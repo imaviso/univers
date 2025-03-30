@@ -298,7 +298,7 @@ export default function ForgotPasswordForm() {
                 </CardTitle>
                 <CardDescription className="text-center">
                     {step === 1 &&
-                        "Enter your ID number to receive a verification code"}
+                        "Enter your Email to receive a verification code"}
                     {step === 2 &&
                         "Enter the verification code sent to your email"}
                     {step === 3 && "Create a new password for your account"}
