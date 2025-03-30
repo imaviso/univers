@@ -59,7 +59,7 @@ export default function LoginForm() {
     };
 
     return (
-        <Card>
+        <Card className="w-full max-w-md mx-auto shadow-lg">
             <CardContent className="pt-6">
                 <Form {...form}>
                     <form

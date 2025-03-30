@@ -51,7 +51,7 @@ export default function RegistrationForm() {
     };
 
     return (
-        <Card className="w-full">
+        <Card className="w-full max-w-xl mx-auto shadow-lg">
             <CardContent className="pt-6">
                 <div className="space-y-8">
                     <StepIndicator
