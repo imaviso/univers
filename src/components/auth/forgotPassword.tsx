@@ -37,13 +37,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
-// Form schemas with validation
-const idNumberSchema = z.object({
-    idNumber: z
-        .string()
-        .min(5, { message: "ID number must be at least 5 characters" }),
-});
-
 const emailSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
 });
@@ -75,7 +68,6 @@ const passwordResetSchema = z
         path: ["confirmPassword"],
     });
 
-type IdNumberValues = z.infer<typeof idNumberSchema>;
 type EmailValues = z.infer<typeof emailSchema>;
 type VerificationCodeValues = z.infer<typeof verificationCodeSchema>;
 type PasswordResetValues = z.infer<typeof passwordResetSchema>;
@@ -84,20 +76,11 @@ export default function ForgotPasswordForm() {
     const [step, setStep] = useState<number>(1);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
-    const [idNumber, setIdNumber] = useState("");
     const [email, setEmail] = useState("");
     const [resendTimer, setResendTimer] = useState<number>(0);
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const [showConfirmPassword, setShowConfirmPassword] =
         useState<boolean>(false);
-
-    // Form for step 1: ID number
-    const idForm = useForm<IdNumberValues>({
-        resolver: zodResolver(idNumberSchema),
-        defaultValues: {
-            idNumber: "",
-        },
-    });
 
     const emailForm = useForm<EmailValues>({
         resolver: zodResolver(emailSchema),
@@ -122,37 +105,6 @@ export default function ForgotPasswordForm() {
             confirmPassword: "",
         },
     });
-
-    const onSubmitIdNumber = async (values: IdNumberValues) => {
-        setIsLoading(true);
-
-        try {
-            // Simulate API call to send verification code
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            console.log("Verification code sent for ID:", values.idNumber);
-            setIdNumber(values.idNumber);
-
-            // Start resend timer
-            setResendTimer(60);
-            const interval = setInterval(() => {
-                setResendTimer((prev) => {
-                    if (prev <= 1) {
-                        clearInterval(interval);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-
-            // Move to next step
-            setStep(2);
-        } catch (error) {
-            console.error("Failed to send verification code:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const onSubmitEmail = async (values: EmailValues) => {
         setIsLoading(true);
@@ -210,7 +162,7 @@ export default function ForgotPasswordForm() {
             // Simulate API call to reset password
             await new Promise((resolve) => setTimeout(resolve, 1000));
 
-            console.log("Password reset completed for ID:", idNumber);
+            console.log("Password reset completed for Email:", email);
 
             // Show success message
             setIsSubmitted(true);
@@ -228,7 +180,7 @@ export default function ForgotPasswordForm() {
             // Simulate API call to resend code
             await new Promise((resolve) => setTimeout(resolve, 1000));
 
-            console.log("Resending verification code for ID:", idNumber);
+            console.log("Resending verification code for Email:", email);
 
             // Reset timer
             setResendTimer(60);
@@ -359,7 +311,7 @@ export default function ForgotPasswordForm() {
 
                 {/* Step 1: Email */}
                 {step === 1 && (
-                    <Form {...idForm}>
+                    <Form {...emailForm}>
                         <form
                             onSubmit={emailForm.handleSubmit(onSubmitEmail)}
                             className="space-y-6"

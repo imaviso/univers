@@ -1,4 +1,4 @@
-import type { LoginResponse, User } from "./types";
+import type { LoginResponse } from "./types";
 
 export const API_BASE_URL = "http://localhost:8080"; // Backend API URL
 
@@ -64,7 +64,7 @@ export const userSignUp = async (
         const data = await response.json();
         return data;
     } catch (error) {
-        throw error;
+        throw Error;
     }
 };
 
