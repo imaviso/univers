@@ -19,10 +19,19 @@ import { Input } from "@/components/ui/input";
 
 // Form schema with validation
 const loginSchema = z.object({
-    idNumber: z
+    email: z.string().email({ message: "Invalid email address" }),
+    password: z
         .string()
-        .min(5, { message: "ID number must be at least 5 characters" }),
-    password: z.string().min(1, { message: "Password is required" }),
+        .min(8, { message: "Password must be at least 8 characters" })
+        .regex(/[A-Z]/, {
+            message: "Password must contain at least one uppercase letter",
+        })
+        .regex(/[a-z]/, {
+            message: "Password must contain at least one lowercase letter",
+        })
+        .regex(/[0-9]/, {
+            message: "Password must contain at least one number",
+        }),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -34,7 +43,7 @@ export default function LoginForm() {
     const form = useForm<LoginValues>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
-            idNumber: "",
+            email: "",
             password: "",
         },
     });
@@ -69,13 +78,13 @@ export default function LoginForm() {
                         <div className="space-y-4">
                             <FormField
                                 control={form.control}
-                                name="idNumber"
+                                name="email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>ID Number</FormLabel>
+                                        <FormLabel>Email</FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="Enter your ID number"
+                                                placeholder="Enter your Email"
                                                 {...field}
                                             />
                                         </FormControl>
