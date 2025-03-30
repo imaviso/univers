@@ -44,6 +44,10 @@ const idNumberSchema = z.object({
         .min(5, { message: "ID number must be at least 5 characters" }),
 });
 
+const emailSchema = z.object({
+    email: z.string().email({ message: "Invalid email address" }),
+});
+
 const verificationCodeSchema = z.object({
     code: z
         .string()
@@ -69,6 +73,7 @@ const passwordResetSchema = z
     });
 
 type IdNumberValues = z.infer<typeof idNumberSchema>;
+type EmailValues = z.infer<typeof emailSchema>;
 type VerificationCodeValues = z.infer<typeof verificationCodeSchema>;
 type PasswordResetValues = z.infer<typeof passwordResetSchema>;
 
@@ -77,6 +82,7 @@ export default function ForgotPasswordForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [idNumber, setIdNumber] = useState("");
+    const [email, setEmail] = useState("");
     const [resendTimer, setResendTimer] = useState<number>(0);
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const [showConfirmPassword, setShowConfirmPassword] =
@@ -87,6 +93,13 @@ export default function ForgotPasswordForm() {
         resolver: zodResolver(idNumberSchema),
         defaultValues: {
             idNumber: "",
+        },
+    });
+
+    const emailForm = useForm<EmailValues>({
+        resolver: zodResolver(emailSchema),
+        defaultValues: {
+            email: "",
         },
     });
 
@@ -116,6 +129,37 @@ export default function ForgotPasswordForm() {
 
             console.log("Verification code sent for ID:", values.idNumber);
             setIdNumber(values.idNumber);
+
+            // Start resend timer
+            setResendTimer(60);
+            const interval = setInterval(() => {
+                setResendTimer((prev) => {
+                    if (prev <= 1) {
+                        clearInterval(interval);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+
+            // Move to next step
+            setStep(2);
+        } catch (error) {
+            console.error("Failed to send verification code:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const onSubmitEmail = async (values: EmailValues) => {
+        setIsLoading(true);
+
+        try {
+            // Simulate API call to send verification code
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            console.log("Verification code sent for Email:", values.email);
+            setEmail(values.email);
 
             // Start resend timer
             setResendTimer(60);
@@ -310,28 +354,28 @@ export default function ForgotPasswordForm() {
                     </div>
                 </div>
 
-                {/* Step 1: ID Number */}
+                {/* Step 1: Email */}
                 {step === 1 && (
                     <Form {...idForm}>
                         <form
-                            onSubmit={idForm.handleSubmit(onSubmitIdNumber)}
+                            onSubmit={emailForm.handleSubmit(onSubmitEmail)}
                             className="space-y-6"
                         >
                             <FormField
-                                control={idForm.control}
-                                name="idNumber"
+                                control={emailForm.control}
+                                name="email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>ID Number</FormLabel>
+                                        <FormLabel>Email</FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="Enter your ID number"
+                                                placeholder="Enter your Email"
                                                 {...field}
                                             />
                                         </FormControl>
                                         <FormDescription>
-                                            Enter the ID number associated with
-                                            your account
+                                            Enter the Email associated with your
+                                            account
                                         </FormDescription>
                                         <FormMessage />
                                     </FormItem>
@@ -426,7 +470,7 @@ export default function ForgotPasswordForm() {
                                     onClick={() => setStep(1)}
                                     disabled={isLoading}
                                 >
-                                    Back to ID Number
+                                    Back to Email
                                 </Button>
                             </div>
                         </form>
