@@ -3,6 +3,8 @@ import { atom } from "jotai";
 // Registration form atoms
 export const registrationStepAtom = atom(0);
 
+export const registrationLoadingAtom = atom(false);
+
 export const registrationFormAtom = atom({
     idNumber: "",
     firstName: "",

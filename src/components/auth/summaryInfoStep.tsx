@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { registrationFormAtom } from "@/lib/atoms";
+import { registrationLoadingAtom } from "@/lib/atoms";
 import { useAtom } from "jotai";
 import { CheckCircle2 } from "lucide-react";
 
@@ -25,6 +26,7 @@ interface SummaryStepProps {
 
 export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
     const [formData] = useAtom(registrationFormAtom);
+    const [isLoading, setLoading] = useAtom(registrationLoadingAtom);
 
     return (
         <div className="space-y-6">
@@ -126,7 +128,9 @@ export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
                 <Button type="button" variant="outline" onClick={onBack}>
                     Back
                 </Button>
-                <Button onClick={onSubmit}>Create Account</Button>
+                <Button onClick={onSubmit} disabled={isLoading}>
+                    {isLoading ? "Creating Account..." : "Create Account"}
+                </Button>
             </div>
         </div>
     );

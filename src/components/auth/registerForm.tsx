@@ -3,13 +3,20 @@ import PersonalInfoStep from "@/components/auth/personalInfoStep";
 import StepIndicator from "@/components/auth/stepIndicator";
 import SummaryStep from "@/components/auth/summaryInfoStep";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { registrationFormAtom, registrationStepAtom } from "@/lib/atoms";
+import {
+    registrationFormAtom,
+    registrationLoadingAtom,
+    registrationStepAtom,
+} from "@/lib/atoms";
+import { userSignUp } from "@/lib/auth";
 import { Link } from "@tanstack/react-router";
 import { useAtom } from "jotai";
+import { toast } from "sonner";
 
 export default function RegistrationForm() {
     const [currentStep, setCurrentStep] = useAtom(registrationStepAtom);
     const [formData] = useAtom(registrationFormAtom);
+    const [, setLoading] = useAtom(registrationLoadingAtom);
 
     // Steps configuration
     const steps = [
@@ -43,11 +50,28 @@ export default function RegistrationForm() {
     };
 
     const handleSubmit = async () => {
-        // Here you would typically send the data to your backend
-        console.log("Form submitted:", formData);
+        setLoading(true);
 
-        // Show success message or redirect
-        alert("Registration successful!");
+        try {
+            await userSignUp(
+                formData.idNumber,
+                formData.firstName,
+                formData.lastName,
+                formData.department,
+                formData.email,
+                formData.phoneNumber,
+                formData.password,
+            );
+            console.log(formData);
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred";
+            toast.error(errorMessage);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

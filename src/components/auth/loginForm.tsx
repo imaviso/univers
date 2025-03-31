@@ -16,6 +16,8 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { userSignIn } from "@/lib/auth";
+import { toast } from "sonner";
 
 // Form schema with validation
 const loginSchema = z.object({
@@ -52,16 +54,14 @@ export default function LoginForm() {
         setIsLoading(true);
 
         try {
-            // Here you would typically authenticate with your backend
             console.log("Login attempt:", values);
-
-            // Simulate API call
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            // Show success message or redirect
-            alert("Login successful!");
+            await userSignIn(values.email, values.password);
         } catch (error) {
-            console.error("Login failed:", error);
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred";
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
