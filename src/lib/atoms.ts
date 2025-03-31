@@ -9,6 +9,7 @@ export const registrationFormAtom = atom({
     lastName: "",
     department: "",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
 });

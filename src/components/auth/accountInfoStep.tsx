@@ -24,6 +24,12 @@ const accountInfoSchema = z
         email: z
             .string()
             .email({ message: "Please enter a valid email address" }),
+        phoneNumber: z
+            .string()
+            .regex(/^\+?[0-9]\d{1,10}$/, {
+                message: "Please enter a valid phone number",
+            })
+            .min(11, { message: "Phone number must be 11 digits" }),
         password: z
             .string()
             .min(8, { message: "Password must be at least 8 characters" })
@@ -62,6 +68,7 @@ export default function AccountInfoStep({
         resolver: zodResolver(accountInfoSchema),
         defaultValues: {
             email: formData.email,
+            phoneNumber: formData.phoneNumber,
             password: formData.password,
             confirmPassword: formData.confirmPassword,
         },
@@ -99,6 +106,24 @@ export default function AccountInfoStep({
                                     We'll never share your email with anyone
                                     else
                                 </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="phoneNumber"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Phone Number</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="number"
+                                        placeholder="Enter your phone number"
+                                        {...field}
+                                    />
+                                </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}

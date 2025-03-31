@@ -84,6 +84,12 @@ export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
                                         {formData.email}
                                     </div>
 
+                                    <div className="font-medium">
+                                        Phone Number:
+                                    </div>
+                                    <div className="break-all">
+                                        {formData.phoneNumber}
+                                    </div>
                                     <div className="font-medium">Password:</div>
                                     <div>••••••••</div>
                                 </div>
