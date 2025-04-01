@@ -9,7 +9,7 @@ import {
     registrationStepAtom,
 } from "@/lib/atoms";
 import { userSignUp } from "@/lib/auth";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { toast } from "sonner";
 
@@ -49,6 +49,7 @@ export default function RegistrationForm() {
         }
     };
 
+    const navigate = useNavigate();
     const handleSubmit = async () => {
         setLoading(true);
 
@@ -63,6 +64,7 @@ export default function RegistrationForm() {
                 formData.password,
             );
             console.log(formData);
+            navigate({ from: "/auth/register", to: "/auth/verify-email" });
         } catch (error) {
             const errorMessage =
                 error instanceof Error

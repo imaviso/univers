@@ -21,15 +21,20 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { verifyOTP } from "@/lib/auth";
+import { registrationFormAtom } from "@/lib/atoms";
+import { userResendVerificationCode, verifyOTP } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "@tanstack/react-router";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useAtom } from "jotai";
+import { atom } from "jotai";
 import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
+
+const emailAtom = atom((get) => get(registrationFormAtom).email);
 
 const FormSchema = z.object({
     pin: z.string().min(6, {
@@ -39,8 +44,10 @@ const FormSchema = z.object({
 
 export function InputOTPForm() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
-
     const navigate = useNavigate();
+    const router = useRouter();
+    const onBack = () => router.history.back();
+    const [email] = useAtom(emailAtom);
 
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
@@ -53,16 +60,16 @@ export function InputOTPForm() {
         try {
             setIsLoading(true);
 
-            const email = localStorage.getItem("email");
             // Attempt to sign in user
-            const response = await verifyOTP(email, data.pin);
+            await verifyOTP(email, data.pin);
             console.log(email, data.pin);
-            console.log("OTP successful:", response);
-            navigate({ to: "/login" });
+            navigate({ to: "/auth/login" });
         } catch (error) {
-            // Handle login error
-            console.error("OTP failed:", error);
-            // You might want to show an error message to the user
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred";
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -74,11 +81,7 @@ export function InputOTPForm() {
     const handleResendCode = async () => {
         try {
             setIsResending(true);
-            const email = localStorage.getItem("email");
-
-            // Simulate API call for resending code
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
+            await userResendVerificationCode(email);
             console.log("Resending verification code to:", email);
             setResendSuccess(true);
 
@@ -94,7 +97,11 @@ export function InputOTPForm() {
                 });
             }, 1000);
         } catch (error) {
-            console.error("Failed to resend code:", error);
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred";
+            toast.error(errorMessage);
         } finally {
             setIsResending(false);
         }
@@ -103,10 +110,13 @@ export function InputOTPForm() {
     return (
         <Card className="w-full max-w-md mx-auto shadow-lg">
             <CardHeader className="space-y-1">
-                <Link to="/auth/login">
-                    {" "}
+                <Button
+                    className="w-fit"
+                    variant="link"
+                    onClick={() => onBack()}
+                >
                     <ArrowLeft className="h-5 w-5 text-primary" />
-                </Link>
+                </Button>
                 <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit">
                     <Mail className="h-6 w-6 text-primary" />
                 </div>

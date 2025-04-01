@@ -22,6 +22,11 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from "@/components/ui/input-otp";
+import {
+    userForgotPassword,
+    userResetPassword,
+    userResetVerificationCode,
+} from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
@@ -35,6 +40,7 @@ import {
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import * as z from "zod";
 
 const emailSchema = z.object({
@@ -110,9 +116,7 @@ export default function ForgotPasswordForm() {
         setIsLoading(true);
 
         try {
-            // Simulate API call to send verification code
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
+            await userForgotPassword(values.email);
             console.log("Verification code sent for Email:", values.email);
             setEmail(values.email);
 
@@ -131,7 +135,11 @@ export default function ForgotPasswordForm() {
             // Move to next step
             setStep(2);
         } catch (error) {
-            console.error("Failed to send verification code:", error);
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred";
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -141,15 +149,17 @@ export default function ForgotPasswordForm() {
         setIsLoading(true);
 
         try {
-            // Simulate API call to verify code
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
+            await userResetVerificationCode(email, values.code);
             console.log("Verification code validated:", values.code);
 
             // Move to next step
             setStep(3);
         } catch (error) {
-            console.error("Code verification failed:", error);
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred";
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -159,15 +169,17 @@ export default function ForgotPasswordForm() {
         setIsLoading(true);
 
         try {
-            // Simulate API call to reset password
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
+            await userResetPassword(email, values.password);
             console.log("Password reset completed for Email:", email);
 
             // Show success message
             setIsSubmitted(true);
         } catch (error) {
-            console.error("Password reset failed:", error);
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred";
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }

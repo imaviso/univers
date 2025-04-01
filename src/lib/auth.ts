@@ -1,4 +1,3 @@
-import type { LoginResponse } from "./types";
 export const API_BASE_URL = "http://localhost:8080"; // Backend API URL
 
 export const userSignIn = async (email: string, password: string) => {
@@ -9,8 +8,8 @@ export const userSignIn = async (email: string, password: string) => {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                email,
-                password,
+                email: email,
+                password: password,
             }),
         });
 
@@ -54,13 +53,13 @@ export const userSignUp = async (
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                idNumber,
-                firstName,
-                lastName,
-                department,
-                email,
-                phoneNumber,
-                password,
+                idNumber: idNumber,
+                firstName: firstName,
+                lastName: lastName,
+                department: department,
+                email: email,
+                phoneNumber: phoneNumber,
+                password: password,
             }),
         });
 
@@ -89,31 +88,36 @@ export const userSignUp = async (
 };
 
 export const userSignOut = async () => {
-    let error = null;
-
-    const res = await fetch(`${API_BASE_URL}/users/logout`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        credentials: "include",
-    })
-        .then(async (res) => {
-            if (!res.ok) throw await res.json();
-            localStorage.clear();
-            window.location.reload();
-            return res;
-        })
-        .catch((err) => {
-            console.log(err);
-            error = err.detail;
-            return null;
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
         });
 
-    if (error) {
-        throw error;
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `Error! Status: ${response.status}`;
+
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage =
+                    errorData.message || errorData.error || errorMessage;
+            } catch {
+                errorMessage = errorText || errorMessage;
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
+    } catch (error) {
+        // Re-throw the error with the specific message
+        throw error instanceof Error
+            ? error
+            : new Error("An unexpected error occurred during signout");
     }
-    return res;
 };
 
 export const getSessionUser = async () => {
@@ -145,7 +149,7 @@ export const getSessionUser = async () => {
 
 export const verifyOTP = async (email: string, code: string) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/users/verify-email`, {
+        const response = await fetch(`${API_BASE_URL}/users/verify`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -157,12 +161,179 @@ export const verifyOTP = async (email: string, code: string) => {
         });
 
         if (!response.ok) {
-            throw new Error(`Error! Status: ${response.status}`);
+            const errorText = await response.text();
+            let errorMessage = `Error! Status: ${response.status}`;
+
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage =
+                    errorData.message || errorData.error || errorMessage;
+            } catch {
+                errorMessage = errorText || errorMessage;
+            }
+
+            throw new Error(errorMessage);
         }
 
-        const data = await response.json();
-        return data;
+        return await response.json();
     } catch (error) {
-        throw Error;
+        // Re-throw the error with the specific message
+        throw error instanceof Error
+            ? error
+            : new Error("An unexpected error occurred during verification");
+    }
+};
+
+export const userResendVerificationCode = async (email: string) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/resend-code`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                email: email,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `Error! Status: ${response.status}`;
+
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage =
+                    errorData.message || errorData.error || errorMessage;
+            } catch {
+                errorMessage = errorText || errorMessage;
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
+    } catch (error) {
+        // Re-throw the error with the specific message
+        throw error instanceof Error
+            ? error
+            : new Error("An unexpected error occurred during resending code");
+    }
+};
+
+export const userForgotPassword = async (email: string) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                email: email,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `Error! Status: ${response.status}`;
+
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage =
+                    errorData.message || errorData.error || errorMessage;
+            } catch {
+                errorMessage = errorText || errorMessage;
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
+    } catch (error) {
+        // Re-throw the error with the specific message
+        throw error instanceof Error
+            ? error
+            : new Error("An unexpected error occurred during forgot password");
+    }
+};
+
+export const userResetVerificationCode = async (
+    email: string,
+    code: string,
+) => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/auth/reset-verification-code`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: email,
+                    code: code,
+                }),
+            },
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `Error! Status: ${response.status}`;
+
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage =
+                    errorData.message || errorData.error || errorMessage;
+            } catch {
+                errorMessage = errorText || errorMessage;
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
+    } catch (error) {
+        // Re-throw the error with the specific message
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during reset verification code",
+              );
+    }
+};
+
+export const userResetPassword = async (email: string, password: string) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `Error! Status: ${response.status}`;
+
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage =
+                    errorData.message || errorData.error || errorMessage;
+            } catch {
+                errorMessage = errorText || errorMessage;
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
+    } catch (error) {
+        // Re-throw the error with the specific message
+        throw error instanceof Error
+            ? error
+            : new Error("An unexpected error occurred during reset password");
     }
 };
