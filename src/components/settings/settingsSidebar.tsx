@@ -24,11 +24,11 @@ export function SettingsSidebar() {
             label: "Notifications",
             icon: <Bell className="h-4 w-4" />,
         },
-        {
-            id: "integrations",
-            label: "Integrations",
-            icon: <Globe className="h-4 w-4" />,
-        },
+        // {
+        //     id: "integrations",
+        //     label: "Integrations",
+        //     icon: <Globe className="h-4 w-4" />,
+        // },
     ];
 
     return (

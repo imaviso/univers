@@ -19,9 +19,6 @@ export function NotificationSettings() {
     const [notifications, setNotifications] = useState({
         eventReminders: true,
         eventUpdates: true,
-        teamMessages: true,
-        taskAssignments: true,
-        taskUpdates: true,
         weeklyDigest: false,
         marketingEmails: false,
     });
@@ -79,63 +76,6 @@ export function NotificationSettings() {
                             id="event-updates"
                             checked={notifications.eventUpdates}
                             onCheckedChange={() => handleToggle("eventUpdates")}
-                        />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Team Notifications</CardTitle>
-                    <CardDescription>
-                        Control notifications related to your team.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                            <Label htmlFor="team-messages">Team messages</Label>
-                            <p className="text-sm text-muted-foreground">
-                                Receive notifications for new team messages.
-                            </p>
-                        </div>
-                        <Switch
-                            id="team-messages"
-                            checked={notifications.teamMessages}
-                            onCheckedChange={() => handleToggle("teamMessages")}
-                        />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                            <Label htmlFor="task-assignments">
-                                Task assignments
-                            </Label>
-                            <p className="text-sm text-muted-foreground">
-                                Receive notifications when you're assigned a
-                                task.
-                            </p>
-                        </div>
-                        <Switch
-                            id="task-assignments"
-                            checked={notifications.taskAssignments}
-                            onCheckedChange={() =>
-                                handleToggle("taskAssignments")
-                            }
-                        />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                            <Label htmlFor="task-updates">Task updates</Label>
-                            <p className="text-sm text-muted-foreground">
-                                Receive notifications when tasks are updated.
-                            </p>
-                        </div>
-                        <Switch
-                            id="task-updates"
-                            checked={notifications.taskUpdates}
-                            onCheckedChange={() => handleToggle("taskUpdates")}
                         />
                     </div>
                 </CardContent>

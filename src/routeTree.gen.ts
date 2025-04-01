@@ -37,7 +37,6 @@ import { Route as AppVenueApprovalApprovalImport } from './routes/app/venue-appr
 import { Route as AppVenueApprovalApprovalIdImport } from './routes/app/venue-approval/$approvalId'
 import { Route as AppSettingsProfileImport } from './routes/app/settings/profile'
 import { Route as AppSettingsNotificationsImport } from './routes/app/settings/notifications'
-import { Route as AppSettingsIntegrationsImport } from './routes/app/settings/integrations'
 import { Route as AppSettingsAccountImport } from './routes/app/settings/account'
 import { Route as AppEventsTimelineImport } from './routes/app/events/timeline'
 import { Route as AppEventsEventIdImport } from './routes/app/events/$eventId'
@@ -201,12 +200,6 @@ const AppSettingsProfileRoute = AppSettingsProfileImport.update({
 const AppSettingsNotificationsRoute = AppSettingsNotificationsImport.update({
   id: '/notifications',
   path: '/notifications',
-  getParentRoute: () => AppSettingsRouteRoute,
-} as any)
-
-const AppSettingsIntegrationsRoute = AppSettingsIntegrationsImport.update({
-  id: '/integrations',
-  path: '/integrations',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 
@@ -421,13 +414,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsAccountImport
       parentRoute: typeof AppSettingsRouteImport
     }
-    '/app/settings/integrations': {
-      id: '/app/settings/integrations'
-      path: '/integrations'
-      fullPath: '/app/settings/integrations'
-      preLoaderRoute: typeof AppSettingsIntegrationsImport
-      parentRoute: typeof AppSettingsRouteImport
-    }
     '/app/settings/notifications': {
       id: '/app/settings/notifications'
       path: '/notifications'
@@ -491,14 +477,12 @@ const AppEventsRouteRouteWithChildren = AppEventsRouteRoute._addFileChildren(
 
 interface AppSettingsRouteRouteChildren {
   AppSettingsAccountRoute: typeof AppSettingsAccountRoute
-  AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsProfileRoute: typeof AppSettingsProfileRoute
 }
 
 const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsAccountRoute: AppSettingsAccountRoute,
-  AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsProfileRoute: AppSettingsProfileRoute,
 }
@@ -617,7 +601,6 @@ export interface FileRoutesByFullPath {
   '/app/events/$eventId': typeof AppEventsEventIdRoute
   '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
-  '/app/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/app/settings/profile': typeof AppSettingsProfileRoute
   '/app/venue-approval/$approvalId': typeof AppVenueApprovalApprovalIdRoute
@@ -652,7 +635,6 @@ export interface FileRoutesByTo {
   '/app/events/$eventId': typeof AppEventsEventIdRoute
   '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
-  '/app/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/app/settings/profile': typeof AppSettingsProfileRoute
   '/app/venue-approval/$approvalId': typeof AppVenueApprovalApprovalIdRoute
@@ -688,7 +670,6 @@ export interface FileRoutesById {
   '/app/events/$eventId': typeof AppEventsEventIdRoute
   '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
-  '/app/settings/integrations': typeof AppSettingsIntegrationsRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/app/settings/profile': typeof AppSettingsProfileRoute
   '/app/venue-approval/$approvalId': typeof AppVenueApprovalApprovalIdRoute
@@ -725,7 +706,6 @@ export interface FileRouteTypes {
     | '/app/events/$eventId'
     | '/app/events/timeline'
     | '/app/settings/account'
-    | '/app/settings/integrations'
     | '/app/settings/notifications'
     | '/app/settings/profile'
     | '/app/venue-approval/$approvalId'
@@ -759,7 +739,6 @@ export interface FileRouteTypes {
     | '/app/events/$eventId'
     | '/app/events/timeline'
     | '/app/settings/account'
-    | '/app/settings/integrations'
     | '/app/settings/notifications'
     | '/app/settings/profile'
     | '/app/venue-approval/$approvalId'
@@ -793,7 +772,6 @@ export interface FileRouteTypes {
     | '/app/events/$eventId'
     | '/app/events/timeline'
     | '/app/settings/account'
-    | '/app/settings/integrations'
     | '/app/settings/notifications'
     | '/app/settings/profile'
     | '/app/venue-approval/$approvalId'
@@ -880,7 +858,6 @@ export const routeTree = rootRoute
       "parent": "/app",
       "children": [
         "/app/settings/account",
-        "/app/settings/integrations",
         "/app/settings/notifications",
         "/app/settings/profile"
       ]
@@ -967,10 +944,6 @@ export const routeTree = rootRoute
     },
     "/app/settings/account": {
       "filePath": "app/settings/account.tsx",
-      "parent": "/app/settings"
-    },
-    "/app/settings/integrations": {
-      "filePath": "app/settings/integrations.tsx",
       "parent": "/app/settings"
     },
     "/app/settings/notifications": {
