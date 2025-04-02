@@ -65,12 +65,14 @@ export default function RegistrationForm() {
             );
             console.log(formData);
             navigate({ from: "/auth/register", to: "/auth/verify-email" });
+            toast.success("Registration successful! Please check your email.");
         } catch (error) {
             const errorMessage =
                 error instanceof Error
                     ? error.message
                     : "An unexpected error occurred";
             toast.error(errorMessage);
+            console.error("Registration error:", error);
         } finally {
             setLoading(false);
         }

@@ -59,11 +59,11 @@ export function InputOTPForm() {
     async function onSubmit(data: z.infer<typeof FormSchema>) {
         try {
             setIsLoading(true);
-
             // Attempt to sign in user
+            console.log("Verifying OTP for email:", email);
             await verifyOTP(email, data.pin);
-            console.log(email, data.pin);
             navigate({ to: "/auth/login" });
+            toast.success("Verification successful! You can now log in.");
         } catch (error) {
             const errorMessage =
                 error instanceof Error
@@ -78,6 +78,7 @@ export function InputOTPForm() {
     const [isResending, setIsResending] = useState<boolean>(false);
     const [resendSuccess, setResendSuccess] = useState<boolean>(false);
     const [resendTimer, setResendTimer] = useState<number>(0);
+
     const handleResendCode = async () => {
         try {
             setIsResending(true);
@@ -168,9 +169,8 @@ export function InputOTPForm() {
 
                         <Button
                             type="submit"
-                            className="w-full font-medium"
+                            className="w-full"
                             disabled={isLoading}
-                            size="lg"
                         >
                             {isLoading ? "Verifying..." : "Verify Email"}
                         </Button>

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -16,7 +16,9 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { userDetailsAtom } from "@/lib/atoms";
 import { userSignIn } from "@/lib/auth";
+import { useAtom } from "jotai";
 import { toast } from "sonner";
 
 // Form schema with validation
@@ -41,7 +43,9 @@ type LoginValues = z.infer<typeof loginSchema>;
 export default function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [, setUserDetails] = useAtom(userDetailsAtom);
 
+    const navigate = useNavigate();
     const form = useForm<LoginValues>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
@@ -55,7 +59,18 @@ export default function LoginForm() {
 
         try {
             console.log("Login attempt:", values);
-            await userSignIn(values.email, values.password);
+            const res = await userSignIn(values.email, values.password);
+            console.log("Login response:", res.user);
+            setUserDetails({
+                idNumber: res.user.idNumber,
+                firstName: res.user.first_name,
+                lastName: res.user.last_name,
+                email: res.user.email,
+                role: res.user.roles,
+                department: res.user.department,
+                phoneNumber: res.user.phoneNumber,
+            });
+            navigate({ to: "/app/dashboard" });
         } catch (error) {
             const errorMessage =
                 error instanceof Error

@@ -78,7 +78,7 @@ export const userSignUp = async (
             throw new Error(errorMessage);
         }
 
-        return await response.json();
+        return await response.text();
     } catch (error) {
         // Re-throw the error with the specific message
         throw error instanceof Error
@@ -111,7 +111,7 @@ export const userSignOut = async () => {
             throw new Error(errorMessage);
         }
 
-        return await response.json();
+        return await response.text();
     } catch (error) {
         // Re-throw the error with the specific message
         throw error instanceof Error
@@ -145,7 +145,7 @@ export const getCurrentUser = async () => {
             throw new Error(errorMessage);
         }
 
-        return await response.json();
+        return await response.text();
     } catch (error) {
         // Re-throw the error with the specific message
         throw error instanceof Error
@@ -163,7 +163,7 @@ export const verifyOTP = async (email: string, code: string) => {
             },
             body: JSON.stringify({
                 email: email,
-                verificationCode: code,
+                verification_code: code,
             }),
         });
 
@@ -182,7 +182,7 @@ export const verifyOTP = async (email: string, code: string) => {
             throw new Error(errorMessage);
         }
 
-        return await response.json();
+        return await response.text();
     } catch (error) {
         // Re-throw the error with the specific message
         throw error instanceof Error
@@ -218,7 +218,7 @@ export const userResendVerificationCode = async (email: string) => {
             throw new Error(errorMessage);
         }
 
-        return await response.json();
+        return await response.text();
     } catch (error) {
         // Re-throw the error with the specific message
         throw error instanceof Error
@@ -254,7 +254,7 @@ export const userForgotPassword = async (email: string) => {
             throw new Error(errorMessage);
         }
 
-        return await response.json();
+        return await response.text();
     } catch (error) {
         // Re-throw the error with the specific message
         throw error instanceof Error
@@ -297,7 +297,7 @@ export const userResetVerificationCode = async (
             throw new Error(errorMessage);
         }
 
-        return await response.json();
+        return await response.text();
     } catch (error) {
         // Re-throw the error with the specific message
         throw error instanceof Error
@@ -336,7 +336,7 @@ export const userResetPassword = async (email: string, password: string) => {
             throw new Error(errorMessage);
         }
 
-        return await response.json();
+        return await response.text();
     } catch (error) {
         // Re-throw the error with the specific message
         throw error instanceof Error

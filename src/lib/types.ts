@@ -1,10 +1,13 @@
 export const isAuthenticated = !!localStorage.getItem("token");
 
-export type User = {
-    //id: string
-    name: string;
+export type UserType = {
+    idNumber: string;
+    firstName: string;
+    lastName: string;
     email: string;
-    //profile_image_url: string
+    role: string;
+    department: string;
+    phoneNumber: string;
 };
 
 export type LoginResponse = {
