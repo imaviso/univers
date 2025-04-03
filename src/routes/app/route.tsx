@@ -23,20 +23,17 @@ export const Route = createFileRoute("/app")({
 });
 
 function App() {
-    const [view, setView] = useState<"list" | "timeline">("list");
     const [isModalOpen, setIsModalOpen] = useState(false);
     return (
         <div className="flex h-screen overflow-y-hidden">
-            <SettingsProvider>
-                <NotificationProvider>
-                    <Sidebar setView={setView} currentView={view} />
-                    <div className="flex-1 relative flex h-full w-full flex-col overflow-y-auto overflow-x-hidden">
-                        <main>
-                            <Outlet />
-                        </main>
-                    </div>
-                </NotificationProvider>
-            </SettingsProvider>
+            <NotificationProvider>
+                <Sidebar />
+                <div className="flex-1 relative flex h-full w-full flex-col overflow-y-auto overflow-x-hidden">
+                    <main>
+                        <Outlet />
+                    </main>
+                </div>
+            </NotificationProvider>
         </div>
     );
 }
