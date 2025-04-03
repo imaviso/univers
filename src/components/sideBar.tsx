@@ -44,7 +44,7 @@ const mainNavigation = [
         href: "/app/venue-reservation",
         icon: BookText,
     },
-    { name: "Users", href: "/app/user-management", icon: Users },
+    { name: "Users", href: "/app/user-management/users", icon: Users },
     { name: "Equipments", href: "/app/equipments", icon: Package },
     {
         name: "Equipment Approval",
