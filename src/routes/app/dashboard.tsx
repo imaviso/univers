@@ -20,25 +20,24 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { createFileRoute } from "@tanstack/react-router";
+import { isAuthenticated } from "@/lib/query";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Calendar, CalendarDays, TrendingUp, Users } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/app/dashboard")({
     component: Dashboard,
-    // beforeLoad: async ({ location }) => {
-    // 	if (!isAuthenticated) {
-    // 		throw redirect({
-    // 			to: "/login",
-    // 			search: {
-    // 				// Use the current location to power a redirect after login
-    // 				// (Do not use `router.state.resolvedLocation` as it can
-    // 				// potentially lag behind the actual current location)
-    // 				redirect: location.href,
-    // 			},
-    // 		});
-    // 	}
-    // },
+    beforeLoad: async ({ location }) => {
+        const auth = await isAuthenticated(["ADMIN"]);
+        if (!auth) {
+            throw redirect({
+                to: "/auth/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+    },
 });
 
 function Dashboard() {

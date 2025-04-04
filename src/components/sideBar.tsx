@@ -27,37 +27,66 @@ import {
     Settings,
     Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 
-const mainNavigation = [
-    { name: "Dashboard", href: "/app/dashboard", icon: Home },
-    { name: "Calendar", href: "/app/calendar", icon: CalendarDays },
-    { name: "Events", href: "/app/events/timeline", icon: LayoutGrid },
-    { name: "Venues", href: "/app/venues/management", icon: Building },
+const allNavigation = [
+    { name: "Dashboard", href: "/app/dashboard", icon: Home, roles: ["ADMIN"] },
+    {
+        name: "Calendar",
+        href: "/app/calendar",
+        icon: CalendarDays,
+        roles: ["ADMIN", "ORGANIZER", "USER"],
+    },
+    {
+        name: "Events",
+        href: "/app/events/timeline",
+        icon: LayoutGrid,
+        roles: ["ADMIN", "ORGANIZER", "USER"],
+    },
+    {
+        name: "Venues",
+        href: "/app/venues/management",
+        icon: Building,
+        roles: ["ADMIN"],
+    },
     {
         name: "Venue Approval",
         href: "/app/venue-approval/approval",
         icon: BookCheck,
+        roles: ["ADMIN"],
     },
     {
         name: "Venue Reservation",
         href: "/app/venue-reservation",
         icon: BookText,
+        roles: ["ADMIN", "ORGANIZER", "USER"],
     },
-    { name: "Users", href: "/app/user-management/users", icon: Users },
-    { name: "Equipments", href: "/app/equipments", icon: Package },
+    {
+        name: "Users",
+        href: "/app/user-management/users",
+        icon: Users,
+        roles: ["ADMIN"],
+    },
+    {
+        name: "Equipments",
+        href: "/app/equipments",
+        icon: Package,
+        roles: ["ADMIN"],
+    },
     {
         name: "Equipment Approval",
         href: "/app/equipment-approval/approval",
         icon: PackageCheck,
+        roles: ["ADMIN"],
     },
     {
         name: "Equipment Reservation",
         href: "/app/equipment-reservation",
         icon: PackagePlus,
+        roles: ["ADMIN", "ORGANIZER", "USER"],
     },
 ];
 
@@ -66,9 +95,20 @@ export function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const { data: user, isLoading, isError } = useCurrentUser();
+    const [navigation, setNavigation] = useState(allNavigation);
     const initials = user
         ? `${user.firstName?.charAt(0)}${user.lastName?.charAt(0)}`
         : "UV"; // Default initials
+
+    useEffect(() => {
+        if (user) {
+            const filteredNavigation = allNavigation.filter((item) =>
+                item.roles.includes(user.role),
+            );
+            setNavigation(filteredNavigation);
+        }
+    }, [user]);
+
     return (
         <TooltipProvider>
             <>
@@ -139,7 +179,7 @@ export function Sidebar() {
                     <div className="flex-1 border-r">
                         <ScrollArea className="flex-1 px-2 py-4">
                             <div className="space-y-1">
-                                {mainNavigation.map((item) => (
+                                {navigation.map((item) => (
                                     <Link
                                         key={item.name}
                                         to={item.href}

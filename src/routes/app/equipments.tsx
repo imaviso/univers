@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
-import { createFileRoute } from "@tanstack/react-router";
+import { isAuthenticated } from "@/lib/query";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
     Download,
@@ -41,6 +42,17 @@ import { useState } from "react";
 
 export const Route = createFileRoute("/app/equipments")({
     component: EquipmentInventory,
+    beforeLoad: async ({ location }) => {
+        const auth = await isAuthenticated(["ADMIN"]);
+        if (!auth) {
+            throw redirect({
+                to: "/auth/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+    },
 });
 
 // Sample equipment data

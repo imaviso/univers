@@ -1,7 +1,19 @@
 import VenueReservationForm from "@/components/venue-reservation/venueReservationForm";
-import { createFileRoute } from "@tanstack/react-router";
+import { isAuthenticated } from "@/lib/query";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/app/venue-reservation")({
     component: VenueReservationPage,
+    beforeLoad: async ({ location }) => {
+        const auth = await isAuthenticated(["ADMIN", "ORGANIZER", "USER"]);
+        if (!auth) {
+            throw redirect({
+                to: "/auth/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+    },
 });
 
 function VenueReservationPage() {

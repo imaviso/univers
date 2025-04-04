@@ -25,7 +25,9 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isAuthenticated } from "@/lib/query";
 import { useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { format } from "date-fns";
 import {
     Calendar,
@@ -37,10 +39,19 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { createFileRoute } from "@tanstack/react-router";
-
 export const Route = createFileRoute("/app/equipment-approval/approval")({
     component: EquipmentReservationApproval,
+    beforeLoad: async ({ location }) => {
+        const auth = await isAuthenticated(["ADMIN"]);
+        if (!auth) {
+            throw redirect({
+                to: "/auth/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+    },
 });
 
 // Sample equipment reservation data

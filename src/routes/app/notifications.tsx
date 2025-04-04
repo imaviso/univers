@@ -1,5 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -14,6 +12,8 @@ import {
     type Notification,
     useNotification,
 } from "@/contexts/notification-context";
+import { isAuthenticated } from "@/lib/query";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { Bell, Check, Filter, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -21,6 +21,17 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/notifications")({
     component: Notifications,
+    beforeLoad: async ({ location }) => {
+        const auth = await isAuthenticated(["ORGANIZER", "ADMIN", "USER"]);
+        if (!auth) {
+            throw redirect({
+                to: "/auth/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+    },
 });
 
 export function Notifications() {

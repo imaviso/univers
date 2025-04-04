@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isAuthenticated } from "@/lib/query";
 import { cn } from "@/lib/utils";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import {
     addDays,
     addMonths,
@@ -28,10 +30,19 @@ import {
 import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
 import { useState } from "react";
 
-import { createFileRoute } from "@tanstack/react-router";
-
 export const Route = createFileRoute("/app/calendar")({
     component: Calendar,
+    beforeLoad: async ({ location }) => {
+        const auth = await isAuthenticated(["ADMIN", "ORGANIZER", "USER"]);
+        if (!auth) {
+            throw redirect({
+                to: "/auth/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+    },
 });
 // Sample events data
 const events = [

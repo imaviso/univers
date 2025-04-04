@@ -1,8 +1,20 @@
 import EquipmentReservationForm from "@/components/equipment-reservation/equipmentReservationForm";
-import { createFileRoute } from "@tanstack/react-router";
+import { isAuthenticated } from "@/lib/query";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/equipment-reservation")({
     component: RouteComponent,
+    beforeLoad: async ({ location }) => {
+        const auth = await isAuthenticated(["ADMIN", "ORGANIZER", "USER"]);
+        if (!auth) {
+            throw redirect({
+                to: "/auth/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+    },
 });
 
 function RouteComponent() {
