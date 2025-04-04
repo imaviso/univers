@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useCurrentUser } from "@/lib/query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/app/settings/account")({
 export function AccountSettings() {
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
     const { theme, setTheme } = useTheme();
+    const { data: user } = useCurrentUser();
 
     return (
         <div className="space-y-6">
@@ -102,7 +104,7 @@ export function AccountSettings() {
                         <Input
                             id="email"
                             type="email"
-                            defaultValue="jane@example.com"
+                            defaultValue={user?.email}
                         />
                     </div>
                 </CardContent>

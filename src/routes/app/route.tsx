@@ -1,7 +1,6 @@
 import { Sidebar } from "@/components/sideBar";
 import { NotificationProvider } from "@/contexts/notification-context";
-import { isAuthenticated } from "@/lib/query";
-import { useCurrentUser } from "@/lib/query";
+import { isAuthenticated, useCurrentUser } from "@/lib/query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Outlet } from "@tanstack/react-router";
 import { useState } from "react";
@@ -23,7 +22,7 @@ export const Route = createFileRoute("/app")({
 
 function App() {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const { data: user, isLoading, isError } = useCurrentUser();
+    const { isLoading, isError } = useCurrentUser();
 
     if (isLoading) {
         return <div>Loading...</div>; // Or a more sophisticated loading indicator

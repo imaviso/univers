@@ -8,12 +8,13 @@ export const userQueryOptions = {
         const user = await getCurrentUser();
         return user;
     },
-    staleTime: 600 * 1000, // 60 seconds - Adjust as needed
+    // staleTime: 600 * 1000, // 60 seconds - Adjust as needed
     retry: false, // Prevent automatic retries, handle errors explicitly
 };
 
 export const useCurrentUser = () => {
-    return useQuery(userQueryOptions);
+    const query = useQuery(userQueryOptions);
+    return query;
 };
 
 export const isAuthenticated = async (

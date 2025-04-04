@@ -12,16 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrentUser } from "@/lib/query";
+import { createFileRoute } from "@tanstack/react-router";
 import { Camera } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-
-import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/app/settings/profile")({
     component: ProfileSettings,
 });
 
 function ProfileSettings() {
+    const { data: user } = useCurrentUser();
     const [profile, setProfile] = useState({
         name: "Jane Doe",
         email: "jane@example.com",
@@ -29,6 +30,10 @@ function ProfileSettings() {
         bio: "Experienced event manager with a passion for creating memorable experiences.",
         avatar: "/placeholder.svg?height=100&width=100",
     });
+    const name = user?.firstName.concat(" ", user?.lastName);
+    const initials = user
+        ? `${user.firstName?.charAt(0)}${user.lastName?.charAt(0)}`
+        : "UV"; // Default initials
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -65,9 +70,7 @@ function ProfileSettings() {
                                     src={profile.avatar}
                                     alt={profile.name}
                                 />
-                                <AvatarFallback>
-                                    {profile.name.charAt(0)}
-                                </AvatarFallback>
+                                <AvatarFallback>{initials}</AvatarFallback>
                             </Avatar>
                             <Button
                                 size="icon"
@@ -83,7 +86,7 @@ function ProfileSettings() {
                                 <Input
                                     id="name"
                                     name="name"
-                                    value={profile.name}
+                                    value={name}
                                     onChange={handleChange}
                                 />
                             </div>
@@ -92,7 +95,7 @@ function ProfileSettings() {
                                 <Input
                                     id="title"
                                     name="title"
-                                    value={profile.title}
+                                    value={user?.role}
                                     onChange={handleChange}
                                 />
                             </div>

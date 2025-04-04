@@ -6,9 +6,12 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { NotificationCenter } from "@/contexts/notification-context";
+import { userDetailsAtom } from "@/lib/atoms";
+import { isAuthenticated, useCurrentUser } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
+import { useAtom } from "jotai";
 import {
     BookCheck,
     BookText,
@@ -62,7 +65,10 @@ export function Sidebar() {
     const pathname = useRouterState({ select: (s) => s.location.pathname });
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-
+    const { data: user, isLoading, isError } = useCurrentUser();
+    const initials = user
+        ? `${user.firstName?.charAt(0)}${user.lastName?.charAt(0)}`
+        : "UV"; // Default initials
     return (
         <TooltipProvider>
             <>
@@ -192,10 +198,10 @@ export function Sidebar() {
                                         className="flex flex-col gap-1"
                                     >
                                         <span className="font-medium">
-                                            Jane Doe
+                                            {user?.firstName} {user?.lastName}
                                         </span>
                                         <span className="text-xs">
-                                            jane@example.com
+                                            {user?.email}
                                         </span>
                                     </TooltipContent>
                                 </Tooltip>
@@ -208,14 +214,17 @@ export function Sidebar() {
                                     <div className="flex items-center gap-2">
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                                            <AvatarFallback>JD</AvatarFallback>
+                                            <AvatarFallback>
+                                                {initials}
+                                            </AvatarFallback>
                                         </Avatar>
                                         <div className="flex flex-col">
                                             <span className="text-sm font-medium">
-                                                Jane Doe
+                                                {user?.firstName}{" "}
+                                                {user?.lastName}
                                             </span>
                                             <span className="text-xs text-muted-foreground">
-                                                jane@example.com
+                                                {user?.email}
                                             </span>
                                         </div>
                                     </div>

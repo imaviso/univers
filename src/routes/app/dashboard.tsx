@@ -20,13 +20,9 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { userDetailsAtom } from "@/lib/atoms";
 import { createFileRoute } from "@tanstack/react-router";
-import { atom, useAtom } from "jotai";
 import { Calendar, CalendarDays, TrendingUp, Users } from "lucide-react";
 import { useState } from "react";
-
-const getUserDetails = atom((get) => get(userDetailsAtom));
 
 export const Route = createFileRoute("/app/dashboard")({
     component: Dashboard,
@@ -49,9 +45,6 @@ function Dashboard() {
     const [period, setPeriod] = useState<"day" | "week" | "month" | "year">(
         "month",
     );
-
-    const [userDetails] = useAtom(getUserDetails);
-    console.log("User Details:", userDetails);
 
     // Sample stats data
     const stats = {

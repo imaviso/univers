@@ -16,9 +16,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { userDetailsAtom } from "@/lib/atoms";
 import { userSignIn } from "@/lib/auth";
-import { useAtom } from "jotai";
 import { toast } from "sonner";
 
 // Form schema with validation
@@ -43,7 +41,6 @@ type LoginValues = z.infer<typeof loginSchema>;
 export default function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [, setUserDetails] = useAtom(userDetailsAtom);
 
     const navigate = useNavigate();
     const form = useForm<LoginValues>({
@@ -61,15 +58,6 @@ export default function LoginForm() {
             console.log("Login attempt:", values);
             const res = await userSignIn(values.email, values.password);
             console.log("Login response:", res.user);
-            setUserDetails({
-                idNumber: res.user.idNumber,
-                firstName: res.user.first_name,
-                lastName: res.user.last_name,
-                email: res.user.email,
-                role: res.user.roles,
-                department: res.user.department,
-                phoneNumber: res.user.phoneNumber,
-            });
             navigate({ to: "/app/dashboard" });
         } catch (error) {
             const errorMessage =
