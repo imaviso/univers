@@ -42,7 +42,11 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/equipment-approval/approval")({
     component: EquipmentReservationApproval,
     beforeLoad: async ({ location }) => {
-        const auth = await isAuthenticated(["ADMIN"]);
+        const auth = await isAuthenticated([
+            "SUPER_ADMIN",
+            "VP_ADMIN",
+            "EQUIPMENT_OWNER",
+        ]);
         if (!auth) {
             throw redirect({
                 to: "/auth/login",

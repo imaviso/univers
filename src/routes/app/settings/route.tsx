@@ -5,7 +5,14 @@ import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/app/settings")({
     component: Settings,
     beforeLoad: async ({ location }) => {
-        const auth = await isAuthenticated(["ADMIN", "ORGANIZER", "USER"]);
+        const auth = await isAuthenticated([
+            "ORGANIZER",
+            "SUPER_ADMIN",
+            "EQUIPMENT_OWNER",
+            "VENUE_OWNER",
+            "VPAA",
+            "VP_ADMIN",
+        ]);
         if (!auth) {
             throw redirect({
                 to: "/auth/login",

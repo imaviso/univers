@@ -5,7 +5,13 @@ export type UserType = {
     firstName: string;
     lastName: string;
     email: string;
-    role: "ORGANIZER" | "ADMIN" | "USER";
+    role:
+        | "EQUIPMENT_OWNER"
+        | "ORGANIZER"
+        | "SUPER_ADMIN"
+        | "VENUE_OWNER"
+        | "VPAA"
+        | "VP_ADMIN";
     department: string;
     phoneNumber: string;
 };

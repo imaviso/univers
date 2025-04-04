@@ -33,60 +33,79 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 
 const allNavigation = [
-    { name: "Dashboard", href: "/app/dashboard", icon: Home, roles: ["ADMIN"] },
+    {
+        name: "Dashboard",
+        href: "/app/dashboard",
+        icon: Home,
+        roles: ["SUPER_ADMIN", "VP_ADMIN"],
+    },
     {
         name: "Calendar",
         href: "/app/calendar",
         icon: CalendarDays,
-        roles: ["ADMIN", "ORGANIZER", "USER"],
+        roles: [
+            "SUPER_ADMIN",
+            "ORGANIZER",
+            "EQUIPMENT_OWNER",
+            "VENUE_OWNER",
+            "VPAA",
+            "VP_ADMIN",
+        ],
     },
     {
         name: "Events",
         href: "/app/events/timeline",
         icon: LayoutGrid,
-        roles: ["ADMIN", "ORGANIZER", "USER"],
+        roles: [
+            "SUPER_ADMIN",
+            "ORGANIZER",
+            "EQUIPMENT_OWNER",
+            "VENUE_OWNER",
+            "VPAA",
+            "VP_ADMIN",
+        ],
     },
     {
         name: "Venues",
         href: "/app/venues/management",
         icon: Building,
-        roles: ["ADMIN"],
+        roles: ["SUPER_ADMIN", "VENUE_OWNER", "VPAA", "VP_ADMIN"],
     },
     {
         name: "Venue Approval",
         href: "/app/venue-approval/approval",
         icon: BookCheck,
-        roles: ["ADMIN"],
+        roles: ["SUPER_ADMIN", "VENUE_OWNER", "VPAA", "VP_ADMIN"],
     },
     {
         name: "Venue Reservation",
         href: "/app/venue-reservation",
         icon: BookText,
-        roles: ["ADMIN", "ORGANIZER", "USER"],
+        roles: ["SUPER_ADMIN", "ORGANIZER"],
     },
     {
         name: "Users",
         href: "/app/user-management/users",
         icon: Users,
-        roles: ["ADMIN"],
+        roles: ["SUPER_ADMIN"],
     },
     {
         name: "Equipments",
         href: "/app/equipments",
         icon: Package,
-        roles: ["ADMIN"],
+        roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER", "VP_ADMIN"],
     },
     {
         name: "Equipment Approval",
         href: "/app/equipment-approval/approval",
         icon: PackageCheck,
-        roles: ["ADMIN"],
+        roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER", "VP_ADMIN"],
     },
     {
         name: "Equipment Reservation",
         href: "/app/equipment-reservation",
         icon: PackagePlus,
-        roles: ["ADMIN", "ORGANIZER", "USER"],
+        roles: ["SUPER_ADMIN", "ORGANIZER"],
     },
 ];
 

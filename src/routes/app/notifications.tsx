@@ -22,7 +22,14 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/app/notifications")({
     component: Notifications,
     beforeLoad: async ({ location }) => {
-        const auth = await isAuthenticated(["ORGANIZER", "ADMIN", "USER"]);
+        const auth = await isAuthenticated([
+            "ORGANIZER",
+            "SUPER_ADMIN",
+            "EQUIPMENT_OWNER",
+            "VENUE_OWNER",
+            "VPAA",
+            "VP_ADMIN",
+        ]);
         if (!auth) {
             throw redirect({
                 to: "/auth/login",

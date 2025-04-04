@@ -33,7 +33,14 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/calendar")({
     component: Calendar,
     beforeLoad: async ({ location }) => {
-        const auth = await isAuthenticated(["ADMIN", "ORGANIZER", "USER"]);
+        const auth = await isAuthenticated([
+            "ORGANIZER",
+            "SUPER_ADMIN",
+            "EQUIPMENT_OWNER",
+            "VENUE_OWNER",
+            "VPAA",
+            "VP_ADMIN",
+        ]);
         if (!auth) {
             throw redirect({
                 to: "/auth/login",

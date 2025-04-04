@@ -28,7 +28,7 @@ import { useState } from "react";
 export const Route = createFileRoute("/app/dashboard")({
     component: Dashboard,
     beforeLoad: async ({ location }) => {
-        const auth = await isAuthenticated(["ADMIN"]);
+        const auth = await isAuthenticated(["SUPER_ADMIN", "VP_ADMIN"]);
         if (!auth) {
             throw redirect({
                 to: "/auth/login",

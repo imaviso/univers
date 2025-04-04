@@ -18,7 +18,14 @@ export const useCurrentUser = () => {
 };
 
 export const isAuthenticated = async (
-    requiredRoles?: ("ORGANIZER" | "ADMIN" | "USER")[], // Array of roles
+    requiredRoles?: (
+        | "ORGANIZER"
+        | "SUPER_ADMIN"
+        | "EQUIPMENT_OWNER"
+        | "VPAA"
+        | "VP_ADMIN"
+        | "VENUE_OWNER"
+    )[], // Array of roles
     route?: any,
 ): Promise<boolean> => {
     try {
