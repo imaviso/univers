@@ -3,6 +3,7 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
+import NotFound from "@/components/404NotFound";
 import { ThemeProvider } from "next-themes";
 
 // Import the generated route tree
@@ -19,7 +20,7 @@ const router = createRouter({
     defaultPreload: "intent",
     // Since we're using React Query, we don't want loader calls to ever be stale
     // This will ensure that the loader is always called when the route is preloaded or visited
-    defaultPreloadStaleTime: 0,
+    defaultPreloadStaleTime: 60,
     scrollRestoration: true,
 });
 

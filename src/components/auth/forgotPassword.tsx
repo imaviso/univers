@@ -83,6 +83,7 @@ export default function ForgotPasswordForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [email, setEmail] = useState("");
+    const [code, setCode] = useState("");
     const [resendTimer, setResendTimer] = useState<number>(0);
     const [showPassword, setShowPassword] = useState<boolean>(false);
     const [showConfirmPassword, setShowConfirmPassword] =
@@ -147,6 +148,7 @@ export default function ForgotPasswordForm() {
 
     const onSubmitVerificationCode = async (values: VerificationCodeValues) => {
         setIsLoading(true);
+        setCode(values.code);
 
         try {
             await userResetVerificationCode(email, values.code);
@@ -169,7 +171,7 @@ export default function ForgotPasswordForm() {
         setIsLoading(true);
 
         try {
-            await userResetPassword(email, values.password);
+            await userResetPassword(email, code, values.password);
             console.log("Password reset completed for Email:", email);
 
             // Show success message

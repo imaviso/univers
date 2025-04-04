@@ -1,3 +1,4 @@
+import type { UserType } from "@/lib/types";
 export const API_BASE_URL = "http://localhost:8080"; // Backend API URL
 
 export const userSignIn = async (email: string, password: string) => {
@@ -7,6 +8,7 @@ export const userSignIn = async (email: string, password: string) => {
             headers: {
                 "Content-Type": "application/json",
             },
+            credentials: "include",
             body: JSON.stringify({
                 email: email,
                 password: password,
@@ -120,10 +122,10 @@ export const userSignOut = async () => {
     }
 };
 
-export const getCurrentUser = async () => {
+export const getCurrentUser = async (): Promise<UserType | null> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/current-user`, {
-            method: "POST",
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            method: "GET",
             headers: {
                 "Content-Type": "application/json",
             },
@@ -131,6 +133,10 @@ export const getCurrentUser = async () => {
         });
 
         if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                return null;
+            }
+
             const errorText = await response.text();
             let errorMessage = `Error! Status: ${response.status}`;
 
@@ -145,12 +151,11 @@ export const getCurrentUser = async () => {
             throw new Error(errorMessage);
         }
 
-        return await response.text();
+        const userData = await response.json();
+        return userData as UserType; // Type assertion to User
     } catch (error) {
-        // Re-throw the error with the specific message
-        throw error instanceof Error
-            ? error
-            : new Error("An unexpected error occurred during fetching user");
+        console.error("Error fetching user:", error);
+        return null;
     }
 };
 
@@ -268,19 +273,16 @@ export const userResetVerificationCode = async (
     code: string,
 ) => {
     try {
-        const response = await fetch(
-            `${API_BASE_URL}/auth/reset-verification-code`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email: email,
-                    code: code,
-                }),
+        const response = await fetch(`${API_BASE_URL}/auth/verify-reset-code`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
             },
-        );
+            body: JSON.stringify({
+                email: email,
+                verificationCode: code,
+            }),
+        });
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -308,7 +310,11 @@ export const userResetVerificationCode = async (
     }
 };
 
-export const userResetPassword = async (email: string, password: string) => {
+export const userResetPassword = async (
+    email: string,
+    code: string,
+    password: string,
+) => {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
             method: "POST",
@@ -317,7 +323,8 @@ export const userResetPassword = async (email: string, password: string) => {
             },
             body: JSON.stringify({
                 email: email,
-                password: password,
+                verificationCode: code,
+                newPassword: password,
             }),
         });
 
