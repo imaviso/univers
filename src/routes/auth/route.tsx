@@ -1,5 +1,4 @@
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
-import { GalleryVerticalEnd } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
     component: AuthRoute,

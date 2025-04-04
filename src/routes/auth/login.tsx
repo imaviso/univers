@@ -1,13 +1,17 @@
 import LoginForm from "@/components/auth/loginForm";
-import { isAuthenticated } from "@/lib/types";
+import { isAuthenticated } from "@/lib/query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/auth/login")({
     component: LoginPage,
-    beforeLoad: async () => {
-        if (isAuthenticated) {
+    beforeLoad: async ({ location }) => {
+        const auth = await isAuthenticated(["ORGANIZER", "ADMIN", "USER"]);
+        if (auth) {
             throw redirect({
                 to: "/app/dashboard",
+                search: {
+                    redirect: location.href,
+                },
             });
         }
     },
