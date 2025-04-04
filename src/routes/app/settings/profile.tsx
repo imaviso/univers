@@ -30,6 +30,7 @@ function ProfileSettings() {
         bio: "Experienced event manager with a passion for creating memorable experiences.",
         avatar: "/placeholder.svg?height=100&width=100",
     });
+
     const name = user?.firstName.concat(" ", user?.lastName);
     const initials = user
         ? `${user.firstName?.charAt(0)}${user.lastName?.charAt(0)}`

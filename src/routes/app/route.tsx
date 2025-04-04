@@ -21,7 +21,6 @@ export const Route = createFileRoute("/app")({
 });
 
 function App() {
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const { isLoading, isError } = useCurrentUser();
 
     if (isLoading) {

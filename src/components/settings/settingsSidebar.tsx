@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { userSignOut } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
     Bell,
     Building,
@@ -13,9 +14,9 @@ import {
     User,
     Users,
 } from "lucide-react";
-
 export function SettingsSidebar() {
     const pathname = useRouterState({ select: (s) => s.location.pathname });
+    const navigate = useNavigate();
     const menuItems = [
         { id: "profile", label: "Profile", icon: <User className="h-4 w-4" /> },
         { id: "account", label: "Account", icon: <Lock className="h-4 w-4" /> },
@@ -30,6 +31,15 @@ export function SettingsSidebar() {
         //     icon: <Globe className="h-4 w-4" />,
         // },
     ];
+
+    const handleLogout = async () => {
+        try {
+            await userSignOut();
+            navigate({ to: "/auth/login" });
+        } catch (error) {
+            console.error("Logout error:", error);
+        }
+    };
 
     return (
         <div className="w-64 border-r bg-background">
@@ -71,6 +81,7 @@ export function SettingsSidebar() {
                             Advanced
                         </Link>
                         <Button
+                            onClick={handleLogout}
                             variant="ghost"
                             className="inline-flex w-full items-center justify-start gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors text-primary hover:text-destructive"
                         >

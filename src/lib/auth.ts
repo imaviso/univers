@@ -96,6 +96,7 @@ export const userSignOut = async () => {
             headers: {
                 "Content-Type": "application/json",
             },
+            credentials: "include",
         });
 
         if (!response.ok) {
