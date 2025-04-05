@@ -1,10 +1,11 @@
+import NotFound from "@/components/404NotFound";
 import { Sidebar } from "@/components/sideBar";
 import { NotificationProvider } from "@/contexts/notification-context";
 import { createFileRoute } from "@tanstack/react-router";
 import { Outlet } from "@tanstack/react-router";
-
 export const Route = createFileRoute("/app")({
     component: App,
+    notFoundComponent: () => <NotFound />,
 });
 
 function App() {
