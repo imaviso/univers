@@ -1,3 +1,4 @@
+import { getAllUsers } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import type { UserType } from "./types";
@@ -49,4 +50,12 @@ export const isAuthenticated = async (
         console.error("Error checking authentication:", error);
         return false;
     }
+};
+
+export const usersQueryOptions = {
+    queryKey: ["users"],
+    queryFn: async () => {
+        const users = await getAllUsers();
+        return users;
+    },
 };

@@ -3,7 +3,6 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import NotFound from "@/components/404NotFound";
 import { ThemeProvider } from "next-themes";
 
 // Import the generated route tree

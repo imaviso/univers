@@ -27,3 +27,22 @@ export type LoginResponse = {
     token: string;
     tokenType: string;
 };
+
+export const ROLES = [
+    "SUPER_ADMIN",
+    "ORGANIZER",
+    "EQUIPMENT_OWNER",
+    "VENUE_OWNER",
+    "VPAA",
+    "VP_ADMIN",
+];
+
+// TODO: NEEDS TO BE CHANGED TO ACTUAL DEPARTMENTS
+export const DEPARTMENTS = [
+    "IT Department",
+    "Human Resources",
+    "Marketing",
+    "Finance",
+    "Operations",
+    "Sales",
+];

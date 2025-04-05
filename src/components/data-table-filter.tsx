@@ -165,7 +165,7 @@ export function TableFilterActions<TData>({ table }: { table: Table<TData> }) {
     return (
         <Button
             className={cn("h-7 !px-2", !hasFilters && "hidden")}
-            variant="destructive"
+            variant="secondary"
             onClick={clearFilters}
         >
             <FilterXIcon />

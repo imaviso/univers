@@ -71,7 +71,6 @@ import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 // --- End Import ---
 
-// Sample user data (remains the same)
 const initialUsers = [
     {
         id: 1,
@@ -1327,6 +1326,24 @@ export function UserDataTable() {
         <DropdownMenu>...</DropdownMenu> // Column visibility can stay if DataTableFilter doesn't handle it
       </div>
       */}
+                {Object.keys(table.getState().rowSelection).length > 0 && (
+                    <Button
+                        variant="destructive"
+                        className="ml-2 h-7 !px-2"
+                        onClick={() => {
+                            const selectedRowIds = Object.keys(
+                                table.getState().rowSelection,
+                            );
+                            console.log(
+                                "Deleting rows with ids:",
+                                selectedRowIds,
+                            );
+                            // TODO: Add deletion logic here
+                        }}
+                    >
+                        Delete
+                    </Button>
+                )}
                 {/* Position it */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
