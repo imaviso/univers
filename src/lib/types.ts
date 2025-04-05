@@ -29,12 +29,12 @@ export type LoginResponse = {
 };
 
 export const ROLES = [
-    "SUPER_ADMIN",
-    "ORGANIZER",
-    "EQUIPMENT_OWNER",
-    "VENUE_OWNER",
-    "VPAA",
-    "VP_ADMIN",
+    { value: "SUPER_ADMIN", label: "Super Admin" },
+    { value: "ORGANIZER", label: "Organizer" },
+    { value: "EQUIPMENT_OWNER", label: "Equipment Owner" },
+    { value: "VENUE_OWNER", label: "Venue Owner" },
+    { value: "VPAA", label: "VPAA" },
+    { value: "VP_ADMIN", label: "VP Admin" },
 ];
 
 // TODO: NEEDS TO BE CHANGED TO ACTUAL DEPARTMENTS

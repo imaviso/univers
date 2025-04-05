@@ -52,7 +52,10 @@ function UsersComponent() {
                     onSubmit={handleAddUser}
                     roles={ROLES}
                     departments={DEPARTMENTS}
-                    active={["active", "inactive"]}
+                    active={[
+                        { value: "1", label: "Active" },
+                        { value: "0", label: "Inactive" },
+                    ]}
                 />
                 <div className="flex-1 overflow-auto p-6">
                     <UserDataTable />
