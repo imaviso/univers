@@ -58,7 +58,7 @@ export default function LoginForm() {
             console.log("Login attempt:", values);
             const res = await userSignIn(values.email, values.password);
             console.log("Login response:", res.user);
-            navigate({ to: "/app/calendar" });
+            window.location.reload();
         } catch (error) {
             const errorMessage =
                 error instanceof Error

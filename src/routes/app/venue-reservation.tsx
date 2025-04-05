@@ -1,11 +1,11 @@
 import VenueReservationForm from "@/components/venue-reservation/venueReservationForm";
-import { isAuthenticated } from "@/lib/query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
+
+const allowedRoles: string[] = ["SUPER_ADMIN", "ORGANIZER"];
 export const Route = createFileRoute("/app/venue-reservation")({
     component: VenueReservationPage,
-    beforeLoad: async ({ location }) => {
-        const auth = await isAuthenticated(["ORGANIZER", "SUPER_ADMIN"]);
-        if (!auth) {
+    beforeLoad: async ({ location, context }) => {
+        if (!allowedRoles.includes(context.role)) {
             throw redirect({
                 to: "/auth/login",
                 search: {

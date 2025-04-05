@@ -1,10 +1,16 @@
 import { Toaster } from "@/components/ui/sonner";
+// import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { userQueryOptions } from "@/lib/query";
 import type { QueryClient } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
-// import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 export const Route = createRootRouteWithContext<{
     queryClient: QueryClient;
 }>()({
+    beforeLoad: async ({ context }) => {
+        const authState =
+            await context.queryClient.ensureQueryData(userQueryOptions);
+        return authState;
+    },
     component: () => {
         return (
             <>

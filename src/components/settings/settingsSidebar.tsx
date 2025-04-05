@@ -3,6 +3,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { userSignOut } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { Query, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
     Bell,
@@ -17,6 +18,7 @@ import {
 export function SettingsSidebar() {
     const pathname = useRouterState({ select: (s) => s.location.pathname });
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const menuItems = [
         { id: "profile", label: "Profile", icon: <User className="h-4 w-4" /> },
         { id: "account", label: "Account", icon: <Lock className="h-4 w-4" /> },
@@ -35,6 +37,7 @@ export function SettingsSidebar() {
     const handleLogout = async () => {
         try {
             await userSignOut();
+            queryClient.clear();
             navigate({ to: "/auth/login" });
         } catch (error) {
             console.error("Logout error:", error);

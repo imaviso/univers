@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isAuthenticated } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import {
@@ -30,18 +29,18 @@ import {
 import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
 import { useState } from "react";
 
+const allowedRoles: string[] = [
+    "SUPER_ADMIN",
+    "ORGANIZER",
+    "VPAA",
+    "EQUIPMENT_OWNER",
+    "VENUE_OWNER",
+    "VP_ADMIN",
+];
 export const Route = createFileRoute("/app/calendar")({
     component: Calendar,
-    beforeLoad: async ({ location }) => {
-        const auth = await isAuthenticated([
-            "ORGANIZER",
-            "SUPER_ADMIN",
-            "EQUIPMENT_OWNER",
-            "VENUE_OWNER",
-            "VPAA",
-            "VP_ADMIN",
-        ]);
-        if (!auth) {
+    beforeLoad: async ({ location, context }) => {
+        if (!allowedRoles.includes(context.role)) {
             throw redirect({
                 to: "/auth/login",
                 search: {

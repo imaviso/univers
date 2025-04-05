@@ -39,15 +39,11 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+const allowedRoles: string[] = ["SUPER_ADMIN", "VP_ADMIN", "EQUIPMENT_OWNER"];
 export const Route = createFileRoute("/app/equipment-approval/approval")({
     component: EquipmentReservationApproval,
-    beforeLoad: async ({ location }) => {
-        const auth = await isAuthenticated([
-            "SUPER_ADMIN",
-            "VP_ADMIN",
-            "EQUIPMENT_OWNER",
-        ]);
-        if (!auth) {
+    beforeLoad: async ({ location, context }) => {
+        if (!allowedRoles.includes(context.role)) {
             throw redirect({
                 to: "/auth/login",
                 search: {
