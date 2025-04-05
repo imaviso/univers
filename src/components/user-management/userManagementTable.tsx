@@ -1218,12 +1218,13 @@ export const columns: ColumnDef<User>[] = [
             return <div className="text-right font-medium">{formatted}</div>;
         },
         // --- Filter Config (Optional - If your filter supports date) ---
-        // filterFn: filterFn('date'), // Assuming 'date' type exists
-        // meta: defineMeta(row => new Date(row.lastActive), { // Pass Date object if needed
-        //   displayName: 'Last Active',
-        //   type: 'date',
-        //   icon: CalendarIcon,
-        // }),
+        filterFn: filterFn("date"), // Assuming 'date' type exists
+        meta: defineMeta((row) => new Date(row.lastActive), {
+            // Pass Date object if needed
+            displayName: "Last Active",
+            type: "date",
+            icon: CalendarIcon,
+        }),
         // --- End Filter Config ---
     },
     {

@@ -1,4 +1,3 @@
-import "@tanstack/table-core";
 import type {
     AccessorFn,
     Column,
