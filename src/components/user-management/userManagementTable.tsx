@@ -67,9 +67,14 @@ import {
 // --- Import your custom filter components ---
 // Adjust the import path as necessary
 import { DataTableFilter } from "@/components/data-table-filter";
+import { editDialogAtom, selectedUserAtom } from "@/lib/atoms";
 import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
+import { set } from "date-fns";
+import { atom, useAtom } from "jotai";
 // --- End Import ---
+import { EditFormDialog } from "./editUserFormDialog";
+import { UserFormDialog } from "./userFormDialog";
 
 const initialUsers = [
     {
@@ -1232,6 +1237,8 @@ export const columns: ColumnDef<User>[] = [
         cell: ({ row }) => {
             /* Actions DropdownMenu... */
             const user = row.original;
+            const [, setEditDialogOpen] = useAtom(editDialogAtom);
+            const [, setSelectedUser] = useAtom(selectedUserAtom);
             return (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1243,9 +1250,10 @@ export const columns: ColumnDef<User>[] = [
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem
-                            onClick={() =>
-                                console.log(`Editing user: ${user.id}`)
-                            }
+                            onClick={() => {
+                                setEditDialogOpen(true);
+                                setSelectedUser(user);
+                            }}
                         >
                             Edit User
                         </DropdownMenuItem>
@@ -1281,6 +1289,8 @@ export function UserDataTable() {
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
+    const [editDialogOpen, setEditDialogOpen] = useAtom(editDialogAtom);
+    const [selectedUser, setSelectedUser] = useAtom(selectedUserAtom);
 
     const table = useReactTable({
         data,
@@ -1358,8 +1368,11 @@ export function UserDataTable() {
                             .map((column) => {
                                 // Use displayName from meta if available, otherwise format ID
                                 const displayName =
-                                    (column.columnDef.meta as any)
-                                        ?.displayName || column.id;
+                                    (
+                                        column.columnDef.meta as
+                                            | { displayName?: string }
+                                            | undefined
+                                    )?.displayName || column.id;
                                 return (
                                     <DropdownMenuCheckboxItem
                                         key={column.id}
@@ -1523,6 +1536,24 @@ export function UserDataTable() {
                     </Button>
                 </div>
             </div>
+            <EditFormDialog
+                isOpen={editDialogOpen}
+                onClose={() => {
+                    setEditDialogOpen(false);
+                    setSelectedUser(null); // Clear selected user on close
+                }}
+                onSubmit={(userData) => {
+                    // Handle the form submission (e.g., update the user data)
+                    console.log("Updated user data:", userData);
+                    setEditDialogOpen(false);
+                    setSelectedUser(null);
+                    // TODO: Implement the actual update logic here
+                }}
+                user={selectedUser!} // Pass the selected user
+                roles={ROLE_OPTIONS}
+                departments={Array.from(new Set(data.map((u) => u.department)))}
+                active={STATUS_OPTIONS}
+            />
         </div>
     );
 }

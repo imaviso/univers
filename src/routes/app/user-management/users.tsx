@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { EditFormDialog } from "@/components/user-management/editUserFormDialog";
 import { UserFormDialog } from "@/components/user-management/userFormDialog";
 import { UserDataTable } from "@/components/user-management/userManagementTable";
 import { usersQueryOptions } from "@/lib/query";
@@ -44,7 +45,7 @@ function UsersComponent() {
                     </div>
                 </header>
 
-                <UserFormDialog
+                <EditFormDialog
                     isOpen={isAddUserOpen}
                     onClose={() => {
                         setIsAddUserOpen(false);
