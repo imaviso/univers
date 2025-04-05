@@ -15,6 +15,13 @@ export type UserType = {
     department: string;
     phoneNumber: string;
 };
+export type UserRole =
+    | "SUPER_ADMIN"
+    | "VP_ADMIN"
+    | "ORGANIZER"
+    | "EQUIPMENT_OWNER"
+    | "VENUE_OWNER"
+    | "VPAA";
 
 export type LoginResponse = {
     token: string;

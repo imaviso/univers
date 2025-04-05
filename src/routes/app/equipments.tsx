@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
+import { allNavigation } from "@/lib/navigation";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
@@ -39,11 +40,25 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-const allowedRoles: string[] = ["SUPER_ADMIN", "EQUIPMENT_OWNER", "VP_ADMIN"];
 export const Route = createFileRoute("/app/equipments")({
     component: EquipmentInventory,
     beforeLoad: async ({ location, context }) => {
-        if (!allowedRoles.includes(context.role)) {
+        const navigationItem = allNavigation.find((item) => {
+            // Allow exact match or any sub-route after the base path, e.g. "/app/notifications/..."
+            return (
+                location.pathname === item.href ||
+                location.pathname.startsWith(`${item.href}/`)
+            );
+        });
+        const allowedRoles: string[] = navigationItem
+            ? navigationItem.roles
+            : [];
+        const isAuthorized =
+            "role" in context && // <-- Check if the key 'role' exists
+            context.role != null && // <-- Optional but good: ensure role isn't null/undefined
+            allowedRoles.includes(context.role);
+
+        if (!isAuthorized) {
             throw redirect({
                 to: "/auth/login",
                 search: {

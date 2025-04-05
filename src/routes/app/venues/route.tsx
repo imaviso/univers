@@ -1,15 +1,32 @@
+import { allNavigation } from "@/lib/navigation";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
-const allowedRoles: string[] = [
-    "SUPER_ADMIN",
-    "VPAA",
-    "VENUE_OWNER",
-    "VP_ADMIN",
-];
 export const Route = createFileRoute("/app/venues")({
     component: RouteComponent,
     beforeLoad: async ({ location, context }) => {
-        if (!allowedRoles.includes(context.role)) {
+        const navigationItem = allNavigation.find((item) => {
+            // Allow exact match or any sub-route after the base path.
+            if (
+                location.pathname === item.href ||
+                location.pathname.startsWith(`${item.href}/`)
+            ) {
+                return true;
+            }
+            if (item.href === "/app/venues/management") {
+                const customPathRegex = /^\/app\/venues\/\d+$/;
+                return customPathRegex.test(location.pathname);
+            }
+            return false;
+        });
+        const allowedRoles: string[] = navigationItem
+            ? navigationItem.roles
+            : [];
+        const isAuthorized =
+            "role" in context && // <-- Check if the key 'role' exists
+            context.role != null && // <-- Optional but good: ensure role isn't null/undefined
+            allowedRoles.includes(context.role);
+
+        if (!isAuthorized) {
             throw redirect({
                 to: "/auth/login",
                 search: {

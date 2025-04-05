@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { allNavigation } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import {
@@ -29,18 +30,25 @@ import {
 import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
 import { useState } from "react";
 
-const allowedRoles: string[] = [
-    "SUPER_ADMIN",
-    "ORGANIZER",
-    "VPAA",
-    "EQUIPMENT_OWNER",
-    "VENUE_OWNER",
-    "VP_ADMIN",
-];
 export const Route = createFileRoute("/app/calendar")({
     component: Calendar,
     beforeLoad: async ({ location, context }) => {
-        if (!allowedRoles.includes(context.role)) {
+        const navigationItem = allNavigation.find((item) => {
+            // Allow exact match or any sub-route after the base path, e.g. "/app/notifications/..."
+            return (
+                location.pathname === item.href ||
+                location.pathname.startsWith(`${item.href}/`)
+            );
+        });
+        const allowedRoles: string[] = navigationItem
+            ? navigationItem.roles
+            : [];
+        const isAuthorized =
+            "role" in context && // <-- Check if the key 'role' exists
+            context.role != null && // <-- Optional but good: ensure role isn't null/undefined
+            allowedRoles.includes(context.role);
+
+        if (!isAuthorized) {
             throw redirect({
                 to: "/auth/login",
                 search: {

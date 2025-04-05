@@ -6,108 +6,16 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { NotificationCenter } from "@/contexts/notification-context";
-import { userDetailsAtom } from "@/lib/atoms";
-import { isAuthenticated, useCurrentUser } from "@/lib/query";
+import { allNavigation } from "@/lib/navigation";
+import { useCurrentUser } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
-import { useAtom } from "jotai";
-import {
-    BookCheck,
-    BookText,
-    Building,
-    CalendarDays,
-    ChevronLeft,
-    Home,
-    LayoutGrid,
-    Menu,
-    Package,
-    PackageCheck,
-    PackagePlus,
-    Settings,
-    Users,
-} from "lucide-react";
+import { ChevronLeft, Menu, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
-
-const allNavigation = [
-    {
-        name: "Dashboard",
-        href: "/app/dashboard",
-        icon: Home,
-        roles: ["SUPER_ADMIN", "VP_ADMIN"],
-    },
-    {
-        name: "Calendar",
-        href: "/app/calendar",
-        icon: CalendarDays,
-        roles: [
-            "SUPER_ADMIN",
-            "ORGANIZER",
-            "EQUIPMENT_OWNER",
-            "VENUE_OWNER",
-            "VPAA",
-            "VP_ADMIN",
-        ],
-    },
-    {
-        name: "Events",
-        href: "/app/events/timeline",
-        icon: LayoutGrid,
-        roles: [
-            "SUPER_ADMIN",
-            "ORGANIZER",
-            "EQUIPMENT_OWNER",
-            "VENUE_OWNER",
-            "VPAA",
-            "VP_ADMIN",
-        ],
-    },
-    {
-        name: "Venues",
-        href: "/app/venues/management",
-        icon: Building,
-        roles: ["SUPER_ADMIN", "VENUE_OWNER", "VPAA", "VP_ADMIN"],
-    },
-    {
-        name: "Venue Approval",
-        href: "/app/venue-approval/approval",
-        icon: BookCheck,
-        roles: ["SUPER_ADMIN", "VENUE_OWNER", "VPAA", "VP_ADMIN"],
-    },
-    {
-        name: "Venue Reservation",
-        href: "/app/venue-reservation",
-        icon: BookText,
-        roles: ["SUPER_ADMIN", "ORGANIZER"],
-    },
-    {
-        name: "Users",
-        href: "/app/user-management/users",
-        icon: Users,
-        roles: ["SUPER_ADMIN"],
-    },
-    {
-        name: "Equipments",
-        href: "/app/equipments",
-        icon: Package,
-        roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER", "VP_ADMIN"],
-    },
-    {
-        name: "Equipment Approval",
-        href: "/app/equipment-approval/approval",
-        icon: PackageCheck,
-        roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER", "VP_ADMIN"],
-    },
-    {
-        name: "Equipment Reservation",
-        href: "/app/equipment-reservation",
-        icon: PackagePlus,
-        roles: ["SUPER_ADMIN", "ORGANIZER"],
-    },
-];
 
 export function Sidebar() {
     const pathname = useRouterState({ select: (s) => s.location.pathname });

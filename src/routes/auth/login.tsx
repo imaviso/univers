@@ -1,19 +1,25 @@
 import LoginForm from "@/components/auth/loginForm";
-import { isAuthenticated, useCurrentUser } from "@/lib/query";
+import { authNavigation } from "@/lib/navigation";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-
-const allowedRoles: string[] = [
-    "SUPER_ADMIN",
-    "ORGANIZER",
-    "VPAA",
-    "EQUIPMENT_OWNER",
-    "VENUE_OWNER",
-    "VP_ADMIN",
-];
 export const Route = createFileRoute("/auth/login")({
     component: LoginPage,
     beforeLoad: async ({ location, context }) => {
-        if (allowedRoles.includes(context.role)) {
+        const navigationItem = authNavigation.find((item) => {
+            // Allow exact match or any sub-route after the base path, e.g. "/app/notifications/..."
+            return (
+                location.pathname === item.href ||
+                location.pathname.startsWith(`${item.href}/`)
+            );
+        });
+        const allowedRoles: string[] = navigationItem
+            ? navigationItem.roles
+            : [];
+        const isAuthorized =
+            "role" in context && // <-- Check if the key 'role' exists
+            context.role != null && // <-- Optional but good: ensure role isn't null/undefined
+            allowedRoles.includes(context.role);
+
+        if (isAuthorized) {
             throw redirect({
                 to: "/app/calendar",
                 search: {

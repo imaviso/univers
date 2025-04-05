@@ -1,18 +1,26 @@
 import { SettingsSidebar } from "@/components/settings/settingsSidebar";
+import { settingsNavigation } from "@/lib/navigation";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
-const allowedRoles: string[] = [
-    "SUPER_ADMIN",
-    "ORGANIZER",
-    "VPAA",
-    "EQUIPMENT_OWNER",
-    "VENUE_OWNER",
-    "VP_ADMIN",
-];
 export const Route = createFileRoute("/app/settings")({
     component: Settings,
     beforeLoad: async ({ location, context }) => {
-        if (!allowedRoles.includes(context.role)) {
+        const navigationItem = settingsNavigation.find((item) => {
+            // Allow exact match or any sub-route after the base path, e.g. "/app/notifications/..."
+            return (
+                location.pathname === item.href ||
+                location.pathname.startsWith(`${item.href}/`)
+            );
+        });
+        const allowedRoles: string[] = navigationItem
+            ? navigationItem.roles
+            : [];
+        const isAuthorized =
+            "role" in context && // <-- Check if the key 'role' exists
+            context.role != null && // <-- Optional but good: ensure role isn't null/undefined
+            allowedRoles.includes(context.role);
+
+        if (!isAuthorized) {
             throw redirect({
                 to: "/auth/login",
                 search: {
