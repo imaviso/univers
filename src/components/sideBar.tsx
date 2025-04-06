@@ -69,7 +69,12 @@ export function Sidebar() {
                                     to="/"
                                     className="flex items-center font-semibold"
                                 >
-                                    <span className="text-lg">UniVERS</span>
+                                    <span className="text-primary">Uni</span>
+                                    <span className="relative">
+                                        <span className="bg-primary text-white px-1">
+                                            VERS
+                                        </span>
+                                    </span>
                                 </Link>
                             )}
                             <div
@@ -106,30 +111,55 @@ export function Sidebar() {
                     <div className="flex-1 border-r">
                         <ScrollArea className="flex-1 px-2 py-4">
                             <div className="space-y-1">
-                                {navigation.map((item) => (
-                                    <Link
-                                        key={item.name}
-                                        to={item.href}
-                                        className={cn(
-                                            "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                                            pathname === item.href
-                                                ? "bg-primary text-primary-foreground"
-                                                : "text-foreground hover:bg-secondary hover:text-secondary-foreground",
-                                            isCollapsed &&
-                                                "justify-center px-2",
-                                        )}
-                                    >
-                                        <item.icon
+                                {navigation.map((item) =>
+                                    isCollapsed ? (
+                                        <Tooltip
+                                            key={item.name}
+                                            delayDuration={700}
+                                        >
+                                            <TooltipTrigger asChild>
+                                                <Link
+                                                    to={item.href}
+                                                    className={cn(
+                                                        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                                                        pathname === item.href
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "text-foreground hover:bg-secondary hover:text-secondary-foreground",
+                                                        "justify-center px-2",
+                                                    )}
+                                                >
+                                                    <item.icon className="h-4 w-4" />
+                                                </Link>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="right">
+                                                {item.name}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    ) : (
+                                        <Link
+                                            key={item.name}
+                                            to={item.href}
                                             className={cn(
-                                                "h-4 w-4",
-                                                !isCollapsed && "mr-1",
+                                                "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                                                pathname === item.href
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "text-foreground hover:bg-secondary hover:text-secondary-foreground",
+                                                isCollapsed &&
+                                                    "justify-center px-2",
                                             )}
-                                        />
-                                        {!isCollapsed && (
-                                            <span>{item.name}</span>
-                                        )}
-                                    </Link>
-                                ))}
+                                        >
+                                            <item.icon
+                                                className={cn(
+                                                    "h-4 w-4",
+                                                    !isCollapsed && "mr-1",
+                                                )}
+                                            />
+                                            {!isCollapsed && (
+                                                <span>{item.name}</span>
+                                            )}
+                                        </Link>
+                                    ),
+                                )}
                             </div>
                             <Separator className="my-4" />
                         </ScrollArea>
@@ -137,23 +167,39 @@ export function Sidebar() {
                     {isCollapsed ? (
                         <div className="flex flex-col gap-1 border-t border-r border-border p-4">
                             <div className="flex justify-center">
-                                <NotificationCenter />
+                                <Tooltip delayDuration={700}>
+                                    <TooltipTrigger asChild>
+                                        <div>
+                                            <NotificationCenter />
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">
+                                        Notifications
+                                    </TooltipContent>
+                                </Tooltip>
                             </div>
                             <div className="flex justify-center">
-                                <Link
-                                    to="/app/settings"
-                                    className={cn(
-                                        buttonVariants({
-                                            variant: "ghost",
-                                            size: "icon",
-                                        }),
-                                    )}
-                                >
-                                    <Settings className="h-4 w-4" />
-                                </Link>
+                                <Tooltip delayDuration={700}>
+                                    <TooltipTrigger asChild>
+                                        <Link
+                                            to="/app/settings"
+                                            className={cn(
+                                                buttonVariants({
+                                                    variant: "ghost",
+                                                    size: "icon",
+                                                }),
+                                            )}
+                                        >
+                                            <Settings className="h-4 w-4" />
+                                        </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">
+                                        Settings
+                                    </TooltipContent>
+                                </Tooltip>
                             </div>
                             <div className="flex justify-center">
-                                <Tooltip delayDuration={0}>
+                                <Tooltip delayDuration={700}>
                                     <TooltipTrigger asChild>
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src="/placeholder.svg?height=32&width=32" />
@@ -176,7 +222,7 @@ export function Sidebar() {
                         </div>
                     ) : (
                         <div className="flex items-center border-t border-r border-border gap-2 p-4">
-                            <Tooltip delayDuration={0}>
+                            <Tooltip delayDuration={700}>
                                 <TooltipTrigger asChild>
                                     <div className="flex items-center gap-2">
                                         <Avatar className="h-8 w-8">
