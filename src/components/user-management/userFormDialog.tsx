@@ -23,11 +23,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
-// Update the form schema to include ID Number
 const formSchema = z
     .object({
         firstName: z.string().min(2, {
@@ -53,8 +52,9 @@ const formSchema = z
             })
             .regex(/[0-9]/, {
                 message: "Password must contain at least one number",
-            }),
-        confirmPassword: z.string(),
+            })
+            .optional(),
+        confirmPassword: z.string().optional(),
         role: z.string({
             required_error: "Please select a role.",
         }),
@@ -79,23 +79,27 @@ const formSchema = z
 interface UserFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (userData: {
+    onSubmit: (
+        userData: Partial<{
+            idNumber: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            password: string;
+            confirmPassword: string;
+            role: string;
+            department: string;
+            phoneNumber: string;
+            active: string;
+        }>,
+    ) => void;
+    user?: {
         idNumber: string;
         firstName: string;
         lastName: string;
         email: string;
-        password: string;
-        confirmPassword: string;
-        role: string;
-        department: string;
-        phoneNumber: string;
-        active: string;
-    }) => void;
-    user?: {
-        id: string;
-        firstName: string;
-        lastName: string;
-        email: string;
+        // password: string;
+        // confirmPassword: string;
         role: string;
         department: string;
         phoneNumber: string;
@@ -115,133 +119,12 @@ export function UserFormDialog({
     departments,
     active,
 }: UserFormDialogProps) {
-    const [formData, setFormData] = useState({
-        idNumber: "",
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        role: "",
-        department: "",
-        phoneNumber: "",
-        active: "",
-    });
-
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    // Reset form when dialog opens/closes or user changes
-    useEffect(() => {
-        if (isOpen) {
-            if (user) {
-                setFormData({
-                    idNumber: user.id,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    email: user.email,
-                    password: "",
-                    confirmPassword: "",
-                    role: user.role,
-                    department: user.department,
-                    phoneNumber: user.phoneNumber,
-                    active: user.active,
-                });
-            } else {
-                setFormData({
-                    idNumber: "",
-                    firstName: "",
-                    lastName: "",
-                    email: "",
-                    password: "",
-                    confirmPassword: "",
-                    role: "",
-                    department: "",
-                    phoneNumber: "",
-                    active: "",
-                });
-            }
-            setErrors({});
-        }
-    }, [isOpen, user]);
-
-    const handleChange = (field: string, value: string) => {
-        setFormData({ ...formData, [field]: value });
-
-        // Clear error for this field if it exists
-        if (errors[field]) {
-            const newErrors = { ...errors };
-            delete newErrors[field];
-            setErrors(newErrors);
-        }
-    };
-
-    const validateForm = () => {
-        const newErrors: Record<string, string> = {};
-
-        if (!formData.firstName.trim()) {
-            newErrors.firstName = "First Name is required";
-        }
-
-        if (!formData.lastName.trim()) {
-            newErrors.lastName = "Last Name is required";
-        }
-
-        if (!formData.email.trim()) {
-            newErrors.email = "Email is required";
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = "Email is invalid";
-        }
-
-        if (!formData.password.trim()) {
-            newErrors.password = "Password is required";
-        } else if (formData.password.length < 8) {
-            newErrors.password = "Password must be at least 8 characters";
-        } else if (!/[A-Z]/.test(formData.password)) {
-            newErrors.password =
-                "Password must contain at least one uppercase letter";
-        } else if (!/[a-z]/.test(formData.password)) {
-            newErrors.password =
-                "Password must contain at least one lowercase letter";
-        } else if (!/[0-9]/.test(formData.password)) {
-            newErrors.password = "Password must contain at least one number";
-        }
-
-        if (!formData.role) {
-            newErrors.role = "Role is required";
-        }
-
-        if (!formData.department) {
-            newErrors.department = "Department is required";
-        }
-
-        if (!formData.idNumber.trim()) {
-            newErrors.idNumber = "ID Number is required";
-        }
-
-        if (!formData.phoneNumber.trim()) {
-            newErrors.phoneNumber = "Phone Number is required";
-        }
-
-        if (!formData.active) {
-            newErrors.active = "Status is required";
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = () => {
-        if (validateForm()) {
-            onSubmit(formData);
-        }
-    };
-
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
+            idNumber: user?.idNumber || "",
             firstName: user?.firstName || "",
             lastName: user?.lastName || "",
-            idNumber: "",
             email: user?.email || "",
             password: "",
             confirmPassword: "",
@@ -250,7 +133,14 @@ export function UserFormDialog({
             phoneNumber: user?.phoneNumber || "",
             active: user?.active || "",
         },
+        mode: "onChange",
     });
+
+    useEffect(() => {
+        if (user && isOpen) {
+            form.reset(user);
+        }
+    }, [user, isOpen, form]);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -389,7 +279,6 @@ export function UserFormDialog({
                                 </FormItem>
                             )}
                         />
-
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
@@ -497,6 +386,7 @@ export function UserFormDialog({
                         </Button>
                         <Button
                             type="submit"
+                            disabled={!form.formState.isValid}
                             onClick={form.handleSubmit(onSubmit)}
                         >
                             {user ? "Save changes" : "Create"}

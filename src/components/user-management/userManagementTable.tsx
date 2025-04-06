@@ -72,9 +72,8 @@ import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 import { set } from "date-fns";
 import { atom, useAtom } from "jotai";
-// --- End Import ---
-import { EditFormDialog } from "./editUserFormDialog";
 import { UserFormDialog } from "./userFormDialog";
+// --- End Import ---
 
 const initialUsers = [
     {
@@ -1536,7 +1535,7 @@ export function UserDataTable() {
                     </Button>
                 </div>
             </div>
-            <EditFormDialog
+            <UserFormDialog
                 isOpen={editDialogOpen}
                 onClose={() => {
                     setEditDialogOpen(false);
