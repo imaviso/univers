@@ -1,4 +1,3 @@
-import { SettingsSidebar } from "@/components/settings/settingsSidebar";
 import { settingsNavigation } from "@/lib/navigation";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
@@ -34,7 +33,6 @@ export const Route = createFileRoute("/app/settings")({
 function Settings() {
     return (
         <div className="flex h-screen overflow-y-hidden">
-            <SettingsSidebar />
             <div className="flex-1 relative flex h-full w-full flex-col overflow-y-auto overflow-x-hidden">
                 <div className="items-center justify-between px-6 py-4">
                     <Outlet />

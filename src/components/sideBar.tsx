@@ -1,17 +1,27 @@
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { NotificationCenter } from "@/contexts/notification-context";
+import { userSignOut } from "@/lib/auth";
 import { allNavigation } from "@/lib/navigation";
 import { useCurrentUser } from "@/lib/query";
 import { cn } from "@/lib/utils";
-import { Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
-import { ChevronLeft, Menu, Settings } from "lucide-react";
+import { Bell, ChevronLeft, LogOut, Menu, Settings, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
@@ -23,6 +33,8 @@ export function Sidebar() {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const { data: user, isLoading, isError } = useCurrentUser();
     const [navigation, setNavigation] = useState(allNavigation);
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const initials = user
         ? `${user.firstName?.charAt(0)}${user.lastName?.charAt(0)}`
         : "UV"; // Default initials
@@ -35,6 +47,16 @@ export function Sidebar() {
             setNavigation(filteredNavigation);
         }
     }, [user]);
+
+    const handleLogout = async () => {
+        try {
+            await userSignOut();
+            queryClient.clear();
+            navigate({ to: "/auth/login" });
+        } catch (error) {
+            console.error("Logout error:", error);
+        }
+    };
 
     return (
         <TooltipProvider>
@@ -179,24 +201,71 @@ export function Sidebar() {
                                 </Tooltip>
                             </div>
                             <div className="flex justify-center">
-                                <Tooltip delayDuration={700}>
-                                    <TooltipTrigger asChild>
-                                        <Link
-                                            to="/app/settings"
-                                            className={cn(
-                                                buttonVariants({
-                                                    variant: "ghost",
-                                                    size: "icon",
-                                                }),
-                                            )}
+                                <DropdownMenu>
+                                    <Tooltip delayDuration={700}>
+                                        <TooltipTrigger asChild>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                >
+                                                    <Settings className="h-4 w-4" />
+                                                    <span className="sr-only">
+                                                        Settings
+                                                    </span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right">
+                                            Settings
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <DropdownMenuContent
+                                        align="end"
+                                        className="w-56"
+                                    >
+                                        <DropdownMenuLabel>
+                                            Settings
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <Link
+                                                to="/app/settings/profile"
+                                                className="flex w-full items-center gap-2"
+                                            >
+                                                <User className="h-4 w-4" />
+                                                <span>Profile</span>
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                            <Link
+                                                to="/app/settings/account"
+                                                className="flex w-full items-center gap-2"
+                                            >
+                                                <Settings className="h-4 w-4" />
+                                                <span>Account</span>
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                            <Link
+                                                to="/app/settings/notifications"
+                                                className="flex w-full items-center gap-2"
+                                            >
+                                                <Bell className="h-4 w-4" />
+                                                <span>Notifications</span>
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            className="text-destructive focus:text-destructive cursor-pointer"
+                                            onClick={handleLogout}
                                         >
-                                            <Settings className="h-4 w-4" />
-                                        </Link>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right">
-                                        Settings
-                                    </TooltipContent>
-                                </Tooltip>
+                                            <LogOut className="h-4 w-4 mr-2" />
+                                            <span>Logout</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                             <div className="flex justify-center">
                                 <Tooltip delayDuration={700}>
@@ -243,18 +312,64 @@ export function Sidebar() {
                                     </div>
                                 </TooltipTrigger>
                             </Tooltip>
-                            <Link
-                                to="/app/settings"
-                                className={cn(
-                                    buttonVariants({
-                                        variant: "ghost",
-                                        size: "icon",
-                                    }),
-                                    "ml-auto",
-                                )}
-                            >
-                                <Settings className="h-4 w-4" />
-                            </Link>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="ml-auto h-8 w-8"
+                                    >
+                                        <Settings className="h-4 w-4" />
+                                        <span className="sr-only">
+                                            Settings
+                                        </span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    align="end"
+                                    className="w-56"
+                                >
+                                    <DropdownMenuLabel>
+                                        Settings
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem asChild>
+                                        <Link
+                                            to="/app/settings/profile"
+                                            className="flex w-full items-center gap-2"
+                                        >
+                                            <User className="h-4 w-4" />
+                                            <span>Profile</span>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                        <Link
+                                            to="/app/settings/account"
+                                            className="flex w-full items-center gap-2"
+                                        >
+                                            <Settings className="h-4 w-4" />
+                                            <span>Account</span>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                        <Link
+                                            to="/app/settings/notifications"
+                                            className="flex w-full items-center gap-2"
+                                        >
+                                            <Bell className="h-4 w-4" />
+                                            <span>Notifications</span>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive cursor-pointer"
+                                        onClick={handleLogout}
+                                    >
+                                        <LogOut className="h-4 w-4 mr-2" />
+                                        <span>Logout</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     )}
                 </div>
