@@ -14,7 +14,10 @@ export type UserType = {
         | "VP_ADMIN";
     department: string;
     phoneNumber: string;
-    active: string;
+    emailVerified: boolean;
+    active: boolean;
+    createdAt: string;
+    updatedAt: string;
 };
 export type UserRole =
     | "SUPER_ADMIN"

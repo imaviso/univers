@@ -25,7 +25,7 @@ export const getAllUsers = async () => {
             throw new Error(errorMessage);
         }
 
-        return await response.text();
+        return await response.json();
     } catch (error) {
         // Re-throw the error with the specific message
         throw error instanceof Error

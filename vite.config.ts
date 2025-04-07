@@ -12,7 +12,7 @@ export default defineConfig({
         biomePlugin({
             mode: "check",
             files: "./src",
-            applyFixes: true,
+            applyFixes: false,
         }),
         react(),
         tailwindcss(),

@@ -3,10 +3,10 @@ import { UserFormDialog } from "@/components/user-management/userFormDialog";
 import { UserDataTable } from "@/components/user-management/userManagementTable";
 import { usersQueryOptions } from "@/lib/query";
 import { DEPARTMENTS, ROLES } from "@/lib/types";
+import type { UserType } from "@/lib/types";
 import { createFileRoute } from "@tanstack/react-router";
 import { UserPlus } from "lucide-react";
 import { useState } from "react";
-
 export const Route = createFileRoute("/app/user-management/users")({
     component: UsersComponent,
     loader: async ({ context: { queryClient } }) => {
@@ -16,9 +16,9 @@ export const Route = createFileRoute("/app/user-management/users")({
 
 function UsersComponent() {
     const [isAddUserOpen, setIsAddUserOpen] = useState(false);
-    const [, setUsers] = useState<any[]>([]);
+    const [, setUsers] = useState<UserType[]>([]);
 
-    const handleAddUser = (userData: any) => {
+    const handleAddUser = (userData: UserType) => {
         const newUser = {
             ...userData,
         };
