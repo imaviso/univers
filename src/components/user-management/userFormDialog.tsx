@@ -29,6 +29,7 @@ import * as z from "zod";
 
 const formSchema = z
     .object({
+        id: z.string().optional(),
         firstName: z.string().min(2, {
             message: "First Name must be at least 2 characters.",
         }),
@@ -67,9 +68,8 @@ const formSchema = z
                 message: "Please enter a valid phone number",
             })
             .min(11, { message: "Phone number must be 11 digits" }),
-        active: z.string({
-            required_error: "Please select a status.",
-        }),
+        active: z.boolean(),
+        emailVerified: z.boolean().optional(),
     })
     .refine((data) => data.password === data.confirmPassword, {
         message: "Passwords do not match",
@@ -81,6 +81,7 @@ interface UserFormDialogProps {
     onClose: () => void;
     onSubmit: (
         userData: Partial<{
+            id: string;
             idNumber: string;
             firstName: string;
             lastName: string;
@@ -90,20 +91,22 @@ interface UserFormDialogProps {
             role: string;
             department: string;
             phoneNumber: string;
-            active: string;
+            active: boolean;
         }>,
     ) => void;
     user?: {
+        id: string;
         idNumber: string;
         firstName: string;
         lastName: string;
         email: string;
-        // password: string;
-        // confirmPassword: string;
+        password: string;
+        confirmPassword: string;
         role: string;
         department: string;
         phoneNumber: string;
-        active: string;
+        active: boolean;
+        emailVerified: boolean;
     };
     roles: { value: string; label: string }[];
     departments: string[];
@@ -122,6 +125,7 @@ export function UserFormDialog({
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
+            id: user?.id || "",
             idNumber: user?.idNumber || "",
             firstName: user?.firstName || "",
             lastName: user?.lastName || "",
@@ -131,7 +135,8 @@ export function UserFormDialog({
             role: user?.role || "",
             department: user?.department || "",
             phoneNumber: user?.phoneNumber || "",
-            active: user?.active || "",
+            active: user?.active,
+            emailVerified: user?.emailVerified 
         },
         mode: "onChange",
     });
@@ -350,7 +355,7 @@ export function UserFormDialog({
                             name="active"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Status</FormLabel>
+                                    <FormLabel>Active</FormLabel>
                                     <Select
                                         onValueChange={field.onChange}
                                         defaultValue={field.value}

@@ -1,6 +1,7 @@
 export const isAuthenticated = !!localStorage.getItem("token");
 
 export type UserType = {
+    id: string;
     idNumber: string;
     firstName: string;
     lastName: string;

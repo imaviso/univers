@@ -24,7 +24,7 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
-    FingerprintIcon, // Icon for ID Number
+    FingerprintIcon, IdCardIcon, // Icon for ID Number
     ListFilterIcon, // Generic Filter Icon or for Status
     MoreHorizontal,
     UserIcon, // Icon for User Name
@@ -72,11 +72,13 @@ import { editDialogAtom, selectedUserAtom } from "@/lib/atoms";
 import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 import { usersQueryOptions } from "@/lib/query";
-import type { UserType } from "@/lib/types";
+import { DEPARTMENTS, ROLES, type UserType } from "@/lib/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { set } from "date-fns";
 import { atom, useAtom } from "jotai";
 import { UserFormDialog } from "./userFormDialog";
+import { updateUser } from "@/lib/api";
+import { toast } from "sonner";
 // --- End Import ---
 
 // The main DataTable component
@@ -97,8 +99,6 @@ export function UserDataTable() {
         data: initialUsers,
     } = useQuery(usersQueryOptions);
 
-    console.log(initialUsers);
-
     if (isLoading) {
         return <div>Loading users...</div>;
     }
@@ -107,25 +107,75 @@ export function UserDataTable() {
         return <div>Error loading users</div>;
     }
 
-    // --- Define Options for Filters ---
+    const handleDeactivateUser = (userId: string) => {
+        // Logic to deactivate user
+        console.log(`Deactivating user with ID: ${userId}`);
+    };
 
-    const STATUS_OPTIONS = React.useMemo(
-        () => [
-            { value: true, label: "Active", icon: CheckCircleIcon },
-            { value: false, label: "Inactive", icon: XCircleIcon },
-        ],
-        [],
-    );
+    const handleEditUser = (userId: string) => {
+        try {
+            updateUser(userId, selectedUser);
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred";
+            toast.error(errorMessage);
+        }
+    };
+
+    // --- Define Options for Filters ---
+    const ACTIVE_OPTIONS = React.useMemo(() => {
+        // Handle potential null/undefined initialUsers
+        const users = initialUsers || [];
+
+        // 1. Get unique boolean active states present in the users array
+        //    Map directly to the boolean `active` property.
+        const uniqueActiveStates = Array.from(
+            new Set(users.map((u: UserType) => u.active)), // Result: e.g., [true], [false], [true, false]
+        );
+
+        // 2. Map these unique boolean states to the desired option objects
+        const options = uniqueActiveStates.map((isActive: boolean) => ({
+            value: isActive, // Convert boolean to string ("true" or "false") for the value
+            label: isActive ? "True" : "False",
+            icon: isActive ? CheckCircleIcon : XCircleIcon,
+        }));
+
+        // 4. Return the array of option objects directly
+        return options;
+    }, [initialUsers]);
+
+    const VERIFIED_OPTIONS = React.useMemo(() => {
+        // Handle potential null/undefined initialUsers
+        const users = initialUsers || [];
+
+        // 1. Get unique boolean active states present in the users array
+        //    Map directly to the boolean `active` property.
+        const uniqueVerifiedStates = Array.from(
+            new Set(users.map((u: UserType) => u.emailVerified)), // Result: e.g., [true], [false], [true, false]
+        );
+
+        // 2. Map these unique boolean states to the desired option objects
+        const options = uniqueVerifiedStates.map((isVerified: boolean) => ({
+            value: isVerified, // Convert boolean to string ("true" or "false") for the value
+            label: isVerified ? "True" : "False",
+            icon: isVerified ? CheckCircleIcon : XCircleIcon,
+        })); 
+
+        // 4. Return the array of option objects directly
+        return options;
+    }, [initialUsers]);
 
     // Dynamically generate options or define manually if fixed
     const ROLE_OPTIONS = React.useMemo(
         () =>
-            Array.from(new Set(initialUsers?.map((u) => u.role) || [])).map(
-                (role) => ({
-                    value: role,
-                    label: role,
-                }),
-            ),
+            Array.from(
+                new Set(initialUsers?.map((u: UserType) => u.role) || []),
+            ).map((role) => ({
+                value: role,
+                label: role,
+            })),
         [initialUsers],
     );
 
@@ -147,7 +197,6 @@ export function UserDataTable() {
         () => [
             {
                 id: "select",
-                // Header and Cell remain the same...
                 header: ({ table }) => (
                     <Checkbox
                         checked={
@@ -171,9 +220,8 @@ export function UserDataTable() {
                 enableSorting: false,
                 enableHiding: false,
             },
-            // Fix the name column to use firstName and lastName
             {
-                accessorKey: "name", // This remains for consistency but we'll use firstName+lastName
+                accessorKey: "name",
                 header: ({ column }) => (
                     <Button
                         variant="ghost"
@@ -186,7 +234,6 @@ export function UserDataTable() {
                     </Button>
                 ),
                 cell: ({ row }) => {
-                    /* User Avatar/Name/Email cell... */
                     const user = row.original;
                     const fullName = `${user.firstName} ${user.lastName}`;
                     const getInitials = () => {
@@ -217,6 +264,19 @@ export function UserDataTable() {
                     type: "text",
                     icon: UserIcon,
                 }),
+            },
+         {
+                accessorKey: "id",
+                header: "User ID",
+                cell: ({ row }) => <div>{row.getValue("id")}</div>,
+                // --- Filter Config ---
+                filterFn: filterFn("text"),
+                meta: defineMeta((row) => row.id, {
+                    displayName: "User ID",
+                    type: "text",
+                    icon: IdCardIcon,
+                }),
+                // --- End Filter Config ---
             },
             {
                 accessorKey: "idNumber",
@@ -253,11 +313,11 @@ export function UserDataTable() {
                     displayName: "Role",
                     type: "option",
                     icon: UsersIcon,
-                    options: ROLE_OPTIONS, // Provide the predefined options
+                    options: ROLE_OPTIONS, 
                 }),
                 // --- End Filter Config ---
             },
-           {
+            {
                 accessorKey: "phoneNumber",
                 header: ({ column }) => (
                     <Button
@@ -312,7 +372,7 @@ export function UserDataTable() {
                 header: "Verified",
                 cell: ({ row }) => {
                     const emailVerified = row.original.emailVerified;
-                    const status = emailVerified ? "Verified" : "Not Verified";
+                    const status = emailVerified ? "true" : "false";
                     return (
                         <Badge
                             variant={emailVerified ? "default" : "outline"}
@@ -323,14 +383,17 @@ export function UserDataTable() {
                     );
                 },
                 filterFn: filterFn("option"),
-                meta: defineMeta((row) => row.emailVerified, {
-                    displayName: "Verified",
-                    type: "option",
-                    icon: VerifiedIcon,
-                    options: STATUS_OPTIONS,
-                }),
+                meta: defineMeta(
+                    (row) => (row.emailVerified ? "true" : "false"),
+                    {
+                        displayName: "Verified",
+                        type: "option",
+                        icon: VerifiedIcon,
+                        options: VERIFIED_OPTIONS,
+                    },
+                ),
             },
-          {
+            {
                 accessorKey: "active", // Virtual column
                 header: "Active",
                 cell: ({ row }) => {
@@ -338,9 +401,7 @@ export function UserDataTable() {
                     const status = statusActive ? "true" : "false";
                     return (
                         <Badge
-                            variant={
-                                status === "true" ? "default" : "outline"
-                            }
+                            variant={status ? "default" : "outline"}
                             className="capitalize"
                         >
                             {status}
@@ -348,21 +409,16 @@ export function UserDataTable() {
                     );
                 },
                 filterFn: filterFn("option"),
-                meta: defineMeta(
-                    (row) => (row.emailVerified ? "true" : "false"),
-                    {
-                        displayName: "Status",
-                        type: "option",
-                        icon: ListFilterIcon,
-                        options: STATUS_OPTIONS,
-                    },
-                ),
+                meta: defineMeta((row) => (row.active ? "true" : "false"), {
+                    displayName: "Active",
+                    type: "option",
+                    icon: ListFilterIcon,
+                    options: ACTIVE_OPTIONS,
+                }),
             },
-            // Fix the date-related column and other fields based on your actual user object
 
-            // Replace the problematic lastActive column with createdAt
             {
-                accessorKey: "createdAt", // Changed from lastActive to createdAt
+                accessorKey: "createdAt", 
                 header: ({ column }) => (
                     <div className="text-right">
                         <Button
@@ -374,7 +430,6 @@ export function UserDataTable() {
                             }
                         >
                             Created At{" "}
-                            {/* Changed from Last Active to Created At */}
                             <ArrowUpDown className="ml-2 h-4 w-4" />
                         </Button>
                     </div>
@@ -437,7 +492,7 @@ export function UserDataTable() {
                         }
                     },
                     {
-                        displayName: "Created At", // Changed from Last Active to Created At
+                        displayName: "Created At", 
                         type: "date",
                         icon: CalendarIcon,
                     },
@@ -445,7 +500,6 @@ export function UserDataTable() {
             },
             {
                 id: "actions",
-                // Cell remains the same...
                 cell: ({ row }) => {
                     /* Actions DropdownMenu... */
                     const user = row.original;
@@ -496,7 +550,7 @@ export function UserDataTable() {
                 enableHiding: false, // Keep actions always visible
             },
         ],
-        [ROLE_OPTIONS, DEPARTMENT_OPTIONS, STATUS_OPTIONS],
+        [ROLE_OPTIONS, DEPARTMENT_OPTIONS, ACTIVE_OPTIONS, VERIFIED_OPTIONS],
     );
 
     const table = useReactTable({
@@ -752,16 +806,15 @@ export function UserDataTable() {
                 onSubmit={(userData) => {
                     // Handle the form submission (e.g., update the user data)
                     console.log("Updated user data:", userData);
+                    updateUser(userData) 
                     setEditDialogOpen(false);
                     setSelectedUser(null);
                     // TODO: Implement the actual update logic here
                 }}
                 user={selectedUser!} // Pass the selected user
-                roles={ROLE_OPTIONS}
-                departments={Array.from(
-                    new Set(initialUsers?.map((u) => u.department) || []),
-                )}
-                active={STATUS_OPTIONS}
+                roles={ROLES}
+                departments={DEPARTMENTS}
+                active={ACTIVE_OPTIONS}
             />
         </div>
     );
