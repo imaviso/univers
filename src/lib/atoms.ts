@@ -48,3 +48,4 @@ export const userDetailsAtom = atom<UserDetails>(initialUserDetails);
 
 export const editDialogAtom = atom(false);
 export const selectedUserAtom = atom<UserType | null>(null);
+export const deleteDialogAtom = atom(false);

@@ -69,8 +69,12 @@ import {
 // --- Import your custom filter components ---
 // Adjust the import path as necessary
 import { DataTableFilter } from "@/components/data-table-filter";
-import { updateUser } from "@/lib/api";
-import { editDialogAtom, selectedUserAtom } from "@/lib/atoms";
+import { deactivateUser, updateUser } from "@/lib/api";
+import {
+    deleteDialogAtom,
+    editDialogAtom,
+    selectedUserAtom,
+} from "@/lib/atoms";
 import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 import { usersQueryOptions } from "@/lib/query";
@@ -81,6 +85,7 @@ import { atom, useAtom } from "jotai";
 import { toast } from "sonner";
 import { EditUserFormDialog } from "./editUserFormDialog";
 import { UserFormDialog } from "./userFormDialog";
+import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 // --- End Import ---
 
 // The main DataTable component
@@ -92,6 +97,7 @@ export function UserDataTable() {
         React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
     const [editDialogOpen, setEditDialogOpen] = useAtom(editDialogAtom);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useAtom(deleteDialogAtom);
     const [selectedUser, setSelectedUser] = useAtom(selectedUserAtom);
 
     const queryClient = useQueryClient();
@@ -109,9 +115,37 @@ export function UserDataTable() {
         return <div>Error loading users</div>;
     }
 
-    const handleDeactivateUser = (userId: string) => {
-        // Logic to deactivate user
-        console.log(`Deactivating user with ID: ${userId}`);
+    const handleDeactivateUser = (userData: Partial<UserType>) => {
+        console.log("Deactivating user:", userData);
+
+        // Make sure we have all the required fields from the original user
+        if (!selectedUser) {
+            toast.error("No user selected");
+            return;
+        }
+
+        // Create updated user data with active explicitly set to false
+        const updatedUserData: UserType = {
+            ...selectedUser,
+            ...userData,
+            active: false, // Force the active status to false regardless of input
+            updatedAt: new Date().toISOString(), // Also update the timestamp
+        };
+
+        deactivateUser(updatedUserData)
+            .then(() => {
+                toast.success("User deactivated successfully");
+                queryClient.invalidateQueries(usersQueryOptions);
+            })
+            .catch((error) => {
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to deactivate user";
+                toast.error(errorMessage);
+            });
+        setDeleteDialogOpen(false);
+        setSelectedUser(null);
     };
 
     const handleEditUser = (userData: Partial<UserType>) => {
@@ -522,6 +556,7 @@ export function UserDataTable() {
                     const user = row.original;
                     const [, setEditDialogOpen] = useAtom(editDialogAtom);
                     const [, setSelectedUser] = useAtom(selectedUserAtom);
+                    const [, setDeleteDialogOpen] = useAtom(deleteDialogAtom);
                     return (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -552,11 +587,10 @@ export function UserDataTable() {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     className="text-destructive"
-                                    onClick={() =>
-                                        console.log(
-                                            `Deactivating user: ${user.id}`,
-                                        )
-                                    }
+                                    onClick={() => {
+                                        setDeleteDialogOpen(true);
+                                        setSelectedUser(user);
+                                    }}
                                 >
                                     Deactivate User
                                 </DropdownMenuItem>
@@ -825,6 +859,18 @@ export function UserDataTable() {
                 user={selectedUser!} // Pass the selected user
                 roles={ROLES}
                 departments={DEPARTMENTS}
+            />
+            <DeleteConfirmDialog
+                isOpen={deleteDialogOpen}
+                onClose={() => {
+                    setDeleteDialogOpen(false);
+                    setSelectedUser(null); // Clear selected user on close
+                }}
+                title="Deactivate User"
+                description="Are you sure you want to deactivate this user?"
+                onConfirm={() => {
+                    handleDeactivateUser({});
+                }}
             />
         </div>
     );
