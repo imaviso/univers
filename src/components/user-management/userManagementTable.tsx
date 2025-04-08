@@ -24,7 +24,8 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
-    FingerprintIcon, IdCardIcon, // Icon for ID Number
+    FingerprintIcon,
+    IdCardIcon, // Icon for ID Number
     ListFilterIcon, // Generic Filter Icon or for Status
     MoreHorizontal,
     UserIcon, // Icon for User Name
@@ -68,6 +69,7 @@ import {
 // --- Import your custom filter components ---
 // Adjust the import path as necessary
 import { DataTableFilter } from "@/components/data-table-filter";
+import { updateUser } from "@/lib/api";
 import { editDialogAtom, selectedUserAtom } from "@/lib/atoms";
 import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
@@ -76,9 +78,9 @@ import { DEPARTMENTS, ROLES, type UserType } from "@/lib/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { set } from "date-fns";
 import { atom, useAtom } from "jotai";
-import { UserFormDialog } from "./userFormDialog";
-import { updateUser } from "@/lib/api";
 import { toast } from "sonner";
+import { EditUserFormDialog } from "./editUserFormDialog";
+import { UserFormDialog } from "./userFormDialog";
 // --- End Import ---
 
 // The main DataTable component
@@ -112,18 +114,34 @@ export function UserDataTable() {
         console.log(`Deactivating user with ID: ${userId}`);
     };
 
-    const handleEditUser = (userId: string) => {
-        try {
-            updateUser(userId, selectedUser);
-        } catch (error) {
-            const errorMessage =
-                error instanceof Error
-                    ? error.message
-                    : "An unexpected error occurred";
-            toast.error(errorMessage);
+    const handleEditUser = (userData: Partial<UserType>) => {
+        console.log("Updated user data:", userData);
+        // Make sure we have all the required fields from the original user
+        if (!selectedUser) {
+            toast.error("No user selected");
+            return;
         }
-    };
+        const updatedUserData: UserType = {
+            ...selectedUser,
+            ...userData,
+        };
 
+        // Now call updateUser with the complete data
+        updateUser(updatedUserData)
+            .then(() => {
+                toast.success("User updated successfully");
+                queryClient.invalidateQueries(usersQueryOptions);
+            })
+            .catch((error) => {
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to update user";
+                toast.error(errorMessage);
+            });
+        setEditDialogOpen(false);
+        setSelectedUser(null);
+    };
     // --- Define Options for Filters ---
     const ACTIVE_OPTIONS = React.useMemo(() => {
         // Handle potential null/undefined initialUsers
@@ -161,7 +179,7 @@ export function UserDataTable() {
             value: isVerified, // Convert boolean to string ("true" or "false") for the value
             label: isVerified ? "True" : "False",
             icon: isVerified ? CheckCircleIcon : XCircleIcon,
-        })); 
+        }));
 
         // 4. Return the array of option objects directly
         return options;
@@ -265,7 +283,7 @@ export function UserDataTable() {
                     icon: UserIcon,
                 }),
             },
-         {
+            {
                 accessorKey: "id",
                 header: "User ID",
                 cell: ({ row }) => <div>{row.getValue("id")}</div>,
@@ -313,7 +331,7 @@ export function UserDataTable() {
                     displayName: "Role",
                     type: "option",
                     icon: UsersIcon,
-                    options: ROLE_OPTIONS, 
+                    options: ROLE_OPTIONS,
                 }),
                 // --- End Filter Config ---
             },
@@ -418,7 +436,7 @@ export function UserDataTable() {
             },
 
             {
-                accessorKey: "createdAt", 
+                accessorKey: "createdAt",
                 header: ({ column }) => (
                     <div className="text-right">
                         <Button
@@ -429,8 +447,7 @@ export function UserDataTable() {
                                 )
                             }
                         >
-                            Created At{" "}
-                            <ArrowUpDown className="ml-2 h-4 w-4" />
+                            Created At <ArrowUpDown className="ml-2 h-4 w-4" />
                         </Button>
                     </div>
                 ),
@@ -492,7 +509,7 @@ export function UserDataTable() {
                         }
                     },
                     {
-                        displayName: "Created At", 
+                        displayName: "Created At",
                         type: "date",
                         icon: CalendarIcon,
                     },
@@ -797,24 +814,17 @@ export function UserDataTable() {
                     </Button>
                 </div>
             </div>
-            <UserFormDialog
+            <EditUserFormDialog
                 isOpen={editDialogOpen}
                 onClose={() => {
                     setEditDialogOpen(false);
                     setSelectedUser(null); // Clear selected user on close
                 }}
-                onSubmit={(userData) => {
-                    // Handle the form submission (e.g., update the user data)
-                    console.log("Updated user data:", userData);
-                    updateUser(userData) 
-                    setEditDialogOpen(false);
-                    setSelectedUser(null);
-                    // TODO: Implement the actual update logic here
-                }}
+                isLoading={isLoading}
+                onSubmit={handleEditUser}
                 user={selectedUser!} // Pass the selected user
                 roles={ROLES}
                 departments={DEPARTMENTS}
-                active={ACTIVE_OPTIONS}
             />
         </div>
     );

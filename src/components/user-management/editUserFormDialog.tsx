@@ -55,8 +55,9 @@ const formSchema = z
             })
             .regex(/[0-9]/, {
                 message: "Password must contain at least one number",
-            }),
-        confirmPassword: z.string(),
+            })
+            .optional(),
+        confirmPassword: z.string().optional(),
         role: z.string({
             required_error: "Please select a role.",
         }),
@@ -81,54 +82,85 @@ interface UserFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
     isLoading?: boolean;
-    onSubmit: (userData: {
-        // id: string;
+    onSubmit: (
+        userData: Partial<{
+            // id: string;
+            idNumber: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            password: string;
+            confirmPassword: string;
+            role: string;
+            department: string;
+            phoneNumber: string;
+            active: boolean;
+        }>,
+    ) => void;
+    user?: {
+        id: string;
         idNumber: string;
         firstName: string;
         lastName: string;
         email: string;
-        password: string;
+        // password: string;
         // confirmPassword: string;
         role: string;
         department: string;
         phoneNumber: string;
-        active: boolean;
-    }) => void;
+        active?: boolean;
+        emailVerified: boolean;
+    };
     roles: { value: string; label: string }[];
     departments: string[];
     active?: boolean;
 }
 
-export function UserFormDialog({
+export function EditUserFormDialog({
     isOpen,
     onClose,
     isLoading,
     onSubmit,
+    user,
     roles,
     departments,
 }: UserFormDialogProps) {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            idNumber: "",
-            firstName: "",
-            lastName: "",
-            email: "",
-            password: "",
-            confirmPassword: "",
-            role: "",
-            department: "",
-            phoneNumber: "",
-            active: true,
+            // id: user?.id || undefined,
+            idNumber: user?.idNumber || "",
+            firstName: user?.firstName || "",
+            lastName: user?.lastName || "",
+            email: user?.email || "",
+            // password: "",
+            // confirmPassword: "",
+            role: user?.role || "",
+            department: user?.department || "",
+            phoneNumber: user?.phoneNumber || "",
+            active: user?.active,
+            emailVerified: user?.emailVerified,
         },
         mode: "onChange",
     });
+
+    useEffect(() => {
+        if (isOpen) {
+            if (user) {
+                form.reset({
+                    ...user,
+                });
+            }
+        }
+    }, [user, isOpen, form]);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogTitle>
+                        {user ? "Edit User" : "Add New User"}
+                    </DialogTitle>
                 </DialogHeader>
 
                 <Form {...form}>
@@ -359,7 +391,7 @@ export function UserFormDialog({
                             disabled={!form.formState.isValid || isLoading}
                             onClick={form.handleSubmit(onSubmit)}
                         >
-                            Create User
+                            {user ? "Save Changes" : "Create User"}
                         </Button>
                     </DialogFooter>
                 </Form>

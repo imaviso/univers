@@ -1,3 +1,5 @@
+import { StringValidation } from "zod";
+
 export const isAuthenticated = !!localStorage.getItem("token");
 
 export type UserType = {
@@ -6,13 +8,7 @@ export type UserType = {
     firstName: string;
     lastName: string;
     email: string;
-    role:
-        | "EQUIPMENT_OWNER"
-        | "ORGANIZER"
-        | "SUPER_ADMIN"
-        | "VENUE_OWNER"
-        | "VPAA"
-        | "VP_ADMIN";
+    role: string;
     department: string;
     phoneNumber: string;
     emailVerified: boolean;
@@ -50,4 +46,9 @@ export const DEPARTMENTS = [
     "Finance",
     "Operations",
     "Sales",
+];
+
+export const ACTIVE = [
+    { value: true, label: "True" },
+    { value: false, label: "False" },
 ];
