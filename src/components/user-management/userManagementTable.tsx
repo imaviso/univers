@@ -345,7 +345,7 @@ export function UserDataTable() {
             },
             {
                 accessorKey: "role",
-                header: ({ column } /* Sort button... */) => (
+                header: ({ column }) => (
                     <Button
                         variant="ghost"
                         onClick={() =>
@@ -356,9 +356,44 @@ export function UserDataTable() {
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 ),
-                cell: ({ row }) => (
-                    <div className="capitalize">{row.getValue("role")}</div>
-                ),
+                cell: ({ row }) => {
+                    // Get the role value from the row
+                    const roleValue = row.getValue("role") as string;
+
+                    // Find the matching role in ROLES array to get the proper label
+                    const roleInfo = ROLES.find(
+                        (role) => role.value === roleValue,
+                    );
+
+                    // Define badge variants and colors based on role
+                    const getBadgeVariant = (role: string) => {
+                        switch (role) {
+                            case "SUPER_ADMIN":
+                                return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+                            case "VP_ADMIN":
+                                return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+                            case "ORGANIZER":
+                                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+                            case "EQUIPMENT_OWNER":
+                                return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200";
+                            case "VENUE_OWNER":
+                                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+                            case "VPAA":
+                                return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200";
+                            default:
+                                return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+                        }
+                    };
+
+                    return (
+                        <Badge
+                            className={`font-medium capitalize px-2 py-0.5 ${getBadgeVariant(roleValue)}`}
+                            variant="outline"
+                        >
+                            {roleInfo ? roleInfo.label : roleValue}
+                        </Badge>
+                    );
+                },
                 // --- Filter Config ---
                 filterFn: filterFn("option"),
                 meta: defineMeta((row) => row.role, {
