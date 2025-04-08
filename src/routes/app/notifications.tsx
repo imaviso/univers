@@ -25,8 +25,8 @@ export const Route = createFileRoute("/app/notifications")({
         const navigationItem = allNavigation.find((item) => {
             // Allow exact match or any sub-route after the base path, e.g. "/app/notifications/..."
             return (
-                location.pathname === item.href ||
-                location.pathname.startsWith(`${item.href}/`)
+                location.pathname === "/app/notifications" ||
+                location.pathname.startsWith("/app/notifications/")
             );
         });
         const allowedRoles: string[] = navigationItem
