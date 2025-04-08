@@ -400,7 +400,7 @@ export function UserDataTable() {
                     displayName: "Role",
                     type: "option",
                     icon: UsersIcon,
-                    options: ROLE_OPTIONS,
+                    options: ROLES,
                 }),
                 // --- End Filter Config ---
             },
