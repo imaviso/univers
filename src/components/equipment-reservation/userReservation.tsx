@@ -119,11 +119,26 @@ export default function UserReservations() {
                 onValueChange={setActiveTab}
                 className="w-full"
             >
-                <div className="flex items-center justify-between border-b py-2">
-                    <TabsList className="flex items-center gap-2">
-                        <TabsTrigger value="all">All Reservations</TabsTrigger>
-                        <TabsTrigger value="approved">Approved</TabsTrigger>
-                        <TabsTrigger value="pending">Pending</TabsTrigger>
+                <div className="flex items-center justify-between">
+                    <TabsList className="flex w-full mb-3 h-auto -space-x-px bg-background p-0 shadow-sm shadow-black/5 rtl:space-x-reverse">
+                        <TabsTrigger
+                            value="all"
+                            className="relative overflow-hidden rounded-none border border-border py-2 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 first:rounded-s last:rounded-e data-[state=active]:bg-muted data-[state=active]:after:bg-primary"
+                        >
+                            All Reservations
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="approved"
+                            className="relative overflow-hidden rounded-none border border-border py-2 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 first:rounded-s last:rounded-e data-[state=active]:bg-muted data-[state=active]:after:bg-primary"
+                        >
+                            Approved
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="pending"
+                            className="relative overflow-hidden rounded-none border border-border py-2 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 first:rounded-s last:rounded-e data-[state=active]:bg-muted data-[state=active]:after:bg-primary"
+                        >
+                            Pending
+                        </TabsTrigger>
                     </TabsList>
                 </div>
                 <TabsContent value={activeTab} className="pt-4">

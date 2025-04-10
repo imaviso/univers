@@ -7,7 +7,6 @@ import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Dialog,
     DialogContent,
@@ -30,7 +29,6 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Select,
     SelectContent,
@@ -38,25 +36,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import EquipmentList from "./equipmentList";
-import UserReservations from "./userReservation";
-
-// Mock data for events
-const events = [
-    { id: "1", name: "Annual Conference" },
-    { id: "2", name: "Team Building Workshop" },
-    { id: "3", name: "Product Launch" },
-];
-
-// Mock data for venues
-const venues = [
-    { id: "1", name: "Main Auditorium", capacity: 500 },
-    { id: "2", name: "Conference Room A", capacity: 100 },
-    { id: "3", name: "Outdoor Pavilion", capacity: 300 },
-];
 
 // Form schema
 const formSchema = z.object({
@@ -78,17 +60,31 @@ const formSchema = z.object({
     endTime: z.string({
         required_error: "Please enter an end time.",
     }),
-    purpose: z.string().min(10, {
-        message: "Purpose must be at least 10 characters.",
-    }),
+    purpose: z.string().optional(),
     selectedEquipment: z.array(z.string()).min(1, {
         message: "Please select at least one equipment.",
     }),
 });
 
-export default function EquipmentReservationForm() {
-    const [activeTab, setActiveTab] = useState("form");
-    const [showSummary, setShowSummary] = useState(false);
+// Define the props interface
+interface EquipmentReservationFormDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSubmit: (data: z.infer<typeof formSchema>) => void;
+    events: { id: string; name: string }[];
+    venues: { id: string; name: string; capacity: number }[];
+    isLoading?: boolean;
+}
+
+export function EquipmentReservationFormDialog({
+    isOpen,
+    onClose,
+    onSubmit,
+    events,
+    venues,
+    isLoading = false,
+}: EquipmentReservationFormDialogProps) {
+    const [step, setStep] = useState(1);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -96,520 +92,419 @@ export default function EquipmentReservationForm() {
             purpose: "",
             selectedEquipment: [],
         },
+        mode: "onChange",
     });
 
-    const onSubmit = (values: z.infer<typeof formSchema>) => {
-        console.log(values);
-        setShowSummary(true);
+    // Step validation logic
+    const isStep1Valid = () => {
+        const { eventId } = form.getValues();
+        return !!eventId;
     };
 
-    const selectedEvent = events.find(
-        (event) => event.id === form.watch("eventId"),
-    );
+    const isStep2Valid = () => {
+        const { venueId, startDate, endDate, startTime, endTime } =
+            form.getValues();
+        return (
+            !!venueId && !!startDate && !!endDate && !!startTime && !!endTime
+        );
+    };
 
-    const selectedVenue = venues.find(
-        (venue) => venue.id === form.watch("venueId"),
-    );
+    const handleNext = async () => {
+        if (step === 1 && isStep1Valid()) {
+            setStep(2);
+        } else if (step === 2 && isStep2Valid()) {
+            setStep(3);
+        }
+    };
+
+    const handleBack = () => {
+        setStep(Math.max(1, step - 1));
+    };
+
+    const handleSubmit = (values: z.infer<typeof formSchema>) => {
+        onSubmit(values);
+        form.reset();
+        setStep(1);
+        onClose();
+    };
 
     const selectedEquipment = form.watch("selectedEquipment") || [];
 
+    const handleDialogClose = () => {
+        form.reset();
+        setStep(1);
+        onClose();
+    };
+
     return (
-        <div className="space-y-6">
-            <Tabs
-                value={activeTab}
-                onValueChange={setActiveTab}
-                className="w-full"
-            >
-                <div className="flex items-center justify-between border-b py-2">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="form">Reservation Form</TabsTrigger>
-                        <TabsTrigger value="myReservations">
-                            My Reservations
-                        </TabsTrigger>
-                    </TabsList>
+        <Dialog open={isOpen} onOpenChange={handleDialogClose}>
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Equipment Reservation</DialogTitle>
+                </DialogHeader>
+
+                {/* Progress indicator */}
+                <div className="w-full mt-4">
+                    <div className="flex justify-between mb-2">
+                        <div
+                            className={`text-sm font-medium ${step === 1 ? "text-primary" : step > 1 ? "text-muted-foreground" : "text-muted"}`}
+                        >
+                            Event Details
+                        </div>
+                        <div
+                            className={`text-sm font-medium ${step === 2 ? "text-primary" : step > 2 ? "text-muted-foreground" : "text-muted"}`}
+                        >
+                            Venue & Schedule
+                        </div>
+                        <div
+                            className={`text-sm font-medium ${step === 3 ? "text-primary" : "text-muted"}`}
+                        >
+                            Equipment Selection
+                        </div>
+                    </div>
+                    <div className="w-full bg-muted h-2 rounded-full">
+                        <div
+                            className="bg-primary h-2 rounded-full transition-all"
+                            style={{ width: `${(step - 1) * 50}%` }}
+                        />
+                    </div>
                 </div>
 
-                <TabsContent
-                    value="form"
-                    className="space-y-4 pt-4 overflow-hidden"
-                >
-                    <Form {...form}>
-                        <form
-                            onSubmit={form.handleSubmit(onSubmit)}
-                            className="space-y-8"
-                        >
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                {/* Event Information */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Event Information</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="eventId"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Event</FormLabel>
-                                                    <Select
-                                                        onValueChange={
-                                                            field.onChange
-                                                        }
-                                                        defaultValue={
-                                                            field.value
-                                                        }
-                                                    >
-                                                        <FormControl>
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Select an event" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                            {events.map(
-                                                                (event) => (
-                                                                    <SelectItem
-                                                                        key={
-                                                                            event.id
-                                                                        }
-                                                                        value={
-                                                                            event.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            event.name
-                                                                        }
-                                                                    </SelectItem>
-                                                                ),
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                <Form {...form}>
+                    <form
+                        onSubmit={form.handleSubmit(handleSubmit)}
+                        className="space-y-6"
+                    >
+                        {step === 1 && (
+                            <>
+                                <FormField
+                                    control={form.control}
+                                    name="eventId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Event</FormLabel>
+                                            <Select
+                                                onValueChange={field.onChange}
+                                                defaultValue={field.value}
+                                            >
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select an event" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {events.map((event) => (
+                                                        <SelectItem
+                                                            key={event.id}
+                                                            value={event.id}
+                                                        >
+                                                            {event.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                                        <FormField
-                                            control={form.control}
-                                            name="purpose"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>
-                                                        Purpose
-                                                    </FormLabel>
-                                                    <FormControl>
-                                                        <Textarea
-                                                            placeholder="Describe the purpose of the equipment reservation"
-                                                            className="resize-none"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </CardContent>
-                                </Card>
+                                <FormField
+                                    control={form.control}
+                                    name="purpose"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Purpose</FormLabel>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder="Describe the purpose of the equipment reservation"
+                                                    className="resize-none"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </>
+                        )}
 
-                                {/* Venue Information */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Venue Information</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="venueId"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Venue</FormLabel>
-                                                    <Select
-                                                        onValueChange={
-                                                            field.onChange
-                                                        }
-                                                        defaultValue={
-                                                            field.value
-                                                        }
-                                                    >
-                                                        <FormControl>
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Select a venue" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                            {venues.map(
-                                                                (venue) => (
-                                                                    <SelectItem
-                                                                        key={
-                                                                            venue.id
-                                                                        }
-                                                                        value={
-                                                                            venue.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            venue.name
-                                                                        }{" "}
-                                                                        (Capacity:{" "}
-                                                                        {
-                                                                            venue.capacity
-                                                                        }
-                                                                        )
-                                                                    </SelectItem>
-                                                                ),
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                        {step === 2 && (
+                            <>
+                                <FormField
+                                    control={form.control}
+                                    name="venueId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Venue</FormLabel>
+                                            <Select
+                                                onValueChange={field.onChange}
+                                                defaultValue={field.value}
+                                            >
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a venue" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {venues.map((venue) => (
+                                                        <SelectItem
+                                                            key={venue.id}
+                                                            value={venue.id}
+                                                        >
+                                                            {venue.name}{" "}
+                                                            (Capacity:{" "}
+                                                            {venue.capacity})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <FormField
-                                                control={form.control}
-                                                name="startDate"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-col">
-                                                        <FormLabel>
-                                                            Start Date
-                                                        </FormLabel>
-                                                        <Popover>
-                                                            <PopoverTrigger
-                                                                asChild
-                                                            >
-                                                                <FormControl>
-                                                                    <Button
-                                                                        variant={
-                                                                            "outline"
-                                                                        }
-                                                                        className={cn(
-                                                                            "w-full pl-3 text-left font-normal",
-                                                                            !field.value &&
-                                                                                "text-muted-foreground",
-                                                                        )}
-                                                                    >
-                                                                        {field.value ? (
-                                                                            format(
-                                                                                field.value,
-                                                                                "PPP",
-                                                                            )
-                                                                        ) : (
-                                                                            <span>
-                                                                                Pick
-                                                                                a
-                                                                                date
-                                                                            </span>
-                                                                        )}
-                                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                                    </Button>
-                                                                </FormControl>
-                                                            </PopoverTrigger>
-                                                            <PopoverContent
-                                                                className="w-auto p-0"
-                                                                align="start"
-                                                            >
-                                                                <Calendar
-                                                                    mode="single"
-                                                                    selected={
-                                                                        field.value
-                                                                    }
-                                                                    onSelect={
-                                                                        field.onChange
-                                                                    }
-                                                                    initialFocus
-                                                                />
-                                                            </PopoverContent>
-                                                        </Popover>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={form.control}
-                                                name="endDate"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-col">
-                                                        <FormLabel>
-                                                            End Date
-                                                        </FormLabel>
-                                                        <Popover>
-                                                            <PopoverTrigger
-                                                                asChild
-                                                            >
-                                                                <FormControl>
-                                                                    <Button
-                                                                        variant={
-                                                                            "outline"
-                                                                        }
-                                                                        className={cn(
-                                                                            "w-full pl-3 text-left font-normal",
-                                                                            !field.value &&
-                                                                                "text-muted-foreground",
-                                                                        )}
-                                                                    >
-                                                                        {field.value ? (
-                                                                            format(
-                                                                                field.value,
-                                                                                "PPP",
-                                                                            )
-                                                                        ) : (
-                                                                            <span>
-                                                                                Pick
-                                                                                a
-                                                                                date
-                                                                            </span>
-                                                                        )}
-                                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                                    </Button>
-                                                                </FormControl>
-                                                            </PopoverTrigger>
-                                                            <PopoverContent
-                                                                className="w-auto p-0"
-                                                                align="start"
-                                                            >
-                                                                <Calendar
-                                                                    mode="single"
-                                                                    selected={
-                                                                        field.value
-                                                                    }
-                                                                    onSelect={
-                                                                        field.onChange
-                                                                    }
-                                                                    initialFocus
-                                                                />
-                                                            </PopoverContent>
-                                                        </Popover>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={form.control}
-                                                name="startTime"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>
-                                                            Start Time
-                                                        </FormLabel>
-                                                        <FormControl>
-                                                            <Input
-                                                                type="time"
-                                                                {...field}
-                                                            />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={form.control}
-                                                name="endTime"
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>
-                                                            End Time
-                                                        </FormLabel>
-                                                        <FormControl>
-                                                            <Input
-                                                                type="time"
-                                                                {...field}
-                                                            />
-                                                        </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-
-                            {/* Equipment Selection */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Equipment Selection</CardTitle>
-                                </CardHeader>
-                                <CardContent>
+                                <div className="grid grid-cols-2 gap-4">
                                     <FormField
                                         control={form.control}
-                                        name="selectedEquipment"
-                                        render={() => (
-                                            <FormItem>
-                                                <div className="mb-4">
-                                                    <FormLabel className="text-base">
-                                                        Select Equipment
-                                                    </FormLabel>
-                                                    <FormDescription>
-                                                        Select the equipment you
-                                                        need for your event.
-                                                        Unavailable equipment
-                                                        cannot be selected.
-                                                    </FormDescription>
-                                                </div>
+                                        name="startDate"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-col">
+                                                <FormLabel>
+                                                    Start Date
+                                                </FormLabel>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <FormControl>
+                                                            <Button
+                                                                variant={
+                                                                    "outline"
+                                                                }
+                                                                className={cn(
+                                                                    "w-full pl-3 text-left font-normal",
+                                                                    !field.value &&
+                                                                        "text-muted-foreground",
+                                                                )}
+                                                            >
+                                                                {field.value ? (
+                                                                    format(
+                                                                        field.value,
+                                                                        "PPP",
+                                                                    )
+                                                                ) : (
+                                                                    <span>
+                                                                        Pick a
+                                                                        date
+                                                                    </span>
+                                                                )}
+                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                            </Button>
+                                                        </FormControl>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent
+                                                        className="w-auto p-0"
+                                                        align="start"
+                                                    >
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={
+                                                                field.value
+                                                            }
+                                                            onSelect={
+                                                                field.onChange
+                                                            }
+                                                            initialFocus
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
                                                 <FormMessage />
-
-                                                <EquipmentList
-                                                    selectedEquipment={
-                                                        selectedEquipment
-                                                    }
-                                                    onEquipmentChange={(
-                                                        equipmentIds,
-                                                    ) => {
-                                                        form.setValue(
-                                                            "selectedEquipment",
-                                                            equipmentIds,
-                                                            {
-                                                                shouldValidate: true,
-                                                            },
-                                                        );
-                                                    }}
-                                                />
                                             </FormItem>
                                         )}
                                     />
-                                </CardContent>
-                            </Card>
 
-                            <Button type="submit" className="w-full">
-                                Submit Reservation
-                            </Button>
-                        </form>
-                    </Form>
-                </TabsContent>
+                                    <FormField
+                                        control={form.control}
+                                        name="endDate"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-col">
+                                                <FormLabel>End Date</FormLabel>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <FormControl>
+                                                            <Button
+                                                                variant={
+                                                                    "outline"
+                                                                }
+                                                                className={cn(
+                                                                    "w-full pl-3 text-left font-normal",
+                                                                    !field.value &&
+                                                                        "text-muted-foreground",
+                                                                )}
+                                                            >
+                                                                {field.value ? (
+                                                                    format(
+                                                                        field.value,
+                                                                        "PPP",
+                                                                    )
+                                                                ) : (
+                                                                    <span>
+                                                                        Pick a
+                                                                        date
+                                                                    </span>
+                                                                )}
+                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                            </Button>
+                                                        </FormControl>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent
+                                                        className="w-auto p-0"
+                                                        align="start"
+                                                    >
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={
+                                                                field.value
+                                                            }
+                                                            onSelect={
+                                                                field.onChange
+                                                            }
+                                                            initialFocus
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                <TabsContent value="myReservations" className="pt-4">
-                    <UserReservations />
-                </TabsContent>
-            </Tabs>
+                                    <FormField
+                                        control={form.control}
+                                        name="startTime"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Start Time
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="time"
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-            {/* Reservation Summary Dialog */}
-            <Dialog open={showSummary} onOpenChange={setShowSummary}>
-                <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                        <DialogTitle>Reservation Summary</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <h4 className="font-medium">Event Information</h4>
-                            <p>Event: {selectedEvent?.name || "N/A"}</p>
-                            <p>Purpose: {form.getValues("purpose")}</p>
-                        </div>
+                                    <FormField
+                                        control={form.control}
+                                        name="endTime"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>End Time</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="time"
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </>
+                        )}
 
-                        <div>
-                            <h4 className="font-medium">Venue Information</h4>
-                            <p>Venue: {selectedVenue?.name || "N/A"}</p>
-                            <p>
-                                Date:{" "}
-                                {form.getValues("startDate")
-                                    ? format(form.getValues("startDate"), "PPP")
-                                    : "N/A"}{" "}
-                                to{" "}
-                                {form.getValues("endDate")
-                                    ? format(form.getValues("endDate"), "PPP")
-                                    : "N/A"}
-                            </p>
-                            <p>
-                                Time: {form.getValues("startTime") || "N/A"} to{" "}
-                                {form.getValues("endTime") || "N/A"}
-                            </p>
-                        </div>
+                        {step === 3 && (
+                            <FormField
+                                control={form.control}
+                                name="selectedEquipment"
+                                render={() => (
+                                    <FormItem>
+                                        <div className="mb-4">
+                                            <FormLabel className="text-base">
+                                                Select Equipment
+                                            </FormLabel>
+                                            <FormDescription>
+                                                Select the equipment you need
+                                                for your event. Unavailable
+                                                equipment cannot be selected.
+                                            </FormDescription>
+                                        </div>
+                                        <FormMessage />
 
-                        <div>
-                            <h4 className="font-medium">Selected Equipment</h4>
-                            <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                                <EquipmentSummary
-                                    selectedEquipment={selectedEquipment}
-                                />
-                            </ScrollArea>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowSummary(false)}
-                        >
-                            Edit
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                setShowSummary(false);
-                                form.reset();
-                                setActiveTab("myReservations");
-                            }}
-                        >
-                            Confirm Reservation
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
-}
+                                        <EquipmentList
+                                            selectedEquipment={
+                                                selectedEquipment
+                                            }
+                                            onEquipmentChange={(
+                                                equipmentIds,
+                                            ) => {
+                                                form.setValue(
+                                                    "selectedEquipment",
+                                                    equipmentIds,
+                                                    {
+                                                        shouldValidate: true,
+                                                    },
+                                                );
+                                            }}
+                                        />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
 
-// Helper component to display equipment summary
-function EquipmentSummary({
-    selectedEquipment,
-}: { selectedEquipment: string[] }) {
-    // Mock equipment data - in a real app, you would fetch this based on the IDs
-    const equipmentMap = {
-        "msdo-camera": { name: "Camera", owner: "MSDO" },
-        "msdo-speaker": { name: "Speaker", owner: "MSDO" },
-        "msdo-microphone": { name: "Microphone", owner: "MSDO" },
-        "msdo-extension": { name: "Extension Wire", owner: "MSDO" },
-        "opc-chairs": { name: "Chairs", owner: "OPC" },
-        "opc-table": { name: "Folding Table", owner: "OPC" },
-        "opc-extension": { name: "Extension Wire", owner: "OPC" },
-    };
-
-    const msdoEquipment = selectedEquipment.filter((id) =>
-        id.startsWith("msdo-"),
-    );
-    const opcEquipment = selectedEquipment.filter((id) =>
-        id.startsWith("opc-"),
-    );
-
-    if (selectedEquipment.length === 0) {
-        return <p>No equipment selected</p>;
-    }
-
-    return (
-        <div className="space-y-4">
-            {msdoEquipment.length > 0 && (
-                <div>
-                    <h5 className="font-medium mb-2">MSDO Equipment</h5>
-                    <ul className="list-disc pl-5 space-y-1">
-                        {msdoEquipment.map((id) => (
-                            <li key={id}>
-                                {
-                                    equipmentMap[
-                                        id as keyof typeof equipmentMap
-                                    ]?.name
-                                }
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-
-            {opcEquipment.length > 0 && (
-                <div>
-                    <h5 className="font-medium mb-2">OPC Equipment</h5>
-                    <ul className="list-disc pl-5 space-y-1">
-                        {opcEquipment.map((id) => (
-                            <li key={id}>
-                                {
-                                    equipmentMap[
-                                        id as keyof typeof equipmentMap
-                                    ]?.name
-                                }
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-        </div>
+                        <DialogFooter>
+                            <div className="flex w-full justify-between">
+                                <div>
+                                    {step > 1 && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleBack}
+                                        >
+                                            Back
+                                        </Button>
+                                    )}
+                                </div>
+                                <div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleDialogClose}
+                                        className="mr-2"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    {step < 3 ? (
+                                        <Button
+                                            type="button"
+                                            onClick={handleNext}
+                                            disabled={
+                                                (step === 1 &&
+                                                    !isStep1Valid()) ||
+                                                (step === 2 && !isStep2Valid())
+                                            }
+                                        >
+                                            Next
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            type="submit"
+                                            disabled={
+                                                !form.formState.isValid ||
+                                                isLoading
+                                            }
+                                        >
+                                            Submit Reservation
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
     );
 }

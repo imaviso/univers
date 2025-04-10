@@ -287,7 +287,6 @@ const departments = [
 
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
-    // Use optional chaining and provide a default value to handle cases where role might not exist
     const role = "role" in context ? context.role : "USER";
     console.log("Role from context:", role);
     const navigate = useNavigate();

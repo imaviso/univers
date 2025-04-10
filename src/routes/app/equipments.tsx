@@ -1,4 +1,6 @@
 import { EquipmentFormDialog } from "@/components/equipment-inventory/equipmentFormDialog";
+import { EquipmentReservationFormDialog } from "@/components/equipment-reservation/equipmentReservationForm";
+import UserReservations from "@/components/equipment-reservation/userReservation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +30,11 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { allNavigation } from "@/lib/navigation";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import {
+    createFileRoute,
+    redirect,
+    useRouteContext,
+} from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
     Download,
@@ -198,7 +204,22 @@ const locations = [
     "IT Department",
 ];
 
+const events = [
+    { id: "1", name: "Annual Conference" },
+    { id: "2", name: "Team Building Workshop" },
+    { id: "3", name: "Product Launch" },
+];
+
+const venues = [
+    { id: "1", name: "Main Auditorium", capacity: 500 },
+    { id: "2", name: "Conference Room A", capacity: 100 },
+    { id: "3", name: "Outdoor Pavilion", capacity: 300 },
+];
+
 export function EquipmentInventory() {
+    const context = useRouteContext({ from: "/app/equipments" });
+    const role = "role" in context ? context.role : "USER";
+    console.log("Role from context:", role);
     const [equipment, setEquipment] = useState(initialEquipment);
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -209,7 +230,16 @@ export function EquipmentInventory() {
     const [equipmentToDelete, setEquipmentToDelete] = useState<number | null>(
         null,
     );
-    const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+    const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
+        role === "SUPER_ADMIN" ? "table" : "grid",
+    );
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    const handleReserveEquipment = (data) => {
+        console.log("Reservation data:", data);
+        // Submit to your API here
+        setIsDialogOpen(false);
+    };
 
     // Filter equipment based on filters
     const filteredEquipment = equipment.filter((item) => {
@@ -487,14 +517,25 @@ export function EquipmentInventory() {
                         Equipment Inventory
                     </h1>
                     <div className="flex items-center gap-2">
-                        <Button
-                            onClick={() => setIsAddEquipmentOpen(true)}
-                            size="sm"
-                            className="gap-1"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Equipment
-                        </Button>
+                        {role === "SUPER_ADMIN" ? (
+                            <Button
+                                onClick={() => setIsAddEquipmentOpen(true)}
+                                size="sm"
+                                className="gap-1"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add Equipment
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={() => setIsDialogOpen(true)}
+                                size="sm"
+                                className="gap-1"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Reserve Equipment
+                            </Button>
+                        )}
                     </div>
                 </header>
 
@@ -593,12 +634,27 @@ export function EquipmentInventory() {
                         <Tabs
                             value={viewMode}
                             onValueChange={(value) =>
-                                setViewMode(value as "table" | "grid")
+                                setViewMode(
+                                    value as "table" | "grid" | "reservations",
+                                )
                             }
                         >
                             <TabsList>
-                                <TabsTrigger value="table">Table</TabsTrigger>
-                                <TabsTrigger value="grid">Grid</TabsTrigger>
+                                {role === "SUPER_ADMIN" && (
+                                    <TabsTrigger value="table">
+                                        Table
+                                    </TabsTrigger>
+                                )}
+                                <TabsTrigger value="grid">
+                                    {role === "SUPER_ADMIN"
+                                        ? "Grid"
+                                        : "Equipments"}
+                                </TabsTrigger>
+                                {role !== "SUPER_ADMIN" && (
+                                    <TabsTrigger value="reservations">
+                                        My Reservations
+                                    </TabsTrigger>
+                                )}
                             </TabsList>
                         </Tabs>
 
@@ -623,143 +679,163 @@ export function EquipmentInventory() {
                             </SelectContent>
                         </Select>
 
-                        <Select
-                            value={statusFilter || "all"}
-                            onValueChange={(value) =>
-                                setStatusFilter(value || null)
-                            }
-                        >
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Filter by status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    All Statuses
-                                </SelectItem>
-                                <SelectItem value="available">
-                                    Available
-                                </SelectItem>
-                                <SelectItem value="in-use">In Use</SelectItem>
-                                <SelectItem value="maintenance">
-                                    Maintenance
-                                </SelectItem>
-                                <SelectItem value="out-of-order">
-                                    Out of Order
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                        {role === "SUPER_ADMIN" && (
+                            <>
+                                <Select
+                                    value={statusFilter || "all"}
+                                    onValueChange={(value) =>
+                                        setStatusFilter(value || null)
+                                    }
+                                >
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">
+                                            All Statuses
+                                        </SelectItem>
+                                        <SelectItem value="available">
+                                            Available
+                                        </SelectItem>
+                                        <SelectItem value="in-use">
+                                            In Use
+                                        </SelectItem>
+                                        <SelectItem value="maintenance">
+                                            Maintenance
+                                        </SelectItem>
+                                        <SelectItem value="out-of-order">
+                                            Out of Order
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
 
-                        <Button variant="outline" size="sm" className="gap-1">
-                            <Download className="h-4 w-4" />
-                            Export
-                        </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Export
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-auto p-6">
-                    {viewMode === "table" ? (
+                    {viewMode === "table" && (
                         <DataTable
                             columns={columns}
                             data={filteredEquipment}
                             searchColumn="name"
                             searchPlaceholder="Search equipment..."
                         />
-                    ) : (
+                    )}
+                    {viewMode === "grid" && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredEquipment.map((item) => (
                                 <Card key={item.id} className="overflow-hidden">
                                     <CardHeader className="p-4 pb-2">
                                         <div className="flex justify-between">
                                             <div className="flex items-start gap-2">
-                                                <Checkbox
-                                                    checked={selectedItems.includes(
-                                                        item.id,
-                                                    )}
-                                                    onCheckedChange={() => {
-                                                        if (
-                                                            selectedItems.includes(
-                                                                item.id,
-                                                            )
-                                                        ) {
-                                                            setSelectedItems(
-                                                                selectedItems.filter(
-                                                                    (id) =>
-                                                                        id !==
+                                                {role === "SUPER_ADMIN" && (
+                                                    <Checkbox
+                                                        checked={selectedItems.includes(
+                                                            item.id,
+                                                        )}
+                                                        onCheckedChange={() => {
+                                                            if (
+                                                                selectedItems.includes(
+                                                                    item.id,
+                                                                )
+                                                            ) {
+                                                                setSelectedItems(
+                                                                    selectedItems.filter(
+                                                                        (id) =>
+                                                                            id !==
+                                                                            item.id,
+                                                                    ),
+                                                                );
+                                                            } else {
+                                                                setSelectedItems(
+                                                                    [
+                                                                        ...selectedItems,
                                                                         item.id,
-                                                                ),
-                                                            );
-                                                        } else {
-                                                            setSelectedItems([
-                                                                ...selectedItems,
-                                                                item.id,
-                                                            ]);
-                                                        }
-                                                    }}
-                                                />
+                                                                    ],
+                                                                );
+                                                            }
+                                                        }}
+                                                    />
+                                                )}
                                                 <CardTitle className="text-base">
                                                     {item.name}
                                                 </CardTitle>
                                             </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
+                                            {role === "SUPER_ADMIN" && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
                                                     >
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            setEditingEquipment(
-                                                                item,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Edit className="mr-2 h-4 w-4" />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    {item.status !==
-                                                        "maintenance" && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                        >
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
                                                         <DropdownMenuItem
+                                                            onClick={() =>
+                                                                setEditingEquipment(
+                                                                    item,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        {item.status !==
+                                                            "maintenance" && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    handleEditEquipment(
+                                                                        {
+                                                                            ...item,
+                                                                            status: "maintenance",
+                                                                            lastMaintenance:
+                                                                                new Date()
+                                                                                    .toISOString()
+                                                                                    .split(
+                                                                                        "T",
+                                                                                    )[0],
+                                                                        },
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <Wrench className="mr-2 h-4 w-4" />
+                                                                Mark for
+                                                                Maintenance
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="text-destructive"
                                                             onClick={() => {
-                                                                handleEditEquipment(
-                                                                    {
-                                                                        ...item,
-                                                                        status: "maintenance",
-                                                                        lastMaintenance:
-                                                                            new Date()
-                                                                                .toISOString()
-                                                                                .split(
-                                                                                    "T",
-                                                                                )[0],
-                                                                    },
+                                                                setEquipmentToDelete(
+                                                                    item.id,
+                                                                );
+                                                                setIsDeleteDialogOpen(
+                                                                    true,
                                                                 );
                                                             }}
                                                         >
-                                                            <Wrench className="mr-2 h-4 w-4" />
-                                                            Mark for Maintenance
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
                                                         </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        className="text-destructive"
-                                                        onClick={() => {
-                                                            setEquipmentToDelete(
-                                                                item.id,
-                                                            );
-                                                            setIsDeleteDialogOpen(
-                                                                true,
-                                                            );
-                                                        }}
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
                                         </div>
                                         <CardDescription className="text-xs">
                                             {item.idNumber}
@@ -808,49 +884,61 @@ export function EquipmentInventory() {
                             )}
                         </div>
                     )}
+                    {viewMode === "reservations" && <UserReservations />}
                 </div>
             </div>
 
-            {/* Add/Edit Equipment Dialog */}
-            <EquipmentFormDialog
-                isOpen={isAddEquipmentOpen || !!editingEquipment}
-                onClose={() => {
-                    setIsAddEquipmentOpen(false);
-                    setEditingEquipment(null);
-                }}
-                onSubmit={
-                    editingEquipment ? handleEditEquipment : handleAddEquipment
-                }
-                equipment={editingEquipment}
-                categories={categories}
-                locations={locations}
+            <EquipmentReservationFormDialog
+                isOpen={isDialogOpen}
+                onClose={() => setIsDialogOpen(false)}
+                onSubmit={handleReserveEquipment}
+                events={events}
+                venues={venues}
             />
+            {role === "SUPER_ADMIN" && (
+                <>
+                    <EquipmentFormDialog
+                        isOpen={isAddEquipmentOpen || !!editingEquipment}
+                        onClose={() => {
+                            setIsAddEquipmentOpen(false);
+                            setEditingEquipment(null);
+                        }}
+                        onSubmit={
+                            editingEquipment
+                                ? handleEditEquipment
+                                : handleAddEquipment
+                        }
+                        equipment={editingEquipment}
+                        categories={categories}
+                        locations={locations}
+                    />
 
-            {/* Delete Confirmation Dialog */}
-            <DeleteConfirmDialog
-                isOpen={isDeleteDialogOpen}
-                onClose={() => {
-                    setIsDeleteDialogOpen(false);
-                    setEquipmentToDelete(null);
-                }}
-                onConfirm={() => {
-                    if (equipmentToDelete) {
-                        handleDeleteEquipment(equipmentToDelete);
-                    } else if (selectedItems.length > 0) {
-                        handleBulkDelete();
-                    }
-                }}
-                title={
-                    equipmentToDelete
-                        ? "Delete Equipment"
-                        : "Delete Selected Equipment"
-                }
-                description={
-                    equipmentToDelete
-                        ? "Are you sure you want to delete this equipment? This action cannot be undone."
-                        : `Are you sure you want to delete ${selectedItems.length} selected items? This action cannot be undone.`
-                }
-            />
+                    <DeleteConfirmDialog
+                        isOpen={isDeleteDialogOpen}
+                        onClose={() => {
+                            setIsDeleteDialogOpen(false);
+                            setEquipmentToDelete(null);
+                        }}
+                        onConfirm={() => {
+                            if (equipmentToDelete) {
+                                handleDeleteEquipment(equipmentToDelete);
+                            } else if (selectedItems.length > 0) {
+                                handleBulkDelete();
+                            }
+                        }}
+                        title={
+                            equipmentToDelete
+                                ? "Delete Equipment"
+                                : "Delete Selected Equipment"
+                        }
+                        description={
+                            equipmentToDelete
+                                ? "Are you sure you want to delete this equipment? This action cannot be undone."
+                                : `Are you sure you want to delete ${selectedItems.length} selected items? This action cannot be undone.`
+                        }
+                    />
+                </>
+            )}
         </div>
     );
 }

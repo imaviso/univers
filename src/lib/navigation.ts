@@ -74,19 +74,20 @@ export const allNavigation = [
         name: "Equipments",
         href: "/app/equipments",
         icon: Package,
-        roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER", "VP_ADMIN"],
+        roles: [
+            "SUPER_ADMIN",
+            "ORGANIZER",
+            "EQUIPMENT_OWNER",
+            "VENUE_OWNER",
+            "VPAA",
+            "VP_ADMIN",
+        ],
     },
     {
         name: "Equipment Approval",
         href: "/app/equipment-approval/approval",
         icon: PackageCheck,
         roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER", "VP_ADMIN"],
-    },
-    {
-        name: "Equipment Reservation",
-        href: "/app/equipment-reservation",
-        icon: PackagePlus,
-        roles: ["SUPER_ADMIN", "ORGANIZER"],
     },
 ];
 
