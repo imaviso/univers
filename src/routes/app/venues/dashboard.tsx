@@ -639,14 +639,6 @@ export function VenueManagement() {
                 </div>
 
                 <div className="flex-1 overflow-auto p-6">
-                    {viewMode === "reservations" && (
-                        <div className="text-center text-muted-foreground">
-                            No reservations found.
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex-1 overflow-auto p-6">
                     {viewMode === "table" && (
                         <Table>
                             <TableHeader>
@@ -988,6 +980,7 @@ export function VenueManagement() {
                                     </CardFooter>
                                 </Card>
                             ))}
+
                             {filteredVenues.length === 0 && (
                                 <div className="col-span-full text-center py-8 text-muted-foreground">
                                     No venues found. Try adjusting your filters.
@@ -995,6 +988,13 @@ export function VenueManagement() {
                             )}
                         </div>
                     )}
+                    <div className="flex-1 overflow-auto p-6">
+                        {viewMode === "reservations" && (
+                            <div className="text-center text-muted-foreground">
+                                No reservations found.
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
