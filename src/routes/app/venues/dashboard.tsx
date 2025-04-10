@@ -37,7 +37,11 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+    createFileRoute,
+    useNavigate,
+    useRouteContext,
+} from "@tanstack/react-router";
 import {
     Building,
     Calendar,
@@ -51,8 +55,10 @@ import {
     Users,
 } from "lucide-react";
 import { useState } from "react";
+import { VenueReservationFormDialog } from "@/components/venue-reservation/VenueReservationFormDialog";
+import { DEPARTMENTS } from "@/lib/types";
 
-export const Route = createFileRoute("/app/venues/management")({
+export const Route = createFileRoute("/app/venues/dashboard")({
     component: VenueManagement,
 });
 
@@ -248,7 +254,42 @@ const commonAmenities = [
     "Bar Area",
 ];
 
+// Mock data for venues and event types
+const venues = [
+    { id: "1", name: "Main Auditorium" },
+    { id: "2", name: "Conference Room A" },
+    { id: "3", name: "Conference Room B" },
+    { id: "4", name: "Outdoor Pavilion" },
+    { id: "5", name: "Lecture Hall" },
+];
+
+const eventTypes = [
+    { id: "1", name: "Conference" },
+    { id: "2", name: "Workshop" },
+    { id: "3", name: "Seminar" },
+    { id: "4", name: "Meeting" },
+    { id: "5", name: "Social Event" },
+    { id: "6", name: "Other" },
+];
+
+const departments = [
+    { id: "1", name: "Marketing" },
+    { id: "2", name: "Human Resources" },
+    { id: "3", name: "Finance" },
+    { id: "4", name: "IT" },
+    { id: "5", name: "Operations" },
+    { id: "6", name: "Research & Development" },
+    { id: "7", name: "Customer Service" },
+    { id: "8", name: "Sales" },
+    { id: "9", name: "Legal" },
+    { id: "10", name: "Executive" },
+];
+
 export function VenueManagement() {
+    const context = useRouteContext({ from: "/app/venues" });
+    // Use optional chaining and provide a default value to handle cases where role might not exist
+    const role = "role" in context ? context.role : "USER";
+    console.log("Role from context:", role);
     const navigate = useNavigate();
     const [venues, setVenues] = useState(initialVenues);
     const [searchQuery, setSearchQuery] = useState("");
@@ -259,8 +300,18 @@ export function VenueManagement() {
     const [editingVenue, setEditingVenue] = useState<any>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [venueToDelete, setVenueToDelete] = useState<number | null>(null);
-    const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+    const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
+        role === "SUPER_ADMIN" ? "table" : "grid",
+    );
 
+    const [isReservationDialogOpen, setIsReservationDialogOpen] =
+        useState(false);
+
+    const handleReservationSubmit = (data) => {
+        console.log("Reservation data:", data);
+        // Submit to your API here
+        setIsReservationDialogOpen(false);
+    };
     const handleNavigate = (venueId: number) => {
         navigate({ from: Route.fullPath, to: `/app/venues/${venueId}` });
     };
@@ -396,14 +447,25 @@ export function VenueManagement() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <Button
-                            onClick={() => setIsAddVenueOpen(true)}
-                            size="sm"
-                            className="gap-1"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Venue
-                        </Button>
+                        {role === "SUPER_ADMIN" ? (
+                            <Button
+                                onClick={() => setIsAddVenueOpen(true)}
+                                size="sm"
+                                className="gap-1"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add Venue
+                            </Button>
+                        ) : (
+                            <Button
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => setIsReservationDialogOpen(true)}
+                            >
+                                <Plus className="h-4 w-4" />
+                                Reserve Venue
+                            </Button>
+                        )}
                     </div>
                 </header>
 
@@ -491,69 +553,102 @@ export function VenueManagement() {
                         <Tabs
                             value={viewMode}
                             onValueChange={(value) =>
-                                setViewMode(value as "table" | "grid")
+                                setViewMode(
+                                    value as "table" | "grid" | "reservations",
+                                )
                             }
                         >
                             <TabsList>
-                                <TabsTrigger value="table">Table</TabsTrigger>
-                                <TabsTrigger value="grid">Grid</TabsTrigger>
+                                {role === "SUPER_ADMIN" && (
+                                    <TabsTrigger value="table">
+                                        Table
+                                    </TabsTrigger>
+                                )}
+                                <TabsTrigger value="grid">
+                                    {role === "SUPER_ADMIN" ? "Grid" : "Venues"}
+                                </TabsTrigger>
+                                {role !== "SUPER_ADMIN" && (
+                                    <TabsTrigger value="reservations">
+                                        My Reservations
+                                    </TabsTrigger>
+                                )}
                             </TabsList>
                         </Tabs>
 
-                        <Select
-                            value={typeFilter || ""}
-                            onValueChange={(value) =>
-                                setTypeFilter(value || null)
-                            }
-                        >
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Filter by type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Types</SelectItem>
-                                {venueTypes.map((type) => (
-                                    <SelectItem key={type} value={type}>
-                                        {type}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        {role === "SUPER_ADMIN" && (
+                            <>
+                                <Select
+                                    value={typeFilter || ""}
+                                    onValueChange={(value) =>
+                                        setTypeFilter(value || null)
+                                    }
+                                >
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Filter by type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">
+                                            All Types
+                                        </SelectItem>
+                                        {venueTypes.map((type) => (
+                                            <SelectItem key={type} value={type}>
+                                                {type}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
 
-                        <Select
-                            value={statusFilter || ""}
-                            onValueChange={(value) =>
-                                setStatusFilter(value || null)
-                            }
-                        >
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Filter by status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    All Statuses
-                                </SelectItem>
-                                <SelectItem value="available">
-                                    Available
-                                </SelectItem>
-                                <SelectItem value="booked">Booked</SelectItem>
-                                <SelectItem value="maintenance">
-                                    Maintenance
-                                </SelectItem>
-                                <SelectItem value="unavailable">
-                                    Unavailable
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                                <Select
+                                    value={statusFilter || ""}
+                                    onValueChange={(value) =>
+                                        setStatusFilter(value || null)
+                                    }
+                                >
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">
+                                            All Statuses
+                                        </SelectItem>
+                                        <SelectItem value="available">
+                                            Available
+                                        </SelectItem>
+                                        <SelectItem value="booked">
+                                            Booked
+                                        </SelectItem>
+                                        <SelectItem value="maintenance">
+                                            Maintenance
+                                        </SelectItem>
+                                        <SelectItem value="unavailable">
+                                            Unavailable
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
 
-                        <Button variant="outline" size="sm" className="gap-1">
-                            <Download className="h-4 w-4" />
-                            Export
-                        </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Export
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-auto p-6">
-                    {viewMode === "table" ? (
+                    {viewMode === "reservations" && (
+                        <div className="text-center text-muted-foreground">
+                            No reservations found.
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex-1 overflow-auto p-6">
+                    {viewMode === "table" && (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -709,7 +804,8 @@ export function VenueManagement() {
                                 )}
                             </TableBody>
                         </Table>
-                    ) : (
+                    )}
+                    {viewMode === "grid" && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredVenues.map((venue) => (
                                 <Card
@@ -729,16 +825,18 @@ export function VenueManagement() {
                                     <CardHeader className="p-4 pb-2">
                                         <div className="flex justify-between">
                                             <div className="flex items-start gap-2">
-                                                <Checkbox
-                                                    checked={selectedItems.includes(
-                                                        venue.id,
-                                                    )}
-                                                    onCheckedChange={() =>
-                                                        handleSelectItem(
+                                                {role === "SUPER_ADMIN" && (
+                                                    <Checkbox
+                                                        checked={selectedItems.includes(
                                                             venue.id,
-                                                        )
-                                                    }
-                                                />
+                                                        )}
+                                                        onCheckedChange={() =>
+                                                            handleSelectItem(
+                                                                venue.id,
+                                                            )
+                                                        }
+                                                    />
+                                                )}
                                                 <div>
                                                     <CardTitle className="text-base">
                                                         {venue.name}
@@ -760,16 +858,18 @@ export function VenueManagement() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            setEditingVenue(
-                                                                venue,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Edit className="mr-2 h-4 w-4" />
-                                                        Edit
-                                                    </DropdownMenuItem>
+                                                    {role === "SUPER_ADMIN" && (
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                setEditingVenue(
+                                                                    venue,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                    )}
                                                     <DropdownMenuItem>
                                                         <Calendar className="mr-2 h-4 w-4" />
                                                         View Calendar
@@ -784,21 +884,25 @@ export function VenueManagement() {
                                                         <Building className="mr-2 h-4 w-4" />
                                                         View Details
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        className="text-destructive"
-                                                        onClick={() => {
-                                                            setVenueToDelete(
-                                                                venue.id,
-                                                            );
-                                                            setIsDeleteDialogOpen(
-                                                                true,
-                                                            );
-                                                        }}
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete
-                                                    </DropdownMenuItem>
+                                                    {role === "SUPER_ADMIN" && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                className="text-destructive"
+                                                                onClick={() => {
+                                                                    setVenueToDelete(
+                                                                        venue.id,
+                                                                    );
+                                                                    setIsDeleteDialogOpen(
+                                                                        true,
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
@@ -895,42 +999,77 @@ export function VenueManagement() {
                 </div>
             </div>
 
-            {/* Add/Edit Venue Dialog */}
-            <VenueFormDialog
-                isOpen={isAddVenueOpen || !!editingVenue}
-                onClose={() => {
-                    setIsAddVenueOpen(false);
-                    setEditingVenue(null);
-                }}
-                onSubmit={editingVenue ? handleEditVenue : handleAddVenue}
-                venue={editingVenue}
-                venueTypes={venueTypes}
-                amenities={commonAmenities}
+            <VenueReservationFormDialog
+                isOpen={isReservationDialogOpen}
+                onClose={() => setIsReservationDialogOpen(false)}
+                onSubmit={handleReservationSubmit}
+                venues={venues.map((venue) => ({
+                    id: venue.id,
+                    name: venue.name,
+                    capacity: venue.capacity,
+                    location: venue.address,
+                    amenities: venue.amenities,
+                    image: venue.image,
+                    availableTimes: [
+                        "08:00",
+                        "09:00",
+                        "10:00",
+                        "11:00",
+                        "12:00",
+                        "13:00",
+                        "14:00",
+                        "15:00",
+                        "16:00",
+                        "17:00",
+                    ], // Adding some default available times
+                }))}
+                eventTypes={eventTypes.map((type) => type.name)}
+                departments={departments.map((dept) => dept.name)}
+                isLoading={false}
             />
 
-            {/* Delete Confirmation Dialog */}
-            <DeleteConfirmDialog
-                isOpen={isDeleteDialogOpen}
-                onClose={() => {
-                    setIsDeleteDialogOpen(false);
-                    setVenueToDelete(null);
-                }}
-                onConfirm={() => {
-                    if (venueToDelete) {
-                        handleDeleteVenue(venueToDelete);
-                    } else if (selectedItems.length > 0) {
-                        handleBulkDelete();
-                    }
-                }}
-                title={
-                    venueToDelete ? "Delete Venue" : "Delete Selected Venues"
-                }
-                description={
-                    venueToDelete
-                        ? "Are you sure you want to delete this venue? This action cannot be undone."
-                        : `Are you sure you want to delete ${selectedItems.length} selected venues? This action cannot be undone.`
-                }
-            />
+            {role === "SUPER_ADMIN" && (
+                <>
+                    <VenueFormDialog
+                        isOpen={isAddVenueOpen || !!editingVenue}
+                        onClose={() => {
+                            setIsAddVenueOpen(false);
+                            setEditingVenue(null);
+                        }}
+                        onSubmit={
+                            editingVenue ? handleEditVenue : handleAddVenue
+                        }
+                        venue={editingVenue}
+                        venueTypes={venueTypes}
+                        amenities={commonAmenities}
+                    />
+
+                    <DeleteConfirmDialog
+                        isOpen={isDeleteDialogOpen}
+                        onClose={() => {
+                            setIsDeleteDialogOpen(false);
+                            setVenueToDelete(null);
+                        }}
+                        onConfirm={() => {
+                            if (venueToDelete) {
+                                handleDeleteVenue(venueToDelete);
+                            } else if (selectedItems.length > 0) {
+                                handleBulkDelete();
+                            }
+                        }}
+                        title={
+                            venueToDelete
+                                ? "Delete Venue"
+                                : "Delete Selected Venues"
+                        }
+                        description={
+                            venueToDelete
+                                ? "Are you sure you want to delete this venue? This action cannot be undone."
+                                : `Are you sure you want to delete ${selectedItems.length} selected venues? This action cannot be undone.`
+                        }
+                    />
+                </>
+            )}
         </div>
     );
 }

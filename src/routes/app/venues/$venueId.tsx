@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { initialReservations } from "../venue-approval/approval";
-import { initialVenues } from "./management.tsx";
+import { initialVenues } from "./dashboard.tsx";
 
 export const Route = createFileRoute("/app/venues/$venueId")({
     component: VenueDetails,

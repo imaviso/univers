@@ -1,5 +1,11 @@
 import { allNavigation } from "@/lib/navigation";
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import {
+    Outlet,
+    createFileRoute,
+    redirect,
+    useRouteContext,
+} from "@tanstack/react-router";
+import { VenueManagement } from "./dashboard";
 
 export const Route = createFileRoute("/app/venues")({
     component: RouteComponent,

@@ -47,21 +47,22 @@ export const allNavigation = [
     },
     {
         name: "Venues",
-        href: "/app/venues/management",
+        href: "/app/venues/dashboard",
         icon: Building,
-        roles: ["SUPER_ADMIN", "VENUE_OWNER", "VPAA", "VP_ADMIN"],
+        roles: [
+            "SUPER_ADMIN",
+            "ORGANIZER",
+            "EQUIPMENT_OWNER",
+            "VENUE_OWNER",
+            "VPAA",
+            "VP_ADMIN",
+        ],
     },
     {
         name: "Venue Approval",
         href: "/app/venue-approval/approval",
         icon: BookCheck,
         roles: ["SUPER_ADMIN", "VENUE_OWNER", "VPAA", "VP_ADMIN"],
-    },
-    {
-        name: "Venue Reservation",
-        href: "/app/venue-reservation",
-        icon: BookText,
-        roles: ["SUPER_ADMIN", "ORGANIZER"],
     },
     {
         name: "Users",
