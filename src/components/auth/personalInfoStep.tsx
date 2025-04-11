@@ -22,26 +22,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-
-// Sample departments
-const departments = [
-    { id: "1", name: "Marketing" },
-    { id: "2", name: "Human Resources" },
-    { id: "3", name: "Finance" },
-    { id: "4", name: "IT" },
-    { id: "5", name: "Operations" },
-    { id: "6", name: "Research & Development" },
-    { id: "7", name: "Customer Service" },
-    { id: "8", name: "Sales" },
-    { id: "9", name: "Legal" },
-    { id: "10", name: "Executive" },
-];
+import { DEPARTMENTS } from "@/lib/types";
 
 // Form schema with validation
 const personalInfoSchema = z.object({
-    idNumber: z
-        .string()
-        .min(5, { message: "ID number must be at least 5 characters" }),
+    idNumber: z.string().min(1, { message: "ID number is required" }),
     firstName: z
         .string()
         .min(2, { message: "First name must be at least 2 characters" }),
@@ -157,12 +142,12 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {departments.map((dept) => (
+                                        {DEPARTMENTS.map((dept) => (
                                             <SelectItem
-                                                key={dept.id}
-                                                value={dept.id}
+                                                key={dept.value}
+                                                value={dept.value}
                                             >
-                                                {dept.name}
+                                                {dept.label}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

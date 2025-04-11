@@ -38,14 +38,38 @@ export const ROLES = [
     { value: "VP_ADMIN", label: "VP Admin" },
 ];
 
-// TODO: NEEDS TO BE CHANGED TO ACTUAL DEPARTMENTS
 export const DEPARTMENTS = [
-    "IT Department",
-    "Human Resources",
-    "Marketing",
-    "Finance",
-    "Operations",
-    "Sales",
+    { value: "SHS", label: "SENIOR HIGH SCHOOL (SHS)" },
+    { value: "VPAA", label: "VICE-PRESIDENT FOR ACADEMIC AFFAIRS (VPAA)" },
+    { value: "CCS", label: "COLLEGE OF COMPUTER STUDIES (CCS)" },
+    {
+        value: "MSDO",
+        label: "MULTIMEDIA SOLUTIONS AND DOCUMENTATION OFFICE (MSDO)",
+    },
+    { value: "SSD", label: "SAFETY AND SECURITY DEPARMENT (SSD)" },
+    { value: "PE", label: "PHYSICAL EDUCATION (PE)" },
+    { value: "JHS", label: "JUNIOR HIGH SCHOOL (JHS)" },
+    {
+        value: "OPC",
+        label: "OFFICE OF PROPERTY CUSTODIAN (OPC)",
+    },
+    {
+        value: "FAO",
+        label: "FINANCE AND ACCOUNTING OFFICE (FAO)",
+    },
+    {
+        value: "OAS",
+        label: "OFFICE OF ADMISSION AND SCHOLARSHIPS (OAS)",
+    },
+    {
+        value: "SSO",
+        label: "STUDENTS SUCCESS OFFICE (SSO)",
+    },
+    { value: "CORE", label: "CORE" },
+    { value: "ELEM", label: "ELEMENTARY" },
+    { value: "CASE", label: "COLLEGE OF ARTS, SCIENCES, AND EDUCATION (CASE)" },
+    { value: "CEA", label: "COLLEGE OF ENGINEERING AND ARCHITECHURE (CEA)" },
+    { value: "EO", label: "EXECUTIVE OFFICE (EO)" },
 ];
 
 export const ACTIVE = [

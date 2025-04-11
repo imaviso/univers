@@ -45,6 +45,7 @@ export const userSignUp = async (
     lastName: string,
     department: string,
     email: string,
+    telephoneNumber: string,
     phoneNumber: string,
     password: string,
 ) => {
@@ -60,6 +61,7 @@ export const userSignUp = async (
                 lastName: lastName,
                 department: department,
                 email: email,
+                telephoneNumber: telephoneNumber,
                 phoneNumber: phoneNumber,
                 password: password,
             }),

@@ -11,6 +11,7 @@ export const registrationFormAtom = atom({
     lastName: "",
     department: "",
     email: "",
+    telephoneNumber: "",
     phoneNumber: "",
     password: "",
     confirmPassword: "",
@@ -25,6 +26,7 @@ interface UserDetails {
     email: string | null;
     role: string | null;
     department: string | null;
+    telephoneNumber: string | null;
     phoneNumber: string | null;
     emailVerified: boolean | null;
     active: boolean | null;
@@ -39,6 +41,7 @@ const initialUserDetails: UserDetails = {
     password: null,
     role: null,
     department: null,
+    telephoneNumber: null,
     phoneNumber: null,
     emailVerified: null,
     active: null,

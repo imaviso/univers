@@ -5,20 +5,6 @@ import { registrationLoadingAtom } from "@/lib/atoms";
 import { useAtom } from "jotai";
 import { CheckCircle2 } from "lucide-react";
 
-// Sample departments mapping
-const departments = {
-    "1": "Marketing",
-    "2": "Human Resources",
-    "3": "Finance",
-    "4": "IT",
-    "5": "Operations",
-    "6": "Research & Development",
-    "7": "Customer Service",
-    "8": "Sales",
-    "9": "Legal",
-    "10": "Executive",
-};
-
 interface SummaryStepProps {
     onSubmit: () => void;
     onBack: () => void;
@@ -69,9 +55,7 @@ export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
                                         Department:
                                     </div>
                                     <div className="break-all">
-                                        {departments[
-                                            formData.department as keyof typeof departments
-                                        ] || formData.department}
+                                        {formData.department}
                                     </div>
                                 </div>
                             </div>
@@ -85,7 +69,12 @@ export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
                                     <div className="break-all">
                                         {formData.email}
                                     </div>
-
+                                    <div className="font-medium">
+                                        Telephone Number:
+                                    </div>
+                                    <div className="break-all">
+                                        {formData.telephoneNumber}
+                                    </div>
                                     <div className="font-medium">
                                         Phone Number:
                                     </div>

@@ -60,6 +60,7 @@ export default function RegistrationForm() {
                 formData.lastName,
                 formData.department,
                 formData.email,
+                formData.telephoneNumber,
                 formData.phoneNumber,
                 formData.password,
             );
