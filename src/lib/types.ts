@@ -39,37 +39,46 @@ export const ROLES = [
 ];
 
 export const DEPARTMENTS = [
-    { value: "SHS", label: "SENIOR HIGH SCHOOL (SHS)" },
-    { value: "VPAA", label: "VICE-PRESIDENT FOR ACADEMIC AFFAIRS (VPAA)" },
-    { value: "CCS", label: "COLLEGE OF COMPUTER STUDIES (CCS)" },
+    { value: "VPAA", label: "Vice-President for Academic Affairs (VPAA)" },
     {
         value: "MSDO",
-        label: "MULTIMEDIA SOLUTIONS AND DOCUMENTATION OFFICE (MSDO)",
+        label: "Multimedia Solutions and Documentation Office (MSDO)",
     },
-    { value: "SSD", label: "SAFETY AND SECURITY DEPARMENT (SSD)" },
-    { value: "PE", label: "PHYSICAL EDUCATION (PE)" },
-    { value: "JHS", label: "JUNIOR HIGH SCHOOL (JHS)" },
+    { value: "SSD", label: "Safety and Security Department (SSD)" },
+    { value: "EO", label: "Executive Office (EO)" },
     {
         value: "OPC",
-        label: "OFFICE OF PROPERTY CUSTODIAN (OPC)",
+        label: "Office of Property Custodian (OPC)",
     },
     {
         value: "FAO",
-        label: "FINANCE AND ACCOUNTING OFFICE (FAO)",
+        label: "Finance and Accounting Office (FAO)",
     },
     {
         value: "OAS",
-        label: "OFFICE OF ADMISSION AND SCHOLARSHIPS (OAS)",
+        label: "Office of Admission and Scholarships (OAS)",
     },
     {
         value: "SSO",
-        label: "STUDENTS SUCCESS OFFICE (SSO)",
+        label: "Students Success Office (SSO)",
     },
-    { value: "CORE", label: "CORE" },
-    { value: "ELEM", label: "ELEMENTARY" },
-    { value: "CASE", label: "COLLEGE OF ARTS, SCIENCES, AND EDUCATION (CASE)" },
-    { value: "CEA", label: "COLLEGE OF ENGINEERING AND ARCHITECHURE (CEA)" },
-    { value: "EO", label: "EXECUTIVE OFFICE (EO)" },
+    { value: "CORE", label: "Core" },
+    { value: "ELEM", label: "Elementary" },
+    { value: "JHS", label: "Junior High School (JHS)" },
+    { value: "SHS", label: "Senior High School (SHS)" },
+    { value: "PE", label: "Physical Education (PE)" },
+    { value: "CASE", label: "College of Arts, Sciences, and Education (CASE)" },
+    {
+        value: "CMBA",
+        label: "College of Management, Business and Accountancy (CMBA)",
+    },
+    {
+        value: "CNAHS",
+        label: "College of Nursing and Allied Health Services (CNAHS)",
+    },
+    { value: "CEA", label: "College of Engineering and Architecture (CEA)" },
+    { value: "CCJ", label: "College of Criminal Justice (CCJ)" },
+    { value: "CCS", label: "College of Computer Studies (CCS)" },
 ];
 
 export const ACTIVE = [
