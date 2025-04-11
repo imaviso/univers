@@ -13,9 +13,22 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { toast } from "sonner";
 
+const initialRegistrationFormState = {
+    idNumber: '',
+    firstName: '',
+    lastName: '',
+    department: '',
+    email: '',
+    telephoneNumber: '',
+    phoneNumber: '',
+    password: '',
+    confirmPassword: '',
+};
+
+
 export default function RegistrationForm() {
     const [currentStep, setCurrentStep] = useAtom(registrationStepAtom);
-    const [formData] = useAtom(registrationFormAtom);
+    const [formData, setFormData] = useAtom(registrationFormAtom);
     const [, setLoading] = useAtom(registrationLoadingAtom);
 
     // Steps configuration
@@ -67,6 +80,8 @@ export default function RegistrationForm() {
             console.log(formData);
             navigate({ from: "/auth/register", to: "/auth/verify-email" });
             toast.success("Registration successful! Please check your email.");
+            setFormData(initialRegistrationFormState);
+            setCurrentStep(0);
         } catch (error) {
             const errorMessage =
                 error instanceof Error
