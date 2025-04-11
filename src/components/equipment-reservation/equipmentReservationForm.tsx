@@ -98,14 +98,22 @@ export function EquipmentReservationFormDialog({
     // Step validation logic
     const isStep1Valid = () => {
         const { eventId } = form.getValues();
-        return !!eventId;
+        return !!eventId; 
     };
 
     const isStep2Valid = () => {
         const { venueId, startDate, endDate, startTime, endTime } =
             form.getValues();
+
+        // Validate that venueId is not empty and that date and time values are valid
         return (
-            !!venueId && !!startDate && !!endDate && !!startTime && !!endTime
+            !!venueId &&
+            startDate instanceof Date &&
+            !isNaN(startDate.getTime()) && // Ensure startDate is a valid Date object
+            endDate instanceof Date &&
+            !isNaN(endDate.getTime()) && // Ensure endDate is a valid Date object
+            !!startTime &&
+            !!endTime
         );
     };
 
@@ -480,11 +488,11 @@ export function EquipmentReservationFormDialog({
                                         <Button
                                             type="button"
                                             onClick={handleNext}
-                                            disabled={
-                                                (step === 1 &&
-                                                    !isStep1Valid()) ||
-                                                (step === 2 && !isStep2Valid())
-                                            }
+                                            // disabled={
+                                            //     (step === 1 &&
+                                            //         !isStep1Valid()) ||
+                                            //     (step === 2 && !isStep2Valid())
+                                            // }
                                         >
                                             Next
                                         </Button>
