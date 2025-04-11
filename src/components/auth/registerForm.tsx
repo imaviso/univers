@@ -14,17 +14,16 @@ import { useAtom } from "jotai";
 import { toast } from "sonner";
 
 const initialRegistrationFormState = {
-    idNumber: '',
-    firstName: '',
-    lastName: '',
-    department: '',
-    email: '',
-    telephoneNumber: '',
-    phoneNumber: '',
-    password: '',
-    confirmPassword: '',
+    idNumber: "",
+    firstName: "",
+    lastName: "",
+    department: "",
+    email: "",
+    telephoneNumber: "",
+    phoneNumber: "",
+    password: "",
+    confirmPassword: "",
 };
-
 
 export default function RegistrationForm() {
     const [currentStep, setCurrentStep] = useAtom(registrationStepAtom);

@@ -64,6 +64,9 @@ const formSchema = z
         department: z.string({
             required_error: "Please select a department.",
         }),
+        telephoneNumber: z
+            .string()
+            .min(3, { message: "Telephone Number is required" }),
         phoneNumber: z
             .string()
             .regex(/^\+?[0-9]\d{1,10}$/, {
@@ -93,6 +96,7 @@ interface UserFormDialogProps {
             confirmPassword: string;
             role: string;
             department: string;
+            telephoneNumber: string;
             phoneNumber: string;
             active: boolean;
         }>,
@@ -107,12 +111,13 @@ interface UserFormDialogProps {
         // confirmPassword: string;
         role: string;
         department: string;
+        telephoneNumber: string;
         phoneNumber: string;
         active?: boolean;
         emailVerified: boolean;
     };
     roles: { value: string; label: string }[];
-    departments: string[];
+    departments: { value: string; label: string }[];
     active?: boolean;
 }
 
@@ -137,6 +142,7 @@ export function EditUserFormDialog({
             // confirmPassword: "",
             role: user?.role || "",
             department: user?.department || "",
+            telephoneNumber: user?.telephoneNumber || "",
             phoneNumber: user?.phoneNumber || "",
             active: user?.active,
             emailVerified: user?.emailVerified,
@@ -156,7 +162,7 @@ export function EditUserFormDialog({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle>
                         {user ? "Edit User" : "Add New User"}
@@ -185,17 +191,30 @@ export function EditUserFormDialog({
 
                             <FormField
                                 control={form.control}
-                                name="phoneNumber"
+                                name="role"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Phone Number</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Enter phone number"
-                                                type="tel"
-                                                {...field}
-                                            />
-                                        </FormControl>
+                                        <FormLabel>Role</FormLabel>
+                                        <Select
+                                            onValueChange={field.onChange}
+                                            defaultValue={field.value}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a role" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {roles.map((role) => (
+                                                    <SelectItem
+                                                        key={role.value}
+                                                        value={role.value}
+                                                    >
+                                                        {role.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -256,68 +275,20 @@ export function EditUserFormDialog({
                             )}
                         />
 
-                        <FormField
-                            control={form.control}
-                            name="password"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Password</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Enter password"
-                                            type="password"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="confirmPassword"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Confirm Password</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Confirm password"
-                                            type="password"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
-                                name="role"
+                                name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Role</FormLabel>
-                                        <Select
-                                            onValueChange={field.onChange}
-                                            defaultValue={field.value}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select a role" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {roles.map((role) => (
-                                                    <SelectItem
-                                                        key={role.value}
-                                                        value={role.value}
-                                                    >
-                                                        {role.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <FormLabel>Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter password"
+                                                type="password"
+                                                {...field}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -325,37 +296,93 @@ export function EditUserFormDialog({
 
                             <FormField
                                 control={form.control}
-                                name="department"
+                                name="confirmPassword"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Department</FormLabel>
-                                        <Select
-                                            onValueChange={field.onChange}
-                                            defaultValue={field.value}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select a department" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {departments.map(
-                                                    (department) => (
-                                                        <SelectItem
-                                                            key={department}
-                                                            value={department}
-                                                        >
-                                                            {department}
-                                                        </SelectItem>
-                                                    ),
-                                                )}
-                                            </SelectContent>
-                                        </Select>
+                                        <FormLabel>Confirm Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Confirm password"
+                                                type="password"
+                                                {...field}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="phoneNumber"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>
+                                            Phone Number (Optional)
+                                        </FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter phone number"
+                                                type="tel"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="telephoneNumber"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Telephone Number</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter telephone number"
+                                                type="tel"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <FormField
+                            control={form.control}
+                            name="department"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Department</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a department" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {departments.map((department) => (
+                                                <SelectItem
+                                                    key={department.value}
+                                                    value={department.value}
+                                                >
+                                                    {department.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <FormField
                             control={form.control}
                             name="active"

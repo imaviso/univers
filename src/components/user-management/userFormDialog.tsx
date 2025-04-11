@@ -24,7 +24,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Switch } from "../ui/switch";
@@ -68,7 +67,9 @@ const formSchema = z
             })
             .optional()
             .or(z.literal("")),
-        telephoneNumber: z.string().min(3),
+        telephoneNumber: z
+            .string()
+            .min(3, { message: "Telephone Number is required" }),
         active: z.boolean().default(true),
         emailVerified: z.boolean().optional(),
     })
@@ -91,6 +92,7 @@ interface UserFormDialogProps {
         // confirmPassword: string;
         role: string;
         department: string;
+        telephoneNumber: string;
         phoneNumber: string;
         active: boolean;
     }) => void;
@@ -118,6 +120,7 @@ export function UserFormDialog({
             confirmPassword: "",
             role: "",
             department: "",
+            telephoneNumber: "",
             phoneNumber: "",
             active: true,
         },
