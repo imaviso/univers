@@ -72,7 +72,9 @@ const formSchema = z
             .regex(/^\+?[0-9]\d{1,10}$/, {
                 message: "Please enter a valid phone number",
             })
-            .min(11, { message: "Phone number must be 11 digits" }),
+            .min(11, { message: "Phone number must be 11 digits" })
+            .optional()
+            .or(z.literal("")),
         active: z.boolean().default(true),
         emailVerified: z.boolean().optional(),
     })
