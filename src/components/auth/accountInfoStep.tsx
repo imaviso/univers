@@ -24,13 +24,15 @@ const accountInfoSchema = z
         email: z
             .string()
             .email({ message: "Please enter a valid email address" }),
-        telephoneNumber: z.string().min(3),
+        telephoneNumber: z
+            .string()
+            .min(3, { message: "Telephone Number is required" }),
         phoneNumber: z
             .string()
-            .regex(/^\+?[0-9]\d{1,10}$/, {
-                message: "Please enter a valid phone number",
-            })
-            .optional(),
+            .regex(/^\+?[0-9]\d{1,10}$/)
+            .min(11, { message: "Phone number must be 11 characters" })
+            .optional()
+            .or(z.literal("")),
         password: z
             .string()
             .min(8, { message: "Password must be at least 8 characters" })
@@ -136,7 +138,7 @@ export default function AccountInfoStep({
                         name="phoneNumber"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Phone Number</FormLabel>
+                                <FormLabel>Phone Number (Optional)</FormLabel>
                                 <FormControl>
                                     <Input
                                         type="text"

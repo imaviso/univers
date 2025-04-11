@@ -38,9 +38,7 @@ const formSchema = z
         lastName: z.string().min(2, {
             message: "Last Name must be at least 2 characters.",
         }),
-        idNumber: z.string().min(5, {
-            message: "ID Number must be at least 5 characters.",
-        }),
+        idNumber: z.string().min(1, { message: "ID number is required" }),
         email: z.string().email({
             message: "Please enter a valid email address.",
         }),
@@ -66,9 +64,10 @@ const formSchema = z
         phoneNumber: z
             .string()
             .regex(/^\+?[0-9]\d{1,10}$/, {
-                message: "Please enter a valid phone number",
+                message: "Phone Number must be 11 characters",
             })
-            .optional(),
+            .optional()
+            .or(z.literal("")),
         telephoneNumber: z.string().min(3),
         active: z.boolean().default(true),
         emailVerified: z.boolean().optional(),
@@ -282,7 +281,9 @@ export function UserFormDialog({
                                 name="phoneNumber"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Phone Number</FormLabel>
+                                        <FormLabel>
+                                            Phone Number (Optional)
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter phone number"
@@ -300,7 +301,7 @@ export function UserFormDialog({
                                 name="telephoneNumber"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Phone Number</FormLabel>
+                                        <FormLabel>Telephone Number</FormLabel>
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter telephone number"
