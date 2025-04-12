@@ -11,6 +11,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { VenueReservationInput } from "@/lib/schema";
 
 // Mock data for mapping IDs to names
 const venues = {
@@ -43,20 +44,8 @@ const departments = {
     "10": "Executive",
 };
 
-type FormData = {
-    email: string;
-    phone: string;
-    department: string;
-    eventName: string;
-    eventType: string;
-    venue: string;
-    date: Date;
-    startTime: string;
-    endTime: string;
-};
-
 interface ReservationConfirmationModalProps {
-    formData: FormData;
+    formData: VenueReservationInput;
     approvalLetter: File | null;
     onConfirm: () => void;
     onCancel: () => void;
@@ -90,7 +79,7 @@ export default function ReservationConfirmationModal({
                                 <div>{formData.email}</div>
 
                                 <div className="font-medium">Phone:</div>
-                                <div>{formData.phone}</div>
+                                <div>{formData.phoneNumber}</div>
 
                                 <div className="font-medium">Department:</div>
                                 <div>
@@ -123,32 +112,23 @@ export default function ReservationConfirmationModal({
                                     ] || formData.venue}
                                 </div>
 
-                                <div className="font-medium">Date:</div>
-                                <div>
-                                    {format(formData.date, "MMMM d, yyyy")}
+                                <div className="font-medium">
+                                    Start Date Time:
                                 </div>
-
-                                <div className="font-medium">Start Time:</div>
                                 <div>
                                     {format(
-                                        parse(
-                                            formData.startTime,
-                                            "HH:mm",
-                                            new Date(),
-                                        ),
-                                        "hh:mm aa",
+                                        formData.startDateTime,
+                                        "yyyy-mm-ddThh:mm",
                                     )}
                                 </div>
 
-                                <div className="font-medium">End Time:</div>
+                                <div className="font-medium">
+                                    End Date Time:
+                                </div>
                                 <div>
                                     {format(
-                                        parse(
-                                            formData.endTime,
-                                            "HH:mm",
-                                            new Date(),
-                                        ),
-                                        "hh:mm aa",
+                                        formData.endDateTime,
+                                        "yyyy-mm-ddThh:mm",
                                     )}
                                 </div>
                             </div>

@@ -1,9 +1,7 @@
 import { registrationFormAtom } from "@/lib/atoms";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useAtom } from "jotai";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
-
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -23,21 +21,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { DEPARTMENTS } from "@/lib/types";
-
-// Form schema with validation
-const personalInfoSchema = z.object({
-    idNumber: z.string().min(1, { message: "ID number is required" }),
-    firstName: z
-        .string()
-        .min(2, { message: "First name must be at least 2 characters" }),
-    lastName: z
-        .string()
-        .min(2, { message: "Last name must be at least 2 characters" }),
-    department: z.string({ required_error: "Please select a department" }),
-});
-
-type PersonalInfoValues = z.infer<typeof personalInfoSchema>;
-
+import { personalInfoSchema, type PersonalInfoInput } from "@/lib/schema";
 interface PersonalInfoStepProps {
     onNext: () => void;
 }
@@ -45,8 +29,8 @@ interface PersonalInfoStepProps {
 export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
     const [formData, setFormData] = useAtom(registrationFormAtom);
 
-    const form = useForm<PersonalInfoValues>({
-        resolver: zodResolver(personalInfoSchema),
+    const form = useForm<PersonalInfoInput>({
+        resolver: valibotResolver(personalInfoSchema),
         defaultValues: {
             idNumber: formData.idNumber,
             firstName: formData.firstName,
@@ -55,7 +39,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
         },
     });
 
-    const onSubmit = (values: PersonalInfoValues) => {
+    const onSubmit = (values: PersonalInfoInput) => {
         // Update the global form state
         setFormData({
             ...formData,

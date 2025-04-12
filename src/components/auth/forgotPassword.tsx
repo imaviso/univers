@@ -28,7 +28,6 @@ import {
     userResetVerificationCode,
 } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
 import {
     ArrowLeft,
@@ -41,42 +40,15 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import * as z from "zod";
-
-const emailSchema = z.object({
-    email: z.string().email({ message: "Invalid email address" }),
-});
-
-const verificationCodeSchema = z.object({
-    code: z
-        .string()
-        .min(6, { message: "Verification code must be 6 characters" }),
-});
-
-const passwordResetSchema = z
-    .object({
-        password: z
-            .string()
-            .min(8, { message: "Password must be at least 8 characters" })
-            .regex(/[A-Z]/, {
-                message: "Password must contain at least one uppercase letter",
-            })
-            .regex(/[a-z]/, {
-                message: "Password must contain at least one lowercase letter",
-            })
-            .regex(/[0-9]/, {
-                message: "Password must contain at least one number",
-            }),
-        confirmPassword: z.string(),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-        message: "Passwords don't match",
-        path: ["confirmPassword"],
-    });
-
-type EmailValues = z.infer<typeof emailSchema>;
-type VerificationCodeValues = z.infer<typeof verificationCodeSchema>;
-type PasswordResetValues = z.infer<typeof passwordResetSchema>;
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import {
+    type EmailInput,
+    emailSchema,
+    type ResetPasswordInput,
+    resetPasswordSchema,
+    type OtpInput,
+    OtpSchema,
+} from "@/lib/schema";
 
 export default function ForgotPasswordForm() {
     const [step, setStep] = useState<number>(1);
@@ -89,31 +61,31 @@ export default function ForgotPasswordForm() {
     const [showConfirmPassword, setShowConfirmPassword] =
         useState<boolean>(false);
 
-    const emailForm = useForm<EmailValues>({
-        resolver: zodResolver(emailSchema),
+    const emailForm = useForm<EmailInput>({
+        resolver: valibotResolver(emailSchema),
         defaultValues: {
             email: "",
         },
     });
 
     // Form for step 2: Verification code
-    const codeForm = useForm<VerificationCodeValues>({
-        resolver: zodResolver(verificationCodeSchema),
+    const codeForm = useForm<OtpInput>({
+        resolver: valibotResolver(OtpSchema),
         defaultValues: {
             code: "",
         },
     });
 
     // Form for step 3: New password
-    const passwordForm = useForm<PasswordResetValues>({
-        resolver: zodResolver(passwordResetSchema),
+    const passwordForm = useForm<ResetPasswordInput>({
+        resolver: valibotResolver(resetPasswordSchema),
         defaultValues: {
             password: "",
             confirmPassword: "",
         },
     });
 
-    const onSubmitEmail = async (values: EmailValues) => {
+    const onSubmitEmail = async (values: EmailInput) => {
         setIsLoading(true);
 
         try {
@@ -146,7 +118,7 @@ export default function ForgotPasswordForm() {
         }
     };
 
-    const onSubmitVerificationCode = async (values: VerificationCodeValues) => {
+    const onSubmitVerificationCode = async (values: OtpInput) => {
         setIsLoading(true);
         setCode(values.code);
 
@@ -167,7 +139,7 @@ export default function ForgotPasswordForm() {
         }
     };
 
-    const onSubmitNewPassword = async (values: PasswordResetValues) => {
+    const onSubmitNewPassword = async (values: ResetPasswordInput) => {
         setIsLoading(true);
 
         try {

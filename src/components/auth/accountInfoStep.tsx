@@ -1,11 +1,8 @@
 import { registrationFormAtom } from "@/lib/atoms";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useAtom } from "jotai";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
-
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -17,42 +14,8 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-
-// Form schema with validation
-const accountInfoSchema = z
-    .object({
-        email: z
-            .string()
-            .email({ message: "Please enter a valid email address" }),
-        telephoneNumber: z
-            .string()
-            .min(3, { message: "Telephone Number is required" }),
-        phoneNumber: z
-            .string()
-            .regex(/^\+?[0-9]\d{1,10}$/)
-            .min(11, { message: "Phone number must be 11 characters" })
-            .optional()
-            .or(z.literal("")),
-        password: z
-            .string()
-            .min(8, { message: "Password must be at least 8 characters" })
-            .regex(/[A-Z]/, {
-                message: "Password must contain at least one uppercase letter",
-            })
-            .regex(/[a-z]/, {
-                message: "Password must contain at least one lowercase letter",
-            })
-            .regex(/[0-9]/, {
-                message: "Password must contain at least one number",
-            }),
-        confirmPassword: z.string(),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-        message: "Passwords do not match",
-        path: ["confirmPassword"],
-    });
-
-type AccountInfoValues = z.infer<typeof accountInfoSchema>;
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { accountInfoSchema, type AccountInfoInput } from "@/lib/schema";
 
 interface AccountInfoStepProps {
     onNext: () => void;
@@ -67,8 +30,8 @@ export default function AccountInfoStep({
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const form = useForm<AccountInfoValues>({
-        resolver: zodResolver(accountInfoSchema),
+    const form = useForm<AccountInfoInput>({
+        resolver: valibotResolver(accountInfoSchema),
         defaultValues: {
             email: formData.email,
             telephoneNumber: formData.telephoneNumber,
@@ -78,7 +41,7 @@ export default function AccountInfoStep({
         },
     });
 
-    const onSubmit = (values: AccountInfoValues) => {
+    const onSubmit = (values: AccountInfoInput) => {
         // Update the global form state
         setFormData({
             ...formData,

@@ -1,10 +1,7 @@
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -18,46 +15,30 @@ import {
 import { Input } from "@/components/ui/input";
 import { userSignIn } from "@/lib/auth";
 import { toast } from "sonner";
-
-// Form schema with validation
-const loginSchema = z.object({
-    email: z.string().email({ message: "Invalid email address" }),
-    password: z
-        .string()
-        .min(8, { message: "Password must be at least 8 characters" })
-        .regex(/[A-Z]/, {
-            message: "Password must contain at least one uppercase letter",
-        })
-        .regex(/[a-z]/, {
-            message: "Password must contain at least one lowercase letter",
-        })
-        .regex(/[0-9]/, {
-            message: "Password must contain at least one number",
-        }),
-});
-
-type LoginValues = z.infer<typeof loginSchema>;
+import { type LoginInput, loginSchema } from "@/lib/schema";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 
 export default function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const navigate = useNavigate();
-    const form = useForm<LoginValues>({
-        resolver: zodResolver(loginSchema),
+    const form = useForm<LoginInput>({
+        resolver: valibotResolver(loginSchema),
         defaultValues: {
             email: "",
             password: "",
         },
     });
 
-    const onSubmit = async (values: LoginValues) => {
+    const onSubmit = async (values: LoginInput) => {
         setIsLoading(true);
 
         try {
             console.log("Login attempt:", values);
             const res = await userSignIn(values.email, values.password);
             console.log("Login response:", res.user);
+            // navigate({ to: "/app/calendar" });
             window.location.reload();
         } catch (error) {
             const errorMessage =

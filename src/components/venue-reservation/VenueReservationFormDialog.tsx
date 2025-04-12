@@ -29,51 +29,12 @@ import {
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { CalendarIcon, Clock, MapPin, Users } from "lucide-react";
-
-// Zod schema for form validation
-const formSchema = z.object({
-    eventName: z.string().min(2, {
-        message: "Event name must be at least 2 characters.",
-    }),
-    eventType: z.string({
-        required_error: "Please select an event type.",
-    }),
-    department: z.string({
-        required_error: "Please select a department.",
-    }),
-    contactPerson: z.string().min(2, {
-        message: "Contact person name must be at least 2 characters.",
-    }),
-    contactEmail: z.string().email({
-        message: "Please enter a valid email address.",
-    }),
-    contactPhone: z.string().min(10, {
-        message: "Please enter a valid phone number.",
-    }),
-    attendees: z.string().refine((value) => {
-        const num = Number(value);
-        return !Number.isNaN(num) && num > 0;
-    }, "Attendees must be a number greater than 0"),
-    date: z.date({
-        required_error: "Please select a date.",
-    }),
-    description: z.string().optional(),
-    venue: z.string({
-        required_error: "Please select a venue.",
-    }),
-    startTime: z.string({
-        required_error: "Please select a start time.",
-    }),
-    endTime: z.string({
-        required_error: "Please select an end time.",
-    }),
-    equipment: z.string().array(),
-});
-
-export type VenueReservationFormData = z.infer<typeof formSchema>;
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import {
+    venueReservationFormDialogSchema,
+    type VenueReservationFormDialogInput,
+} from "@/lib/schema";
 
 export interface VenueType {
     id: number;
@@ -88,7 +49,7 @@ export interface VenueType {
 interface VenueReservationFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: VenueReservationFormData) => void;
+    onSubmit: (data: VenueReservationFormDialogInput) => void;
     venues: VenueType[];
     eventTypes: string[];
     departments: string[];
@@ -107,8 +68,8 @@ export function VenueReservationFormDialog({
     const [step, setStep] = useState(1);
     const [filteredVenues, setFilteredVenues] = useState<VenueType[]>(venues);
 
-    const form = useForm<VenueReservationFormData>({
-        resolver: zodResolver(formSchema),
+    const form = useForm<VenueReservationFormDialogInput>({
+        resolver: valibotResolver(venueReservationFormDialogSchema),
         defaultValues: {
             eventName: "",
             eventType: "",
@@ -118,7 +79,7 @@ export function VenueReservationFormDialog({
             contactPhone: "",
             attendees: "",
             description: "",
-            date: new Date(),
+            date: "",
             venue: "",
             startTime: "",
             endTime: "",
@@ -127,7 +88,7 @@ export function VenueReservationFormDialog({
         mode: "onChange",
     });
 
-    const handleSubmitForm = (data: VenueReservationFormData) => {
+    const handleSubmitForm = (data: VenueReservationFormDialogInput) => {
         onSubmit(data);
         form.reset();
         setStep(1);

@@ -1,12 +1,8 @@
 import type React from "react";
-
-import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { CalendarIcon, Clock, Upload } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
-
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,7 +30,11 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import ReservationConfirmationModal from "./venueReservationModal";
-
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import {
+    venueReservationFormSchema,
+    type VenueReservationInput,
+} from "@/lib/schema";
 // Mock data for venues and event types
 const venues = [
     { id: "1", name: "Main Auditorium" },
@@ -66,50 +66,25 @@ const departments = [
     { id: "10", name: "Executive" },
 ];
 
-// Form schema with validation
-const formSchema = z.object({
-    email: z.string().email({ message: "Please enter a valid email address" }),
-    phone: z
-        .string()
-        .min(10, { message: "Phone number must be at least 10 digits" }),
-    department: z.string({ required_error: "Please select a department" }),
-    eventName: z
-        .string()
-        .min(3, { message: "Event name must be at least 3 characters" }),
-    eventType: z.string({ required_error: "Please select an event type" }),
-    venue: z.string({ required_error: "Please select a venue" }),
-    date: z.date({ required_error: "Please select a date" }),
-    startTime: z.string({ required_error: "Please select a start time" }),
-    endTime: z.string({ required_error: "Please select an end time" }).refine(
-        (time, ctx) => {
-            // Add null check for ctx.data
-            if (!ctx?.data?.startTime) return true;
-
-            // Compare times only if startTime exists
-            return time > ctx.data.startTime;
-        },
-        { message: "End time must be after start time" },
-    ),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
 export default function VenueReservationForm() {
     const [approvalLetter, setApprovalLetter] = useState<File | null>(null);
     const [showConfirmation, setShowConfirmation] = useState(false);
-    const [formData, setFormData] = useState<FormValues | null>(null);
+    const [formData, setFormData] = useState<VenueReservationInput | null>(
+        null,
+    );
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
+    const form = useForm<VenueReservationInput>({
+        resolver: valibotResolver(venueReservationFormSchema),
         defaultValues: {
             email: "",
-            phone: "",
+            phoneNumber: "",
             department: "",
             eventName: "",
             eventType: "",
             venue: "",
-            startTime: "",
-            endTime: "",
+            startDateTime: "",
+            endDateTime: "",
+            approvedLetter: undefined,
         },
     });
 
@@ -119,7 +94,7 @@ export default function VenueReservationForm() {
         }
     };
 
-    const onSubmit = (data: FormValues) => {
+    const onSubmit = (data: VenueReservationInput) => {
         setFormData(data);
         setShowConfirmation(true);
     };
@@ -171,7 +146,7 @@ export default function VenueReservationForm() {
 
                                     <FormField
                                         control={form.control}
-                                        name="phone"
+                                        name="phoneNumber"
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Phone</FormLabel>
@@ -329,10 +304,12 @@ export default function VenueReservationForm() {
 
                                     <FormField
                                         control={form.control}
-                                        name="date"
+                                        name="startDateTime"
                                         render={({ field }) => (
                                             <FormItem className="flex flex-col">
-                                                <FormLabel>Date</FormLabel>
+                                                <FormLabel>
+                                                    Start Date Time
+                                                </FormLabel>
                                                 <Popover>
                                                     <PopoverTrigger asChild>
                                                         <FormControl>
@@ -388,32 +365,12 @@ export default function VenueReservationForm() {
 
                                     <FormField
                                         control={form.control}
-                                        name="startTime"
+                                        name="endDateTime"
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>
-                                                    Start Time
+                                                    End Date Time
                                                 </FormLabel>
-                                                <div className="flex items-center">
-                                                    <FormControl>
-                                                        <Input
-                                                            type="time"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                    <Clock className="ml-2 h-4 w-4 text-muted-foreground" />
-                                                </div>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-
-                                    <FormField
-                                        control={form.control}
-                                        name="endTime"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>End Time</FormLabel>
                                                 <div className="flex items-center">
                                                     <FormControl>
                                                         <Input

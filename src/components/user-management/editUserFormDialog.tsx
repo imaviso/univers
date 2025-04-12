@@ -23,65 +23,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
 import { Switch } from "../ui/switch";
-
-const formSchema = z
-    .object({
-        // id: z.string().optional(),
-        firstName: z.string().min(2, {
-            message: "First Name must be at least 2 characters.",
-        }),
-        lastName: z.string().min(2, {
-            message: "Last Name must be at least 2 characters.",
-        }),
-        idNumber: z.string().min(5, {
-            message: "ID Number must be at least 5 characters.",
-        }),
-        email: z.string().email({
-            message: "Please enter a valid email address.",
-        }),
-        password: z
-            .string()
-            .min(8, { message: "Password must be at least 8 characters" })
-            .regex(/[A-Z]/, {
-                message: "Password must contain at least one uppercase letter",
-            })
-            .regex(/[a-z]/, {
-                message: "Password must contain at least one lowercase letter",
-            })
-            .regex(/[0-9]/, {
-                message: "Password must contain at least one number",
-            })
-            .optional(),
-        confirmPassword: z.string().optional(),
-        role: z.string({
-            required_error: "Please select a role.",
-        }),
-        department: z.string({
-            required_error: "Please select a department.",
-        }),
-        telephoneNumber: z
-            .string()
-            .min(3, { message: "Telephone Number is required" }),
-        phoneNumber: z
-            .string()
-            .regex(/^\+?[0-9]\d{1,10}$/, {
-                message: "Please enter a valid phone number",
-            })
-            .min(11, { message: "Phone number must be 11 digits" })
-            .optional()
-            .or(z.literal("")),
-        active: z.boolean().default(true),
-        emailVerified: z.boolean().optional(),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-        message: "Passwords do not match",
-        path: ["confirmPassword"],
-    });
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { type UserFormInput, userFormSchema } from "@/lib/schema";
 
 interface UserFormDialogProps {
     isOpen: boolean;
@@ -132,8 +78,8 @@ export function EditUserFormDialog({
     roles,
     departments,
 }: UserFormDialogProps) {
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+    const form = useForm<UserFormInput>({
+        resolver: valibotResolver(userFormSchema),
         defaultValues: {
             // id: user?.id || undefined,
             idNumber: user?.idNumber || "",

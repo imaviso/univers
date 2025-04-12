@@ -24,7 +24,6 @@ import {
 import { registrationFormAtom } from "@/lib/atoms";
 import { userResendVerificationCode, verifyOTP } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { atom } from "jotai";
@@ -32,15 +31,10 @@ import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { type OtpInput, OtpSchema } from "@/lib/schema";
 
 const emailAtom = atom((get) => get(registrationFormAtom).email);
-
-const FormSchema = z.object({
-    pin: z.string().min(6, {
-        message: "Your verification code must be 6 characters.",
-    }),
-});
 
 export function InputOTPForm() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -49,19 +43,19 @@ export function InputOTPForm() {
     const onBack = () => router.history.back();
     const [email] = useAtom(emailAtom);
 
-    const form = useForm<z.infer<typeof FormSchema>>({
-        resolver: zodResolver(FormSchema),
+    const form = useForm<OtpInput>({
+        resolver: valibotResolver(OtpSchema),
         defaultValues: {
-            pin: "",
+            code: "",
         },
     });
 
-    async function onSubmit(data: z.infer<typeof FormSchema>) {
+    async function onSubmit(data: OtpInput) {
         try {
             setIsLoading(true);
             // Attempt to sign in user
             console.log("Verifying OTP for email:", email);
-            await verifyOTP(email, data.pin);
+            await verifyOTP(email, data.code);
             navigate({ to: "/auth/login" });
             toast.success("Verification successful! You can now log in.");
         } catch (error) {
@@ -136,7 +130,7 @@ export function InputOTPForm() {
                     >
                         <FormField
                             control={form.control}
-                            name="pin"
+                            name="code"
                             render={({ field }) => (
                                 <FormItem className="space-y-3">
                                     <FormLabel className="text-center block">

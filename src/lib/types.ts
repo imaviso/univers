@@ -1,5 +1,3 @@
-import { StringValidation } from "zod";
-
 export const isAuthenticated = !!localStorage.getItem("token");
 
 export type UserType = {

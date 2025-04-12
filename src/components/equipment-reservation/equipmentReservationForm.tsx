@@ -1,10 +1,7 @@
-import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
-
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -39,38 +36,17 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import EquipmentList from "./equipmentList";
-
-// Form schema
-const formSchema = z.object({
-    eventId: z.string({
-        required_error: "Please select an event.",
-    }),
-    venueId: z.string({
-        required_error: "Please select a venue.",
-    }),
-    startDate: z.date({
-        required_error: "Please select a start date.",
-    }),
-    endDate: z.date({
-        required_error: "Please select an end date.",
-    }),
-    startTime: z.string({
-        required_error: "Please enter a start time.",
-    }),
-    endTime: z.string({
-        required_error: "Please enter an end time.",
-    }),
-    purpose: z.string().optional(),
-    selectedEquipment: z.array(z.string()).min(1, {
-        message: "Please select at least one equipment.",
-    }),
-});
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import {
+    equipmentReservationFormSchema,
+    type EquipmentReservationFormInput,
+} from "@/lib/schema";
 
 // Define the props interface
 interface EquipmentReservationFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: z.infer<typeof formSchema>) => void;
+    onSubmit: (data: EquipmentReservationFormInput) => void;
     events: { id: string; name: string }[];
     venues: { id: string; name: string; capacity: number }[];
     isLoading?: boolean;
@@ -86,8 +62,8 @@ export function EquipmentReservationFormDialog({
 }: EquipmentReservationFormDialogProps) {
     const [step, setStep] = useState(1);
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+    const form = useForm<EquipmentReservationFormInput>({
+        resolver: valibotResolver(equipmentReservationFormSchema),
         defaultValues: {
             purpose: "",
             selectedEquipment: [],
@@ -98,7 +74,7 @@ export function EquipmentReservationFormDialog({
     // Step validation logic
     const isStep1Valid = () => {
         const { eventId } = form.getValues();
-        return !!eventId; 
+        return !!eventId;
     };
 
     const isStep2Valid = () => {
@@ -129,7 +105,7 @@ export function EquipmentReservationFormDialog({
         setStep(Math.max(1, step - 1));
     };
 
-    const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    const handleSubmit = (values: EquipmentReservationFormInput) => {
         onSubmit(values);
         form.reset();
         setStep(1);

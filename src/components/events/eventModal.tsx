@@ -40,26 +40,16 @@ import {
 import { SmartDatetimeInput } from "@/components/ui/smart-datetime-input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import * as z from "zod";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { type EventInput, eventSchema } from "@/lib/schema";
 interface EventModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
-const formSchema = z.object({
-    eventName: z.string().min(1),
-    status: z.string(),
-    facility: z.string(),
-    description: z.string().optional(),
-    startTime: z.unknown(),
-    endTime: z.unknown(),
-    allDay: z.boolean().default(true).optional(),
-});
 
 const facilities = [
     {
@@ -91,15 +81,15 @@ const facilities = [
 export function EventModal({ isOpen, onClose }: EventModalProps) {
     const [date, setDate] = useState<Date>();
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+    const form = useForm<EventInput>({
+        resolver: valibotResolver(eventSchema),
         defaultValues: {
             startTime: new Date(),
             endTime: new Date(),
         },
     });
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
+    function onSubmit(values: EventInput) {
         try {
             console.log(values);
             toast("Event Created", {

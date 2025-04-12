@@ -219,7 +219,6 @@ const venues = [
 export function EquipmentInventory() {
     const context = useRouteContext({ from: "/app/equipments" });
     const role = "role" in context ? context.role : "USER";
-    console.log("Role from context:", role);
     const [equipment, setEquipment] = useState(initialEquipment);
     const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<string | null>(null);

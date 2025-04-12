@@ -288,7 +288,6 @@ const departments = [
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
     const role = "role" in context ? context.role : "USER";
-    console.log("Role from context:", role);
     const navigate = useNavigate();
     const [venues, setVenues] = useState(initialVenues);
     const [searchQuery, setSearchQuery] = useState("");

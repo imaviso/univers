@@ -1,9 +1,6 @@
-import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Eye, EyeOff, KeyRound } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
-
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -23,24 +20,8 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-
-const FormSchema = z
-    .object({
-        password: z
-            .string()
-            .min(8, {
-                message: "Password must be at least 8 characters.",
-            })
-            .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
-                message:
-                    "Password must contain uppercase, lowercase, and number.",
-            }),
-        confirmPassword: z.string(),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-        message: "Passwords don't match",
-        path: ["confirmPassword"],
-    });
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { type ResetPasswordInput, resetPasswordSchema } from "@/lib/schema";
 
 export function ResetPasswordForm() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -49,15 +30,15 @@ export function ResetPasswordForm() {
     const [showConfirmPassword, setShowConfirmPassword] =
         useState<boolean>(false);
 
-    const form = useForm<z.infer<typeof FormSchema>>({
-        resolver: zodResolver(FormSchema),
+    const form = useForm<ResetPasswordInput>({
+        resolver: valibotResolver(resetPasswordSchema),
         defaultValues: {
             password: "",
             confirmPassword: "",
         },
     });
 
-    async function onSubmit(data: z.infer<typeof FormSchema>) {
+    async function onSubmit(data: ResetPasswordInput) {
         try {
             setIsLoading(true);
 
