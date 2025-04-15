@@ -96,7 +96,7 @@ export function VenueReservationFormDialog({
             endDateTime: undefined,
             venue: "",
             equipment: [],
-            approvedLetter: undefined,
+            approvedLetter: [],
         },
         mode: "onChange",
     });
@@ -517,10 +517,6 @@ export function VenueReservationFormDialog({
                             <div>
                                 <div className="max-w-[700px gap-6">
                                     <div>
-                                        <h3 className="text-lg font-medium mb-4">
-                                            Select Date & Equipment
-                                        </h3>
-                                        {/* Start Date and Time */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2 ">
                                             <FormField
                                                 control={form.control}
@@ -595,7 +591,7 @@ export function VenueReservationFormDialog({
                                                     name="equipment"
                                                     render={() => (
                                                         <FormItem>
-                                                            <FormLabel className="text-base">
+                                                            <FormLabel>
                                                                 Equipment Needed
                                                             </FormLabel>
                                                             <div className="space-y-2 mt-2">
