@@ -218,7 +218,7 @@ export const venueReservationFormSchema = v.object({
     ),
     eventType: v.pipe(v.string(), v.nonEmpty("Event Type is required")),
     venue: v.pipe(v.string(), v.nonEmpty("Venue is required")),
- 
+
     approvedLetter: v.pipe(
         v.file("Please select an image file."),
         v.mimeType(
@@ -270,6 +270,19 @@ export const venueReservationFormDialogSchema = v.pipe(
         equipment: v.pipe(
             v.array(v.string()),
             v.minLength(1, "Please select at least one equipment."),
+        ),
+        approvedLetter: v.array(
+            v.pipe(
+                v.file("Please select an image file."),
+                v.mimeType(
+                    ["image/jpeg", "image/png"],
+                    "Please select a JPEG or PNG file.",
+                ),
+                v.maxSize(
+                    1024 * 1024 * 10,
+                    "Please select a file smaller than 10 MB.",
+                ),
+            ),
         ),
     }),
     v.forward(
