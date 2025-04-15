@@ -23,7 +23,9 @@ import {
 } from "@/components/ui/input-otp";
 import { registrationFormAtom } from "@/lib/atoms";
 import { userResendVerificationCode, verifyOTP } from "@/lib/auth";
+import { type OtpInput, OtpSchema } from "@/lib/schema";
 import { cn } from "@/lib/utils";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { atom } from "jotai";
@@ -31,8 +33,6 @@ import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { valibotResolver } from "@hookform/resolvers/valibot";
-import { type OtpInput, OtpSchema } from "@/lib/schema";
 
 const emailAtom = atom((get) => get(registrationFormAtom).email);
 

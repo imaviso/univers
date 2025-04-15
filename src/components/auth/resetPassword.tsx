@@ -1,6 +1,3 @@
-import { CheckCircle2, Eye, EyeOff, KeyRound } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -20,8 +17,11 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { valibotResolver } from "@hookform/resolvers/valibot";
 import { type ResetPasswordInput, resetPasswordSchema } from "@/lib/schema";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { CheckCircle2, Eye, EyeOff, KeyRound } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 export function ResetPasswordForm() {
     const [isLoading, setIsLoading] = useState<boolean>(false);

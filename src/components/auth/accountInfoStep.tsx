@@ -1,8 +1,3 @@
-import { registrationFormAtom } from "@/lib/atoms";
-import { useAtom } from "jotai";
-import { Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -14,8 +9,13 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { registrationFormAtom } from "@/lib/atoms";
+import { type AccountInfoInput, accountInfoSchema } from "@/lib/schema";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { accountInfoSchema, type AccountInfoInput } from "@/lib/schema";
+import { useAtom } from "jotai";
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 interface AccountInfoStepProps {
     onNext: () => void;

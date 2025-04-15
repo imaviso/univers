@@ -23,10 +23,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { type UserFormInput, userFormSchema } from "@/lib/schema";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useForm } from "react-hook-form";
 import { Switch } from "../ui/switch";
-import { valibotResolver } from "@hookform/resolvers/valibot";
-import { userFormSchema, type UserFormInput } from "@/lib/schema";
 
 interface UserFormDialogProps {
     isOpen: boolean;

@@ -87,9 +87,9 @@ import {
 import { set } from "date-fns";
 import { atom, useAtom } from "jotai";
 import { toast } from "sonner";
+import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 import { EditUserFormDialog } from "./editUserFormDialog";
 import { UserFormDialog } from "./userFormDialog";
-import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 // --- End Import ---
 
 // The main DataTable component
@@ -110,8 +110,6 @@ export function UserDataTable() {
         isError,
         data: initialUsers,
     } = useSuspenseQuery(usersQueryOptions);
-
- 
 
     const handleDeactivateUser = (userData: Partial<UserType>) => {
         console.log("Deactivating user:", userData);

@@ -1,8 +1,3 @@
-import type React from "react";
-import { format } from "date-fns";
-import { CalendarIcon, Clock, Upload } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,13 +23,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import ReservationConfirmationModal from "./venueReservationModal";
-import { valibotResolver } from "@hookform/resolvers/valibot";
 import {
-    venueReservationFormSchema,
     type VenueReservationInput,
+    venueReservationFormSchema,
 } from "@/lib/schema";
+import { cn } from "@/lib/utils";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { format } from "date-fns";
+import { CalendarIcon, Clock, Upload } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import ReservationConfirmationModal from "./venueReservationModal";
 // Mock data for venues and event types
 const venues = [
     { id: "1", name: "Main Auditorium" },

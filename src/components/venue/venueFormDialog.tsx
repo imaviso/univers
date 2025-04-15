@@ -243,7 +243,10 @@ export function VenueFormDialog({
                                         handleChange("status", value)
                                     }
                                 >
-                                    <SelectTrigger className="w-full" id="status">
+                                    <SelectTrigger
+                                        className="w-full"
+                                        id="status"
+                                    >
                                         <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
                                     <SelectContent>

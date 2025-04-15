@@ -1,7 +1,3 @@
-import { format, isBefore } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -33,14 +29,18 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn, timeOptions } from "@/lib/utils";
-import EquipmentList from "./equipmentList";
-import { valibotResolver } from "@hookform/resolvers/valibot";
 import {
-    equipmentReservationFormSchema,
     type EquipmentReservationFormInput,
+    equipmentReservationFormSchema,
 } from "@/lib/schema";
+import { cn, timeOptions } from "@/lib/utils";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { format, isBefore } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Checkbox } from "../ui/checkbox";
+import EquipmentList from "./equipmentList";
 
 // Define the props interface
 interface EquipmentReservationFormDialogProps {

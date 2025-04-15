@@ -1,7 +1,3 @@
-import { registrationFormAtom } from "@/lib/atoms";
-import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useAtom } from "jotai";
-import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -20,8 +16,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { registrationFormAtom } from "@/lib/atoms";
+import { type PersonalInfoInput, personalInfoSchema } from "@/lib/schema";
 import { DEPARTMENTS } from "@/lib/types";
-import { personalInfoSchema, type PersonalInfoInput } from "@/lib/schema";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useAtom } from "jotai";
+import { useForm } from "react-hook-form";
 interface PersonalInfoStepProps {
     onNext: () => void;
 }

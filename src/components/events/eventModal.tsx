@@ -38,16 +38,16 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { type EventInput, eventSchema } from "@/lib/schema";
 import { cn } from "@/lib/utils";
+import { combineDateTime, timeOptions } from "@/lib/utils";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { format, isBefore, setHours, setMinutes } from "date-fns"; // Added date-fns functions
 import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { valibotResolver } from "@hookform/resolvers/valibot";
-import { type EventInput, eventSchema } from "@/lib/schema";
 import { Calendar } from "../ui/calendar";
-import { format, isBefore, setHours, setMinutes } from "date-fns"; // Added date-fns functions
-import { combineDateTime, timeOptions } from "@/lib/utils";
 interface EventModalProps {
     isOpen: boolean;
     onClose: () => void;

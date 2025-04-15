@@ -27,7 +27,16 @@ import {
     userResetPassword,
     userResetVerificationCode,
 } from "@/lib/auth";
+import {
+    type EmailInput,
+    type OtpInput,
+    OtpSchema,
+    type ResetPasswordInput,
+    emailSchema,
+    resetPasswordSchema,
+} from "@/lib/schema";
 import { cn } from "@/lib/utils";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Link } from "@tanstack/react-router";
 import {
     ArrowLeft,
@@ -40,15 +49,6 @@ import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { valibotResolver } from "@hookform/resolvers/valibot";
-import {
-    type EmailInput,
-    emailSchema,
-    type ResetPasswordInput,
-    resetPasswordSchema,
-    type OtpInput,
-    OtpSchema,
-} from "@/lib/schema";
 
 export default function ForgotPasswordForm() {
     const [step, setStep] = useState<number>(1);

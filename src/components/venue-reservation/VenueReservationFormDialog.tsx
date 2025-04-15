@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { format, isBefore, isSameDay } from "date-fns"; // Added date-fns functions
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Dialog,
     DialogContent,
@@ -8,17 +9,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import {
     Form,
     FormControl,
@@ -27,16 +17,26 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useForm } from "react-hook-form";
-import { CalendarIcon, Clock, MapPin, Users } from "lucide-react";
-import { valibotResolver } from "@hookform/resolvers/valibot";
+import { Input } from "@/components/ui/input";
 import {
-    venueReservationFormDialogSchema,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
     type VenueReservationFormDialogInput,
+    venueReservationFormDialogSchema,
 } from "@/lib/schema";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn, timeOptions } from "@/lib/utils";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { format, isBefore, isSameDay } from "date-fns"; // Added date-fns functions
+import { CalendarIcon, Clock, MapPin, Users } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 export interface VenueType {
     id: number;
@@ -1098,7 +1098,9 @@ export function VenueReservationFormDialog({
                             disabled={
                                 isLoading || // Check loading state first
                                 // Disable only if NOT allDay AND either startTime or endTime is missing
-                                (!form.watch("allDay") && (!form.watch("startTime") || !form.watch("endTime")))
+                                (!form.watch("allDay") &&
+                                    (!form.watch("startTime") ||
+                                        !form.watch("endTime")))
                             }
                         >
                             {isLoading ? "Submitting..." : "Submit Reservation"}

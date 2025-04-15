@@ -36,7 +36,9 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
+import { VenueReservationFormDialog } from "@/components/venue-reservation/VenueReservationFormDialog";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
+import { DEPARTMENTS } from "@/lib/types";
 import {
     createFileRoute,
     useNavigate,
@@ -55,8 +57,6 @@ import {
     Users,
 } from "lucide-react";
 import { useState } from "react";
-import { VenueReservationFormDialog } from "@/components/venue-reservation/VenueReservationFormDialog";
-import { DEPARTMENTS } from "@/lib/types";
 
 export const Route = createFileRoute("/app/venues/dashboard")({
     component: VenueManagement,

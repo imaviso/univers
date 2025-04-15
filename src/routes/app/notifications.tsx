@@ -12,7 +12,6 @@ import {
     type Notification,
     useNotification,
 } from "@/contexts/notification-context";
-import { allNavigation } from "@/lib/navigation";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { Bell, Check, Filter, Trash2 } from "lucide-react";
@@ -22,20 +21,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/app/notifications")({
     component: Notifications,
     beforeLoad: async ({ location, context }) => {
-        const navigationItem = allNavigation.find((item) => {
-            // Allow exact match or any sub-route after the base path, e.g. "/app/notifications/..."
-            return (
-                location.pathname === "/app/notifications" ||
-                location.pathname.startsWith("/app/notifications/")
-            );
-        });
-        const allowedRoles: string[] = navigationItem
-            ? navigationItem.roles
-            : [];
         const isAuthorized =
             "role" in context && // <-- Check if the key 'role' exists
-            context.role != null && // <-- Optional but good: ensure role isn't null/undefined
-            allowedRoles.includes(context.role);
+            context.role != null; // <-- Optional but good: ensure role isn't null/undefined
 
         if (!isAuthorized) {
             throw redirect({
