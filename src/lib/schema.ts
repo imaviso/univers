@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import { isBefore, isSameDay, setHours, setMinutes } from "date-fns"; // Import date-fns functions
 
 export const personalInfoSchema = v.object({
     idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),
@@ -110,21 +111,63 @@ export const emailSchema = v.object({
 
 export type EmailInput = v.InferInput<typeof emailSchema>;
 
-export const eventSchema = v.object({
-    eventName: v.pipe(v.string("Event Name is required"), v.nonEmpty()),
-    status: v.pipe(
-        v.string("Status is required"),
-        v.nonEmpty("Status is required"),
+const combineDateTime = (date: Date, time: string): Date => {
+    const [hours = 0, minutes = 0] = time.split(":").map(Number);
+    const newDate = new Date(date);
+    newDate.setHours(hours, minutes, 0, 0);
+    return newDate;
+};
+
+export const eventSchema = v.pipe(
+    // Use v.pipe for object-level validation
+    v.object({
+        eventName: v.pipe(
+            v.string("Event Name is required"),
+            v.nonEmpty("Event Name is required"),
+        ),
+        status: v.pipe(
+            v.string("Status is required"),
+            v.nonEmpty("Status is required"),
+        ),
+        facility: v.pipe(
+            v.string("Facility is required"),
+            v.nonEmpty("Facility is required"),
+        ),
+        description: v.optional(v.string()),
+        startDate: v.date("Start date is required"),
+        endDate: v.date("End date is required"),
+        // Add validation for time format if needed (e.g., using regex)
+        startTime: v.pipe(
+            v.string("Start time is required"),
+            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
+        ),
+        endTime: v.pipe(
+            v.string("End time is required"),
+            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
+        ),
+        allDay: v.optional(v.boolean()),
+    }),
+    // Add refinement for cross-field validation
+    v.forward(
+        v.check((input) => {
+            // Skip validation if allDay is true
+            if (input.allDay) {
+                return true;
+            }
+            // Combine date and time for comparison
+            const combinedStart = combineDateTime(
+                input.startDate,
+                input.startTime,
+            );
+            const combinedEnd = combineDateTime(input.endDate, input.endTime);
+
+            // Check if end date/time is before start date/time
+            return !isBefore(combinedEnd, combinedStart);
+        }, "End date/time cannot be before start date/time."),
+        // Apply the error message to relevant fields
+        ["endTime"],
     ),
-    facility: v.pipe(
-        v.string("Facility is required"),
-        v.nonEmpty("Facility is required"),
-    ),
-    description: v.optional(v.string()),
-    startTime: v.unknown(),
-    endTime: v.unknown(),
-    allDay: v.optional(v.boolean()),
-});
+);
 
 export type EventInput = v.InferInput<typeof eventSchema>;
 
@@ -202,14 +245,18 @@ export const venueReservationFormSchema = v.object({
     ),
     eventType: v.pipe(v.string(), v.nonEmpty("Event Type is required")),
     venue: v.pipe(v.string(), v.nonEmpty("Venue is required")),
-    startDateTime: v.pipe(
-        v.string(),
-        v.isoDateTime("The date is badly formatted."),
+    startDate: v.date("Start date is required"),
+    endDate: v.date("End date is required"),
+    // Add validation for time format if needed (e.g., using regex)
+    startTime: v.pipe(
+        v.string("Start time is required"),
+        v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
     ),
-    endDateTime: v.pipe(
-        v.string(),
-        v.isoDateTime("The date is badly formatted."),
+    endTime: v.pipe(
+        v.string("End time is required"),
+        v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
     ),
+    allDay: v.optional(v.boolean()),
     approvedLetter: v.pipe(
         v.file("Please select an image file."),
         v.mimeType(
@@ -224,57 +271,121 @@ export type VenueReservationInput = v.InferInput<
     typeof venueReservationFormSchema
 >;
 
-export const venueReservationFormDialogSchema = v.object({
-    eventName: v.pipe(
-        v.string(),
-        v.minLength(2, "Event name must be at least 2 characters."),
-    ),
-    eventType: v.string(),
-    department: v.string(),
-    contactPerson: v.pipe(
-        v.string(),
-        v.minLength(2, "Contact person name must be at least 2 characters."),
-    ),
-    contactEmail: v.pipe(
-        v.string(),
-        v.email("Please enter a valid email address."),
-    ),
-    contactPhone: v.pipe(
-        v.string(),
-        v.minLength(10, "Please enter a valid phone number."),
-    ),
-    attendees: v.pipe(
-        v.string(),
-        v.custom((value) => {
-            const num = Number(value);
-            return !Number.isNaN(num) && num > 0;
-        }, "Attendees must be a number greater than 0"),
-    ),
-    date: v.string(),
-    description: v.optional(v.string()),
-    venue: v.string(),
-    startTime: v.string(),
-    endTime: v.string(),
-    equipment: v.array(v.string()),
-});
+export const venueReservationFormDialogSchema = v.pipe(
+    v.object({
+        eventName: v.pipe(
+            v.string(),
+            v.minLength(2, "Event name must be at least 2 characters."),
+        ),
+        eventType: v.string(),
+        department: v.string(),
+        contactPerson: v.pipe(
+            v.string(),
+            v.minLength(
+                2,
+                "Contact person name must be at least 2 characters.",
+            ),
+        ),
+        contactEmail: v.pipe(
+            v.string(),
+            v.email("Please enter a valid email address."),
+        ),
+        contactPhone: v.pipe(
+            v.string(),
+            v.minLength(10, "Please enter a valid phone number."),
+        ),
+        attendees: v.pipe(
+            v.string(),
+            v.custom((value) => {
+                const num = Number(value);
+                return !Number.isNaN(num) && num > 0;
+            }, "Attendees must be a number greater than 0"),
+        ),
+        description: v.optional(v.string()),
+        venue: v.string(),
+        startDate: v.date("Start date is required"),
+        endDate: v.date("End date is required"),
+        // Add validation for time format if needed (e.g., using regex)
+        startTime: v.pipe(
+            v.string("Start time is required"),
+            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
+        ),
+        endTime: v.pipe(
+            v.string("End time is required"),
+            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
+        ),
+        allDay: v.optional(v.boolean()),
+        equipment: v.pipe(
+            v.array(v.string()),
+            v.minLength(1, "Please select at least one equipment."),
+        ),
+    }),
+    v.forward(
+        v.check((input) => {
+            // Skip validation if allDay is true
+            if (input.allDay) {
+                return true;
+            }
+            // Combine date and time for comparison
+            const combinedStart = combineDateTime(
+                input.startDate,
+                input.startTime,
+            );
+            const combinedEnd = combineDateTime(input.endDate, input.endTime);
 
+            // Check if end date/time is before start date/time
+            return !isBefore(combinedEnd, combinedStart);
+        }, "End date/time cannot be before start date/time."),
+        // Apply the error message to relevant fields
+        ["endTime"],
+    ),
+);
 export type VenueReservationFormDialogInput = v.InferInput<
     typeof venueReservationFormDialogSchema
 >;
 
-export const equipmentReservationFormSchema = v.object({
-    eventId: v.pipe(v.string(), v.nonEmpty("Please select an event.")),
-    venueId: v.pipe(v.string(), v.nonEmpty("Please select a venue.")),
-    startDate: v.string(),
-    endDate: v.string(),
-    startTime: v.pipe(v.string(), v.nonEmpty("Please enter a start time.")),
-    endTime: v.pipe(v.string(), v.nonEmpty("Please enter an end time.")),
-    purpose: v.optional(v.string()),
-    selectedEquipment: v.pipe(
-        v.array(v.string()),
-        v.minLength(1, "Please select at least one equipment."),
+export const equipmentReservationFormSchema = v.pipe(
+    v.object({
+        eventId: v.pipe(v.string(), v.nonEmpty("Please select an event.")),
+        venueId: v.pipe(v.string(), v.nonEmpty("Please select a venue.")),
+        startDate: v.date("Start date is required"),
+        endDate: v.date("End date is required"),
+        // Add validation for time format if needed (e.g., using regex)
+        startTime: v.pipe(
+            v.string("Start time is required"),
+            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
+        ),
+        endTime: v.pipe(
+            v.string("End time is required"),
+            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
+        ),
+        allDay: v.optional(v.boolean()),
+        purpose: v.optional(v.string()),
+        selectedEquipment: v.pipe(
+            v.array(v.string()),
+            v.minLength(1, "Please select at least one equipment."),
+        ),
+    }),
+    v.forward(
+        v.check((input) => {
+            // Skip validation if allDay is true
+            if (input.allDay) {
+                return true;
+            }
+            // Combine date and time for comparison
+            const combinedStart = combineDateTime(
+                input.startDate,
+                input.startTime,
+            );
+            const combinedEnd = combineDateTime(input.endDate, input.endTime);
+
+            // Check if end date/time is before start date/time
+            return !isBefore(combinedEnd, combinedStart);
+        }, "End date/time cannot be before start date/time."),
+        // Apply the error message to relevant fields
+        ["endTime"],
     ),
-});
+);
 
 export type EquipmentReservationFormInput = v.InferInput<
     typeof equipmentReservationFormSchema

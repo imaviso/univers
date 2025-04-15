@@ -13,9 +13,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 export const Route = createFileRoute("/app/user-management/users")({
     component: UsersComponent,
-    loader: async ({ context: { queryClient } }) => {
-        queryClient.ensureQueryData(usersQueryOptions);
-    },
 });
 
 function UsersComponent() {

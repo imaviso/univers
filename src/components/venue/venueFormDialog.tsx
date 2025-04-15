@@ -217,7 +217,7 @@ export function VenueFormDialog({
                                         handleChange("type", value)
                                     }
                                 >
-                                    <SelectTrigger id="type">
+                                    <SelectTrigger className="w-full" id="type">
                                         <SelectValue placeholder="Select venue type" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -243,7 +243,7 @@ export function VenueFormDialog({
                                         handleChange("status", value)
                                     }
                                 >
-                                    <SelectTrigger id="status">
+                                    <SelectTrigger className="w-full" id="status">
                                         <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
                                     <SelectContent>

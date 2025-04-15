@@ -185,7 +185,10 @@ export function EquipmentFormDialog({
                                         handleChange("category", value)
                                     }
                                 >
-                                    <SelectTrigger id="category">
+                                    <SelectTrigger
+                                        className="w-full"
+                                        id="category"
+                                    >
                                         <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -214,7 +217,10 @@ export function EquipmentFormDialog({
                                         handleChange("location", value)
                                     }
                                 >
-                                    <SelectTrigger id="location">
+                                    <SelectTrigger
+                                        className="w-full"
+                                        id="location"
+                                    >
                                         <SelectValue placeholder="Select location" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -245,7 +251,10 @@ export function EquipmentFormDialog({
                                         handleChange("status", value)
                                     }
                                 >
-                                    <SelectTrigger id="status">
+                                    <SelectTrigger
+                                        className="w-full"
+                                        id="status"
+                                    >
                                         <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -273,7 +282,10 @@ export function EquipmentFormDialog({
                                         handleChange("condition", value)
                                     }
                                 >
-                                    <SelectTrigger id="condition">
+                                    <SelectTrigger
+                                        className="w-full"
+                                        id="condition"
+                                    >
                                         <SelectValue placeholder="Select condition" />
                                     </SelectTrigger>
                                     <SelectContent>

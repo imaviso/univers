@@ -148,7 +148,7 @@ export function EditUserFormDialog({
                                             defaultValue={field.value}
                                         >
                                             <FormControl>
-                                                <SelectTrigger>
+                                                <SelectTrigger className="w-full">
                                                     <SelectValue placeholder="Select a role" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -312,7 +312,7 @@ export function EditUserFormDialog({
                                         defaultValue={field.value}
                                     >
                                         <FormControl>
-                                            <SelectTrigger>
+                                            <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Select a department" />
                                             </SelectTrigger>
                                         </FormControl>

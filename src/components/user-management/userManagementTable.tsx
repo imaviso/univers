@@ -79,7 +79,11 @@ import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 import { usersQueryOptions } from "@/lib/query";
 import { DEPARTMENTS, ROLES, type UserType } from "@/lib/types";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+    useQuery,
+    useQueryClient,
+    useSuspenseQuery,
+} from "@tanstack/react-query";
 import { set } from "date-fns";
 import { atom, useAtom } from "jotai";
 import { toast } from "sonner";
@@ -105,15 +109,9 @@ export function UserDataTable() {
         isLoading,
         isError,
         data: initialUsers,
-    } = useQuery(usersQueryOptions);
+    } = useSuspenseQuery(usersQueryOptions);
 
-    if (isLoading) {
-        return <div>Loading users...</div>;
-    }
-
-    if (isError) {
-        return <div>Error loading users</div>;
-    }
+ 
 
     const handleDeactivateUser = (userData: Partial<UserType>) => {
         console.log("Deactivating user:", userData);

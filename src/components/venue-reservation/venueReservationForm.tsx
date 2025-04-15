@@ -176,7 +176,7 @@ export default function VenueReservationForm() {
                                                     defaultValue={field.value}
                                                 >
                                                     <FormControl>
-                                                        <SelectTrigger>
+                                                        <SelectTrigger className="w-full">
                                                             <SelectValue placeholder="Select department" />
                                                         </SelectTrigger>
                                                     </FormControl>
@@ -236,7 +236,7 @@ export default function VenueReservationForm() {
                                                     defaultValue={field.value}
                                                 >
                                                     <FormControl>
-                                                        <SelectTrigger>
+                                                        <SelectTrigger className="w-full">
                                                             <SelectValue placeholder="Select event type" />
                                                         </SelectTrigger>
                                                     </FormControl>

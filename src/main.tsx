@@ -9,7 +9,14 @@ import { ThemeProvider } from "next-themes";
 import { routeTree } from "./routeTree.gen";
 
 // Create a new router instance
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: 1 * 60 * 1000,
+            gcTime: 10 * 60 * 1000,
+        },
+    },
+});
 
 const router = createRouter({
     routeTree,

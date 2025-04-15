@@ -272,18 +272,6 @@ const eventTypes = [
     { id: "6", name: "Other" },
 ];
 
-const departments = [
-    { id: "1", name: "Marketing" },
-    { id: "2", name: "Human Resources" },
-    { id: "3", name: "Finance" },
-    { id: "4", name: "IT" },
-    { id: "5", name: "Operations" },
-    { id: "6", name: "Research & Development" },
-    { id: "7", name: "Customer Service" },
-    { id: "8", name: "Sales" },
-    { id: "9", name: "Legal" },
-    { id: "10", name: "Executive" },
-];
 
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
@@ -1022,7 +1010,7 @@ export function VenueManagement() {
                     ], // Adding some default available times
                 }))}
                 eventTypes={eventTypes.map((type) => type.name)}
-                departments={departments.map((dept) => dept.name)}
+                departments={DEPARTMENTS.map((dept) => dept.label)}
                 isLoading={false}
             />
 

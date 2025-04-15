@@ -1,8 +1,8 @@
 import { allNavigation } from "@/lib/navigation";
+import { usersQueryOptions } from "@/lib/query";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/user-management")({
-    component: RouteComponent,
     beforeLoad: async ({ location, context }) => {
         const navigationItem = allNavigation.find((item) => {
             // Allow exact match or any sub-route after the base path, e.g. "/app/notifications/..."
@@ -27,6 +27,12 @@ export const Route = createFileRoute("/app/user-management")({
                 },
             });
         }
+    },
+    component: RouteComponent,
+    pendingComponent: () => <div>Loading...</div>,
+    errorComponent: () => <div>Error</div>,
+    loader: async ({ context: { queryClient } }) => {
+        queryClient.prefetchQuery(usersQueryOptions);
     },
 });
 
