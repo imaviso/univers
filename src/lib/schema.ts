@@ -111,13 +111,6 @@ export const emailSchema = v.object({
 
 export type EmailInput = v.InferInput<typeof emailSchema>;
 
-const combineDateTime = (date: Date, time: string): Date => {
-    const [hours = 0, minutes = 0] = time.split(":").map(Number);
-    const newDate = new Date(date);
-    newDate.setHours(hours, minutes, 0, 0);
-    return newDate;
-};
-
 export const eventSchema = v.pipe(
     // Use v.pipe for object-level validation
     v.object({
@@ -134,38 +127,18 @@ export const eventSchema = v.pipe(
             v.nonEmpty("Facility is required"),
         ),
         description: v.optional(v.string()),
-        startDate: v.date("Start date is required"),
-        endDate: v.date("End date is required"),
-        // Add validation for time format if needed (e.g., using regex)
-        startTime: v.pipe(
-            v.string("Start time is required"),
-            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
-        ),
-        endTime: v.pipe(
-            v.string("End time is required"),
-            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
-        ),
-        allDay: v.optional(v.boolean()),
+        startDateTime: v.date("Start date is required"),
+        endDateTime: v.date("End date is required"),
     }),
-    // Add refinement for cross-field validation
     v.forward(
         v.check((input) => {
-            // Skip validation if allDay is true
-            if (input.allDay) {
-                return true;
-            }
-            // Combine date and time for comparison
-            const combinedStart = combineDateTime(
-                input.startDate,
-                input.startTime,
-            );
-            const combinedEnd = combineDateTime(input.endDate, input.endTime);
-
             // Check if end date/time is before start date/time
-            return !isBefore(combinedEnd, combinedStart);
+            // This check is valid whether it's allDay or not,
+            // as the times will be adjusted accordingly elsewhere if allDay is true.
+            return !isBefore(input.endDateTime, input.startDateTime);
         }, "End date/time cannot be before start date/time."),
-        // Apply the error message to relevant fields
-        ["endTime"],
+        // Apply the error message to the endDateTime field
+        ["endDateTime"],
     ),
 );
 
@@ -245,18 +218,7 @@ export const venueReservationFormSchema = v.object({
     ),
     eventType: v.pipe(v.string(), v.nonEmpty("Event Type is required")),
     venue: v.pipe(v.string(), v.nonEmpty("Venue is required")),
-    startDate: v.date("Start date is required"),
-    endDate: v.date("End date is required"),
-    // Add validation for time format if needed (e.g., using regex)
-    startTime: v.pipe(
-        v.string("Start time is required"),
-        v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
-    ),
-    endTime: v.pipe(
-        v.string("End time is required"),
-        v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
-    ),
-    allDay: v.optional(v.boolean()),
+ 
     approvedLetter: v.pipe(
         v.file("Please select an image file."),
         v.mimeType(
@@ -303,18 +265,8 @@ export const venueReservationFormDialogSchema = v.pipe(
         ),
         description: v.optional(v.string()),
         venue: v.string(),
-        startDate: v.date("Start date is required"),
-        endDate: v.date("End date is required"),
-        // Add validation for time format if needed (e.g., using regex)
-        startTime: v.pipe(
-            v.string("Start time is required"),
-            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
-        ),
-        endTime: v.pipe(
-            v.string("End time is required"),
-            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
-        ),
-        allDay: v.optional(v.boolean()),
+        startDateTime: v.date("Start date is required"),
+        endDateTime: v.date("End date is required"),
         equipment: v.pipe(
             v.array(v.string()),
             v.minLength(1, "Please select at least one equipment."),
@@ -322,22 +274,13 @@ export const venueReservationFormDialogSchema = v.pipe(
     }),
     v.forward(
         v.check((input) => {
-            // Skip validation if allDay is true
-            if (input.allDay) {
-                return true;
-            }
-            // Combine date and time for comparison
-            const combinedStart = combineDateTime(
-                input.startDate,
-                input.startTime,
-            );
-            const combinedEnd = combineDateTime(input.endDate, input.endTime);
-
             // Check if end date/time is before start date/time
-            return !isBefore(combinedEnd, combinedStart);
+            // This check is valid whether it's allDay or not,
+            // as the times will be adjusted accordingly elsewhere if allDay is true.
+            return !isBefore(input.endDateTime, input.startDateTime);
         }, "End date/time cannot be before start date/time."),
-        // Apply the error message to relevant fields
-        ["endTime"],
+        // Apply the error message to the endDateTime field
+        ["endDateTime"],
     ),
 );
 export type VenueReservationFormDialogInput = v.InferInput<
@@ -348,18 +291,8 @@ export const equipmentReservationFormSchema = v.pipe(
     v.object({
         eventId: v.pipe(v.string(), v.nonEmpty("Please select an event.")),
         venueId: v.pipe(v.string(), v.nonEmpty("Please select a venue.")),
-        startDate: v.date("Start date is required"),
-        endDate: v.date("End date is required"),
-        // Add validation for time format if needed (e.g., using regex)
-        startTime: v.pipe(
-            v.string("Start time is required"),
-            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
-        ),
-        endTime: v.pipe(
-            v.string("End time is required"),
-            v.regex(/^\d{2}:\d{2}$/, "Invalid time format (HH:MM)"),
-        ),
-        allDay: v.optional(v.boolean()),
+        startDateTime: v.date("Start date/time is required"),
+        endDateTime: v.date("End date/time is required"),
         purpose: v.optional(v.string()),
         selectedEquipment: v.pipe(
             v.array(v.string()),
@@ -368,22 +301,13 @@ export const equipmentReservationFormSchema = v.pipe(
     }),
     v.forward(
         v.check((input) => {
-            // Skip validation if allDay is true
-            if (input.allDay) {
-                return true;
-            }
-            // Combine date and time for comparison
-            const combinedStart = combineDateTime(
-                input.startDate,
-                input.startTime,
-            );
-            const combinedEnd = combineDateTime(input.endDate, input.endTime);
-
             // Check if end date/time is before start date/time
-            return !isBefore(combinedEnd, combinedStart);
+            // This check is valid whether it's allDay or not,
+            // as the times will be adjusted accordingly elsewhere if allDay is true.
+            return !isBefore(input.endDateTime, input.startDateTime);
         }, "End date/time cannot be before start date/time."),
-        // Apply the error message to relevant fields
-        ["endTime"],
+        // Apply the error message to the endDateTime field
+        ["endDateTime"],
     ),
 );
 

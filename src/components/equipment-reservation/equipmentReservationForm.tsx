@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
     Dialog,
     DialogContent,
@@ -17,11 +16,6 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
-import {
     Select,
     SelectContent,
     SelectItem,
@@ -33,14 +27,12 @@ import {
     type EquipmentReservationFormInput,
     equipmentReservationFormSchema,
 } from "@/lib/schema";
-import { cn, timeOptions } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { format, isBefore } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { startOfDay } from "date-fns";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Checkbox } from "../ui/checkbox";
 import EquipmentList from "./equipmentList";
+import { SmartDatetimeInput } from "../ui/smart-date-picker";
 
 // Define the props interface
 interface EquipmentReservationFormDialogProps {
@@ -61,8 +53,6 @@ export function EquipmentReservationFormDialog({
     isLoading = false,
 }: EquipmentReservationFormDialogProps) {
     const [step, setStep] = useState(1);
-    const [startDateOpen, setStartDateOpen] = useState(false);
-    const [endDateOpen, setEndDateOpen] = useState(false);
 
     const form = useForm<EquipmentReservationFormInput>({
         resolver: valibotResolver(equipmentReservationFormSchema),
@@ -73,8 +63,6 @@ export function EquipmentReservationFormDialog({
         mode: "onChange",
     });
 
-    const allDay = form.watch("allDay");
-
     // Step validation logic
     const isStep1Valid = () => {
         const { eventId } = form.getValues();
@@ -82,18 +70,15 @@ export function EquipmentReservationFormDialog({
     };
 
     const isStep2Valid = () => {
-        const { venueId, startDate, endDate, startTime, endTime } =
-            form.getValues();
+        const { venueId, startDateTime, endDateTime } = form.getValues();
 
         // Validate that venueId is not empty and that date and time values are valid
         return (
             !!venueId &&
-            startDate instanceof Date &&
-            !isNaN(startDate.getTime()) && // Ensure startDate is a valid Date object
-            endDate instanceof Date &&
-            !isNaN(endDate.getTime()) && // Ensure endDate is a valid Date object
-            !!startTime &&
-            !!endTime
+            startDateTime instanceof Date &&
+            !isNaN(startDateTime.getTime()) && // Ensure startDate is a valid Date object
+            endDateTime instanceof Date &&
+            !isNaN(endDateTime.getTime()) // Ensure endDate is a valid Date object
         );
     };
 
@@ -252,323 +237,59 @@ export function EquipmentReservationFormDialog({
                                 />
 
                                 {/* Start Date and Time */}
-                                <div className="col-span-2 grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-2 gap-2">
                                     <FormField
                                         control={form.control}
-                                        name="startDate"
+                                        name="startDateTime"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-col col-span-1">
+                                            <FormItem>
                                                 <FormLabel>
-                                                    Start Date
+                                                    Start Date & Time
                                                 </FormLabel>
-                                                <Popover
-                                                    open={startDateOpen}
-                                                    onOpenChange={
-                                                        setStartDateOpen
-                                                    }
-                                                >
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Button
-                                                                variant={
-                                                                    "outline"
-                                                                }
-                                                                className={cn(
-                                                                    "pl-3 text-left font-normal",
-                                                                    !field.value &&
-                                                                        "text-muted-foreground",
-                                                                )}
-                                                            >
-                                                                {field.value ? (
-                                                                    format(
-                                                                        field.value,
-                                                                        "PPP",
-                                                                    )
-                                                                ) : (
-                                                                    <span>
-                                                                        Pick a
-                                                                        date
-                                                                    </span>
-                                                                )}
-                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                            </Button>
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent
-                                                        className="w-auto p-0"
-                                                        align="start"
-                                                    >
-                                                        <Calendar
-                                                            mode="single"
-                                                            selected={
-                                                                field.value
-                                                            }
-                                                            onSelect={(
-                                                                date,
-                                                            ) => {
-                                                                if (!date)
-                                                                    return; // Handle null date selection if necessary
-                                                                field.onChange(
-                                                                    date,
-                                                                );
-                                                                // Auto-update end date if it's before new start date
-                                                                const endDate =
-                                                                    form.getValues(
-                                                                        "endDate",
-                                                                    );
-                                                                if (
-                                                                    endDate &&
-                                                                    isBefore(
-                                                                        endDate,
-                                                                        date,
-                                                                    )
-                                                                ) {
-                                                                    form.setValue(
-                                                                        "endDate",
-                                                                        date,
-                                                                    );
-                                                                }
-                                                                // Clear potential errors when date changes
-                                                                form.clearErrors(
-                                                                    [
-                                                                        "endDate",
-                                                                        "endTime",
-                                                                    ],
-                                                                );
-                                                                setStartDateOpen(
-                                                                    false,
-                                                                ); // Close popover on selection
-                                                            }}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="startTime"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-col col-span-1">
-                                                <FormLabel>
-                                                    Start Time
-                                                </FormLabel>
-                                                <Select
-                                                    onValueChange={(value) => {
-                                                        field.onChange(value);
-                                                        // Clear potential errors when time changes
-                                                        form.clearErrors([
-                                                            "endDate",
-                                                            "endTime",
-                                                        ]);
-                                                    }}
-                                                    defaultValue={field.value}
-                                                    disabled={allDay} // Disable if allDay is checked
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger
-                                                            className="w-full"
-                                                            disabled={allDay}
-                                                        >
-                                                            <SelectValue placeholder="Select time" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {timeOptions.map(
-                                                            (option) => (
-                                                                <SelectItem
-                                                                    key={
-                                                                        option.value
-                                                                    }
-                                                                    value={
-                                                                        option.value
-                                                                    }
-                                                                >
-                                                                    {
-                                                                        option.label
-                                                                    }
-                                                                </SelectItem>
-                                                            ),
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                {/* End Date and Time */}
-                                <div className="col-span-2 grid grid-cols-2 gap-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="endDate"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-col col-span-1">
-                                                <FormLabel>End Date</FormLabel>
-                                                <Popover
-                                                    open={endDateOpen}
-                                                    onOpenChange={
-                                                        setEndDateOpen
-                                                    }
-                                                >
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Button
-                                                                variant={
-                                                                    "outline"
-                                                                }
-                                                                className={cn(
-                                                                    "pl-3 text-left font-normal",
-                                                                    !field.value &&
-                                                                        "text-muted-foreground",
-                                                                )}
-                                                            >
-                                                                {field.value ? (
-                                                                    format(
-                                                                        field.value,
-                                                                        "PPP",
-                                                                    )
-                                                                ) : (
-                                                                    <span>
-                                                                        Pick a
-                                                                        date
-                                                                    </span>
-                                                                )}
-                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                            </Button>
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent
-                                                        className="w-auto p-0"
-                                                        align="start"
-                                                    >
-                                                        <Calendar
-                                                            mode="single"
-                                                            selected={
-                                                                field.value
-                                                            }
-                                                            onSelect={(
-                                                                date,
-                                                            ) => {
-                                                                if (!date)
-                                                                    return; // Handle null date selection
-                                                                field.onChange(
-                                                                    date,
-                                                                );
-                                                                // Clear potential errors when date changes
-                                                                form.clearErrors(
-                                                                    [
-                                                                        "endDate",
-                                                                        "endTime",
-                                                                    ],
-                                                                );
-                                                                setEndDateOpen(
-                                                                    false,
-                                                                ); // Close popover on selection
-                                                            }}
-                                                            // Prevent selecting end date strictly before start date
-                                                            disabled={(
-                                                                date,
-                                                            ) => {
-                                                                const startDate =
-                                                                    form.getValues(
-                                                                        "startDate",
-                                                                    );
-                                                                // Disable if startDate exists and the current date is strictly before startDate
-                                                                return startDate
-                                                                    ? isBefore(
-                                                                          date,
-                                                                          startDate,
-                                                                      )
-                                                                    : false;
-                                                            }}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="endTime"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-col col-span-1">
-                                                <FormLabel>End Time</FormLabel>
-                                                <Select
-                                                    onValueChange={(value) => {
-                                                        field.onChange(value);
-                                                        // Clear potential errors when time changes
-                                                        form.clearErrors([
-                                                            "endDate",
-                                                            "endTime",
-                                                        ]);
-                                                    }}
-                                                    defaultValue={field.value}
-                                                    disabled={allDay} // Disable if allDay is checked
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger
-                                                            className="w-full"
-                                                            disabled={allDay}
-                                                        >
-                                                            <SelectValue placeholder="Select time" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {timeOptions.map(
-                                                            (option) => (
-                                                                <SelectItem
-                                                                    key={
-                                                                        option.value
-                                                                    }
-                                                                    value={
-                                                                        option.value
-                                                                    }
-                                                                >
-                                                                    {
-                                                                        option.label
-                                                                    }
-                                                                </SelectItem>
-                                                            ),
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                {/* All Day Checkbox */}
-                                <div className="col-span-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="allDay"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                                                 <FormControl>
-                                                    <Checkbox
-                                                        checked={field.value}
-                                                        onCheckedChange={
+                                                    <SmartDatetimeInput
+                                                        value={field.value}
+                                                        onValueChange={
                                                             field.onChange
                                                         }
+                                                        disabled={(date) =>
+                                                            date <
+                                                            startOfDay(
+                                                                new Date(),
+                                                            )
+                                                        }
+                                                        placeholder="Select start date and time"
                                                     />
                                                 </FormControl>
-                                                <div className="space-y-1 leading-none">
-                                                    <FormLabel>
-                                                        All day
-                                                    </FormLabel>
-                                                    <FormDescription>
-                                                        Does this event last the
-                                                        entire day?
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="endDateTime"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    End Date & Time
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <SmartDatetimeInput
+                                                        value={field.value}
+                                                        onValueChange={
+                                                            field.onChange
+                                                        }
+                                                        disabled={(date) =>
+                                                            date <
+                                                            startOfDay(
+                                                                new Date(),
+                                                            )
+                                                        }
+                                                        placeholder="Select end date and time"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
                                             </FormItem>
                                         )}
                                     />
