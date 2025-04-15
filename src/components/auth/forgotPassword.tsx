@@ -548,7 +548,7 @@ export default function ForgotPasswordForm() {
                 )}
             </CardContent>
 
-            <CardFooter className="flex justify-center border-t px-6 py-4">
+            <CardFooter className="flex justify-center border-t">
                 <Link
                     to="/auth/login"
                     className="text-sm text-primary flex items-center hover:underline"

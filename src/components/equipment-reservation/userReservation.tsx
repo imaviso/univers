@@ -149,7 +149,7 @@ export default function UserReservations() {
                                     key={reservation.id}
                                     className="overflow-hidden"
                                 >
-                                    <CardHeader className="pb-2">
+                                    <CardHeader>
                                         <div className="flex justify-between items-start">
                                             <CardTitle className="text-lg">
                                                 {reservation.eventName}
@@ -161,7 +161,7 @@ export default function UserReservations() {
                                             {reservation.venueName}
                                         </CardDescription>
                                     </CardHeader>
-                                    <CardContent className="pb-2">
+                                    <CardContent>
                                         <div className="space-y-2 text-sm">
                                             <div className="flex items-center gap-1">
                                                 <Calendar className="h-3.5 w-3.5" />
@@ -187,7 +187,7 @@ export default function UserReservations() {
                                                 items
                                             </div>
                                         </div>
-                                        <div className="mt-4 flex gap-2">
+                                        <div className="mt-4 grid grid-cols-2 gap-2">
                                             <Button
                                                 variant="outline"
                                                 size="sm"

@@ -272,7 +272,6 @@ const eventTypes = [
     { id: "6", name: "Other" },
 ];
 
-
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
     const role = "role" in context ? context.role : "USER";
@@ -458,7 +457,7 @@ export function VenueManagement() {
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-4 p-6 pb-0">
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Total Venues
                             </CardTitle>
@@ -473,7 +472,7 @@ export function VenueManagement() {
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Available Venues
                             </CardTitle>
@@ -491,7 +490,7 @@ export function VenueManagement() {
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Currently Booked
                             </CardTitle>
@@ -800,7 +799,7 @@ export function VenueManagement() {
                                             className="h-full w-full object-cover"
                                         />
                                     </div>
-                                    <CardHeader className="p-4 pb-2">
+                                    <CardHeader>
                                         <div className="flex justify-between">
                                             <div className="flex items-start gap-2">
                                                 {role === "SUPER_ADMIN" && (
@@ -885,7 +884,7 @@ export function VenueManagement() {
                                             </DropdownMenu>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-4 pt-0">
+                                    <CardContent>
                                         <div className="flex flex-wrap gap-1 mb-3">
                                             {getStatusBadge(venue.status)}
                                             <Badge variant="outline">
@@ -953,7 +952,7 @@ export function VenueManagement() {
                                             </div>
                                         </div>
                                     </CardContent>
-                                    <CardFooter className="p-4 pt-0 flex justify-between">
+                                    <CardFooter className="flex justify-between">
                                         <div className="text-sm">
                                             <span className="text-muted-foreground">
                                                 Contact:{" "}

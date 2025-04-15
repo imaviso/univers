@@ -53,7 +53,7 @@ export default function LoginForm() {
 
     return (
         <Card className="w-full max-w-md mx-auto shadow-lg">
-            <CardContent className="pt-6">
+            <CardContent>
                 <Form {...form}>
                     <form
                         onSubmit={form.handleSubmit(onSubmit)}
@@ -134,7 +134,7 @@ export default function LoginForm() {
                     </form>
                 </Form>
             </CardContent>
-            <CardFooter className="flex flex-col space-y-4 border-t px-6 py-4">
+            <CardFooter className="flex flex-col space-y-4 border-t">
                 <div className="text-sm text-muted-foreground text-center">
                     <Link
                         to="/auth/forgot-password"

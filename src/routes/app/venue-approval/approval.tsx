@@ -612,7 +612,7 @@ export function VenueReservationApproval() {
                         className="hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => setViewMode("all")}
                     >
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Total Reservations
                             </CardTitle>
@@ -627,7 +627,7 @@ export function VenueReservationApproval() {
                         className="hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => setViewMode("pending")}
                     >
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Pending Approval
                             </CardTitle>
@@ -642,7 +642,7 @@ export function VenueReservationApproval() {
                         className="hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => setViewMode("approved")}
                     >
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Approved
                             </CardTitle>
@@ -657,7 +657,7 @@ export function VenueReservationApproval() {
                         className="hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => setViewMode("disapproved")}
                     >
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Disapproved
                             </CardTitle>

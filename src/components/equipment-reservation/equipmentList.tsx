@@ -193,7 +193,7 @@ export default function EquipmentList({
                                 key={equipment.id}
                                 className={`overflow-hidden ${!equipment.available ? "opacity-60" : ""}`}
                             >
-                                <CardContent className="p-4">
+                                <CardContent>
                                     <div className="flex items-start gap-3">
                                         <Checkbox
                                             checked={selectedEquipment.includes(
@@ -239,7 +239,7 @@ export default function EquipmentList({
                                 key={equipment.id}
                                 className={`overflow-hidden ${!equipment.available ? "opacity-60" : ""}`}
                             >
-                                <CardContent className="p-4">
+                                <CardContent>
                                     <div className="flex items-start gap-3">
                                         <Checkbox
                                             checked={selectedEquipment.includes(

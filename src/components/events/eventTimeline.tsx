@@ -149,7 +149,7 @@ export function EventTimeline() {
                                                   : "#3b82f6",
                                     }}
                                 >
-                                    <CardHeader className="p-4 pb-2">
+                                    <CardHeader>
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-center gap-2">
                                                 {getStatusIcon(event.status)}
@@ -167,7 +167,7 @@ export function EventTimeline() {
                                             </Badge>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-4 pt-0">
+                                    <CardContent>
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                                             <Clock className="h-4 w-4" />
                                             <span>{event.date}</span>

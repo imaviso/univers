@@ -95,7 +95,7 @@ export default function RegistrationForm() {
 
     return (
         <Card className="w-full max-w-xl mx-auto shadow-lg">
-            <CardContent className="pt-6">
+            <CardContent>
                 <div className="space-y-8">
                     <StepIndicator
                         steps={steps}
@@ -111,7 +111,7 @@ export default function RegistrationForm() {
                     {renderStep()}
                 </div>
             </CardContent>
-            <CardFooter className="flex justify-center border-t px-6 py-4">
+            <CardFooter className="flex justify-center border-t">
                 <div className="text-sm text-muted-foreground">
                     Already have an account?{" "}
                     <Link

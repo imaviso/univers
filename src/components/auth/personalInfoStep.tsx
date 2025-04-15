@@ -121,7 +121,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                                     defaultValue={field.value}
                                 >
                                     <FormControl>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select your department" />
                                         </SelectTrigger>
                                     </FormControl>

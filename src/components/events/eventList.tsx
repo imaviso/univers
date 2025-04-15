@@ -138,7 +138,7 @@ export function EventList() {
                         key={event.id}
                         className="overflow-hidden transition-all hover:shadow-md"
                     >
-                        <CardHeader className="p-4 pb-0">
+                        <CardHeader>
                             <div className="flex items-start justify-between">
                                 <h3 className="font-medium">{event.title}</h3>
                                 <Badge
@@ -149,7 +149,7 @@ export function EventList() {
                                 </Badge>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-4">
+                        <CardContent>
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Clock className="h-4 w-4" />
@@ -179,7 +179,7 @@ export function EventList() {
                             </div>
                         </CardContent>
                         <Separator />
-                        <CardFooter className="p-4">
+                        <CardFooter>
                             <div className="flex items-center justify-between w-full">
                                 <div className="flex -space-x-2">
                                     {event.team.map((member, i) => (

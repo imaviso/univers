@@ -541,7 +541,7 @@ export function EquipmentInventory() {
                 {/* Stats Cards */}
                 <div className="grid grid-cols-5 gap-4 p-6 pb-0">
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Total Equipment
                             </CardTitle>
@@ -553,7 +553,7 @@ export function EquipmentInventory() {
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Available
                             </CardTitle>
@@ -565,7 +565,7 @@ export function EquipmentInventory() {
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 In Use
                             </CardTitle>
@@ -577,7 +577,7 @@ export function EquipmentInventory() {
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Maintenance
                             </CardTitle>
@@ -589,7 +589,7 @@ export function EquipmentInventory() {
                         </CardContent>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-2">
+                        <CardHeader>
                             <CardTitle className="text-sm font-medium">
                                 Out of Order
                             </CardTitle>
@@ -734,7 +734,7 @@ export function EquipmentInventory() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredEquipment.map((item) => (
                                 <Card key={item.id} className="overflow-hidden">
-                                    <CardHeader className="p-4 pb-2">
+                                    <CardHeader>
                                         <div className="flex justify-between">
                                             <div className="flex items-start gap-2">
                                                 {role === "SUPER_ADMIN" && (
@@ -840,7 +840,7 @@ export function EquipmentInventory() {
                                             {item.idNumber}
                                         </CardDescription>
                                     </CardHeader>
-                                    <CardContent className="p-4 pt-0">
+                                    <CardContent>
                                         <div className="flex items-start gap-3 mb-3">
                                             <div className="h-16 w-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
                                                 <img
