@@ -271,18 +271,21 @@ export const venueReservationFormDialogSchema = v.pipe(
             v.array(v.string()),
             v.minLength(1, "Please select at least one equipment."),
         ),
-        approvedLetter: v.array(
-            v.pipe(
-                v.file("Please select an image file."),
-                v.mimeType(
-                    ["image/jpeg", "image/png"],
-                    "Please select a JPEG or PNG file.",
-                ),
-                v.maxSize(
-                    1024 * 1024 * 10,
-                    "Please select a file smaller than 10 MB.",
+        approvedLetter: v.pipe(
+            v.array(
+                v.pipe(
+                    v.file("Please select an image file."),
+                    v.mimeType(
+                        ["image/jpeg", "image/png"],
+                        "Please select a JPEG or PNG file.",
+                    ),
+                    v.maxSize(
+                        1024 * 1024 * 10,
+                        "Please select a file smaller than 10 MB.",
+                    ),
                 ),
             ),
+            v.minLength(1, "Approved letter is required."),
         ),
     }),
     v.forward(
@@ -310,6 +313,22 @@ export const equipmentReservationFormSchema = v.pipe(
         selectedEquipment: v.pipe(
             v.array(v.string()),
             v.minLength(1, "Please select at least one equipment."),
+        ),
+        approvedLetter: v.pipe(
+            v.array(
+                v.pipe(
+                    v.file("Please select an image file."),
+                    v.mimeType(
+                        ["image/jpeg", "image/png"],
+                        "Please select a JPEG or PNG file.",
+                    ),
+                    v.maxSize(
+                        1024 * 1024 * 10,
+                        "Please select a file smaller than 10 MB.",
+                    ),
+                ),
+            ),
+            v.minLength(1, "Approved letter is required."),
         ),
     }),
     v.forward(
