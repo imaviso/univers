@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { registrationFormAtom } from "@/lib/atoms";
 import { registrationLoadingAtom } from "@/lib/atoms";
 import { useAtom } from "jotai";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, LoaderCircleIcon } from "lucide-react";
 
 interface SummaryStepProps {
     onSubmit: () => void;
@@ -118,7 +118,18 @@ export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
                     Back
                 </Button>
                 <Button onClick={onSubmit} disabled={isLoading}>
-                    {isLoading ? "Creating Account..." : "Create Account"}
+                    {isLoading ? (
+                        <>
+                            <LoaderCircleIcon
+                                className="-ms-1 animate-spin"
+                                size={16}
+                                aria-hidden="true"
+                            />
+                            Creating Account...
+                        </>
+                    ) : (
+                        "Create Account"
+                    )}
                 </Button>
             </div>
         </div>

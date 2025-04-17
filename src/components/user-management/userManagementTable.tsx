@@ -79,17 +79,11 @@ import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 import { usersQueryOptions } from "@/lib/query";
 import { DEPARTMENTS, ROLES, type UserType } from "@/lib/types";
-import {
-    useQuery,
-    useQueryClient,
-    useSuspenseQuery,
-} from "@tanstack/react-query";
-import { set } from "date-fns";
-import { atom, useAtom } from "jotai";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useAtom } from "jotai";
 import { toast } from "sonner";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 import { EditUserFormDialog } from "./editUserFormDialog";
-import { UserFormDialog } from "./userFormDialog";
 // --- End Import ---
 
 // The main DataTable component
@@ -105,11 +99,7 @@ export function UserDataTable() {
     const [selectedUser, setSelectedUser] = useAtom(selectedUserAtom);
 
     const queryClient = useQueryClient();
-    const {
-        isLoading,
-        isError,
-        data: initialUsers,
-    } = useSuspenseQuery(usersQueryOptions);
+    const { data: initialUsers } = useSuspenseQuery(usersQueryOptions);
 
     const handleDeactivateUser = (userData: Partial<UserType>) => {
         console.log("Deactivating user:", userData);
@@ -885,7 +875,7 @@ export function UserDataTable() {
                     setEditDialogOpen(false);
                     setSelectedUser(null); // Clear selected user on close
                 }}
-                isLoading={isLoading}
+                // isLoading={isLoading}
                 onSubmit={handleEditUser}
                 user={selectedUser!} // Pass the selected user
                 roles={ROLES}

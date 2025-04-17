@@ -13,7 +13,7 @@ import { userSignIn } from "@/lib/auth";
 import { type LoginInput, loginSchema } from "@/lib/schema";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -129,7 +129,18 @@ export default function LoginForm() {
                             className="w-full"
                             disabled={isLoading}
                         >
-                            {isLoading ? "Logging in..." : "Login"}
+                            {isLoading ? (
+                                <>
+                                    <LoaderCircleIcon
+                                        className="-ms-1 animate-spin"
+                                        size={16}
+                                        aria-hidden="true"
+                                    />
+                                    Logging in...
+                                </>
+                            ) : (
+                                "Login"
+                            )}
                         </Button>
                     </form>
                 </Form>

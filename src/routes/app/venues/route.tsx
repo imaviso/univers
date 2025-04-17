@@ -37,7 +37,7 @@ export const Route = createFileRoute("/app/venues")({
     },
     component: RouteComponent,
     loader: async ({ context: { queryClient } }) => {
-        queryClient.prefetchQuery(venuesQueryOptions);
+        queryClient.ensureQueryData(venuesQueryOptions);
     },
 });
 

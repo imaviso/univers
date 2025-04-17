@@ -42,6 +42,7 @@ import {
     ArrowLeft,
     CheckCircle2,
     KeyRound,
+    LoaderCircleIcon,
     LockKeyhole,
     Mail,
 } from "lucide-react";
@@ -329,7 +330,18 @@ export default function ForgotPasswordForm() {
                                 disabled={isLoading}
                                 size="lg"
                             >
-                                {isLoading ? "Sending..." : "Send Reset Code"}
+                                {isLoading ? (
+                                    <>
+                                        <LoaderCircleIcon
+                                            className="-ms-1 animate-spin"
+                                            size={16}
+                                            aria-hidden="true"
+                                        />
+                                        Sending...
+                                    </>
+                                ) : (
+                                    "Send Reset Code"
+                                )}
                             </Button>
                         </form>
                     </Form>
@@ -384,7 +396,18 @@ export default function ForgotPasswordForm() {
                                     disabled={isLoading}
                                     size="lg"
                                 >
-                                    {isLoading ? "Verifying..." : "Verify Code"}
+                                    {isLoading ? (
+                                        <>
+                                            <LoaderCircleIcon
+                                                className="-ms-1 animate-spin"
+                                                size={16}
+                                                aria-hidden="true"
+                                            />
+                                            Verifying...
+                                        </>
+                                    ) : (
+                                        "Verify Code"
+                                    )}
                                 </Button>
 
                                 <Button
@@ -529,9 +552,18 @@ export default function ForgotPasswordForm() {
                                     disabled={isLoading}
                                     size="lg"
                                 >
-                                    {isLoading
-                                        ? "Resetting..."
-                                        : "Reset Password"}
+                                    {isLoading ? (
+                                        <>
+                                            <LoaderCircleIcon
+                                                className="-ms-1 animate-spin"
+                                                size={16}
+                                                aria-hidden="true"
+                                            />
+                                            Resetting...
+                                        </>
+                                    ) : (
+                                        "Reset Password"
+                                    )}
                                 </Button>
 
                                 <Button

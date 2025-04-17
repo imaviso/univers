@@ -32,7 +32,7 @@ export const Route = createFileRoute("/app/user-management")({
     pendingComponent: () => <div>Loading...</div>,
     errorComponent: () => <div>Error</div>,
     loader: async ({ context: { queryClient } }) => {
-        queryClient.prefetchQuery(usersQueryOptions);
+        queryClient.ensureQueryData(usersQueryOptions);
     },
 });
 
