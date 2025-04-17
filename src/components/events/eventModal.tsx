@@ -40,9 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { type EventInput, eventSchema } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import {
-    startOfDay,
-} from "date-fns";
+import { startOfDay } from "date-fns";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -277,7 +275,8 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                                         field.onChange
                                                     }
                                                     disabled={(date) =>
-                                                        date < startOfDay(new Date())
+                                                        date <
+                                                        startOfDay(new Date())
                                                     }
                                                     placeholder="Select start date and time"
                                                 />
@@ -304,7 +303,8 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                                         field.onChange
                                                     }
                                                     disabled={(date) =>
-                                                        date < startOfDay(new Date())
+                                                        date <
+                                                        startOfDay(new Date())
                                                     }
                                                     placeholder="Select end date and time"
                                                 />

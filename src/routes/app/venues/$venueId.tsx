@@ -171,15 +171,26 @@ export function VenueDetails() {
                     onValueChange={setActiveTab}
                     className="flex-1 overflow-hidden"
                 >
-                    <div className="border-b px-6">
-                        <TabsList className="w-full justify-start">
-                            <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="reservations">
-                                Reservations
-                            </TabsTrigger>
-                            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-                        </TabsList>
-                    </div>
+                    <TabsList className="w-full text-foreground mb-3 h-auto gap-2 rounded-none border-b bg-transparent px-0 py-1">
+                        <TabsTrigger
+                            className="hover:bg-accent hover:text-foreground data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent relative after:absolute after:inset-x-0 after:bottom-0 after:-mb-1 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            value="overview"
+                        >
+                            Overview
+                        </TabsTrigger>
+                        <TabsTrigger
+                            className="hover:bg-accent hover:text-foreground data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent relative after:absolute after:inset-x-0 after:bottom-0 after:-mb-1 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            value="reservations"
+                        >
+                            Reservations
+                        </TabsTrigger>
+                        <TabsTrigger
+                            className="hover:bg-accent hover:text-foreground data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent relative after:absolute after:inset-x-0 after:bottom-0 after:-mb-1 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            value="calendar"
+                        >
+                            Calendar
+                        </TabsTrigger>
+                    </TabsList>
 
                     <div className="flex-1 overflow-auto">
                         <TabsContent value="overview" className="p-6 h-full">

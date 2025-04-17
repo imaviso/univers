@@ -1,4 +1,9 @@
-import { getAllUsers } from "@/lib/api";
+import {
+    getAllUsers,
+    getAllDepartments,
+    getAllEvents,
+    getAllVenues,
+} from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import type { UserType } from "./types";
@@ -57,5 +62,29 @@ export const usersQueryOptions = {
     queryFn: async () => {
         const users = await getAllUsers();
         return users;
+    },
+};
+
+export const eventsQueryOptions = {
+    queryKey: ["events"],
+    queryFn: async () => {
+        const events = await getAllEvents();
+        return events;
+    },
+};
+
+export const venuesQueryOptions = {
+    queryKey: ["venues"],
+    queryFn: async () => {
+        const venues = await getAllVenues();
+        return venues;
+    },
+};
+
+export const departmentsQueryOptions = {
+    queryKey: ["departments"],
+    queryFn: async () => {
+        const departments = await getAllDepartments();
+        return departments;
     },
 };

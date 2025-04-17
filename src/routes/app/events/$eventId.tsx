@@ -38,7 +38,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
+import {
+    Link,
+    createFileRoute,
+    useRouteContext,
+    useRouter,
+} from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/events/$eventId")({
     component: EventDetailsPage,
@@ -442,6 +447,8 @@ const getSessionTypeColor = (type: string) => {
 };
 
 export function EventDetailsPage() {
+    const context = useRouteContext({ from: "/app/events" });
+    const role = "role" in context ? context.role : "USER";
     const [commentText, setCommentText] = useState("");
     const router = useRouter();
     const onBack = () => router.history.back();
@@ -475,25 +482,37 @@ export function EventDetailsPage() {
                         </Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="gap-1">
-                            <Edit className="h-4 w-4" />
-                            Edit
-                        </Button>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
+                        {role === "SUPER_ADMIN" && (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1"
+                                >
+                                    <Edit className="h-4 w-4" />
+                                    Edit
                                 </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                                <DropdownMenuItem>Archive</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive">
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem>
+                                            Duplicate
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem>
+                                            Archive
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="text-destructive">
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </>
+                        )}
                     </div>
                 </header>
                 <main className="flex-1 overflow-auto">

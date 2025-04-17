@@ -1,14 +1,8 @@
 import { allNavigation } from "@/lib/navigation";
-import {
-    Outlet,
-    createFileRoute,
-    redirect,
-    useRouteContext,
-} from "@tanstack/react-router";
-import { VenueManagement } from "./dashboard";
+import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { venuesQueryOptions } from "@/lib/query";
 
 export const Route = createFileRoute("/app/venues")({
-    component: RouteComponent,
     beforeLoad: async ({ location, context }) => {
         const navigationItem = allNavigation.find((item) => {
             // Allow exact match or any sub-route after the base path.
@@ -18,7 +12,7 @@ export const Route = createFileRoute("/app/venues")({
             ) {
                 return true;
             }
-            if (item.href === "/app/venues/management") {
+            if (item.href === "/app/venues/dashboard") {
                 const customPathRegex = /^\/app\/venues\/\d+$/;
                 return customPathRegex.test(location.pathname);
             }
@@ -40,6 +34,10 @@ export const Route = createFileRoute("/app/venues")({
                 },
             });
         }
+    },
+    component: RouteComponent,
+    loader: async ({ context: { queryClient } }) => {
+        queryClient.prefetchQuery(venuesQueryOptions);
     },
 });
 

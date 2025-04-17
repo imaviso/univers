@@ -1,8 +1,8 @@
 import { allNavigation } from "@/lib/navigation";
+import { eventsQueryOptions } from "@/lib/query";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/events")({
-    component: RouteComponent,
     beforeLoad: async ({ location, context }) => {
         const navigationItem = allNavigation.find((item) => {
             // Allow exact match or any sub-route after the base path.
@@ -34,6 +34,10 @@ export const Route = createFileRoute("/app/events")({
                 },
             });
         }
+    },
+    component: RouteComponent,
+    loader: async ({ context: { queryClient } }) => {
+        queryClient.prefetchQuery(eventsQueryOptions);
     },
 });
 

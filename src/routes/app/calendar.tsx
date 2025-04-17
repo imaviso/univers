@@ -14,7 +14,11 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import {
+    createFileRoute,
+    redirect,
+    useRouteContext,
+} from "@tanstack/react-router";
 import {
     addDays,
     addMonths,
@@ -192,6 +196,8 @@ const getStatusColor = (status: string) => {
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function Calendar() {
+    const context = useRouteContext({ from: "/app/calendar" });
+    const role = "role" in context ? context.role : "USER";
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -672,10 +678,11 @@ export function Calendar() {
                                 </div>
                             </PopoverContent>
                         </Popover>
-
-                        <CreateEventButton
-                            onClick={() => setIsCreateModalOpen(true)}
-                        />
+                        {role === "SUPER_ADMIN" && (
+                            <CreateEventButton
+                                onClick={() => setIsCreateModalOpen(true)}
+                            />
+                        )}
                     </div>
                 </header>
                 <main className="flex-1 overflow-auto p-6">
