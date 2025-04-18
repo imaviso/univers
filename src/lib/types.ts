@@ -7,6 +7,7 @@ export type UserType = {
     lastName: string;
     email: string;
     role: string;
+    password: string | undefined;
     department: string;
     phoneNumber: string;
     emailVerified: boolean;

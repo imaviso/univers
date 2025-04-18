@@ -19,6 +19,7 @@ interface DeleteConfirmDialogProps {
 
 export function DeleteConfirmDialog({
     isOpen,
+    isLoading,
     onClose,
     onConfirm,
     title,

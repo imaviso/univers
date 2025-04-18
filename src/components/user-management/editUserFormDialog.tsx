@@ -66,7 +66,7 @@ interface UserFormDialogProps {
     };
     roles: { value: string; label: string }[];
     departments: { value: string; label: string }[];
-    active?: boolean;
+    // active?: boolean;
 }
 
 export function EditUserFormDialog({
@@ -86,8 +86,8 @@ export function EditUserFormDialog({
             firstName: user?.firstName || "",
             lastName: user?.lastName || "",
             email: user?.email || "",
-            // password: "",
-            // confirmPassword: "",
+            password: "",
+            confirmPassword: "",
             role: user?.role || "",
             department: user?.department || "",
             telephoneNumber: user?.telephoneNumber || "",
@@ -101,8 +101,30 @@ export function EditUserFormDialog({
     useEffect(() => {
         if (isOpen) {
             if (user) {
+                // Reset form with user data, ensuring passwords are empty
                 form.reset({
                     ...user,
+                    password: "",
+                    confirmPassword: "",
+                    active: user.active ?? true, // Handle potential undefined active status
+                    phoneNumber: user.phoneNumber || "", // Ensure optional fields reset correctly
+                    emailVerified: user.emailVerified ?? false, // Handle potential undefined
+                });
+            } else {
+                // Reset form for adding a new user
+                form.reset({
+                    idNumber: "",
+                    firstName: "",
+                    lastName: "",
+                    email: "",
+                    password: "",
+                    confirmPassword: "",
+                    role: "",
+                    department: "",
+                    telephoneNumber: "",
+                    phoneNumber: "",
+                    active: true, // Default for new user
+                    emailVerified: false, // Default for new user
                 });
             }
         }
@@ -229,14 +251,31 @@ export function EditUserFormDialog({
                                 name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Password</FormLabel>
+                                        {/* Add "(Optional)" hint when editing */}
+                                        <FormLabel>
+                                            Password {user ? "(Optional)" : ""}
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="Enter password"
+                                                // Add placeholder hint when editing
+                                                placeholder={
+                                                    user
+                                                        ? "Leave blank to keep current"
+                                                        : "Enter password"
+                                                }
                                                 type="password"
                                                 {...field}
+                                                // Ensure value is controlled, handle potential null/undefined from field state if necessary
+                                                value={field.value ?? ""}
                                             />
                                         </FormControl>
+                                        {/* Add description hint when editing */}
+                                        {user && (
+                                            <FormDescription>
+                                                Leave blank to keep the current
+                                                password.
+                                            </FormDescription>
+                                        )}
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -247,14 +286,30 @@ export function EditUserFormDialog({
                                 name="confirmPassword"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Confirm Password</FormLabel>
+                                        <FormLabel>
+                                            Confirm Password{" "}
+                                            {user ? "(Optional)" : ""}
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="Confirm password"
+                                                placeholder={
+                                                    user
+                                                        ? "Leave blank to keep current"
+                                                        : "Confirm password"
+                                                }
                                                 type="password"
                                                 {...field}
+                                                // Ensure value is controlled
+                                                value={field.value ?? ""}
                                             />
                                         </FormControl>
+                                        {/* Add description hint when editing */}
+                                        {user && (
+                                            <FormDescription>
+                                                Leave blank if not changing the
+                                                password.
+                                            </FormDescription>
+                                        )}
                                         <FormMessage />
                                     </FormItem>
                                 )}

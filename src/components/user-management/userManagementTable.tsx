@@ -28,6 +28,7 @@ import {
     IdCardIcon, // Icon for ID Number
     ListFilterIcon, // Generic Filter Icon or for Status
     MoreHorizontal,
+    PhoneIcon,
     UserIcon, // Icon for User Name
     UsersIcon,
     VerifiedIcon, // Icon for Role
@@ -78,8 +79,13 @@ import {
 import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 import { usersQueryOptions } from "@/lib/query";
+import type { UserFormInput } from "@/lib/schema";
 import { DEPARTMENTS, ROLES, type UserType } from "@/lib/types";
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+    useMutation,
+    useQueryClient,
+    useSuspenseQuery,
+} from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { toast } from "sonner";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
@@ -101,66 +107,132 @@ export function UserDataTable() {
     const queryClient = useQueryClient();
     const { data: initialUsers } = useSuspenseQuery(usersQueryOptions);
 
-    const handleDeactivateUser = (userData: Partial<UserType>) => {
-        console.log("Deactivating user:", userData);
+    // --- Mutations ---
+    const updateUserMutation = useMutation({
+        mutationFn: updateUser,
+        onMutate: async (updatedUserData: UserType) => {
+            // Cancel any outgoing refetches for the users list
+            await queryClient.cancelQueries({
+                queryKey: usersQueryOptions.queryKey,
+            });
 
-        // Make sure we have all the required fields from the original user
-        if (!selectedUser) {
-            toast.error("No user selected");
-            return;
-        }
+            // Snapshot the previous value
+            const previousUsers = queryClient.getQueryData<UserType[]>(
+                usersQueryOptions.queryKey,
+            );
 
-        // Create updated user data with active explicitly set to false
-        const updatedUserData: UserType = {
-            ...selectedUser,
-            ...userData,
-            active: false, // Force the active status to false regardless of input
-            updatedAt: new Date().toISOString(), // Also update the timestamp
+            // Optimistically update to the new value
+            queryClient.setQueryData<UserType[]>(
+                usersQueryOptions.queryKey,
+                (old = []) =>
+                    old.map((user) =>
+                        user.id === updatedUserData.id ? updatedUserData : user,
+                    ),
+            );
+
+            // Return a context object with the snapshotted value
+            return { previousUsers, updatedUserData };
+        },
+        onError: (err, updatedUserData, context) => {
+            // Rollback on error
+            if (context?.previousUsers) {
+                queryClient.setQueryData(
+                    usersQueryOptions.queryKey,
+                    context.previousUsers,
+                );
+            }
+            const errorMessage =
+                err instanceof Error ? err.message : "Failed to update user";
+            toast.error(errorMessage);
+        },
+        onSuccess: () => {
+            toast.success("User updated successfully");
+            setEditDialogOpen(false); // Close dialog on success
+            setSelectedUser(null);
+        },
+        onSettled: (updatedUserData) => {
+            // Always refetch after error or success to ensure consistency
+            queryClient.invalidateQueries({
+                queryKey: usersQueryOptions.queryKey,
+            });
+            // Optionally invalidate specific user query if you have one
+            // queryClient.invalidateQueries({ queryKey: ['user', updatedUserData?.id] });
+        },
+    });
+
+    const deactivateUserMutation = useMutation({
+        mutationFn: deactivateUser,
+        onMutate: async (userToDeactivate: UserType) => {
+            await queryClient.cancelQueries({
+                queryKey: usersQueryOptions.queryKey,
+            });
+            const previousUsers = queryClient.getQueryData<UserType[]>(
+                usersQueryOptions.queryKey,
+            );
+            queryClient.setQueryData<UserType[]>(
+                usersQueryOptions.queryKey,
+                (old = []) =>
+                    old.map((user) =>
+                        user.id === userToDeactivate.id
+                            ? { ...user, active: false }
+                            : user,
+                    ),
+            );
+            return { previousUsers };
+        },
+        onError: (err, userToDeactivate, context) => {
+            if (context?.previousUsers) {
+                queryClient.setQueryData(
+                    usersQueryOptions.queryKey,
+                    context.previousUsers,
+                );
+            }
+            const errorMessage =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to deactivate user";
+            toast.error(errorMessage);
+        },
+        onSuccess: () => {
+            toast.success("User deactivated successfully");
+            setDeleteDialogOpen(false);
+            setSelectedUser(null);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({
+                queryKey: usersQueryOptions.queryKey,
+            });
+        },
+    });
+    // --- End Mutations ---
+
+    // --- Event Handlers ---
+    const handleEditUser = (userData: UserFormInput) => {
+        if (!selectedUser) return;
+
+        // Construct the full UserType object for the mutation
+        const updatedUser: UserType = {
+            ...selectedUser, // Start with existing data
+            ...userData, // Apply changes from the form
+            // Ensure password is only included if it's not empty
+            password: userData.password || undefined,
+            // Ensure phoneNumber is handled correctly (optional string)
+            phoneNumber: userData.phoneNumber || "",
+            // Ensure createdAt and updatedAt are strings if they exist on selectedUser
+            createdAt: selectedUser.createdAt,
+            updatedAt: new Date().toISOString(), // Update the timestamp
         };
 
-        deactivateUser(updatedUserData)
-            .then(() => {
-                toast.success("User deactivated successfully");
-                queryClient.invalidateQueries(usersQueryOptions);
-            })
-            .catch((error) => {
-                const errorMessage =
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to deactivate user";
-                toast.error(errorMessage);
-            });
-        setDeleteDialogOpen(false);
-        setSelectedUser(null);
+        // Remove confirmPassword as it's not part of UserType
+        // delete (updatedUser as any).confirmPassword;
+
+        updateUserMutation.mutate(updatedUser);
     };
 
-    const handleEditUser = (userData: Partial<UserType>) => {
-        console.log("Updated user data:", userData);
-        // Make sure we have all the required fields from the original user
-        if (!selectedUser) {
-            toast.error("No user selected");
-            return;
+    const handleDeactivateUser = () => {
+        if (selectedUser) {
+            deactivateUserMutation.mutate(selectedUser);
         }
-        const updatedUserData: UserType = {
-            ...selectedUser,
-            ...userData,
-        };
-
-        // Now call updateUser with the complete data
-        updateUser(updatedUserData)
-            .then(() => {
-                toast.success("User updated successfully");
-                queryClient.invalidateQueries(usersQueryOptions);
-            })
-            .catch((error) => {
-                const errorMessage =
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to update user";
-                toast.error(errorMessage);
-            });
-        setEditDialogOpen(false);
-        setSelectedUser(null);
     };
     // --- Define Options for Filters ---
     const ACTIVE_OPTIONS = React.useMemo(() => {
@@ -412,7 +484,7 @@ export function UserDataTable() {
                 meta: defineMeta((row) => row.phoneNumber, {
                     displayName: "Phone Number",
                     type: "text",
-                    icon: FingerprintIcon,
+                    icon: PhoneIcon,
                 }),
                 // --- End Filter Config ---
             },
@@ -441,7 +513,7 @@ export function UserDataTable() {
                 // --- End Filter Config ---
             },
             {
-                accessorKey: "verified", // Virtual column
+                accessorKey: "emailVerified",
                 header: "Verified",
                 cell: ({ row }) => {
                     const emailVerified = row.original.emailVerified;
@@ -467,7 +539,7 @@ export function UserDataTable() {
                 ),
             },
             {
-                accessorKey: "active", // Virtual column
+                accessorKey: "active",
                 header: "Active",
                 cell: ({ row }) => {
                     const statusActive = row.original.active;
@@ -612,6 +684,7 @@ export function UserDataTable() {
                                         setDeleteDialogOpen(true);
                                         setSelectedUser(user);
                                     }}
+                                    disabled={!user.active}
                                 >
                                     Deactivate User
                                 </DropdownMenuItem>
@@ -656,19 +729,8 @@ export function UserDataTable() {
 
     return (
         <div className="w-full space-y-4">
-            {/* Column Visibility Dropdown (Keep if DataTableFilter doesn't handle it) */}
             <div className="flex items-center justify-end">
-                {" "}
-                {/* Add spacing */}
-                {/* --- Add the custom filter component --- */}
                 <DataTableFilter table={table} />
-                {/* --- Remove the old simple filter input --- */}
-                {/*
-      <div className="flex items-center py-4">
-        <Input placeholder="Filter names..." ... />
-        <DropdownMenu>...</DropdownMenu> // Column visibility can stay if DataTableFilter doesn't handle it
-      </div>
-      */}
                 {Object.keys(table.getState().rowSelection).length > 0 && (
                     <Button
                         variant="destructive"
@@ -869,30 +931,36 @@ export function UserDataTable() {
                     </Button>
                 </div>
             </div>
-            <EditUserFormDialog
-                isOpen={editDialogOpen}
-                onClose={() => {
-                    setEditDialogOpen(false);
-                    setSelectedUser(null); // Clear selected user on close
-                }}
-                // isLoading={isLoading}
-                onSubmit={handleEditUser}
-                user={selectedUser!} // Pass the selected user
-                roles={ROLES}
-                departments={DEPARTMENTS}
-            />
-            <DeleteConfirmDialog
-                isOpen={deleteDialogOpen}
-                onClose={() => {
-                    setDeleteDialogOpen(false);
-                    setSelectedUser(null); // Clear selected user on close
-                }}
-                title="Deactivate User"
-                description="Are you sure you want to deactivate this user?"
-                onConfirm={() => {
-                    handleDeactivateUser({});
-                }}
-            />
+            {/* Edit Dialog */}
+            {selectedUser && ( // Conditionally render dialog only when a user is selected
+                <EditUserFormDialog
+                    isOpen={editDialogOpen}
+                    onClose={() => {
+                        setEditDialogOpen(false);
+                        setSelectedUser(null); // Clear selected user on close
+                    }}
+                    isLoading={updateUserMutation.isPending} // Use mutation pending state
+                    onSubmit={handleEditUser}
+                    user={selectedUser} // Pass the selected user
+                    roles={ROLES}
+                    departments={DEPARTMENTS}
+                />
+            )}
+
+            {/* Deactivate Dialog */}
+            {selectedUser && ( // Conditionally render dialog only when a user is selected
+                <DeleteConfirmDialog
+                    isOpen={deleteDialogOpen}
+                    onClose={() => {
+                        setDeleteDialogOpen(false);
+                        setSelectedUser(null); // Clear selected user on close
+                    }}
+                    title="Deactivate User"
+                    description={`Are you sure you want to deactivate user ${selectedUser.firstName} ${selectedUser.lastName}?`}
+                    onConfirm={handleDeactivateUser}
+                    isLoading={deactivateUserMutation.isPending} // Use mutation pending state
+                />
+            )}
         </div>
     );
 }

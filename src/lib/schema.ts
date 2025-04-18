@@ -155,20 +155,30 @@ export const userFormSchema = v.pipe(
             v.nonEmpty("Email is required"),
             v.email("Invalid email address"),
         ),
-        password: v.pipe(
-            v.string(),
-            v.minLength(8, "Password must be at least 8 characters"),
-            v.regex(
-                /[A-Z]/,
-                "Password must contain at least one uppercase letter",
+        password: v.optional(
+            v.pipe(
+                v.string(),
+                // Only apply non-empty checks if the string is not empty
+                v.check(
+                    (s) => s.length === 0 || s.length >= 8,
+                    "Password must be at least 8 characters",
+                ),
+                v.check(
+                    (s) => s.length === 0 || /[A-Z]/.test(s),
+                    "Password must contain at least one uppercase letter",
+                ),
+                v.check(
+                    (s) => s.length === 0 || /[a-z]/.test(s),
+                    "Password must contain at least one lowercase letter",
+                ),
+                v.check(
+                    (s) => s.length === 0 || /[0-9]/.test(s),
+                    "Password must contain at least one number",
+                ),
             ),
-            v.regex(
-                /[a-z]/,
-                "Password must contain at least one lowercase letter",
-            ),
-            v.regex(/[0-9]/, "Password must contain at least one number"),
+            "",
         ),
-        confirmPassword: v.string(),
+        confirmPassword: v.optional(v.string(), ""),
         role: v.pipe(v.string(), v.nonEmpty("Role is required")),
         telephoneNumber: v.pipe(
             v.string(),
@@ -188,12 +198,19 @@ export const userFormSchema = v.pipe(
         emailVerified: v.optional(v.boolean()),
     }),
     v.forward(
-        v.partialCheck(
-            [["password"], ["confirmPassword"]],
-            (input) => input.password === input.confirmPassword,
-            "Passwords do not match.",
-        ),
-        ["confirmPassword"],
+        v.check((input) => {
+            // If password is provided (not empty string), confirmPassword must match
+            if (input.password && input.password.length > 0) {
+                return input.password === input.confirmPassword;
+            }
+            // If password is empty or undefined, confirmPassword must also be empty or undefined
+            // Note: We defaulted optional fields to "", so check against ""
+            if (input.password === "" && input.confirmPassword !== "") {
+                return false; // Password empty, but confirm not
+            }
+            return true; // Both empty or password provided and they match
+        }, "Passwords do not match. Both fields must be filled or both must be empty."),
+        ["confirmPassword"], // Apply error message to confirmPassword
     ),
 );
 

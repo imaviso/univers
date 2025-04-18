@@ -43,7 +43,7 @@ export const createUser = async (
     >,
 ) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/users`, {
+        const response = await fetch(`${API_BASE_URL}/admin/users`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
