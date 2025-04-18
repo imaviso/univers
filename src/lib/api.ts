@@ -1,10 +1,10 @@
 import { API_BASE_URL } from "./auth";
-import { EventInput } from "./schema";
+import type { EventInput } from "./schema";
 import type { UserType } from "./types";
 
 export const getAllUsers = async () => {
     try {
-        const response = await fetch(`${API_BASE_URL}/users`, {
+        const response = await fetch(`${API_BASE_URL}/admin/users`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",

@@ -34,10 +34,12 @@ import { format } from "date-fns";
 import {
     ArrowLeft,
     Calendar,
+    Clock,
     Download,
     Eye,
     MapPin,
     MoreHorizontal,
+    UserCircle,
     Users,
     Wifi,
 } from "lucide-react";
@@ -48,35 +50,53 @@ import { initialVenues } from "./dashboard.tsx";
 export const Route = createFileRoute("/app/venues/$venueId")({
     component: VenueDetails,
     loader: async ({ params: { venueId } }) => {
-        const reservation = initialReservations.find(
-            (r) => r.id.toString() === venueId,
-        );
-        const routerVenue = initialVenues.find(
-            (v) => v.id.toString() === venueId,
-        );
+        // Find venue in the updated mock data
+        const venue = initialVenues.find((v) => v.id.toString() === venueId) as
+            | Venue
+            | undefined; // Cast or ensure type safety
 
-        if (!reservation) {
-            throw new Error("Reservation not found");
+        if (!venue) {
+            // Use TanStack Router's notFound utility or throw a specific error
+            throw new Error(`Venue with ID ${venueId} not found`);
+            // Or: throw notFound(); // if you import { notFound } from '@tanstack/react-router'
         }
 
-        if (!routerVenue) {
-            throw new Error("Venue not found");
-        }
+        // Fetch related reservations if needed for the reservations tab
+        // const reservations = initialReservations.filter(r => r.venueId === venue.id);
 
-        return {
-            reservation,
-            routerVenue,
-        };
+        return { venue /*, reservations */ };
+    },
+    // Add error component for better error handling
+    errorComponent: ({ error }) => {
+        // Check if it's the specific error we threw
+        if (error instanceof Error && error.message.includes("not found")) {
+            return <div className="p-4 text-red-600">Venue not found.</div>;
+        }
+        // Handle other errors
+        return (
+            <div className="p-4 text-red-600">
+                An error occurred:{" "}
+                {error instanceof Error ? error.message : "Unknown error"}
+            </div>
+        );
     },
 });
 
+type Venue = {
+    id: number;
+    name: string;
+    location: string;
+    venueOwnerId: number;
+    image?: string; // Added optional image field
+    createdAt: string;
+    updatedAt: string;
+};
+
 export function VenueDetails() {
     const navigate = useNavigate();
-    const { reservation, routerVenue } = Route.useLoaderData();
+    const { venue } = Route.useLoaderData();
     const router = useRouter();
     const onBack = () => router.history.back();
-    const [venue, setVenue] = useState(routerVenue);
-    const [venueReservations, setVenueReservations] = useState([reservation]);
     const [activeTab, setActiveTab] = useState("overview");
 
     if (!venue) {
@@ -157,21 +177,24 @@ export function VenueDetails() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => onBack()}
+                            onClick={onBack}
+                            aria-label="Go back"
                         >
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <h1 className="text-xl font-semibold">{venue.name}</h1>
-                        <Badge variant="outline">{venue.type}</Badge>
+                        {/* Removed type badge as it's not in the new entity */}
                     </div>
+                    {/* Removed action buttons if not applicable */}
                 </header>
 
+                {/* Added Tabs */}
                 <Tabs
                     value={activeTab}
                     onValueChange={setActiveTab}
                     className="flex-1 overflow-hidden"
                 >
-                    <TabsList className="w-full text-foreground mb-3 h-auto gap-2 rounded-none border-b bg-transparent px-0 py-1">
+                    <TabsList className="w-full text-foreground mb-3 h-auto gap-2 rounded-none border-b bg-transparent px-6 py-1">
                         <TabsTrigger
                             className="hover:bg-accent hover:text-foreground data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent relative after:absolute after:inset-x-0 after:bottom-0 after:-mb-1 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                             value="overview"
@@ -192,270 +215,88 @@ export function VenueDetails() {
                         </TabsTrigger>
                     </TabsList>
 
-                    <div className="flex-1 overflow-auto">
-                        <TabsContent value="overview" className="p-6 h-full">
-                            <div className="grid grid-cols-3 gap-6">
-                                <div className="col-span-2 space-y-6">
-                                    <div className="rounded-lg overflow-hidden border">
+                    <div className="flex-1 overflow-auto p-6">
+                        {/* Overview Tab */}
+                        <TabsContent value="overview" className="h-full">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* Left Column: Image */}
+                                <div className="md:col-span-2 space-y-6">
+                                    <div className="rounded-lg overflow-hidden border aspect-video">
                                         <img
                                             src={
                                                 venue.image ||
                                                 "/placeholder.svg"
                                             }
                                             alt={venue.name}
-                                            className="w-full h-64 object-cover"
+                                            className="w-full h-full object-cover"
                                         />
                                     </div>
-
-                                    <div className="space-y-4">
-                                        <h2 className="text-lg font-semibold">
-                                            Description
-                                        </h2>
-                                        <p className="text-muted-foreground">
-                                            {venue.description}
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <h2 className="text-lg font-semibold">
-                                            Amenities
-                                        </h2>
-                                        <div className="flex flex-wrap gap-2">
-                                            {venue.amenities.map(
-                                                (
-                                                    amenity: string,
-                                                    index: number,
-                                                ) => (
-                                                    <Badge
-                                                        key={index}
-                                                        variant="secondary"
-                                                        className="flex items-center gap-1"
-                                                    >
-                                                        <Wifi className="h-3 w-3" />
-                                                        {amenity}
-                                                    </Badge>
-                                                ),
-                                            )}
-                                        </div>
-                                    </div>
+                                    {/* Add Description/Amenities back here if those fields exist */}
                                 </div>
 
+                                {/* Right Column: Details */}
                                 <div className="space-y-6">
                                     <Card>
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-base">
-                                                Venue Details
+                                        <CardHeader>
+                                            <CardTitle>
+                                                Venue Information
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-4">
                                             <div className="flex items-center gap-2">
-                                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                                 <span className="text-sm">
-                                                    {venue.address}
+                                                    {venue.location}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Users className="h-4 w-4 text-muted-foreground" />
+                                                <UserCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                                 <span className="text-sm">
-                                                    Capacity: {venue.capacity}{" "}
-                                                    people
+                                                    Owner ID:{" "}
+                                                    {venue.venueOwnerId}
                                                 </span>
                                             </div>
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                                <span className="text-sm">
+                                                    Created:{" "}
+                                                    {formatDateTime(
+                                                        venue.createdAt,
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                                <span className="text-sm">
+                                                    Last Updated:{" "}
+                                                    {formatDateTime(
+                                                        venue.updatedAt,
+                                                    )}
+                                                </span>
+                                            </div>
+                                            {/* Removed capacity, contact info etc. */}
                                         </CardContent>
                                     </Card>
-
-                                    <Card>
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-base">
-                                                Contact Information
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-2">
-                                            <div className="text-sm">
-                                                <span className="font-medium">
-                                                    Contact Person:
-                                                </span>{" "}
-                                                {venue.contactPerson}
-                                            </div>
-                                            <div className="text-sm">
-                                                <span className="font-medium">
-                                                    Email:
-                                                </span>{" "}
-                                                {venue.contactEmail}
-                                            </div>
-                                            <div className="text-sm">
-                                                <span className="font-medium">
-                                                    Phone:
-                                                </span>{" "}
-                                                {venue.contactPhone}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    <Card>
-                                        <CardHeader className="pb-2">
-                                            <CardTitle className="text-base">
-                                                Upcoming Events
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="text-2xl font-bold">
-                                                {venueReservations.length}
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">
-                                                {
-                                                    venueReservations.filter(
-                                                        (r) =>
-                                                            r.status ===
-                                                            "pending",
-                                                    ).length
-                                                }{" "}
-                                                pending approval
-                                            </p>
-                                        </CardContent>
-                                    </Card>
+                                    {/* Add other cards (e.g., Upcoming Events) if needed */}
                                 </div>
                             </div>
                         </TabsContent>
 
-                        <TabsContent
-                            value="reservations"
-                            className="p-6 h-full"
-                        >
+                        {/* Reservations Tab */}
+                        <TabsContent value="reservations" className="h-full">
                             <div className="space-y-6">
-                                <div className="flex justify-between items-center">
-                                    <h2 className="text-lg font-semibold">
-                                        Venue Reservations
-                                    </h2>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-1"
-                                    >
-                                        <Download className="h-4 w-4" />
-                                        Export
-                                    </Button>
+                                <h2 className="text-lg font-semibold">
+                                    Venue Reservations
+                                </h2>
+                                {/* Add Table or List for reservations here */}
+                                <div className="text-center text-muted-foreground py-8 border rounded-md">
+                                    Reservation list placeholder.
                                 </div>
-
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Event Name</TableHead>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Time</TableHead>
-                                            <TableHead>Department</TableHead>
-                                            <TableHead>Requester</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Submitted</TableHead>
-                                            <TableHead className="w-[100px]">
-                                                Actions
-                                            </TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {venueReservations.length > 0 ? (
-                                            venueReservations.map(
-                                                (reservation) => (
-                                                    <TableRow
-                                                        key={reservation.id}
-                                                    >
-                                                        <TableCell className="font-medium">
-                                                            <Button
-                                                                variant="link"
-                                                                className="p-0 h-auto text-left justify-start font-medium"
-                                                                onClick={() =>
-                                                                    handleViewReservation(
-                                                                        reservation.id,
-                                                                    )
-                                                                }
-                                                            >
-                                                                {
-                                                                    reservation.eventName
-                                                                }
-                                                            </Button>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {formatDate(
-                                                                reservation.eventDate,
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {formatTime(
-                                                                reservation.startTime,
-                                                            )}{" "}
-                                                            -{" "}
-                                                            {formatTime(
-                                                                reservation.endTime,
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {
-                                                                reservation.department
-                                                            }
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {
-                                                                reservation.userName
-                                                            }
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {getStatusBadge(
-                                                                reservation.status,
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {formatDate(
-                                                                reservation.createdAt,
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger
-                                                                    asChild
-                                                                >
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-8 w-8"
-                                                                    >
-                                                                        <MoreHorizontal className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem
-                                                                        onClick={() =>
-                                                                            handleViewReservation(
-                                                                                reservation.id,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <Eye className="mr-2 h-4 w-4" />
-                                                                        View
-                                                                        Details
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ),
-                                            )
-                                        ) : (
-                                            <TableRow>
-                                                <TableCell
-                                                    colSpan={8}
-                                                    className="text-center py-8 text-muted-foreground"
-                                                >
-                                                    No reservations found for
-                                                    this venue.
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="calendar" className="p-6 h-full">
+                        {/* Calendar Tab */}
+                        <TabsContent value="calendar" className="h-full">
                             <div className="flex items-center justify-center h-full">
                                 <div className="text-center">
                                     <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />

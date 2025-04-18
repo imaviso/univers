@@ -27,13 +27,12 @@ import {
     type EquipmentReservationFormInput,
     equipmentReservationFormSchema,
 } from "@/lib/schema";
+import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { format, startOfDay } from "date-fns";
+import { CalendarIcon, CloudUpload, Users, X } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import EquipmentList from "./equipmentList";
-import { SmartDatetimeInput } from "../ui/smart-date-picker";
-import { cn } from "@/lib/utils";
 import {
     FileUpload,
     FileUploadDropzone,
@@ -44,7 +43,8 @@ import {
     FileUploadList,
     FileUploadTrigger,
 } from "../ui/file-upload";
-import { CalendarIcon, CloudUpload, Users, X } from "lucide-react";
+import { SmartDatetimeInput } from "../ui/smart-date-picker";
+import EquipmentList from "./equipmentList";
 
 // Define the props interface
 interface EquipmentReservationFormDialogProps {

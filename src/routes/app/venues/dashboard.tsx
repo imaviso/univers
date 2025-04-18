@@ -44,11 +44,13 @@ import {
     useNavigate,
     useRouteContext,
 } from "@tanstack/react-router";
+import { format } from "date-fns";
 import {
     Building,
     Calendar,
     Download,
     Edit,
+    Eye,
     MapPin,
     MoreHorizontal,
     Plus,
@@ -62,206 +64,65 @@ export const Route = createFileRoute("/app/venues/dashboard")({
     component: VenueManagement,
 });
 
-// Sample venue data
 export const initialVenues = [
     {
         id: 1,
         name: "Main Conference Hall",
-        address: "123 Convention Center Way, New York, NY 10001",
-        type: "Conference Hall",
-        capacity: 500,
-        status: "available",
-        amenities: ["Wi-Fi", "Projector", "Sound System", "Stage", "Catering"],
-        contactPerson: "John Smith",
-        contactEmail: "john@venueexample.com",
-        contactPhone: "(212) 555-1234",
-        description:
-            "Our largest venue with state-of-the-art AV equipment and flexible seating arrangements.",
-        image: "/placeholder.svg?height=200&width=300",
-        bookingRate: 65,
-        upcomingEvents: 3,
+        location: "123 Convention Center Way, New York, NY 10001",
+        venueOwnerId: 101,
+        image: "/placeholder.svg?text=Venue+1&height=200&width=300", // Added image
+        createdAt: new Date("2024-01-15T10:00:00Z").toISOString(),
+        updatedAt: new Date("2024-04-10T14:30:00Z").toISOString(),
     },
     {
         id: 2,
         name: "Workshop Room A",
-        address: "123 Convention Center Way, New York, NY 10001",
-        type: "Meeting Room",
-        capacity: 50,
-        status: "booked",
-        amenities: ["Wi-Fi", "Whiteboard", "TV Screen", "Coffee Service"],
-        contactPerson: "Sarah Johnson",
-        contactEmail: "sarah@venueexample.com",
-        contactPhone: "(212) 555-2345",
-        description:
-            "Perfect for workshops, training sessions, and small group meetings.",
-        image: "/placeholder.svg?height=200&width=300",
-        bookingRate: 80,
-        upcomingEvents: 5,
+        location: "123 Convention Center Way, New York, NY 10001",
+        venueOwnerId: 102,
+        image: "/placeholder.svg?text=Venue+2&height=200&width=300", // Added image
+        createdAt: new Date("2024-01-20T09:00:00Z").toISOString(),
+        updatedAt: new Date("2024-03-25T11:00:00Z").toISOString(),
     },
     {
         id: 3,
         name: "Executive Boardroom",
-        address: "555 Business Plaza, New York, NY 10022",
-        type: "Boardroom",
-        capacity: 20,
-        status: "available",
-        amenities: [
-            "Wi-Fi",
-            "Video Conferencing",
-            "Smart Board",
-            "Refreshments",
-        ],
-        contactPerson: "Michael Brown",
-        contactEmail: "michael@venueexample.com",
-        contactPhone: "(212) 555-3456",
-        description:
-            "Elegant boardroom with premium furnishings and advanced technology for executive meetings.",
-        image: "/placeholder.svg?height=200&width=300",
-        bookingRate: 45,
-        upcomingEvents: 2,
+        location: "555 Business Plaza, New York, NY 10022",
+        venueOwnerId: 101,
+        image: "/placeholder.svg?text=Venue+3&height=200&width=300", // Added image
+        createdAt: new Date("2024-02-01T11:30:00Z").toISOString(),
+        updatedAt: new Date("2024-04-15T09:45:00Z").toISOString(),
     },
     {
         id: 4,
         name: "Outdoor Pavilion",
-        address: "789 Park Avenue, New York, NY 10065",
-        type: "Outdoor",
-        capacity: 300,
-        status: "maintenance",
-        amenities: ["Covered Area", "Power Outlets", "Lighting", "Restrooms"],
-        contactPerson: "Jennifer Lee",
-        contactEmail: "jennifer@venueexample.com",
-        contactPhone: "(212) 555-4567",
-        description:
-            "Beautiful outdoor space with garden views, perfect for receptions and social events.",
-        image: "/placeholder.svg?height=200&width=300",
-        bookingRate: 30,
-        upcomingEvents: 0,
+        location: "789 Park Avenue, New York, NY 10065",
+        venueOwnerId: 103,
+        image: "/placeholder.svg?text=Venue+4&height=200&width=300", // Added image
+        createdAt: new Date("2024-02-10T16:00:00Z").toISOString(),
+        updatedAt: new Date("2024-04-01T08:15:00Z").toISOString(),
     },
     {
         id: 5,
         name: "Auditorium",
-        address: "321 Education Lane, New York, NY 10003",
-        type: "Auditorium",
-        capacity: 350,
-        status: "available",
-        amenities: [
-            "Wi-Fi",
-            "Theater Seating",
-            "Advanced AV",
-            "Backstage Area",
-        ],
-        contactPerson: "David Wilson",
-        contactEmail: "david@venueexample.com",
-        contactPhone: "(212) 555-5678",
-        description:
-            "Professional auditorium with tiered seating, ideal for presentations and performances.",
-        image: "/placeholder.svg?height=200&width=300",
-        bookingRate: 55,
-        upcomingEvents: 1,
-    },
-    {
-        id: 6,
-        name: "Gallery Space",
-        address: "456 Arts District, New York, NY 10012",
-        type: "Gallery",
-        capacity: 150,
-        status: "booked",
-        amenities: [
-            "Wi-Fi",
-            "Track Lighting",
-            "Open Floor Plan",
-            "Catering Prep Area",
-        ],
-        contactPerson: "Emma Rodriguez",
-        contactEmail: "emma@venueexample.com",
-        contactPhone: "(212) 555-6789",
-        description:
-            "Modern, open gallery space perfect for exhibitions, receptions, and networking events.",
-        image: "/placeholder.svg?height=200&width=300",
-        bookingRate: 75,
-        upcomingEvents: 4,
-    },
-    {
-        id: 7,
-        name: "Training Center",
-        address: "987 Corporate Drive, New York, NY 10017",
-        type: "Classroom",
-        capacity: 80,
-        status: "available",
-        amenities: ["Wi-Fi", "Computers", "Projector", "Breakout Areas"],
-        contactPerson: "Robert Chen",
-        contactEmail: "robert@venueexample.com",
-        contactPhone: "(212) 555-7890",
-        description:
-            "Fully equipped training facility with computer workstations and flexible seating.",
-        image: "/placeholder.svg?height=200&width=300",
-        bookingRate: 60,
-        upcomingEvents: 2,
-    },
-    {
-        id: 8,
-        name: "Rooftop Terrace",
-        address: "777 Skyline Avenue, New York, NY 10019",
-        type: "Outdoor",
-        capacity: 200,
-        status: "unavailable",
-        amenities: [
-            "Panoramic Views",
-            "Bar Area",
-            "Lounge Seating",
-            "Sound System",
-        ],
-        contactPerson: "Sophia Martinez",
-        contactEmail: "sophia@venueexample.com",
-        contactPhone: "(212) 555-8901",
-        description:
-            "Stunning rooftop venue with city views, perfect for cocktail parties and special events.",
-        image: "/placeholder.svg?height=200&width=300",
-        bookingRate: 90,
-        upcomingEvents: 0,
+        location: "321 Education Lane, New York, NY 10003",
+        venueOwnerId: 102,
+        image: "/placeholder.svg?text=Venue+5&height=200&width=300", // Added image
+        createdAt: new Date("2024-03-05T13:00:00Z").toISOString(),
+        updatedAt: new Date("2024-04-18T10:00:00Z").toISOString(),
     },
 ];
+// --- END NEW MOCK DATA STRUCTURE ---
 
-// Available venue types
-const venueTypes = [
-    "Conference Hall",
-    "Meeting Room",
-    "Boardroom",
-    "Auditorium",
-    "Classroom",
-    "Gallery",
-    "Outdoor",
-    "Ballroom",
-];
-
-// Common amenities
-const commonAmenities = [
-    "Wi-Fi",
-    "Projector",
-    "Sound System",
-    "Video Conferencing",
-    "Whiteboard",
-    "Smart Board",
-    "Stage",
-    "Catering",
-    "Coffee Service",
-    "Refreshments",
-    "Restrooms",
-    "Parking",
-    "Accessibility Features",
-    "Breakout Areas",
-    "Lounge Seating",
-    "Bar Area",
-];
-
-// Mock data for venues and event types
-const venues = [
-    { id: "1", name: "Main Auditorium" },
-    { id: "2", name: "Conference Room A" },
-    { id: "3", name: "Conference Room B" },
-    { id: "4", name: "Outdoor Pavilion" },
-    { id: "5", name: "Lecture Hall" },
-];
+// Define the type for the new Venue structure
+type Venue = {
+    id: number;
+    name: string;
+    location: string;
+    venueOwnerId: number;
+    image?: string; // Added optional image field
+    createdAt: string; // Use string for ISO date format
+    updatedAt: string; // Use string for ISO date format
+};
 
 const eventTypes = [
     { id: "1", name: "Conference" },
@@ -300,37 +161,20 @@ export function VenueManagement() {
     const handleNavigate = (venueId: number) => {
         navigate({ from: Route.fullPath, to: `/app/venues/${venueId}` });
     };
-    // Filter venues based on search query and filters
+
     const filteredVenues = venues.filter((venue) => {
         const matchesSearch =
             venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            venue.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            venue.description
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-            venue.contactPerson
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase());
-
-        const matchesType = typeFilter ? venue.type === typeFilter : true;
-        const matchesStatus = statusFilter
-            ? venue.status === statusFilter
-            : true;
-
-        return matchesSearch && matchesType && matchesStatus;
+            venue.location.toLowerCase().includes(searchQuery.toLowerCase());
+        // Add back type/status filters if needed and if those fields exist on Venue
+        // const matchesType = typeFilter ? venue.type === typeFilter : true;
+        // const matchesStatus = statusFilter ? venue.status === statusFilter : true;
+        return matchesSearch; // && matchesType && matchesStatus;
     });
 
-    // Venue statistics
+    // Simplified stats
     const stats = {
         total: venues.length,
-        available: venues.filter((venue) => venue.status === "available")
-            .length,
-        booked: venues.filter((venue) => venue.status === "booked").length,
-        maintenance: venues.filter((venue) => venue.status === "maintenance")
-            .length,
-        unavailable: venues.filter((venue) => venue.status === "unavailable")
-            .length,
-        totalCapacity: venues.reduce((sum, venue) => sum + venue.capacity, 0),
     };
 
     // Handle bulk selection
@@ -351,19 +195,24 @@ export function VenueManagement() {
     };
 
     // Handle venue operations
-    const handleAddVenue = (venueData: any) => {
-        const newVenue = {
-            id: venues.length + 1,
+    const handleAddVenue = (
+        venueData: Omit<Venue, "id" | "createdAt" | "updatedAt">,
+    ) => {
+        const newVenue: Venue = {
+            id: Math.max(0, ...venues.map((v) => v.id)) + 1, // Simple ID generation
             ...venueData,
-            image: "/placeholder.svg?height=200&width=300",
-            bookingRate: Math.floor(Math.random() * 50) + 30, // Random booking rate between 30-80%
-            upcomingEvents: Math.floor(Math.random() * 5), // Random number of upcoming events
+            // Image URL might come from venueData if form handles upload, or use placeholder
+            image:
+                venueData.image ||
+                `/placeholder.svg?text=New+Venue&height=200&width=300`,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
         setVenues([...venues, newVenue]);
         setIsAddVenueOpen(false);
     };
 
-    const handleEditVenue = (venueData: any) => {
+    const handleEditVenue = (venueData: Venue) => {
         setVenues(
             venues.map((venue) =>
                 venue.id === venueData.id ? { ...venue, ...venueData } : venue,
@@ -384,35 +233,13 @@ export function VenueManagement() {
         setIsDeleteDialogOpen(false);
     };
 
-    // Status badge styling
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case "available":
-                return (
-                    <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">
-                        Available
-                    </Badge>
-                );
-            case "booked":
-                return (
-                    <Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20">
-                        Booked
-                    </Badge>
-                );
-            case "maintenance":
-                return (
-                    <Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
-                        Maintenance
-                    </Badge>
-                );
-            case "unavailable":
-                return (
-                    <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-                        Unavailable
-                    </Badge>
-                );
-            default:
-                return <Badge variant="outline">{status}</Badge>;
+    const formatDateTime = (dateString: string | null) => {
+        if (!dateString) return "—";
+        try {
+            return format(new Date(dateString), "MMM d, yyyy h:mm a");
+        } catch (e) {
+            console.error("Error formatting date:", dateString, e);
+            return "Invalid Date";
         }
     };
 
@@ -454,7 +281,6 @@ export function VenueManagement() {
                     </div>
                 </header>
 
-                {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-4 p-6 pb-0">
                     <Card>
                         <CardHeader>
@@ -466,45 +292,9 @@ export function VenueManagement() {
                             <div className="text-2xl font-bold">
                                 {stats.total}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Total capacity: {stats.totalCapacity} people
-                            </p>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-sm font-medium">
-                                Available Venues
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-green-500">
-                                {stats.available}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {Math.round(
-                                    (stats.available / stats.total) * 100,
-                                )}
-                                % of total venues
-                            </p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-sm font-medium">
-                                Currently Booked
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-blue-500">
-                                {stats.booked}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {Math.round((stats.booked / stats.total) * 100)}
-                                % of total venues
-                            </p>
-                        </CardContent>
-                    </Card>
+                    {/* Add other stats cards if needed */}
                 </div>
 
                 <div className="flex items-center justify-between border-b px-6 py-2">
@@ -535,6 +325,7 @@ export function VenueManagement() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {/* View Mode Toggle */}
                         <Tabs
                             value={viewMode}
                             onValueChange={(value) =>
@@ -552,80 +343,19 @@ export function VenueManagement() {
                                 <TabsTrigger value="grid">
                                     {role === "SUPER_ADMIN" ? "Grid" : "Venues"}
                                 </TabsTrigger>
-                                {role !== "SUPER_ADMIN" && (
-                                    <TabsTrigger value="reservations">
-                                        My Reservations
-                                    </TabsTrigger>
-                                )}
+                                {/* Keep reservations tab separate if needed, or integrate */}
+                                <TabsTrigger value="reservations">
+                                    My Reservations
+                                </TabsTrigger>
                             </TabsList>
                         </Tabs>
-
-                        {role === "SUPER_ADMIN" && (
-                            <>
-                                <Select
-                                    value={typeFilter || ""}
-                                    onValueChange={(value) =>
-                                        setTypeFilter(value || null)
-                                    }
-                                >
-                                    <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Filter by type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">
-                                            All Types
-                                        </SelectItem>
-                                        {venueTypes.map((type) => (
-                                            <SelectItem key={type} value={type}>
-                                                {type}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                <Select
-                                    value={statusFilter || ""}
-                                    onValueChange={(value) =>
-                                        setStatusFilter(value || null)
-                                    }
-                                >
-                                    <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Filter by status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">
-                                            All Statuses
-                                        </SelectItem>
-                                        <SelectItem value="available">
-                                            Available
-                                        </SelectItem>
-                                        <SelectItem value="booked">
-                                            Booked
-                                        </SelectItem>
-                                        <SelectItem value="maintenance">
-                                            Maintenance
-                                        </SelectItem>
-                                        <SelectItem value="unavailable">
-                                            Unavailable
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1"
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Export
-                                </Button>
-                            </>
-                        )}
+                        {/* Removed Filters and Export for simplicity */}
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-auto p-6">
-                    {viewMode === "table" && (
+                    {/* Table View */}
+                    {viewMode === "table" && role === "SUPER_ADMIN" && (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -637,13 +367,15 @@ export function VenueManagement() {
                                                     filteredVenues.length
                                             }
                                             onCheckedChange={handleSelectAll}
+                                            aria-label="Select all venues"
                                         />
                                     </TableHead>
-                                    <TableHead>Venue</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Capacity</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Booking Rate</TableHead>
+                                    <TableHead>Venue</TableHead>{" "}
+                                    {/* Combined Name/Image */}
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Owner ID</TableHead>
+                                    <TableHead>Created At</TableHead>
+                                    <TableHead>Updated At</TableHead>
                                     <TableHead className="w-[80px]">
                                         Actions
                                     </TableHead>
@@ -660,11 +392,12 @@ export function VenueManagement() {
                                                 onCheckedChange={() =>
                                                     handleSelectItem(venue.id)
                                                 }
+                                                aria-label={`Select venue ${venue.name}`}
                                             />
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 rounded-md overflow-hidden bg-muted">
+                                                <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
                                                     <img
                                                         src={
                                                             venue.image ||
@@ -674,40 +407,28 @@ export function VenueManagement() {
                                                         className="h-full w-full object-cover"
                                                     />
                                                 </div>
-                                                <div>
-                                                    <div className="font-medium">
-                                                        {venue.name}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                                        <MapPin className="h-3 w-3" />
-                                                        {
-                                                            venue.address.split(
-                                                                ",",
-                                                            )[0]
-                                                        }
-                                                    </div>
-                                                </div>
+                                                <Button
+                                                    variant="link"
+                                                    className="p-0 h-auto text-left justify-start font-medium truncate"
+                                                    onClick={() =>
+                                                        handleNavigate(venue.id)
+                                                    }
+                                                >
+                                                    {venue.name}
+                                                </Button>
                                             </div>
                                         </TableCell>
-                                        <TableCell>{venue.type}</TableCell>
-                                        <TableCell>
-                                            {venue.capacity} people
+                                        <TableCell className="truncate max-w-xs">
+                                            {venue.location}
                                         </TableCell>
                                         <TableCell>
-                                            {getStatusBadge(venue.status)}
+                                            {venue.venueOwnerId}
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex justify-between text-xs">
-                                                    <span>
-                                                        {venue.bookingRate}%
-                                                    </span>
-                                                </div>
-                                                <Progress
-                                                    value={venue.bookingRate}
-                                                    className="h-2"
-                                                />
-                                            </div>
+                                            {formatDateTime(venue.createdAt)}
+                                        </TableCell>
+                                        <TableCell>
+                                            {formatDateTime(venue.updatedAt)}
                                         </TableCell>
                                         <TableCell>
                                             <DropdownMenu>
@@ -718,26 +439,12 @@ export function VenueManagement() {
                                                         className="h-8 w-8"
                                                     >
                                                         <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">
+                                                            Venue Actions
+                                                        </span>
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>
-                                                        Actions
-                                                    </DropdownMenuLabel>
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            setEditingVenue(
-                                                                venue,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Edit className="mr-2 h-4 w-4" />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <Calendar className="mr-2 h-4 w-4" />
-                                                        View Calendar
-                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         onClick={() =>
                                                             handleNavigate(
@@ -745,12 +452,24 @@ export function VenueManagement() {
                                                             )
                                                         }
                                                     >
-                                                        <Building className="mr-2 h-4 w-4" />
-                                                        View Details
+                                                        <Eye className="mr-2 h-4 w-4" />{" "}
+                                                        View
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
                                                     <DropdownMenuItem
-                                                        className="text-destructive"
+                                                        onClick={() => {
+                                                            setEditingVenue(
+                                                                venue,
+                                                            );
+                                                            setIsAddVenueOpen(
+                                                                true,
+                                                            );
+                                                        }}
+                                                    >
+                                                        <Edit className="mr-2 h-4 w-4" />{" "}
+                                                        Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="text-destructive focus:text-destructive"
                                                         onClick={() => {
                                                             setVenueToDelete(
                                                                 venue.id,
@@ -760,7 +479,7 @@ export function VenueManagement() {
                                                             );
                                                         }}
                                                     >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        <Trash2 className="mr-2 h-4 w-4" />{" "}
                                                         Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -771,23 +490,24 @@ export function VenueManagement() {
                                 {filteredVenues.length === 0 && (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={8}
+                                            colSpan={7} // Adjusted colspan
                                             className="text-center py-8 text-muted-foreground"
                                         >
-                                            No venues found. Try adjusting your
-                                            filters.
+                                            No venues found.
                                         </TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
                         </Table>
                     )}
+                    {/* Grid View */}
                     {viewMode === "grid" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {filteredVenues.map((venue) => (
                                 <Card
                                     key={venue.id}
-                                    className="overflow-hidden"
+                                    className="overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow"
+                                    onClick={() => handleNavigate(venue.id)}
                                 >
                                     <div className="aspect-video w-full overflow-hidden">
                                         <img
@@ -800,223 +520,63 @@ export function VenueManagement() {
                                         />
                                     </div>
                                     <CardHeader>
-                                        <div className="flex justify-between">
-                                            <div className="flex items-start gap-2">
-                                                {role === "SUPER_ADMIN" && (
-                                                    <Checkbox
-                                                        checked={selectedItems.includes(
-                                                            venue.id,
-                                                        )}
-                                                        onCheckedChange={() =>
-                                                            handleSelectItem(
-                                                                venue.id,
-                                                            )
-                                                        }
-                                                    />
-                                                )}
-                                                <div>
-                                                    <CardTitle className="text-base">
-                                                        {venue.name}
-                                                    </CardTitle>
-                                                    <CardDescription className="text-xs flex items-center gap-1">
-                                                        <MapPin className="h-3 w-3" />
-                                                        {venue.address}
-                                                    </CardDescription>
-                                                </div>
-                                            </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                    >
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    {role === "SUPER_ADMIN" && (
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                setEditingVenue(
-                                                                    venue,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Edit className="mr-2 h-4 w-4" />
-                                                            Edit
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuItem>
-                                                        <Calendar className="mr-2 h-4 w-4" />
-                                                        View Calendar
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handleNavigate(
-                                                                venue.id,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Building className="mr-2 h-4 w-4" />
-                                                        View Details
-                                                    </DropdownMenuItem>
-                                                    {role === "SUPER_ADMIN" && (
-                                                        <>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                className="text-destructive"
-                                                                onClick={() => {
-                                                                    setVenueToDelete(
-                                                                        venue.id,
-                                                                    );
-                                                                    setIsDeleteDialogOpen(
-                                                                        true,
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
+                                        <CardTitle
+                                            className="text-base font-semibold truncate"
+                                            title={venue.name}
+                                        >
+                                            {venue.name}
+                                        </CardTitle>
                                     </CardHeader>
-                                    <CardContent>
-                                        <div className="flex flex-wrap gap-1 mb-3">
-                                            {getStatusBadge(venue.status)}
-                                            <Badge variant="outline">
-                                                {venue.type}
-                                            </Badge>
-                                            <Badge
-                                                variant="outline"
-                                                className="flex items-center gap-1"
-                                            >
-                                                <Users className="h-3 w-3" />
-                                                {venue.capacity}
-                                            </Badge>
-                                        </div>
-
-                                        <div className="text-sm mb-3">
-                                            {venue.description}
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-2 text-sm">
-                                            <div>
-                                                <div className="text-muted-foreground">
-                                                    Booking Rate
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Progress
-                                                        value={
-                                                            venue.bookingRate
-                                                        }
-                                                        className="h-2 flex-1"
-                                                    />
-                                                    <span className="text-xs">
-                                                        {venue.bookingRate}%
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-3">
-                                            <div className="text-sm text-muted-foreground">
-                                                Amenities
-                                            </div>
-                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                {venue.amenities
-                                                    .slice(0, 3)
-                                                    .map((amenity, index) => (
-                                                        <Badge
-                                                            key={index}
-                                                            variant="secondary"
-                                                            className="text-xs"
-                                                        >
-                                                            {amenity}
-                                                        </Badge>
-                                                    ))}
-                                                {venue.amenities.length > 3 && (
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="text-xs"
-                                                    >
-                                                        +
-                                                        {venue.amenities
-                                                            .length - 3}{" "}
-                                                        more
-                                                    </Badge>
-                                                )}
-                                            </div>
+                                    <CardContent className="text-sm text-muted-foreground flex-grow">
+                                        <div className="flex items-start gap-1.5">
+                                            <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                            <span className="line-clamp-2">
+                                                {venue.location}
+                                            </span>
                                         </div>
                                     </CardContent>
-                                    <CardFooter className="flex justify-between">
-                                        <div className="text-sm">
-                                            <span className="text-muted-foreground">
-                                                Contact:{" "}
-                                            </span>
-                                            {venue.contactPerson}
-                                        </div>
-                                        <div className="text-sm text-muted-foreground">
-                                            {venue.upcomingEvents} upcoming
-                                            events
-                                        </div>
-                                    </CardFooter>
+                                    {/* Optional Footer for quick info */}
+                                    {/* <CardFooter className="text-xs text-muted-foreground pt-2 pb-3">
+                                        <span>Owner ID: {venue.venueOwnerId}</span>
+                                    </CardFooter> */}
                                 </Card>
                             ))}
-
                             {filteredVenues.length === 0 && (
                                 <div className="col-span-full text-center py-8 text-muted-foreground">
-                                    No venues found. Try adjusting your filters.
+                                    No venues found.
                                 </div>
                             )}
                         </div>
                     )}
-                    <div className="flex-1 overflow-auto p-6">
-                        {viewMode === "reservations" && (
-                            <div className="text-center text-muted-foreground">
-                                No reservations found.
-                            </div>
-                        )}
-                    </div>
+
+                    {/* Reservations View */}
+                    {viewMode === "reservations" && (
+                        <div className="text-center text-muted-foreground py-8">
+                            Reservation list placeholder.
+                            {/* Add reservation listing component here */}
+                        </div>
+                    )}
                 </div>
             </div>
 
+            {/* Dialogs */}
             <VenueReservationFormDialog
                 isOpen={isReservationDialogOpen}
                 onClose={() => setIsReservationDialogOpen(false)}
                 onSubmit={handleReservationSubmit}
-                venues={venues.map((venue) => ({
-                    id: venue.id,
-                    name: venue.name,
-                    capacity: venue.capacity,
-                    location: venue.address,
-                    amenities: venue.amenities,
-                    image: venue.image,
-                    availableTimes: [
-                        "08:00",
-                        "09:00",
-                        "10:00",
-                        "11:00",
-                        "12:00",
-                        "13:00",
-                        "14:00",
-                        "15:00",
-                        "16:00",
-                        "17:00",
-                    ], // Adding some default available times
-                }))}
-                eventTypes={eventTypes.map((type) => type.name)}
-                departments={DEPARTMENTS.map((dept) => dept.label)}
-                isLoading={false}
+                // Pass necessary props like venues list, event types, departments
+                venues={venues.map((v) => ({
+                    id: v.id.toString(),
+                    name: v.name,
+                }))} // Simplified for selection
+                departments={DEPARTMENTS.map((d) => d.label)} // Make sure DEPARTMENTS is imported/defined
+                isLoading={false} // Pass loading state if applicable
             />
 
             {role === "SUPER_ADMIN" && (
                 <>
                     <VenueFormDialog
-                        isOpen={isAddVenueOpen || !!editingVenue}
+                        isOpen={isAddVenueOpen}
                         onClose={() => {
                             setIsAddVenueOpen(false);
                             setEditingVenue(null);
@@ -1025,10 +585,8 @@ export function VenueManagement() {
                             editingVenue ? handleEditVenue : handleAddVenue
                         }
                         venue={editingVenue}
-                        venueTypes={venueTypes}
-                        amenities={commonAmenities}
+                        // Pass necessary props like venueTypes, amenities if needed by the form
                     />
-
                     <DeleteConfirmDialog
                         isOpen={isDeleteDialogOpen}
                         onClose={() => {
@@ -1049,8 +607,8 @@ export function VenueManagement() {
                         }
                         description={
                             venueToDelete
-                                ? "Are you sure you want to delete this venue? This action cannot be undone."
-                                : `Are you sure you want to delete ${selectedItems.length} selected venues? This action cannot be undone.`
+                                ? `Are you sure you want to delete the venue "${venues.find((v) => v.id === venueToDelete)?.name}"? This action cannot be undone.`
+                                : `Are you sure you want to delete ${selectedItems.length} selected venue(s)? This action cannot be undone.`
                         }
                     />
                 </>

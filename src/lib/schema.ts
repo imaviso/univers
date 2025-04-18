@@ -346,3 +346,35 @@ export const equipmentReservationFormSchema = v.pipe(
 export type EquipmentReservationFormInput = v.InferInput<
     typeof equipmentReservationFormSchema
 >;
+
+export const venueSchema = v.object({
+    name: v.pipe(v.string(), v.nonEmpty("Venue name is required.")),
+    location: v.pipe(v.string(), v.nonEmpty("Venue location is required.")),
+    image: v.optional(
+        v.union([
+            // Allow empty string if no file is selected initially
+            v.literal(""),
+            // Or validate the file if provided
+            v.pipe(
+                v.file("Please select an image file."),
+                v.mimeType(
+                    ["image/jpeg", "image/png"],
+                    "Please select a JPEG or PNG file.",
+                ),
+                v.maxSize(
+                    1024 * 1024 * 10,
+                    "Please select a file smaller than 10 MB.",
+                ),
+            ),
+        ]),
+    ),
+    venueOwnerId: v.optional(
+        v.pipe(
+            v.number("Venue Owner ID must be a number."),
+            v.integer("Venue Owner ID must be an integer."),
+            v.minValue(1, "Invalid Venue Owner ID."),
+        ),
+    ),
+});
+
+export type VenueInput = v.InferInput<typeof venueSchema>;

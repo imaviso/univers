@@ -1,7 +1,7 @@
 import {
-    getAllUsers,
     getAllDepartments,
     getAllEvents,
+    getAllUsers,
     getAllVenues,
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";

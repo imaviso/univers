@@ -1,6 +1,6 @@
 import { allNavigation } from "@/lib/navigation";
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { venuesQueryOptions } from "@/lib/query";
+import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/venues")({
     beforeLoad: async ({ location, context }) => {
