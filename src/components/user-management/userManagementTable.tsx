@@ -1,6 +1,7 @@
 import {
     type ColumnDef,
     type ColumnFiltersState,
+    type ColumnMeta,
     type SortingState,
     type VisibilityState,
     flexRender,
@@ -209,13 +210,32 @@ export function UserDataTable() {
     // --- End Mutations ---
 
     // --- Event Handlers ---
-    const handleEditUser = (userData: UserFormInput) => {
+    // Modified to accept Partial<UserFormInput> to match EditUserFormDialog props
+    const handleEditUser = (userData: Partial<UserFormInput>) => {
         if (!selectedUser) return;
 
         // Construct the full UserType object for the mutation
         const updatedUser: UserType = {
             ...selectedUser, // Start with existing data
-            ...userData, // Apply changes from the form
+            // Only apply defined fields from the form
+            ...(userData.firstName !== undefined && {
+                firstName: userData.firstName,
+            }),
+            ...(userData.lastName !== undefined && {
+                lastName: userData.lastName,
+            }),
+            ...(userData.email !== undefined && { email: userData.email }),
+            ...(userData.role !== undefined && { role: userData.role }),
+            ...(userData.department !== undefined && {
+                department: userData.department,
+            }),
+            ...(userData.idNumber !== undefined && {
+                idNumber: userData.idNumber,
+            }),
+            ...(userData.telephoneNumber !== undefined && {
+                telephoneNumber: userData.telephoneNumber,
+            }),
+            ...(userData.active !== undefined && { active: userData.active }),
             // Ensure password is only included if it's not empty
             password: userData.password || undefined,
             // Ensure phoneNumber is handled correctly (optional string)
@@ -224,9 +244,6 @@ export function UserDataTable() {
             createdAt: selectedUser.createdAt,
             updatedAt: new Date().toISOString(), // Update the timestamp
         };
-
-        // Remove confirmPassword as it's not part of UserType
-        // delete (updatedUser as any).confirmPassword;
 
         updateUserMutation.mutate(updatedUser);
     };
@@ -244,12 +261,12 @@ export function UserDataTable() {
         // 1. Get unique boolean active states present in the users array
         //    Map directly to the boolean `active` property.
         const uniqueActiveStates = Array.from(
-            new Set(users.map((u: UserType) => u.active)), // Result: e.g., [true], [false], [true, false]
-        );
+            new Set(users.map((u: UserType) => u.active)),
+        ) as boolean[];
 
-        // 2. Map these unique boolean states to the desired option objects
-        const options = uniqueActiveStates.map((isActive: boolean) => ({
-            value: isActive, // Convert boolean to string ("true" or "false") for the value
+        // Map boolean states to option objects with string values
+        const options = uniqueActiveStates.map((isActive) => ({
+            value: String(isActive), // Convert boolean to string
             label: isActive ? "True" : "False",
             icon: isActive ? CheckCircleIcon : XCircleIcon,
         }));
@@ -265,12 +282,12 @@ export function UserDataTable() {
         // 1. Get unique boolean active states present in the users array
         //    Map directly to the boolean `active` property.
         const uniqueVerifiedStates = Array.from(
-            new Set(users.map((u: UserType) => u.emailVerified)), // Result: e.g., [true], [false], [true, false]
-        );
+            new Set(users.map((u: UserType) => u.emailVerified)),
+        ) as boolean[];
 
-        // 2. Map these unique boolean states to the desired option objects
-        const options = uniqueVerifiedStates.map((isVerified: boolean) => ({
-            value: isVerified, // Convert boolean to string ("true" or "false") for the value
+        // Map boolean states to option objects with string values
+        const options = uniqueVerifiedStates.map((isVerified) => ({
+            value: String(isVerified), // Convert boolean to string
             label: isVerified ? "True" : "False",
             icon: isVerified ? CheckCircleIcon : XCircleIcon,
         }));
@@ -291,17 +308,18 @@ export function UserDataTable() {
         [initialUsers],
     );
 
-    const DEPARTMENT_OPTIONS = React.useMemo(
-        () =>
-            Array.from(
-                new Set(initialUsers?.map((u) => u.department) || []),
-            ).map((dep) => ({
-                value: dep,
-                label: dep,
-                icon: BuildingIcon,
-            })),
-        [initialUsers],
-    );
+    const DEPARTMENT_OPTIONS = React.useMemo(() => {
+        const deptSet = new Set(
+            initialUsers?.map((u: UserType) => u.department) || [],
+        );
+        const deptArray = Array.from(deptSet) as string[];
+
+        return deptArray.map((dep) => ({
+            value: dep,
+            label: dep,
+            icon: BuildingIcon,
+        }));
+    }, [initialUsers]);
     // --- End Options ---
 
     // --- Define the columns with filter metadata ---
@@ -333,7 +351,9 @@ export function UserDataTable() {
                 enableHiding: false,
             },
             {
-                accessorKey: "name",
+                // Use accessorFn to combine first and last names for sorting and filtering
+                accessorFn: (row) => `${row.firstName} ${row.lastName}`,
+                id: "name", // Keep id for consistency if needed elsewhere
                 header: ({ column }) => (
                     <Button
                         variant="ghost"
@@ -354,10 +374,7 @@ export function UserDataTable() {
                     return (
                         <div className="flex items-center space-x-3">
                             <Avatar>
-                                <AvatarImage
-                                    src={user?.avatar}
-                                    alt={fullName}
-                                />
+                                {/* Avatar is not part of UserType, removed */}
                                 <AvatarFallback>{getInitials()}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -370,12 +387,15 @@ export function UserDataTable() {
                     );
                 },
                 filterFn: filterFn("text"),
-                meta: defineMeta((row) => `${row.firstName} ${row.lastName}`, {
-                    // Combined name for filtering
-                    displayName: "User Name",
-                    type: "text",
-                    icon: UserIcon,
-                }),
+                meta: defineMeta(
+                    (row: UserType) => `${row.firstName} ${row.lastName}`,
+                    {
+                        // Combined name for filtering
+                        displayName: "User Name",
+                        type: "text",
+                        icon: UserIcon,
+                    },
+                ) as ColumnMeta<UserType, unknown>,
             },
             {
                 accessorKey: "id",
@@ -383,12 +403,23 @@ export function UserDataTable() {
                 cell: ({ row }) => <div>{row.getValue("id")}</div>,
                 // --- Filter Config ---
                 filterFn: filterFn("text"),
-                meta: defineMeta((row) => row.id, {
+                meta: defineMeta((row: UserType) => row.id, {
                     displayName: "User ID",
                     type: "text",
                     icon: IdCardIcon,
-                }),
+                }) as ColumnMeta<UserType, unknown>,
                 // --- End Filter Config ---
+            },
+            {
+                accessorKey: "email",
+                header: "Email",
+                cell: ({ row }) => <div>{row.getValue("email")}</div>,
+                filterFn: filterFn("text"),
+                meta: defineMeta((row: UserType) => row.email, {
+                    displayName: "Email",
+                    type: "text",
+                    icon: UserIcon, // Using UserIcon, consider MailIcon if available
+                }) as ColumnMeta<UserType, unknown>,
             },
             {
                 accessorKey: "idNumber",
@@ -396,11 +427,11 @@ export function UserDataTable() {
                 cell: ({ row }) => <div>{row.getValue("idNumber")}</div>,
                 // --- Filter Config ---
                 filterFn: filterFn("text"),
-                meta: defineMeta((row) => row.idNumber, {
+                meta: defineMeta((row: UserType) => row.idNumber, {
                     displayName: "ID Number",
                     type: "text",
                     icon: FingerprintIcon,
-                }),
+                }) as ColumnMeta<UserType, unknown>,
                 // --- End Filter Config ---
             },
             {
@@ -456,12 +487,12 @@ export function UserDataTable() {
                 },
                 // --- Filter Config ---
                 filterFn: filterFn("option"),
-                meta: defineMeta((row) => row.role, {
+                meta: defineMeta((row: UserType) => row.role, {
                     displayName: "Role",
                     type: "option",
                     icon: UsersIcon,
                     options: ROLES,
-                }),
+                }) as ColumnMeta<UserType, unknown>,
                 // --- End Filter Config ---
             },
             {
@@ -483,11 +514,11 @@ export function UserDataTable() {
                 },
                 // --- Filter Config ---
                 filterFn: filterFn("text"),
-                meta: defineMeta((row) => row.phoneNumber, {
+                meta: defineMeta((row: UserType) => row.phoneNumber, {
                     displayName: "Phone Number",
                     type: "text",
                     icon: PhoneIcon,
-                }),
+                }) as ColumnMeta<UserType, unknown>,
                 // --- End Filter Config ---
             },
             {
@@ -506,12 +537,12 @@ export function UserDataTable() {
                 cell: ({ row }) => <div>{row.getValue("department")}</div>,
                 // --- Filter Config ---
                 filterFn: filterFn("option"),
-                meta: defineMeta((row) => row.department, {
+                meta: defineMeta((row: UserType) => row.department, {
                     displayName: "Department",
                     type: "option",
                     icon: BuildingIcon,
                     options: DEPARTMENT_OPTIONS,
-                }),
+                }) as ColumnMeta<UserType, unknown>,
                 // --- End Filter Config ---
             },
             {
@@ -530,15 +561,12 @@ export function UserDataTable() {
                     );
                 },
                 filterFn: filterFn("option"),
-                meta: defineMeta(
-                    (row) => (row.emailVerified ? "true" : "false"),
-                    {
-                        displayName: "Verified",
-                        type: "option",
-                        icon: VerifiedIcon,
-                        options: VERIFIED_OPTIONS,
-                    },
-                ),
+                meta: defineMeta((row: UserType) => String(row.emailVerified), {
+                    displayName: "Verified",
+                    type: "option",
+                    icon: VerifiedIcon,
+                    options: VERIFIED_OPTIONS,
+                }) as ColumnMeta<UserType, unknown>,
             },
             {
                 accessorKey: "active",
@@ -556,12 +584,12 @@ export function UserDataTable() {
                     );
                 },
                 filterFn: filterFn("option"),
-                meta: defineMeta((row) => (row.active ? "true" : "false"), {
+                meta: defineMeta((row: UserType) => String(row.active), {
                     displayName: "Active",
                     type: "option",
                     icon: ListFilterIcon,
                     options: ACTIVE_OPTIONS,
-                }),
+                }) as ColumnMeta<UserType, unknown>,
             },
 
             {
@@ -598,7 +626,7 @@ export function UserDataTable() {
                         const date = new Date(dateValue);
 
                         // Check if the date is valid
-                        if (isNaN(date.getTime())) {
+                        if (Number.isNaN(date.getTime())) {
                             return (
                                 <div className="text-right text-muted-foreground">
                                     Invalid date
@@ -629,10 +657,12 @@ export function UserDataTable() {
                 },
                 filterFn: filterFn("date"),
                 meta: defineMeta(
-                    (row) => {
+                    (row: UserType) => {
                         try {
                             const date = new Date(row.createdAt);
-                            return isNaN(date.getTime()) ? undefined : date;
+                            return Number.isNaN(date.getTime())
+                                ? undefined
+                                : date;
                         } catch (e) {
                             return undefined;
                         }
@@ -642,7 +672,7 @@ export function UserDataTable() {
                         type: "date",
                         icon: CalendarIcon,
                     },
-                ),
+                ) as ColumnMeta<UserType, unknown>,
             },
             {
                 id: "actions",
@@ -960,7 +990,7 @@ export function UserDataTable() {
                     title="Deactivate User"
                     description={`Are you sure you want to deactivate user ${selectedUser.firstName} ${selectedUser.lastName}?`}
                     onConfirm={handleDeactivateUser}
-                    isLoading={deactivateUserMutation.isPending} // Use mutation pending state
+                    // Removed isLoading prop as it doesn't exist on DeleteConfirmDialog
                 />
             )}
         </div>

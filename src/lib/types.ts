@@ -9,6 +9,7 @@ export type UserType = {
     role: string;
     password: string | undefined;
     department: string;
+    telephoneNumber: string; // Added based on userFormSchema and EditUserFormDialog usage
     phoneNumber: string;
     emailVerified: boolean;
     active: boolean;
