@@ -38,7 +38,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { VenueReservationFormDialog } from "@/components/venue-reservation/VenueReservationFormDialog";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
-import { DEPARTMENTS } from "@/lib/types";
+import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
+import { venuesQueryOptions } from "@/lib/query";
+import type { VenueInput } from "@/lib/schema";
+import { DEPARTMENTS, type Venue } from "@/lib/types";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
     useNavigate,
@@ -59,88 +63,20 @@ import {
     Users,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/venues/dashboard")({
     component: VenueManagement,
+    loader: ({ context: { queryClient } }) =>
+        queryClient.ensureQueryData(venuesQueryOptions),
 });
-
-export const initialVenues = [
-    {
-        id: 1,
-        name: "Main Conference Hall",
-        location: "123 Convention Center Way, New York, NY 10001",
-        venueOwnerId: 101,
-        image: "/placeholder.svg?text=Venue+1&height=200&width=300", // Added image
-        createdAt: new Date("2024-01-15T10:00:00Z").toISOString(),
-        updatedAt: new Date("2024-04-10T14:30:00Z").toISOString(),
-    },
-    {
-        id: 2,
-        name: "Workshop Room A",
-        location: "123 Convention Center Way, New York, NY 10001",
-        venueOwnerId: 102,
-        image: "/placeholder.svg?text=Venue+2&height=200&width=300", // Added image
-        createdAt: new Date("2024-01-20T09:00:00Z").toISOString(),
-        updatedAt: new Date("2024-03-25T11:00:00Z").toISOString(),
-    },
-    {
-        id: 3,
-        name: "Executive Boardroom",
-        location: "555 Business Plaza, New York, NY 10022",
-        venueOwnerId: 101,
-        image: "/placeholder.svg?text=Venue+3&height=200&width=300", // Added image
-        createdAt: new Date("2024-02-01T11:30:00Z").toISOString(),
-        updatedAt: new Date("2024-04-15T09:45:00Z").toISOString(),
-    },
-    {
-        id: 4,
-        name: "Outdoor Pavilion",
-        location: "789 Park Avenue, New York, NY 10065",
-        venueOwnerId: 103,
-        image: "/placeholder.svg?text=Venue+4&height=200&width=300", // Added image
-        createdAt: new Date("2024-02-10T16:00:00Z").toISOString(),
-        updatedAt: new Date("2024-04-01T08:15:00Z").toISOString(),
-    },
-    {
-        id: 5,
-        name: "Auditorium",
-        location: "321 Education Lane, New York, NY 10003",
-        venueOwnerId: 102,
-        image: "/placeholder.svg?text=Venue+5&height=200&width=300", // Added image
-        createdAt: new Date("2024-03-05T13:00:00Z").toISOString(),
-        updatedAt: new Date("2024-04-18T10:00:00Z").toISOString(),
-    },
-];
-// --- END NEW MOCK DATA STRUCTURE ---
-
-// Define the type for the new Venue structure
-type Venue = {
-    id: number;
-    name: string;
-    location: string;
-    venueOwnerId: number;
-    image?: string; // Added optional image field
-    createdAt: string; // Use string for ISO date format
-    updatedAt: string; // Use string for ISO date format
-};
-
-const eventTypes = [
-    { id: "1", name: "Conference" },
-    { id: "2", name: "Workshop" },
-    { id: "3", name: "Seminar" },
-    { id: "4", name: "Meeting" },
-    { id: "5", name: "Social Event" },
-    { id: "6", name: "Other" },
-];
 
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
     const role = "role" in context ? context.role : "USER";
+    const queryClient = context.queryClient;
     const navigate = useNavigate();
-    const [venues, setVenues] = useState(initialVenues);
     const [searchQuery, setSearchQuery] = useState("");
-    const [typeFilter, setTypeFilter] = useState<string | null>(null);
-    const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [selectedItems, setSelectedItems] = useState<number[]>([]);
     const [isAddVenueOpen, setIsAddVenueOpen] = useState(false);
     const [editingVenue, setEditingVenue] = useState<any>(null);
@@ -149,27 +85,207 @@ export function VenueManagement() {
     const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
         role === "SUPER_ADMIN" ? "table" : "grid",
     );
-
     const [isReservationDialogOpen, setIsReservationDialogOpen] =
         useState(false);
+    // --- Queries ---
+    // Fetch venues using React Query
+    const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
+    // --- End Queries ---
 
-    const handleReservationSubmit = (data) => {
+    // --- Mutations ---
+    const createVenueMutation = useMutation({
+        mutationFn: createVenue,
+        onMutate: async (newVenueData: VenueInput) => {
+            await queryClient.cancelQueries({
+                queryKey: venuesQueryOptions.queryKey,
+            });
+            const previousVenues = queryClient.getQueryData<Venue[]>(
+                venuesQueryOptions.queryKey,
+            );
+            // Optimistic update (basic - no real ID/timestamps)
+            queryClient.setQueryData<Venue[]>(
+                venuesQueryOptions.queryKey,
+                (old = []) => [
+                    ...old,
+                    {
+                        ...newVenueData,
+                        id: Math.random(), // Temporary ID
+                        image:
+                            typeof newVenueData.image === "object"
+                                ? URL.createObjectURL(
+                                      newVenueData.image as File,
+                                  )
+                                : newVenueData.image, // Handle File preview
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                    } as Venue,
+                ],
+            );
+            return { previousVenues };
+        },
+        onError: (err, newVenueData, context) => {
+            if (context?.previousVenues) {
+                queryClient.setQueryData(
+                    venuesQueryOptions.queryKey,
+                    context.previousVenues,
+                );
+            }
+            toast.error(
+                `Failed to create venue: ${err instanceof Error ? err.message : "Unknown error"}`,
+            );
+        },
+        onSuccess: () => {
+            toast.success("Venue created successfully");
+            setIsAddVenueOpen(false);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({
+                queryKey: venuesQueryOptions.queryKey,
+            });
+        },
+    });
+
+    const updateVenueMutation = useMutation({
+        mutationFn: updateVenue,
+        onMutate: async (updatedVenueData: Venue) => {
+            await queryClient.cancelQueries({
+                queryKey: venuesQueryOptions.queryKey,
+            });
+            const previousVenues = queryClient.getQueryData<Venue[]>(
+                venuesQueryOptions.queryKey,
+            );
+            queryClient.setQueryData<Venue[]>(
+                venuesQueryOptions.queryKey,
+                (old = []) =>
+                    old.map((venue) =>
+                        venue.id === updatedVenueData.id
+                            ? updatedVenueData
+                            : venue,
+                    ),
+            );
+            return { previousVenues, updatedVenueData };
+        },
+        onError: (err, updatedVenueData, context) => {
+            if (context?.previousVenues) {
+                queryClient.setQueryData(
+                    venuesQueryOptions.queryKey,
+                    context.previousVenues,
+                );
+            }
+            toast.error(
+                `Failed to update venue: ${err instanceof Error ? err.message : "Unknown error"}`,
+            );
+        },
+        onSuccess: () => {
+            toast.success("Venue updated successfully");
+            setIsAddVenueOpen(false);
+            setEditingVenue(null);
+        },
+        onSettled: (updatedVenueData) => {
+            queryClient.invalidateQueries({
+                queryKey: venuesQueryOptions.queryKey,
+            });
+            // Optionally invalidate specific venue query if you have one
+            // queryClient.invalidateQueries({ queryKey: ['venue', updatedVenueData?.id] });
+        },
+    });
+
+    const deleteVenueMutation = useMutation({
+        mutationFn: deleteVenue,
+        onMutate: async (venueId: number) => {
+            await queryClient.cancelQueries({
+                queryKey: venuesQueryOptions.queryKey,
+            });
+            const previousVenues = queryClient.getQueryData<Venue[]>(
+                venuesQueryOptions.queryKey,
+            );
+            queryClient.setQueryData<Venue[]>(
+                venuesQueryOptions.queryKey,
+                (old = []) => old.filter((venue) => venue.id !== venueId),
+            );
+            return { previousVenues };
+        },
+        onError: (err, venueId, context) => {
+            if (context?.previousVenues) {
+                queryClient.setQueryData(
+                    venuesQueryOptions.queryKey,
+                    context.previousVenues,
+                );
+            }
+            toast.error(
+                `Failed to delete venue: ${err instanceof Error ? err.message : "Unknown error"}`,
+            );
+        },
+        onSuccess: () => {
+            toast.success("Venue deleted successfully");
+            setIsDeleteDialogOpen(false);
+            setVenueToDelete(null);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({
+                queryKey: venuesQueryOptions.queryKey,
+            });
+        },
+    });
+
+    // const deleteVenuesMutation = useMutation({
+    //     mutationFn: deleteVenues, // Assumes API function exists: deleteVenues(ids: number[])
+    //     onMutate: async (venueIds: number[]) => {
+    //         await queryClient.cancelQueries({
+    //             queryKey: venuesQueryOptions.queryKey,
+    //         });
+    //         const previousVenues = queryClient.getQueryData<Venue[]>(
+    //             venuesQueryOptions.queryKey,
+    //         );
+    //         queryClient.setQueryData<Venue[]>(
+    //             venuesQueryOptions.queryKey,
+    //             (old = []) =>
+    //                 old.filter((venue) => !venueIds.includes(venue.id)),
+    //         );
+    //         return { previousVenues };
+    //     },
+    //     onError: (err, venueIds, context) => {
+    //         if (context?.previousVenues) {
+    //             queryClient.setQueryData(
+    //                 venuesQueryOptions.queryKey,
+    //                 context.previousVenues,
+    //             );
+    //         }
+    //         toast.error(
+    //             `Failed to delete venues: ${err instanceof Error ? err.message : "Unknown error"}`,
+    //         );
+    //     },
+    //     onSuccess: (data, venueIds) => {
+    //         toast.success(`Successfully deleted ${venueIds.length} venue(s)`);
+    //         setIsDeleteDialogOpen(false);
+    //         setSelectedItems([]); // Clear selection
+    //     },
+    //     onSettled: () => {
+    //         queryClient.invalidateQueries({
+    //             queryKey: venuesQueryOptions.queryKey,
+    //         });
+    //     },
+    // });
+    // // --- End Mutations ---
+
+    // --- Event Handlers ---
+    const handleReservationSubmit = (data: any) => {
+        // Use specific type if available
         console.log("Reservation data:", data);
-        // Submit to your API here
+        // TODO: Implement reservation mutation
         setIsReservationDialogOpen(false);
     };
+
     const handleNavigate = (venueId: number) => {
         navigate({ from: Route.fullPath, to: `/app/venues/${venueId}` });
     };
 
+    // Filter venues based on search query (name and location)
     const filteredVenues = venues.filter((venue) => {
         const matchesSearch =
             venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             venue.location.toLowerCase().includes(searchQuery.toLowerCase());
-        // Add back type/status filters if needed and if those fields exist on Venue
-        // const matchesType = typeFilter ? venue.type === typeFilter : true;
-        // const matchesStatus = statusFilter ? venue.status === statusFilter : true;
-        return matchesSearch; // && matchesType && matchesStatus;
+        return matchesSearch;
     });
 
     // Simplified stats
@@ -187,52 +303,50 @@ export function VenueManagement() {
     };
 
     const handleSelectItem = (itemId: number) => {
-        if (selectedItems.includes(itemId)) {
-            setSelectedItems(selectedItems.filter((id) => id !== itemId));
-        } else {
-            setSelectedItems([...selectedItems, itemId]);
-        }
-    };
-
-    // Handle venue operations
-    const handleAddVenue = (
-        venueData: Omit<Venue, "id" | "createdAt" | "updatedAt">,
-    ) => {
-        const newVenue: Venue = {
-            id: Math.max(0, ...venues.map((v) => v.id)) + 1, // Simple ID generation
-            ...venueData,
-            // Image URL might come from venueData if form handles upload, or use placeholder
-            image:
-                venueData.image ||
-                `/placeholder.svg?text=New+Venue&height=200&width=300`,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-        setVenues([...venues, newVenue]);
-        setIsAddVenueOpen(false);
-    };
-
-    const handleEditVenue = (venueData: Venue) => {
-        setVenues(
-            venues.map((venue) =>
-                venue.id === venueData.id ? { ...venue, ...venueData } : venue,
-            ),
+        setSelectedItems((prev) =>
+            prev.includes(itemId)
+                ? prev.filter((id) => id !== itemId)
+                : [...prev, itemId],
         );
-        setEditingVenue(null);
     };
 
-    const handleDeleteVenue = (itemId: number) => {
-        setVenues(venues.filter((venue) => venue.id !== itemId));
-        setVenueToDelete(null);
-        setIsDeleteDialogOpen(false);
+    // Use mutations in handlers
+    const handleAddVenueSubmit = (venueData: VenueInput) => {
+        // The VenueFormDialog should ideally return VenueInput
+        // The API function createVenue should handle potential file upload
+        createVenueMutation.mutate(venueData);
     };
 
-    const handleBulkDelete = () => {
-        setVenues(venues.filter((venue) => !selectedItems.includes(venue.id)));
-        setSelectedItems([]);
-        setIsDeleteDialogOpen(false);
+    const handleEditVenueSubmit = (venueData: VenueInput) => {
+        if (!editingVenue) return;
+        // Construct the full Venue object expected by the API
+        // The API function updateVenue should handle potential file upload
+        const updatedVenue: Venue = {
+            ...editingVenue, // Keep existing ID, createdAt
+            ...venueData,
+            // Image handling depends on how VenueFormDialog and API work
+            // If venueData.image is a File, API needs FormData. If it's a URL string, it's simpler.
+            image:
+                typeof venueData.image === "object"
+                    ? editingVenue.image
+                    : venueData.image, // Example: Keep old image URL if new one isn't a string
+            updatedAt: new Date().toISOString(), // Update timestamp locally for optimistic update
+            // Ensure venueOwnerId is a number if present
+            venueOwnerId: venueData.venueOwnerId ?? editingVenue.venueOwnerId,
+        };
+        updateVenueMutation.mutate(updatedVenue);
     };
 
+    const handleDeleteConfirm = () => {
+        if (venueToDelete) {
+            deleteVenueMutation.mutate(venueToDelete);
+        }
+        // else if (selectedItems.length > 0) {
+        //     deleteVenuesMutation.mutate(selectedItems);
+        // }
+    };
+
+    // Helper to format date strings
     const formatDateTime = (dateString: string | null) => {
         if (!dateString) return "—";
         try {
@@ -242,6 +356,14 @@ export function VenueManagement() {
             return "Invalid Date";
         }
     };
+    // --- End Event Handlers ---
+
+    // --- Render Logic ---
+    const isMutating =
+        createVenueMutation.isPending ||
+        updateVenueMutation.isPending ||
+        deleteVenueMutation.isPending;
+    // || deleteVenuesMutation.isPending;
 
     return (
         <div className="bg-background">
@@ -573,6 +695,19 @@ export function VenueManagement() {
                 isLoading={false} // Pass loading state if applicable
             />
 
+            {/* Dialogs */}
+            <VenueReservationFormDialog
+                isOpen={isReservationDialogOpen}
+                onClose={() => setIsReservationDialogOpen(false)}
+                onSubmit={handleReservationSubmit}
+                venues={venues.map((v) => ({
+                    id: v.id.toString(),
+                    name: v.name,
+                }))}
+                departments={DEPARTMENTS.map((d) => d.label)}
+                isLoading={false} // Pass loading state from reservation mutation if implemented
+            />
+
             {role === "SUPER_ADMIN" && (
                 <>
                     <VenueFormDialog
@@ -582,10 +717,15 @@ export function VenueManagement() {
                             setEditingVenue(null);
                         }}
                         onSubmit={
-                            editingVenue ? handleEditVenue : handleAddVenue
+                            editingVenue
+                                ? handleEditVenueSubmit
+                                : handleAddVenueSubmit
                         }
                         venue={editingVenue}
-                        // Pass necessary props like venueTypes, amenities if needed by the form
+                        isLoading={
+                            createVenueMutation.isPending ||
+                            updateVenueMutation.isPending
+                        }
                     />
                     <DeleteConfirmDialog
                         isOpen={isDeleteDialogOpen}
@@ -593,13 +733,7 @@ export function VenueManagement() {
                             setIsDeleteDialogOpen(false);
                             setVenueToDelete(null);
                         }}
-                        onConfirm={() => {
-                            if (venueToDelete) {
-                                handleDeleteVenue(venueToDelete);
-                            } else if (selectedItems.length > 0) {
-                                handleBulkDelete();
-                            }
-                        }}
+                        onConfirm={handleDeleteConfirm}
                         title={
                             venueToDelete
                                 ? "Delete Venue"
@@ -609,6 +743,11 @@ export function VenueManagement() {
                             venueToDelete
                                 ? `Are you sure you want to delete the venue "${venues.find((v) => v.id === venueToDelete)?.name}"? This action cannot be undone.`
                                 : `Are you sure you want to delete ${selectedItems.length} selected venue(s)? This action cannot be undone.`
+                        }
+                        isLoading={
+                            deleteVenueMutation.isPending
+                            // ||
+                            // deleteVenuesMutation.isPending
                         }
                     />
                 </>

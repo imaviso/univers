@@ -256,30 +256,7 @@ export const venueReservationFormDialogSchema = v.pipe(
             v.string(),
             v.minLength(2, "Event name must be at least 2 characters."),
         ),
-        eventType: v.string(),
         department: v.string(),
-        contactPerson: v.pipe(
-            v.string(),
-            v.minLength(
-                2,
-                "Contact person name must be at least 2 characters.",
-            ),
-        ),
-        contactEmail: v.pipe(
-            v.string(),
-            v.email("Please enter a valid email address."),
-        ),
-        contactPhone: v.pipe(
-            v.string(),
-            v.minLength(10, "Please enter a valid phone number."),
-        ),
-        attendees: v.pipe(
-            v.string(),
-            v.custom((value) => {
-                const num = Number(value);
-                return !Number.isNaN(num) && num > 0;
-            }, "Attendees must be a number greater than 0"),
-        ),
         description: v.optional(v.string()),
         venue: v.string(),
         startDateTime: v.date("Start date is required"),

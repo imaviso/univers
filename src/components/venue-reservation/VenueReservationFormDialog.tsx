@@ -30,6 +30,7 @@ import {
     type VenueReservationFormDialogInput,
     venueReservationFormDialogSchema,
 } from "@/lib/schema";
+import type { Venue as VenueType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { format, startOfDay } from "date-fns"; // Added date-fns functions
@@ -49,22 +50,11 @@ import {
 } from "../ui/file-upload";
 import { SmartDatetimeInput } from "../ui/smart-date-picker";
 
-export interface VenueType {
-    id: number;
-    name: string;
-    capacity: number;
-    location: string;
-    amenities: string[];
-    image: string;
-    availableTimes: string[];
-}
-
 interface VenueReservationFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: VenueReservationFormDialogInput) => void;
     venues: VenueType[];
-    eventTypes: string[];
     departments: string[];
     isLoading?: boolean;
 }
@@ -74,23 +64,16 @@ export function VenueReservationFormDialog({
     onClose,
     onSubmit,
     venues,
-    eventTypes,
     departments,
     isLoading = false,
 }: VenueReservationFormDialogProps) {
     const [step, setStep] = useState(1);
-    const [filteredVenues, setFilteredVenues] = useState<VenueType[]>(venues);
 
     const form = useForm<VenueReservationFormDialogInput>({
         resolver: valibotResolver(venueReservationFormDialogSchema),
         defaultValues: {
             eventName: "",
-            eventType: "",
             department: "",
-            contactPerson: "",
-            contactEmail: "",
-            contactPhone: "",
-            attendees: "",
             description: "",
             startDateTime: undefined,
             endDateTime: undefined,
@@ -121,22 +104,11 @@ export function VenueReservationFormDialog({
             // Validate fields required by schema for Step 1
             fieldsToValidate = [
                 "eventName",
-                "eventType",
                 "department",
-                "contactPerson",
-                "contactEmail",
-                "contactPhone",
-                "attendees",
                 // 'description' is optional
             ];
             isValid = await form.trigger(fieldsToValidate);
             if (isValid) {
-                // Filter venues based on attendees only if step 1 is valid
-                const attendees =
-                    Number.parseInt(form.getValues("attendees")) || 0;
-                setFilteredVenues(
-                    venues.filter((venue) => venue.capacity >= attendees),
-                );
                 setStep(2);
             }
         } else if (step === 2) {
@@ -173,15 +145,7 @@ export function VenueReservationFormDialog({
 
     const isStep1ButtonDisabled = () => {
         const errors = form.formState.errors;
-        return !!(
-            errors.eventName ||
-            errors.eventType ||
-            errors.department ||
-            errors.contactPerson ||
-            errors.contactEmail ||
-            errors.contactPhone ||
-            errors.attendees
-        );
+        return !!(errors.eventName || errors.department);
     };
 
     const isStep2ButtonDisabled = () => {
@@ -273,63 +237,22 @@ export function VenueReservationFormDialog({
                     >
                         {step === 1 && (
                             <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="eventName"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    Event Name
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        placeholder="Enter event name"
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-
-                                    <FormField
-                                        control={form.control}
-                                        name="eventType"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    Event Type
-                                                </FormLabel>
-                                                <Select
-                                                    onValueChange={
-                                                        field.onChange
-                                                    }
-                                                    defaultValue={field.value}
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger className="w-full">
-                                                            <SelectValue placeholder="Select event type" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {eventTypes.map(
-                                                            (type) => (
-                                                                <SelectItem
-                                                                    key={type}
-                                                                    value={type}
-                                                                >
-                                                                    {type}
-                                                                </SelectItem>
-                                                            ),
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="eventName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Event Name</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Enter event name"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
                                 <FormField
                                     control={form.control}
@@ -362,87 +285,6 @@ export function VenueReservationFormDialog({
                                     )}
                                 />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="attendees"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    Expected Attendees
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        type="number"
-                                                        min="1"
-                                                        placeholder="Enter number of attendees"
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-
-                                    <FormField
-                                        control={form.control}
-                                        name="contactPerson"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    Contact Person
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        placeholder="Enter contact person name"
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="contactEmail"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    Contact Email
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        placeholder="Enter contact email"
-                                                        type="email"
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="contactPhone"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    Contact Phone
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <Input
-                                                        placeholder="Enter contact phone"
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
                                 <FormField
                                     control={form.control}
                                     name="description"
@@ -477,119 +319,62 @@ export function VenueReservationFormDialog({
                                             </FormLabel>
                                             <FormControl>
                                                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                                                    {filteredVenues.length >
-                                                    0 ? (
-                                                        filteredVenues.map(
-                                                            (venue) => (
-                                                                <div
-                                                                    key={
-                                                                        venue.id
-                                                                    }
-                                                                    className={cn(
-                                                                        "border rounded-lg p-3 cursor-pointer transition-all",
-                                                                        field.value ===
-                                                                            String(
-                                                                                venue.id,
-                                                                            )
-                                                                            ? "border-primary bg-primary/5"
-                                                                            : "hover:border-primary/50",
-                                                                    )}
-                                                                    onClick={() =>
-                                                                        field.onChange(
-                                                                            String(
-                                                                                venue.id,
-                                                                            ),
+                                                    {venues.length > 0 ? (
+                                                        venues.map((venue) => (
+                                                            <div
+                                                                key={venue.id}
+                                                                className={cn(
+                                                                    "border rounded-lg p-3 cursor-pointer transition-all",
+                                                                    field.value ===
+                                                                        String(
+                                                                            venue.id,
                                                                         )
-                                                                    }
-                                                                >
-                                                                    {/* Venue details */}
-                                                                    <div className="flex items-start gap-3">
-                                                                        <div className="w-20 h-14 rounded overflow-hidden bg-muted">
-                                                                            <img
-                                                                                src={
-                                                                                    venue.image ||
-                                                                                    "/placeholder.svg"
-                                                                                }
-                                                                                alt={
-                                                                                    venue.name
-                                                                                }
-                                                                                className="w-full h-full object-cover"
-                                                                            />
-                                                                        </div>
-                                                                        <div className="flex-1">
-                                                                            <h4 className="font-medium">
-                                                                                {
-                                                                                    venue.name
-                                                                                }
-                                                                            </h4>
-                                                                            <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                                                                <Users className="h-3.5 w-3.5 mr-1" />
-                                                                                <span>
-                                                                                    Capacity:{" "}
-                                                                                    {
-                                                                                        venue.capacity
-                                                                                    }
-                                                                                </span>
-                                                                            </div>
-                                                                            <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                                                                <MapPin className="h-3.5 w-3.5 mr-1" />
-                                                                                <span>
-                                                                                    {
-                                                                                        venue.location
-                                                                                    }
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
+                                                                        ? "border-primary bg-primary/5"
+                                                                        : "hover:border-primary/50",
+                                                                )}
+                                                                onClick={() =>
+                                                                    field.onChange(
+                                                                        String(
+                                                                            venue.id,
+                                                                        ),
+                                                                    )
+                                                                }
+                                                            >
+                                                                {/* Venue details */}
+                                                                <div className="flex items-start gap-3">
+                                                                    <div className="w-20 h-14 rounded overflow-hidden bg-muted">
+                                                                        <img
+                                                                            src={
+                                                                                venue.image ||
+                                                                                "/placeholder.svg"
+                                                                            }
+                                                                            alt={
+                                                                                venue.name
+                                                                            }
+                                                                            className="w-full h-full object-cover"
+                                                                        />
                                                                     </div>
-                                                                    <div className="flex flex-wrap gap-1 mt-2">
-                                                                        {venue.amenities
-                                                                            .slice(
-                                                                                0,
-                                                                                3,
-                                                                            )
-                                                                            .map(
-                                                                                (
-                                                                                    amenity,
-                                                                                    index,
-                                                                                ) => (
-                                                                                    <Badge
-                                                                                        key={
-                                                                                            index
-                                                                                        }
-                                                                                        variant="outline"
-                                                                                        className="text-xs"
-                                                                                    >
-                                                                                        {
-                                                                                            amenity
-                                                                                        }
-                                                                                    </Badge>
-                                                                                ),
-                                                                            )}
-                                                                        {venue
-                                                                            .amenities
-                                                                            .length >
-                                                                            3 && (
-                                                                            <Badge
-                                                                                variant="outline"
-                                                                                className="text-xs"
-                                                                            >
-                                                                                +
-                                                                                {venue
-                                                                                    .amenities
-                                                                                    .length -
-                                                                                    3}{" "}
-                                                                                more
-                                                                            </Badge>
-                                                                        )}
+                                                                    <div className="flex-1">
+                                                                        <h4 className="font-medium">
+                                                                            {
+                                                                                venue.name
+                                                                            }
+                                                                        </h4>
+                                                                        <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                                                            <MapPin className="h-3.5 w-3.5 mr-1" />
+                                                                            <span>
+                                                                                {
+                                                                                    venue.location
+                                                                                }
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            ),
-                                                        )
+                                                            </div>
+                                                        ))
                                                     ) : (
                                                         <div className="text-center py-8 text-muted-foreground">
-                                                            No venues available
-                                                            for the specified
-                                                            number of attendees.
+                                                            No venues available.
                                                         </div>
                                                     )}
                                                 </div>
@@ -852,13 +637,6 @@ export function VenueReservationFormDialog({
                                                 {selectedVenue.location}
                                             </span>
                                         </div>
-                                        <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                            <Users className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                                            <span>
-                                                Capacity:{" "}
-                                                {selectedVenue.capacity}
-                                            </span>
-                                        </div>
                                     </div>
 
                                     {/* Event Details */}
@@ -866,16 +644,10 @@ export function VenueReservationFormDialog({
                                         <h5 className="font-medium text-sm mb-1">
                                             Event Details
                                         </h5>
-                                        <p className="text-sm">
-                                            {form.watch("eventName")} (
-                                            {form.watch("eventType")})
-                                        </p>
+
                                         <p className="text-sm text-muted-foreground">
                                             Department:{" "}
                                             {form.watch("department")}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            Attendees: {form.watch("attendees")}
                                         </p>
                                         {form.watch("description") && (
                                             <p className="text-sm text-muted-foreground mt-1">
@@ -883,22 +655,6 @@ export function VenueReservationFormDialog({
                                                 {form.watch("description")}
                                             </p>
                                         )}
-                                    </div>
-
-                                    {/* Contact Person */}
-                                    <div className="pt-2 pb-2 border-b">
-                                        <h5 className="font-medium text-sm mb-1">
-                                            Contact Person
-                                        </h5>
-                                        <p className="text-sm">
-                                            {form.watch("contactPerson")}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {form.watch("contactEmail")}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {form.watch("contactPhone")}
-                                        </p>
                                     </div>
 
                                     {/* Time & Date */}

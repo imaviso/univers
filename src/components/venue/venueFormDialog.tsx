@@ -38,6 +38,7 @@ interface VenueFormDialogProps {
     onSubmit: (venueData: VenueInput) => void; // Use VenueInput type
     venue?: Venue | null; // Use Venue type, allow null for clarity
     isLoading?: boolean;
+    venueOwners: [];
 }
 
 export function VenueFormDialog({
@@ -46,6 +47,7 @@ export function VenueFormDialog({
     onSubmit,
     venue,
     isLoading,
+    venueOwners,
 }: VenueFormDialogProps) {
     const form = useForm<VenueInput>({
         resolver: valibotResolver(venueSchema),
@@ -187,6 +189,7 @@ export function VenueFormDialog({
                                     <FormControl>
                                         {/* Basic file input - needs refinement for preview/upload handling */}
                                         <Input
+                                            className="pe-3 file:me-3"
                                             type="file"
                                             accept="image/jpeg, image/png"
                                             onChange={(event) => {

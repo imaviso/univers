@@ -1,3 +1,4 @@
+import ErrorPage from "@/components/ErrorPage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { venuesQueryOptions } from "@/lib/query";
 import {
     createFileRoute,
     useNavigate,
@@ -44,14 +46,13 @@ import {
     Wifi,
 } from "lucide-react";
 import { useState } from "react";
-import { initialReservations } from "../venue-approval/approval";
-import { initialVenues } from "./dashboard.tsx";
 
 export const Route = createFileRoute("/app/venues/$venueId")({
     component: VenueDetails,
-    loader: async ({ params: { venueId } }) => {
+    loader: async ({ params: { venueId }, context }) => {
         // Find venue in the updated mock data
-        const venue = initialVenues.find((v) => v.id.toString() === venueId) as
+        const venues = context.queryClient.ensureQueryData(venuesQueryOptions);
+        const venue = (await venues).find((v) => v.id.toString() === venueId) as
             | Venue
             | undefined; // Cast or ensure type safety
 
@@ -61,25 +62,10 @@ export const Route = createFileRoute("/app/venues/$venueId")({
             // Or: throw notFound(); // if you import { notFound } from '@tanstack/react-router'
         }
 
-        // Fetch related reservations if needed for the reservations tab
-        // const reservations = initialReservations.filter(r => r.venueId === venue.id);
-
         return { venue /*, reservations */ };
     },
     // Add error component for better error handling
-    errorComponent: ({ error }) => {
-        // Check if it's the specific error we threw
-        if (error instanceof Error && error.message.includes("not found")) {
-            return <div className="p-4 text-red-600">Venue not found.</div>;
-        }
-        // Handle other errors
-        return (
-            <div className="p-4 text-red-600">
-                An error occurred:{" "}
-                {error instanceof Error ? error.message : "Unknown error"}
-            </div>
-        );
-    },
+    errorComponent: () => ErrorPage(),
 });
 
 type Venue = {

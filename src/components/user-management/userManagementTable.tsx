@@ -86,6 +86,7 @@ import {
     useQueryClient,
     useSuspenseQuery,
 } from "@tanstack/react-query";
+import { useRouteContext } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { toast } from "sonner";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
@@ -94,6 +95,8 @@ import { EditUserFormDialog } from "./editUserFormDialog";
 
 // The main DataTable component
 export function UserDataTable() {
+    const context = useRouteContext({ from: "/app/user-management" });
+    const queryClient = context.queryClient;
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
         React.useState<ColumnFiltersState>([]);
@@ -104,7 +107,6 @@ export function UserDataTable() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useAtom(deleteDialogAtom);
     const [selectedUser, setSelectedUser] = useAtom(selectedUserAtom);
 
-    const queryClient = useQueryClient();
     const { data: initialUsers } = useSuspenseQuery(usersQueryOptions);
 
     // --- Mutations ---

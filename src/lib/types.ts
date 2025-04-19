@@ -61,7 +61,10 @@ export const DEPARTMENTS = [
         value: "SSO",
         label: "Students Success Office (SSO)",
     },
-    { value: "CORE", label: "Core" },
+    {
+        value: "CORE",
+        label: "Center for Communications, Creatives, and Marketing (CORE)",
+    },
     { value: "ELEM", label: "Elementary" },
     { value: "JHS", label: "Junior High School (JHS)" },
     { value: "SHS", label: "Senior High School (SHS)" },
@@ -84,3 +87,13 @@ export const ACTIVE = [
     { value: true, label: "True" },
     { value: false, label: "False" },
 ];
+
+export type Venue = {
+    id: number;
+    name: string;
+    location: string;
+    venueOwnerId: number;
+    image?: string; // Added optional image field
+    createdAt: string; // Use string for ISO date format
+    updatedAt: string; // Use string for ISO date format
+};
