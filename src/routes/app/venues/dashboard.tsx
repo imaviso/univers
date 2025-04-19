@@ -39,9 +39,9 @@ import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmD
 import { VenueReservationFormDialog } from "@/components/venue-reservation/VenueReservationFormDialog";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
 import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
-import { venuesQueryOptions } from "@/lib/query";
+import { usersQueryOptions, venuesQueryOptions } from "@/lib/query";
 import type { VenueInput } from "@/lib/schema";
-import { DEPARTMENTS, type Venue } from "@/lib/types";
+import { DEPARTMENTS, type UserType, type Venue } from "@/lib/types";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
@@ -79,7 +79,7 @@ export function VenueManagement() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedItems, setSelectedItems] = useState<number[]>([]);
     const [isAddVenueOpen, setIsAddVenueOpen] = useState(false);
-    const [editingVenue, setEditingVenue] = useState<any>(null);
+    const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [venueToDelete, setVenueToDelete] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
@@ -90,6 +90,12 @@ export function VenueManagement() {
     // --- Queries ---
     // Fetch venues using React Query
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
+    // Fetch users for venue owner selection
+    const { data: users = [] } = useSuspenseQuery(usersQueryOptions);
+    // Filter users with VENUE_OWNER role for venue owner selection
+    const venueOwners = users.filter(
+        (user: UserType) => user.role === "VENUE_OWNER",
+    );
     // --- End Queries ---
 
     // --- Mutations ---
@@ -269,7 +275,7 @@ export function VenueManagement() {
     // // --- End Mutations ---
 
     // --- Event Handlers ---
-    const handleReservationSubmit = (data: any) => {
+    const handleReservationSubmit = (data: Record<string, unknown>) => {
         // Use specific type if available
         console.log("Reservation data:", data);
         // TODO: Implement reservation mutation
@@ -726,6 +732,7 @@ export function VenueManagement() {
                             createVenueMutation.isPending ||
                             updateVenueMutation.isPending
                         }
+                        venueOwners={venueOwners}
                     />
                     <DeleteConfirmDialog
                         isOpen={isDeleteDialogOpen}

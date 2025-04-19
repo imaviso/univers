@@ -1,7 +1,7 @@
 import ErrorPage from "@/components/ErrorPage";
 import PendingPage from "@/components/PendingPage";
 import { allNavigation } from "@/lib/navigation";
-import { venuesQueryOptions } from "@/lib/query";
+import { usersQueryOptions, venuesQueryOptions } from "@/lib/query";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/venues")({
@@ -42,6 +42,7 @@ export const Route = createFileRoute("/app/venues")({
     errorComponent: () => <ErrorPage />,
     loader: async ({ context: { queryClient } }) => {
         queryClient.ensureQueryData(venuesQueryOptions);
+        queryClient.ensureQueryData(usersQueryOptions);
     },
 });
 

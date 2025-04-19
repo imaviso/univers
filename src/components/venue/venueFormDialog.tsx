@@ -16,21 +16,18 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { type VenueInput, venueSchema } from "@/lib/schema"; // Import schema and type
+import type { UserType, Venue } from "@/lib/types"; // Import UserType and Venue
 import { valibotResolver } from "@hookform/resolvers/valibot"; // Import resolver
 import { useEffect } from "react";
 import { useForm } from "react-hook-form"; // Import useForm
-
-// Define the Venue type based on previous context (adjust if needed)
-type Venue = {
-    id: number;
-    name: string;
-    location: string;
-    venueOwnerId?: number | null; // Make optional/nullable
-    image?: File | null; // Make optional/nullable
-    createdAt: string;
-    updatedAt: string;
-};
 
 interface VenueFormDialogProps {
     isOpen: boolean;
@@ -38,7 +35,7 @@ interface VenueFormDialogProps {
     onSubmit: (venueData: VenueInput) => void; // Use VenueInput type
     venue?: Venue | null; // Use Venue type, allow null for clarity
     isLoading?: boolean;
-    venueOwners: [];
+    venueOwners: UserType[]; // Use UserType array for venue owners
 }
 
 export function VenueFormDialog({
@@ -71,7 +68,7 @@ export function VenueFormDialog({
                     // Image handling: If image is a URL (string), keep it.
                     // If it's meant to be a File object for upload, reset to empty string or handle file preview.
                     // For simplicity, assuming image might be a URL string or empty for new upload.
-                    image: venue.image || "",
+                    image: venue.image ? "" : "", // Reset image field to empty string regardless of current value
                     venueOwnerId: venue.venueOwnerId ?? undefined, // Handle null/undefined
                 });
             } else {
@@ -149,19 +146,10 @@ export function VenueFormDialog({
                             name="venueOwnerId"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>
-                                        Venue Owner ID (Optional)
-                                    </FormLabel>
+                                    <FormLabel>Venue Owner</FormLabel>
                                     <FormControl>
-                                        {/* Use text input and parse, or number input */}
-                                        <Input
-                                            type="number"
-                                            placeholder="Enter owner's user ID"
-                                            {...field}
-                                            // Handle potential string value from input type="number"
-                                            value={field.value ?? ""}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
+                                        <Select
+                                            onValueChange={(value) => {
                                                 field.onChange(
                                                     value === ""
                                                         ? undefined
@@ -171,8 +159,50 @@ export function VenueFormDialog({
                                                           ),
                                                 );
                                             }}
-                                        />
+                                            value={
+                                                field.value?.toString() || ""
+                                            }
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select a venue owner">
+                                                    {field.value
+                                                        ? (() => {
+                                                              const selectedUser =
+                                                                  venueOwners.find(
+                                                                      (user) =>
+                                                                          Number(
+                                                                              user.id,
+                                                                          ) ===
+                                                                          field.value,
+                                                                  );
+                                                              return selectedUser
+                                                                  ? `${selectedUser.firstName} ${selectedUser.lastName}`
+                                                                  : "None";
+                                                          })()
+                                                        : null}
+                                                </SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">
+                                                    None
+                                                </SelectItem>
+                                                {venueOwners.map((user) => (
+                                                    <SelectItem
+                                                        key={user.id}
+                                                        value={user.id}
+                                                    >
+                                                        {user.firstName}{" "}
+                                                        {user.lastName} (
+                                                        {user.email})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </FormControl>
+                                    <FormDescription>
+                                        Select a user to be the owner of this
+                                        venue
+                                    </FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -193,19 +223,24 @@ export function VenueFormDialog({
                                             type="file"
                                             accept="image/jpeg, image/png"
                                             onChange={(event) => {
-                                                onChange(
-                                                    event.target.files?.[0] ??
-                                                        null,
-                                                );
+                                                const file =
+                                                    event.target.files?.[0];
+                                                if (file) {
+                                                    onChange(file);
+                                                } else {
+                                                    onChange("");
+                                                }
                                             }}
                                             {...fieldProps} // Pass rest of props like name, ref, etc.
                                         />
                                     </FormControl>
                                     <FormDescription>
                                         Select a JPEG or PNG file (max 10MB).
-                                        {typeof value === "string" && value && (
+                                        {venue?.image && (
                                             <span className="block mt-1 text-xs">
-                                                Current image: {value}
+                                                Current image exists (will be
+                                                replaced if you select a new
+                                                file)
                                             </span>
                                         )}
                                     </FormDescription>
