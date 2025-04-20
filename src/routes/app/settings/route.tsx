@@ -1,3 +1,5 @@
+import ErrorPage from "@/components/ErrorPage";
+import PendingPage from "@/components/PendingPage";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/settings")({
@@ -16,6 +18,8 @@ export const Route = createFileRoute("/app/settings")({
             });
         }
     },
+    pendingComponent: () => <PendingPage />,
+    errorComponent: () => <ErrorPage />,
 });
 
 function Settings() {

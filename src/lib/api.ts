@@ -88,6 +88,27 @@ export const getAllUsers = async () => {
     }
 };
 
+export const updateProfile = async (userData: UserType) => {
+    try {
+        // Exclude fields that shouldn't be sent on update if necessary
+        const { id, createdAt, updatedAt, emailVerified, ...updateData } =
+            userData;
+        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updateData),
+            credentials: "include",
+        });
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during updating profile.",
+              );
+    }
+};
+
 export const createUser = async (
     userData: Omit<
         UserType,

@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
-import { Bell, ChevronLeft, LogOut, Menu, Settings, User } from "lucide-react";
+import { Bell, ChevronLeft, LogOut, Menu, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
@@ -231,15 +231,6 @@ export function Sidebar() {
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem asChild>
                                             <Link
-                                                to="/app/settings/profile"
-                                                className="flex w-full items-center gap-2"
-                                            >
-                                                <User className="h-4 w-4" />
-                                                <span>Profile</span>
-                                            </Link>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem asChild>
-                                            <Link
                                                 to="/app/settings/account"
                                                 className="flex w-full items-center gap-2"
                                             >
@@ -333,15 +324,6 @@ export function Sidebar() {
                                         Settings
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem asChild>
-                                        <Link
-                                            to="/app/settings/profile"
-                                            className="flex w-full items-center gap-2"
-                                        >
-                                            <User className="h-4 w-4" />
-                                            <span>Profile</span>
-                                        </Link>
-                                    </DropdownMenuItem>
                                     <DropdownMenuItem asChild>
                                         <Link
                                             to="/app/settings/account"

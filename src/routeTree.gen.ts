@@ -34,7 +34,6 @@ import { Route as AppVenuesVenueIdImport } from './routes/app/venues/$venueId'
 import { Route as AppVenueApprovalApprovalImport } from './routes/app/venue-approval/approval'
 import { Route as AppVenueApprovalApprovalIdImport } from './routes/app/venue-approval/$approvalId'
 import { Route as AppUserManagementUsersImport } from './routes/app/user-management/users'
-import { Route as AppSettingsProfileImport } from './routes/app/settings/profile'
 import { Route as AppSettingsNotificationsImport } from './routes/app/settings/notifications'
 import { Route as AppSettingsAccountImport } from './routes/app/settings/account'
 import { Route as AppEventsTimelineImport } from './routes/app/events/timeline'
@@ -182,12 +181,6 @@ const AppUserManagementUsersRoute = AppUserManagementUsersImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AppUserManagementRouteRoute,
-} as any)
-
-const AppSettingsProfileRoute = AppSettingsProfileImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 
 const AppSettingsNotificationsRoute = AppSettingsNotificationsImport.update({
@@ -400,13 +393,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsNotificationsImport
       parentRoute: typeof AppSettingsRouteImport
     }
-    '/app/settings/profile': {
-      id: '/app/settings/profile'
-      path: '/profile'
-      fullPath: '/app/settings/profile'
-      preLoaderRoute: typeof AppSettingsProfileImport
-      parentRoute: typeof AppSettingsRouteImport
-    }
     '/app/user-management/users': {
       id: '/app/user-management/users'
       path: '/users'
@@ -464,13 +450,11 @@ const AppEventsRouteRouteWithChildren = AppEventsRouteRoute._addFileChildren(
 interface AppSettingsRouteRouteChildren {
   AppSettingsAccountRoute: typeof AppSettingsAccountRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
-  AppSettingsProfileRoute: typeof AppSettingsProfileRoute
 }
 
 const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsAccountRoute: AppSettingsAccountRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
-  AppSettingsProfileRoute: AppSettingsProfileRoute,
 }
 
 const AppSettingsRouteRouteWithChildren =
@@ -596,7 +580,6 @@ export interface FileRoutesByFullPath {
   '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/app/settings/profile': typeof AppSettingsProfileRoute
   '/app/user-management/users': typeof AppUserManagementUsersRoute
   '/app/venue-approval/$approvalId': typeof AppVenueApprovalApprovalIdRoute
   '/app/venue-approval/approval': typeof AppVenueApprovalApprovalRoute
@@ -629,7 +612,6 @@ export interface FileRoutesByTo {
   '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/app/settings/profile': typeof AppSettingsProfileRoute
   '/app/user-management/users': typeof AppUserManagementUsersRoute
   '/app/venue-approval/$approvalId': typeof AppVenueApprovalApprovalIdRoute
   '/app/venue-approval/approval': typeof AppVenueApprovalApprovalRoute
@@ -663,7 +645,6 @@ export interface FileRoutesById {
   '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/app/settings/profile': typeof AppSettingsProfileRoute
   '/app/user-management/users': typeof AppUserManagementUsersRoute
   '/app/venue-approval/$approvalId': typeof AppVenueApprovalApprovalIdRoute
   '/app/venue-approval/approval': typeof AppVenueApprovalApprovalRoute
@@ -698,7 +679,6 @@ export interface FileRouteTypes {
     | '/app/events/timeline'
     | '/app/settings/account'
     | '/app/settings/notifications'
-    | '/app/settings/profile'
     | '/app/user-management/users'
     | '/app/venue-approval/$approvalId'
     | '/app/venue-approval/approval'
@@ -730,7 +710,6 @@ export interface FileRouteTypes {
     | '/app/events/timeline'
     | '/app/settings/account'
     | '/app/settings/notifications'
-    | '/app/settings/profile'
     | '/app/user-management/users'
     | '/app/venue-approval/$approvalId'
     | '/app/venue-approval/approval'
@@ -762,7 +741,6 @@ export interface FileRouteTypes {
     | '/app/events/timeline'
     | '/app/settings/account'
     | '/app/settings/notifications'
-    | '/app/settings/profile'
     | '/app/user-management/users'
     | '/app/venue-approval/$approvalId'
     | '/app/venue-approval/approval'
@@ -846,8 +824,7 @@ export const routeTree = rootRoute
       "parent": "/app",
       "children": [
         "/app/settings/account",
-        "/app/settings/notifications",
-        "/app/settings/profile"
+        "/app/settings/notifications"
       ]
     },
     "/app/user-management": {
@@ -931,10 +908,6 @@ export const routeTree = rootRoute
     },
     "/app/settings/notifications": {
       "filePath": "app/settings/notifications.tsx",
-      "parent": "/app/settings"
-    },
-    "/app/settings/profile": {
-      "filePath": "app/settings/profile.tsx",
       "parent": "/app/settings"
     },
     "/app/user-management/users": {

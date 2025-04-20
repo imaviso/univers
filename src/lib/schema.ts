@@ -372,3 +372,33 @@ export const venueSchema = v.object({
 });
 
 export type VenueInput = v.InferInput<typeof venueSchema>;
+
+// ... existing schemas ...
+
+// Schema for the final step of password reset/change via code
+export const setNewPasswordSchema = v.pipe(
+    v.object({
+        newPassword: v.pipe(
+            v.string(),
+            v.minLength(8, "Your new password is too short."),
+            v.regex(
+                /[a-z]/,
+                "Your new password must contain a lowercase letter.",
+            ),
+            v.regex(
+                /[A-Z]/,
+                "Your new password must contain an uppercase letter.",
+            ),
+            v.regex(/[0-9]/, "Your new password must contain a number."),
+        ),
+        confirmPassword: v.string(),
+    }),
+    v.forward(
+        v.check(
+            (input) => input.newPassword === input.confirmPassword,
+            "New passwords do not match.",
+        ),
+        ["confirmPassword"], // Apply error to confirmPassword field
+    ),
+);
+export type SetNewPasswordInput = v.InferInput<typeof setNewPasswordSchema>;
