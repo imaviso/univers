@@ -416,7 +416,7 @@ export function AccountSettings() {
             toast.error("An error occurred. Please try again.");
             setEmailDialogStep("input"); // Go back
             return;
-        }
+        }none
 
         setEmailOtpError(null);
         setIsVerifyingEmailCode(true);

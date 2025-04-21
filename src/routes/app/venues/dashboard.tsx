@@ -42,7 +42,7 @@ import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
 import { usersQueryOptions, venuesQueryOptions } from "@/lib/query";
 import type { VenueInput } from "@/lib/schema";
 import { DEPARTMENTS, type UserType, type Venue } from "@/lib/types";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
     useNavigate,
@@ -90,12 +90,16 @@ export function VenueManagement() {
     // --- Queries ---
     // Fetch venues using React Query
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
-    // Fetch users for venue owner selection
-    const { data: users = [] } = useSuspenseQuery(usersQueryOptions);
-    // Filter users with VENUE_OWNER role for venue owner selection
-    const venueOwners = users.filter(
-        (user: UserType) => user.role === "VENUE_OWNER",
-    );
+    const { data: users = [] } = useQuery({
+        ...usersQueryOptions,
+        enabled: role === "SUPER_ADMIN", // Only enable query if user is SUPER_ADMIN
+    });
+
+    // Derive venueOwners only if users were fetched
+    const venueOwners =
+        role === "SUPER_ADMIN" && users
+            ? users.filter((user: UserType) => user.role === "VENUE_OWNER")
+            : []; // Default to empty array if not SUPER_ADMIN or users not loaded yet
     // --- End Queries ---
 
     // --- Mutations ---
@@ -699,19 +703,6 @@ export function VenueManagement() {
                 }))} // Simplified for selection
                 departments={DEPARTMENTS.map((d) => d.label)} // Make sure DEPARTMENTS is imported/defined
                 isLoading={false} // Pass loading state if applicable
-            />
-
-            {/* Dialogs */}
-            <VenueReservationFormDialog
-                isOpen={isReservationDialogOpen}
-                onClose={() => setIsReservationDialogOpen(false)}
-                onSubmit={handleReservationSubmit}
-                venues={venues.map((v) => ({
-                    id: v.id.toString(),
-                    name: v.name,
-                }))}
-                departments={DEPARTMENTS.map((d) => d.label)}
-                isLoading={false} // Pass loading state from reservation mutation if implemented
             />
 
             {role === "SUPER_ADMIN" && (

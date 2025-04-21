@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Command,
     CommandEmpty,
@@ -18,6 +17,7 @@ import {
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -36,12 +36,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { type EventInput, eventSchema } from "@/lib/schema";
+import { createEvent } from "@/lib/api";
+import { eventsQueryOptions, useCurrentUser } from "@/lib/query"; // Import eventsQueryOptions
+import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
+import type { Venue } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useMutation } from "@tanstack/react-query"; // Import mutation hooks
+import { useRouteContext } from "@tanstack/react-router";
 import { startOfDay } from "date-fns";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { SmartDatetimeInput } from "../ui/smart-date-picker";
@@ -49,67 +53,92 @@ import { SmartDatetimeInput } from "../ui/smart-date-picker";
 interface EventModalProps {
     isOpen: boolean;
     onClose: () => void;
+    venues: Venue[];
 }
 
-const facilities = [
-    {
-        label: "Main Hall",
-        value: "main-hall",
-    },
-    {
-        label: "Conference Room A",
-        value: "conf-room-a",
-    },
-    {
-        label: "Conference Room B",
-        value: "conf-room-b",
-    },
-    {
-        label: "Auditorium",
-        value: "auditorium",
-    },
-    {
-        label: "Meeting Room 1",
-        value: "meeting-room-1",
-    },
-    {
-        label: "Meeting Room 2",
-        value: "meeting-room-2",
-    },
-] as const;
+const eventTypes = ["External", "Program-based", "Admin", "SSG/Advocay-based"];
 
-export function EventModal({ isOpen, onClose }: EventModalProps) {
+export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
+    const { data: currentUser } = useCurrentUser();
+    const context = useRouteContext({ from: "/app/events" });
+    const queryClient = context.queryClient;
+
+    // Remove local isSubmitting state, use mutation.isPending instead
+    // const [isSubmitting, setIsSubmitting] = useState(false);
+
     const form = useForm<EventInput>({
-        resolver: valibotResolver(eventSchema), // Ensure eventSchema uses startDate, startTime, endDate, endTime
+        resolver: valibotResolver(eventSchema),
         defaultValues: {
-            // Update default values according to the modified schema
             eventName: "",
-            status: undefined,
-            facility: undefined,
-            description: "",
+            eventType: undefined,
+            eventVenueId: undefined,
             startDateTime: undefined,
             endDateTime: undefined,
+            approvedLetter: undefined,
         },
     });
 
-    function onSubmit(values: EventInput) {
-        try {
-            const submissionData = {
-                ...values,
-            };
-
-            console.log("Form Values:", values);
-            console.log("Submission Data:", submissionData);
-
-            // Replace console.log with your actual API call
-            toast("Event Created", {
-                description: `Event ${values.eventName} has been created successfully.`,
+    // --- Mutation ---
+    const createEventMutation = useMutation({
+        mutationFn: ({
+            eventDTO,
+            approvedLetter,
+        }: {
+            eventDTO: Parameters<typeof createEvent>[0]; // Get type from api function
+            approvedLetter: Parameters<typeof createEvent>[1];
+        }) => createEvent(eventDTO, approvedLetter), // Call the API function
+        onSuccess: (createdEvent) => {
+            // Invalidate the events query to refetch data
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryOptions.queryKey,
+            });
+            toast.success("Event Created", {
+                description: `Event ${createdEvent.eventName} created successfully.`,
             });
             onClose(); // Close modal on success
             form.reset(); // Reset form
-        } catch (error) {
-            console.error("Form submission error", error);
-            toast.error("Failed to submit the form. Please try again.");
+        },
+        onError: (error) => {
+            console.error("Mutation error", error);
+            toast.error(
+                `Failed to create event: ${error instanceof Error ? error.message : "Please try again."}`,
+            );
+        },
+    });
+    // --- End Mutation ---
+
+    const approvedLetterFileList = form.watch("approvedLetter");
+    const approvedLetterFileName = approvedLetterFileList?.[0]?.name;
+
+    // Updated onSubmit function
+    async function onSubmit(values: EventInput) {
+        if (!currentUser?.id) {
+            toast.error("You must be logged in to create an event.");
+            return;
+        }
+
+        // No need for manual try/catch or setIsSubmitting
+        try {
+            const outputValues = values as unknown as EventOutput;
+            const eventDTO = {
+                eventName: outputValues.eventName,
+                eventType: outputValues.eventType,
+                eventVenueId: outputValues.eventVenueId,
+                startTime: outputValues.startDateTime.toISOString(),
+                endTime: outputValues.endDateTime.toISOString(),
+                organizerId: currentUser.id,
+            };
+
+            // Trigger the mutation
+            createEventMutation.mutate({
+                eventDTO,
+                approvedLetter: outputValues.approvedLetter,
+            });
+        } catch (validationError) {
+            // This catch is primarily for potential issues *before* mutation.mutate
+            // e.g., unexpected errors during DTO preparation, though unlikely here.
+            console.error("Pre-mutation error:", validationError);
+            toast.error("An unexpected error occurred before submitting.");
         }
     }
 
@@ -139,6 +168,10 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                                 <Input
                                                     placeholder="Enter event name"
                                                     {...field}
+                                                    // Use mutation pending state
+                                                    disabled={
+                                                        createEventMutation.isPending
+                                                    }
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -147,32 +180,35 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                 />
                             </div>
 
-                            {/* Status */}
+                            {/* Event Type */}
                             <FormField
                                 control={form.control}
-                                name="status"
+                                name="eventType"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Status</FormLabel>
+                                    <FormItem>
+                                        <FormLabel>Event Type</FormLabel>
                                         <Select
                                             onValueChange={field.onChange}
                                             defaultValue={field.value}
+                                            // Use mutation pending state
+                                            disabled={
+                                                createEventMutation.isPending
+                                            }
                                         >
                                             <FormControl>
                                                 <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select Status" />
+                                                    <SelectValue placeholder="Select event type" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                <SelectItem value="Pending">
-                                                    Pending
-                                                </SelectItem>
-                                                <SelectItem value="Confirmed">
-                                                    Confirmed
-                                                </SelectItem>
-                                                <SelectItem value="Completed">
-                                                    Completed
-                                                </SelectItem>
+                                                {eventTypes.map((type) => (
+                                                    <SelectItem
+                                                        key={type}
+                                                        value={type}
+                                                    >
+                                                        {type}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -180,71 +216,79 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                 )}
                             />
 
-                            {/* Facility */}
+                            {/* Venue */}
                             <FormField
                                 control={form.control}
-                                name="facility"
+                                name="eventVenueId"
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col">
-                                        <FormLabel>Facility</FormLabel>
+                                        <FormLabel>Venue</FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button
                                                         variant="outline"
-                                                        role="combobox"
+                                                        // role="combobox"
+                                                        // Use mutation pending state
+                                                        disabled={
+                                                            createEventMutation.isPending
+                                                        }
                                                         className={cn(
-                                                            "justify-between",
+                                                            "w-full justify-between",
                                                             !field.value &&
                                                                 "text-muted-foreground",
                                                         )}
                                                     >
                                                         {field.value
-                                                            ? facilities.find(
-                                                                  (facility) =>
-                                                                      facility.value ===
+                                                            ? venues.find(
+                                                                  (v) =>
+                                                                      v.id ===
                                                                       field.value,
-                                                              )?.label
-                                                            : "Select facility"}
+                                                              )?.name
+                                                            : "Select venue"}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                     </Button>
                                                 </FormControl>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                {/* Command content remains the same */}
                                                 <Command>
-                                                    <CommandInput placeholder="Search facility..." />
+                                                    <CommandInput placeholder="Search venue..." />
                                                     <CommandList>
                                                         <CommandEmpty>
-                                                            No facility found.
+                                                            No venue found.
                                                         </CommandEmpty>
                                                         <CommandGroup>
-                                                            {facilities.map(
-                                                                (facility) => (
+                                                            {venues.map(
+                                                                (venue) => (
                                                                     <CommandItem
                                                                         value={
-                                                                            facility.label
+                                                                            venue.name
                                                                         }
                                                                         key={
-                                                                            facility.value
+                                                                            venue.id
                                                                         }
                                                                         onSelect={() => {
                                                                             form.setValue(
-                                                                                "facility",
-                                                                                facility.value,
+                                                                                "eventVenueId",
+                                                                                venue.id,
+                                                                                {
+                                                                                    shouldValidate: true,
+                                                                                },
                                                                             );
                                                                         }}
                                                                     >
                                                                         <Check
                                                                             className={cn(
                                                                                 "mr-2 h-4 w-4",
-                                                                                facility.value ===
+                                                                                venue.id ===
                                                                                     field.value
                                                                                     ? "opacity-100"
                                                                                     : "opacity-0",
                                                                             )}
                                                                         />
                                                                         {
-                                                                            facility.label
+                                                                            venue.name
                                                                         }
                                                                     </CommandItem>
                                                                 ),
@@ -259,6 +303,7 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                 )}
                             />
 
+                            {/* Start Date & Time */}
                             <div>
                                 <FormField
                                     control={form.control}
@@ -276,7 +321,11 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                                     }
                                                     disabled={(date) =>
                                                         date <
-                                                        startOfDay(new Date())
+                                                            startOfDay(
+                                                                new Date(),
+                                                            ) ||
+                                                        // Use mutation pending state
+                                                        createEventMutation.isPending
                                                     }
                                                     placeholder="Select start date and time"
                                                 />
@@ -287,6 +336,7 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                 />
                             </div>
 
+                            {/* End Date & Time */}
                             <div>
                                 <FormField
                                     control={form.control}
@@ -304,7 +354,14 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                                     }
                                                     disabled={(date) =>
                                                         date <
-                                                        startOfDay(new Date())
+                                                            (form.getValues(
+                                                                "startDateTime",
+                                                            ) ||
+                                                                startOfDay(
+                                                                    new Date(),
+                                                                )) ||
+                                                        // Use mutation pending state
+                                                        createEventMutation.isPending
                                                     }
                                                     placeholder="Select end date and time"
                                                 />
@@ -315,32 +372,71 @@ export function EventModal({ isOpen, onClose }: EventModalProps) {
                                 />
                             </div>
 
-                            {/* Description */}
+                            {/* Approved Letter */}
                             <div className="col-span-2">
                                 <FormField
                                     control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
+                                    name="approvedLetter"
+                                    render={({
+                                        field: {
+                                            value,
+                                            onChange,
+                                            ...fieldProps
+                                        },
+                                    }) => (
                                         <FormItem>
-                                            <FormLabel>Description</FormLabel>
+                                            <FormLabel>
+                                                Approved Letter
+                                            </FormLabel>
                                             <FormControl>
-                                                <Textarea
-                                                    placeholder="Enter event description"
-                                                    className="resize-none"
-                                                    {...field}
+                                                <Input
+                                                    {...fieldProps}
+                                                    type="file"
+                                                    accept=".pdf, image/*"
+                                                    onChange={(event) =>
+                                                        onChange(
+                                                            event.target.files,
+                                                        )
+                                                    }
+                                                    // Use mutation pending state
+                                                    disabled={
+                                                        createEventMutation.isPending
+                                                    }
                                                 />
                                             </FormControl>
+                                            {approvedLetterFileName && (
+                                                <FormDescription>
+                                                    Selected file:{" "}
+                                                    {approvedLetterFileName}
+                                                </FormDescription>
+                                            )}
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </div>
+
                             {/* Footer */}
                             <DialogFooter className="col-span-2">
-                                <Button variant="outline" onClick={onClose}>
+                                <Button
+                                    variant="outline"
+                                    onClick={onClose}
+                                    // Use mutation pending state
+                                    disabled={createEventMutation.isPending}
+                                >
                                     Cancel
                                 </Button>
-                                <Button type="submit">Create Event</Button>
+                                <Button
+                                    type="submit"
+                                    // Use mutation pending state
+                                    disabled={createEventMutation.isPending}
+                                >
+                                    {/* Use mutation pending state */}
+                                    {createEventMutation.isPending && (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    )}
+                                    Create Event
+                                </Button>
                             </DialogFooter>
                         </form>
                     </Form>

@@ -115,3 +115,12 @@ export type Venue = {
     createdAt: string; // Use string for ISO date format
     updatedAt: string; // Use string for ISO date format
 };
+
+export type EventDTOPayload = {
+    eventName: string;
+    eventType: string;
+    eventVenueId: number;
+    startTime: string; // ISO string
+    endTime: string; // ISO string
+    organizerId: number;
+};

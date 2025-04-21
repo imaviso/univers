@@ -40,9 +40,11 @@ export const Route = createFileRoute("/app/venues")({
     component: RouteComponent,
     pendingComponent: () => <PendingPage />,
     errorComponent: () => <ErrorPage />,
-    loader: async ({ context: { queryClient } }) => {
-        queryClient.ensureQueryData(venuesQueryOptions);
-        queryClient.ensureQueryData(usersQueryOptions);
+    loader: async ({ context }) => {
+        context.queryClient.ensureQueryData(venuesQueryOptions);
+        if ("role" in context && context.role === "SUPER_ADMIN") {
+            context.queryClient.ensureQueryData(usersQueryOptions);
+        }
     },
 });
 

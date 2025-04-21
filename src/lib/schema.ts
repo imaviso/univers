@@ -112,37 +112,46 @@ export const emailSchema = v.object({
 export type EmailInput = v.InferInput<typeof emailSchema>;
 
 export const eventSchema = v.pipe(
-    // Use v.pipe for object-level validation
     v.object({
         eventName: v.pipe(
             v.string("Event Name is required"),
             v.nonEmpty("Event Name is required"),
         ),
-        status: v.pipe(
-            v.string("Status is required"),
-            v.nonEmpty("Status is required"),
+        eventType: v.pipe(
+            v.string("Event Type is required"),
+            v.nonEmpty("Event Type is required"),
         ),
-        facility: v.pipe(
-            v.string("Facility is required"),
-            v.nonEmpty("Facility is required"),
+        eventVenueId: v.pipe(
+            v.number("Venue ID must be a number"),
+            v.integer("Venue ID must be an integer"),
+            v.minValue(1, "Please select a valid facility."), // Ensure a positive ID
         ),
-        description: v.optional(v.string()),
         startDateTime: v.date("Start date is required"),
         endDateTime: v.date("End date is required"),
+        approvedLetter: v.pipe(
+            v.instance(FileList, "Approved letter is required."), // Use FileList for input type="file"
+            v.check((list) => list.length > 0, "Approved letter is required."),
+            v.check((list) => list.length <= 1, "Only one file allowed."),
+            v.transform((list) => list[0]), // Extract the single File object
+            v.pipe(
+                v.file("Please select a valid file."),
+                // Add mimeType/maxSize checks if necessary, matching backend expectations
+                // v.mimeType(['image/jpeg', 'image/png', 'application/pdf'], 'Invalid file type.'),
+                v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."),
+            ),
+        ),
     }),
     v.forward(
-        v.check((input) => {
-            // Check if end date/time is before start date/time
-            // This check is valid whether it's allDay or not,
-            // as the times will be adjusted accordingly elsewhere if allDay is true.
-            return !isBefore(input.endDateTime, input.startDateTime);
-        }, "End date/time cannot be before start date/time."),
-        // Apply the error message to the endDateTime field
+        v.check(
+            (input) => !isBefore(input.endDateTime, input.startDateTime),
+            "End date/time cannot be before start date/time.",
+        ),
         ["endDateTime"],
     ),
 );
 
 export type EventInput = v.InferInput<typeof eventSchema>;
+export type EventOutput = v.InferOutput<typeof eventSchema>;
 
 export const userFormSchema = v.pipe(
     v.object({

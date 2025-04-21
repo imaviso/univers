@@ -2,6 +2,8 @@ import { CreateEventButton } from "@/components/events/createEventButton";
 import { EventList } from "@/components/events/eventList";
 import { EventModal } from "@/components/events/eventModal";
 import { EventTimeline } from "@/components/events/eventTimeline";
+import { venuesQueryOptions } from "@/lib/query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -10,9 +12,10 @@ export const Route = createFileRoute("/app/events/timeline")({
 });
 
 function Events() {
-    const context = useRouteContext({ from: "/app/events/timeline" });
+    const context = useRouteContext({ from: "/app/events" });
     const role = "role" in context ? context.role : "USER";
 
+    const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const [view, setView] = useState<"list" | "timeline">("list");
     const [isModalOpen, setIsModalOpen] = useState(false);
     return (
@@ -61,6 +64,7 @@ function Events() {
             <EventModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
+                venues={venues}
             />
         </div>
     );

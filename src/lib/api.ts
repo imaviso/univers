@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "./auth";
-import type { EventInput, VenueInput } from "./schema";
-import type { UserType, Venue } from "./types";
+import type { EventInput, EventOutput, VenueInput } from "./schema";
+import type { EventDTOPayload, UserType, Venue } from "./types";
 
 // ... other imports ...
 
@@ -225,17 +225,36 @@ export const getAllEvents = async () => {
     }
 };
 
-export const createEvent = async (data: EventInput) => {
+export const createEvent = async (
+    eventDTO: EventDTOPayload,
+    approvedLetter: File,
+): Promise<EventOutput> => {
+    // Added return type Promise<EventOutput>
     try {
+        const formData = new FormData();
+
+        // Append the DTO as a JSON string blob
+        // The backend expects a part named "event"
+        formData.append(
+            "event",
+            new Blob([JSON.stringify(eventDTO)], { type: "application/json" }),
+        );
+
+        // Append the file
+        // The backend expects a part named "approvedLetter"
+        formData.append("approvedLetter", approvedLetter, approvedLetter.name);
+
         const response = await fetch(`${API_BASE_URL}/events`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            // Do NOT set Content-Type header, the browser does it for FormData
             credentials: "include",
-            body: JSON.stringify(data),
+            body: formData,
         });
-        // Assuming backend returns text confirmation on success
-        return await handleApiResponse(response, false);
+
+        // Backend returns the created EventDTO as JSON on success (201)
+        return await handleApiResponse(response, true); // Expect JSON back
     } catch (error) {
+        // Rethrow specific error or a generic one
         throw error instanceof Error
             ? error
             : new Error("An unexpected error occurred during creating event.");
