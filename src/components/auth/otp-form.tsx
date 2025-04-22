@@ -21,27 +21,21 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { registrationFormAtom } from "@/lib/atoms";
 import { userResendVerificationCode, verifyOTP } from "@/lib/auth";
 import { type OtpInput, OtpSchema } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { useAtom } from "jotai";
-import { atom } from "jotai";
 import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-
-const emailAtom = atom((get) => get(registrationFormAtom).email);
 
 export function InputOTPForm() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const navigate = useNavigate();
     const router = useRouter();
     const onBack = () => router.history.back();
-    const [email] = useAtom(emailAtom);
 
     const form = useForm<OtpInput>({
         resolver: valibotResolver(OtpSchema),
@@ -50,14 +44,20 @@ export function InputOTPForm() {
         },
     });
 
+    const userEmail = localStorage.getItem("userEmail");
+    if (userEmail === null) {
+        navigate({ to: "/auth/login" });
+        return null;
+    }
+
     async function onSubmit(data: OtpInput) {
+        // userEmail is guaranteed to be non-null here due to the check above
         try {
             setIsLoading(true);
-            // Attempt to sign in user
-            console.log("Verifying OTP for email:", email);
-            await verifyOTP(email, data.code);
+            await verifyOTP(userEmail!, data.code);
             navigate({ to: "/auth/login" });
             toast.success("Verification successful! You can now log in.");
+            localStorage.removeItem("userEmail");
         } catch (error) {
             const errorMessage =
                 error instanceof Error
@@ -76,8 +76,8 @@ export function InputOTPForm() {
     const handleResendCode = async () => {
         try {
             setIsResending(true);
-            await userResendVerificationCode(email);
-            console.log("Resending verification code to:", email);
+            await userResendVerificationCode(userEmail!);
+            console.log("Resending verification code to:", userEmail);
             setResendSuccess(true);
 
             // Start a 60-second timer

@@ -33,7 +33,7 @@ import {
 import type { Venue as VenueType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { format, startOfDay } from "date-fns"; // Added date-fns functions
+import { format, startOfDay } from "date-fns";
 import { CalendarIcon, CloudUpload, MapPin, Users, X } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";

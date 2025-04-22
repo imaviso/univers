@@ -116,15 +116,14 @@ export function EventTimeline() {
         {} as Record<string, MonthGroup>,
     );
 
-    // Convert grouped object to sorted array (by year, then month)
-    const timelineData: MonthGroup[] = Object.values(groupedEvents).sort(
-        (a, b) => {
-            if (a.year !== b.year) return a.year - b.year;
-            const monthA = Number.parseInt(a.id.split("-")[1], 10);
-            const monthB = Number.parseInt(b.id.split("-")[1], 10);
-            return monthA - monthB;
-        },
-    );
+    const timelineData: MonthGroup[] = (
+        Object.values(groupedEvents) as MonthGroup[]
+    ).sort((a, b) => {
+        if (a.year !== b.year) return a.year - b.year;
+        const monthA = Number.parseInt(a.id.split("-")[1], 10);
+        const monthB = Number.parseInt(b.id.split("-")[1], 10);
+        return monthA - monthB;
+    });
 
     const handleNavigate = (eventId: number | undefined) => {
         if (typeof eventId === "number") {
