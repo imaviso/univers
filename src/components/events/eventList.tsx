@@ -6,109 +6,27 @@ import {
     CardFooter,
     CardHeader,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { eventsQueryOptions, venuesQueryOptions } from "@/lib/query"; // Import query options
+import type { Event } from "@/lib/types";
+import { formatDateRange, getInitials } from "@/lib/utils";
+import { useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
-import {
-    CalendarClock,
-    ChevronRight,
-    Clock,
-    MapPin,
-    Users,
-} from "lucide-react";
-// Sample data
-const events = [
-    {
-        id: 1,
-        title: "Annual Tech Conference",
-        date: "May 15-17, 2024",
-        location: "San Francisco, CA",
-        status: "planning",
-        progress: 25,
-        attendees: 1200,
-        team: [
-            {
-                name: "Alex Johnson",
-                avatar: "/placeholder.svg?height=32&width=32",
-            },
-            {
-                name: "Maria Garcia",
-                avatar: "/placeholder.svg?height=32&width=32",
-            },
-            { name: "Sam Lee", avatar: "/placeholder.svg?height=32&width=32" },
-        ],
-    },
-    {
-        id: 2,
-        title: "Product Launch: Version 2.0",
-        date: "June 5, 2024",
-        location: "Virtual Event",
-        status: "confirmed",
-        progress: 60,
-        attendees: 5000,
-        team: [
-            {
-                name: "Taylor Swift",
-                avatar: "/placeholder.svg?height=32&width=32",
-            },
-            {
-                name: "John Smith",
-                avatar: "/placeholder.svg?height=32&width=32",
-            },
-        ],
-    },
-    {
-        id: 3,
-        title: "Quarterly Team Building",
-        date: "April 22, 2024",
-        location: "Central Park, NY",
-        status: "completed",
-        progress: 100,
-        attendees: 45,
-        team: [
-            {
-                name: "Emma Wilson",
-                avatar: "/placeholder.svg?height=32&width=32",
-            },
-            {
-                name: "James Brown",
-                avatar: "/placeholder.svg?height=32&width=32",
-            },
-            {
-                name: "Olivia Martinez",
-                avatar: "/placeholder.svg?height=32&width=32",
-            },
-        ],
-    },
-    {
-        id: 4,
-        title: "Marketing Strategy Workshop",
-        date: "May 3, 2024",
-        location: "Chicago, IL",
-        status: "planning",
-        progress: 15,
-        attendees: 30,
-        team: [
-            {
-                name: "David Kim",
-                avatar: "/placeholder.svg?height=32&width=32",
-            },
-            {
-                name: "Sarah Johnson",
-                avatar: "/placeholder.svg?height=32&width=32",
-            },
-        ],
-    },
-];
+import { ChevronRight, Clock, MapPin, Paperclip, Tag } from "lucide-react";
+import { Avatar, AvatarFallback } from "../ui/avatar";
 
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case "planning":
-            return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20";
-        case "confirmed":
-            return "bg-green-500/10 text-green-500 hover:bg-green-500/20";
-        case "completed":
-            return "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20";
+const getStatusColor = (status: string | undefined) => {
+    switch (
+        status?.toUpperCase() // Use uppercase for case-insensitivity
+    ) {
+        case "PENDING":
+            return "bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20";
+        case "APPROVED": // Assuming 'APPROVED' might be a status
+            return "bg-green-500/10 text-green-600 hover:bg-green-500/20";
+        case "REJECTED": // Assuming 'REJECTED' might be a status
+            return "bg-red-500/10 text-red-600 hover:bg-red-500/20";
+        case "COMPLETED": // Assuming 'COMPLETED' might be a status
+            return "bg-purple-500/10 text-purple-600 hover:bg-purple-500/20";
         default:
             return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20";
     }
@@ -116,102 +34,152 @@ const getStatusColor = (status: string) => {
 
 export function EventList() {
     const navigate = useNavigate();
+    const { data: events = [] } = useSuspenseQuery(eventsQueryOptions);
+    const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
 
-    const handleNavigate = (eventId: number) => {
-        navigate({ to: `/app/events/${eventId}` });
+    // Create maps for quick lookups
+    const venueMap = new Map(venues.map((venue) => [venue.id, venue.name]));
+
+    const handleNavigate = (eventId: number | undefined) => {
+        if (typeof eventId === "number") {
+            navigate({ to: `/app/events/${eventId}` });
+        } else {
+            console.warn("Attempted to navigate with invalid event ID");
+        }
     };
 
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Upcoming Events</h2>
-                <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="gap-1">
-                        <CalendarClock className="h-3 w-3" />
-                        All Events
-                    </Badge>
+                <h2 className="text-xl font-semibold">Events</h2>
+            </div>
+            {events.length === 0 ? (
+                <div className="text-center text-muted-foreground py-10">
+                    No events found.
                 </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {events.map((event) => (
-                    <Card
-                        key={event.id}
-                        className="overflow-hidden transition-all hover:shadow-md"
-                    >
-                        <CardHeader>
-                            <div className="flex items-start justify-between">
-                                <h3 className="font-medium">{event.title}</h3>
-                                <Badge
-                                    className={`${getStatusColor(event.status)}`}
-                                >
-                                    {event.status.charAt(0).toUpperCase() +
-                                        event.status.slice(1)}
-                                </Badge>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Clock className="h-4 w-4" />
-                                    <span>{event.date}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <MapPin className="h-4 w-4" />
-                                    <span>{event.location}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Users className="h-4 w-4" />
-                                    <span>
-                                        {event.attendees.toLocaleString()}{" "}
-                                        attendees
-                                    </span>
-                                </div>
-                                <div className="space-y-1">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span>Progress</span>
-                                        <span>{event.progress}%</span>
-                                    </div>
-                                    <Progress
-                                        value={event.progress}
-                                        className="h-1"
-                                    />
-                                </div>
-                            </div>
-                        </CardContent>
-                        <Separator />
-                        <CardFooter>
-                            <div className="flex items-center justify-between w-full">
-                                <div className="flex -space-x-2">
-                                    {event.team.map((member, i) => (
-                                        <div
-                                            key={i}
-                                            className="h-6 w-6 rounded-full border-2 border-background bg-muted overflow-hidden"
-                                            title={member.name}
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {events.map((event: Event) => {
+                        let dateDisplayString = "Date not available";
+
+                        if (
+                            typeof event.startTime === "string" &&
+                            typeof event.endTime === "string"
+                        ) {
+                            const startDate = new Date(`${event.startTime}Z`);
+                            const endDate = new Date(`${event.endTime}Z`);
+
+                            if (
+                                !Number.isNaN(startDate.getTime()) &&
+                                !Number.isNaN(endDate.getTime())
+                            ) {
+                                dateDisplayString = formatDateRange(
+                                    startDate,
+                                    endDate,
+                                );
+                            } else {
+                                console.error(
+                                    `Failed to parse dates for event ${event.id}: start='${event.startTime}', end='${event.endTime}'`,
+                                );
+                                dateDisplayString =
+                                    "Invalid date format received";
+                            }
+                        } else {
+                            console.warn(
+                                `Missing or invalid date strings for event ${event.id}: start='${event.startTime}', end='${event.endTime}'`,
+                            );
+                            dateDisplayString = "Date missing";
+                        }
+
+                        // Access organizer details directly from event.organizer
+                        const organizerName = event.organizer
+                            ? `${event.organizer.firstName} ${event.organizer.lastName}`
+                            : "Unknown Organizer";
+                        // const organizerAvatar = event.organizer?.avatarUrl; // Example if avatar URL existed
+
+                        return (
+                            <Card
+                                key={event.id ?? `temp-${Math.random()}`}
+                                className="overflow-hidden transition-all hover:shadow-md flex flex-col" // Added flex flex-col
+                            >
+                                <CardHeader>
+                                    <div className="flex items-start justify-between">
+                                        <h3 className="font-medium">
+                                            {event.eventName}
+                                        </h3>
+                                        <Badge
+                                            className={`${getStatusColor(event.status)}`}
                                         >
-                                            <img
-                                                src={
-                                                    member.avatar ||
-                                                    "/placeholder.svg"
-                                                }
-                                                alt={member.name}
-                                                className="h-full w-full object-cover"
-                                            />
+                                            {event.status
+                                                ? event.status
+                                                      .charAt(0)
+                                                      .toUpperCase() +
+                                                  event.status
+                                                      .slice(1)
+                                                      .toLowerCase()
+                                                : "Unknown"}
+                                        </Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    {" "}
+                                    {/* Added flex-grow */}
+                                    <div className="space-y-3">
+                                        {/* Event Type */}
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <Tag className="h-4 w-4" />
+                                            <span>
+                                                {event.eventType ?? "N/A"}
+                                            </span>
                                         </div>
-                                    ))}
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="flex items-center gap-2 text-sm font-normal"
-                                    onClick={() => handleNavigate(event.id)}
-                                >
-                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                </Button>
-                            </div>
-                        </CardFooter>
-                    </Card>
-                ))}
-            </div>
+                                        {/* Date/Time */}
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <Clock className="h-4 w-4" />
+                                            <span>{dateDisplayString}</span>
+                                        </div>
+                                        {/* Venue */}
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <MapPin className="h-4 w-4" />
+                                            <span>
+                                                {venueMap.get(
+                                                    event.eventVenueId,
+                                                ) ?? "Unknown Venue"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                                <Separator />
+                                <CardFooter className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Avatar className="h-8 w-8">
+                                            {/* Add AvatarImage if URL is available */}
+                                            {/* <AvatarImage src={organizerAvatar} /> */}
+                                            <AvatarFallback>
+                                                {getInitials(organizerName)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-xs text-muted-foreground">
+                                            {organizerName}
+                                        </span>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="flex items-center gap-2 text-sm font-normal" // Removed ml-auto
+                                        onClick={() => handleNavigate(event.id)}
+                                        disabled={typeof event.id !== "number"}
+                                    >
+                                        <span className="sr-only">
+                                            View Details
+                                        </span>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

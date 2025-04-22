@@ -60,7 +60,7 @@ const eventTypes = ["External", "Program-based", "Admin", "SSG/Advocay-based"];
 
 export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
     const { data: currentUser } = useCurrentUser();
-    const context = useRouteContext({ from: "/app/events" });
+    const context = useRouteContext({ from: "/app/events/timeline" });
     const queryClient = context.queryClient;
 
     // Remove local isSubmitting state, use mutation.isPending instead
@@ -72,8 +72,8 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
             eventName: "",
             eventType: undefined,
             eventVenueId: undefined,
-            startDateTime: undefined,
-            endDateTime: undefined,
+            startTime: undefined,
+            endTime: undefined,
             approvedLetter: undefined,
         },
     });
@@ -124,8 +124,8 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                 eventName: outputValues.eventName,
                 eventType: outputValues.eventType,
                 eventVenueId: outputValues.eventVenueId,
-                startTime: outputValues.startDateTime.toISOString(),
-                endTime: outputValues.endDateTime.toISOString(),
+                startTime: outputValues.startTime.toISOString(),
+                endTime: outputValues.startTime.toISOString(),
                 organizerId: currentUser.id,
             };
 
@@ -307,7 +307,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                             <div>
                                 <FormField
                                     control={form.control}
-                                    name="startDateTime"
+                                    name="startTime"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>
@@ -340,7 +340,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                             <div>
                                 <FormField
                                     control={form.control}
-                                    name="endDateTime"
+                                    name="endTime"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>
@@ -355,7 +355,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                     disabled={(date) =>
                                                         date <
                                                             (form.getValues(
-                                                                "startDateTime",
+                                                                "startTime",
                                                             ) ||
                                                                 startOfDay(
                                                                     new Date(),

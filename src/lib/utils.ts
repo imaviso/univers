@@ -30,3 +30,46 @@ export const timeOptions = (() => {
     }
     return options;
 })();
+
+export const getInitials = (name: string): string => {
+    if (!name) return "?";
+    const names = name.split(" ");
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return (
+        names[0].charAt(0).toUpperCase() +
+        names[names.length - 1].charAt(0).toUpperCase()
+    );
+};
+
+export const formatDateRange = (start: Date, end: Date): string => {
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        console.error("formatDateRange received invalid Date objects.");
+        return "Invalid date range";
+    }
+    const startFormat = "MMM d, yyyy h:mm a";
+    const endFormatTimeOnly = "h:mm a";
+    const endFormatFull = "MMM d, yyyy h:mm a";
+    if (
+        start.getFullYear() === end.getFullYear() &&
+        start.getMonth() === end.getMonth() &&
+        start.getDate() === end.getDate()
+    ) {
+        return `${format(start, startFormat)} - ${format(end, endFormatTimeOnly)}`;
+    }
+    return `${format(start, startFormat)} to ${format(end, endFormatFull)}`;
+};
+
+export const getStatusColor = (status: string | undefined) => {
+    switch (status?.toUpperCase()) {
+        case "PENDING":
+            return "bg-yellow-500/10 text-yellow-600";
+        case "APPROVED":
+            return "bg-green-500/10 text-green-600";
+        case "REJECTED":
+            return "bg-red-500/10 text-red-600";
+        case "COMPLETED":
+            return "bg-purple-500/10 text-purple-600";
+        default:
+            return "bg-gray-500/10 text-gray-500";
+    }
+};

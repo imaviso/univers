@@ -124,3 +124,15 @@ export type EventDTOPayload = {
     endTime: string; // ISO string
     organizerId: number;
 };
+
+export type Event = {
+    id: number;
+    eventName: string;
+    eventType: string;
+    organizer: UserType; // Changed from organizerId: number
+    approvedLetterPath: string | null; // Assuming it can be null
+    eventVenueId: number;
+    startTime: string;
+    endTime: string;
+    status: string;
+};

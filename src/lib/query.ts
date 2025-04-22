@@ -3,9 +3,10 @@ import {
     getAllEvents,
     getAllUsers,
     getAllVenues,
+    getEventById,
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import type { UserType } from "./types";
 
 export const userQueryOptions = {
@@ -72,6 +73,13 @@ export const eventsQueryOptions = {
         return events;
     },
 };
+
+export const eventQueryOptions = (eventId: string) =>
+    queryOptions({
+        queryKey: ["events", eventId],
+        queryFn: () => getEventById(eventId),
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
 
 export const venuesQueryOptions = {
     queryKey: ["venues"],

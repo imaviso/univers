@@ -678,11 +678,6 @@ export function Calendar() {
                                 </div>
                             </PopoverContent>
                         </Popover>
-                        {role === "SUPER_ADMIN" && (
-                            <CreateEventButton
-                                onClick={() => setIsCreateModalOpen(true)}
-                            />
-                        )}
                     </div>
                 </header>
                 <main className="flex-1 overflow-auto p-6">
@@ -691,14 +686,14 @@ export function Calendar() {
                     {calendarView === "day" && renderDayView()}
                 </main>
             </div>
-            <EventModal
+            {/* <EventModal
                 isOpen={isCreateModalOpen}
                 onClose={() => {
                     setIsCreateModalOpen(false);
                     setCreateEventDate(null);
                 }}
                 initialDate={createEventDate}
-            />
+            /> */}
             <EventDetailsModal
                 isOpen={isDetailsModalOpen}
                 onClose={() => setIsDetailsModalOpen(false)}

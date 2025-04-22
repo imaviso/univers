@@ -126,8 +126,8 @@ export const eventSchema = v.pipe(
             v.integer("Venue ID must be an integer"),
             v.minValue(1, "Please select a valid facility."), // Ensure a positive ID
         ),
-        startDateTime: v.date("Start date is required"),
-        endDateTime: v.date("End date is required"),
+        startTime: v.date("Start date is required"),
+        endTime: v.date("End date is required"),
         approvedLetter: v.pipe(
             v.instance(FileList, "Approved letter is required."), // Use FileList for input type="file"
             v.check((list) => list.length > 0, "Approved letter is required."),
@@ -143,10 +143,10 @@ export const eventSchema = v.pipe(
     }),
     v.forward(
         v.check(
-            (input) => !isBefore(input.endDateTime, input.startDateTime),
+            (input) => !isBefore(input.startTime, input.endTime),
             "End date/time cannot be before start date/time.",
         ),
-        ["endDateTime"],
+        ["endTime"],
     ),
 );
 

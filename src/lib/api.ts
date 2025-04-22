@@ -225,6 +225,25 @@ export const getAllEvents = async () => {
     }
 };
 
+export const getEventById = async (eventId: string) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        // Expect JSON object, handle empty success
+        const data = await handleApiResponse(response, true);
+        return data ?? {}; // Default to empty object
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during fetching event with ID ${eventId}.`,
+              );
+    }
+};
+
 export const createEvent = async (
     eventDTO: EventDTOPayload,
     approvedLetter: File,
