@@ -362,12 +362,9 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                     }
                                                     disabled={(date) =>
                                                         date <
-                                                            (form.getValues(
-                                                                "startTime",
+                                                            startOfDay(
+                                                                new Date(),
                                                             ) ||
-                                                                startOfDay(
-                                                                    new Date(),
-                                                                )) ||
                                                         // Use mutation pending state
                                                         createEventMutation.isPending
                                                     }

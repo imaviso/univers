@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Dialog,
     DialogContent,
@@ -24,17 +25,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useEffect, useState } from "react"; // Removed useRef
 import {
-    equipmentDataSchema,
-    ImageSchema, // Keep ImageSchema for validation if needed separately
     type EquipmentDTOInput,
+    ImageSchema, // Keep ImageSchema for validation if needed separately
+    equipmentDataSchema,
 } from "@/lib/schema";
-import * as v from "valibot";
-import { STATUS_EQUIPMENT, type Equipment } from "@/lib/types";
-import { useForm } from "react-hook-form";
+import { type Equipment, STATUS_EQUIPMENT } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { UploadCloud, X } from "lucide-react"; // Import icons
+import { useEffect, useState } from "react"; // Removed useRef
+import { useForm } from "react-hook-form";
+import * as v from "valibot";
 import {
     FileUpload,
     FileUploadDropzone,
@@ -44,7 +45,6 @@ import {
     FileUploadItemPreview,
     FileUploadList,
 } from "../ui/file-upload"; // Import FileUpload components
-import { UploadCloud, X } from "lucide-react"; // Import icons
 
 // Default values based on EquipmentDTOInput
 const defaultValues: EquipmentDTOInput = {

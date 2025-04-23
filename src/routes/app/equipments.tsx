@@ -1,3 +1,5 @@
+import ErrorPage from "@/components/ErrorPage";
+import PendingPage from "@/components/PendingPage";
 import { EquipmentFormDialog } from "@/components/equipment-inventory/equipmentFormDialog";
 import { EquipmentReservationFormDialog } from "@/components/equipment-reservation/equipmentReservationForm";
 import UserReservations from "@/components/equipment-reservation/userReservation";
@@ -36,10 +38,14 @@ import {
     editEquipment,
 } from "@/lib/api";
 import { allNavigation } from "@/lib/navigation";
-import { equipmentsQueryOptions, useCurrentUser } from "@/lib/query"; // Import query options and user hook
+import {
+    equipmentsQueryOptions,
+    useCurrentUser,
+    usersQueryOptions,
+} from "@/lib/query"; // Import query options and user hook
 import type { EquipmentDTOInput } from "@/lib/schema";
 import { type Equipment, STATUS_EQUIPMENT } from "@/lib/types"; // Import updated Equipment type
-import { useMutation, useQuery } from "@tanstack/react-query"; // Import useQuery
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import useQuery
 import {
     createFileRoute,
     redirect,
@@ -91,8 +97,6 @@ const venues = [
 ];
 
 export const Route = createFileRoute("/app/equipments")({
-    component: EquipmentInventory,
-    // beforeLoad remains the same
     beforeLoad: async ({ location, context }) => {
         const navigationItem = allNavigation.find((item) => {
             return (
@@ -117,6 +121,15 @@ export const Route = createFileRoute("/app/equipments")({
             });
         }
     },
+    component: EquipmentInventory,
+    errorComponent: () => <ErrorPage />,
+    pendingComponent: () => <PendingPage />,
+    // loader: async ({ context }) => {
+    //     context.queryClient.ensureQueryData(equipmentsQueryOptions(context.userId));
+    //     if ("role" in context && context.role === "SUPER_ADMIN") {
+    //         context.queryClient.ensureQueryData(usersQueryOptions);
+    //     }
+    // },
 });
 
 export function EquipmentInventory() {
@@ -131,7 +144,7 @@ export function EquipmentInventory() {
         isLoading,
         isError,
         error,
-    } = useQuery(equipmentsQueryOptions(currentUser?.id));
+    } = useSuspenseQuery(equipmentsQueryOptions(currentUser?.id));
 
     // State
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
