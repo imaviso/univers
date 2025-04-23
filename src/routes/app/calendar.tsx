@@ -54,7 +54,7 @@ export const Route = createFileRoute("/app/calendar")({
 
         if (!isAuthorized) {
             throw redirect({
-                to: "/auth/login",
+                to: "/login",
                 search: {
                     redirect: location.href,
                 },

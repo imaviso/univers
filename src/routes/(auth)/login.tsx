@@ -1,7 +1,7 @@
 import LoginForm from "@/components/auth/loginForm";
 import { authNavigation } from "@/lib/navigation";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-export const Route = createFileRoute("/auth/login")({
+export const Route = createFileRoute("/(auth)/login")({
     component: LoginPage,
     beforeLoad: async ({ location, context }) => {
         const navigationItem = authNavigation.find((item) => {

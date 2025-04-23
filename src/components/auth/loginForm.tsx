@@ -148,7 +148,7 @@ export default function LoginForm() {
             <CardFooter className="flex flex-col space-y-4 border-t">
                 <div className="text-sm text-muted-foreground text-center">
                     <Link
-                        to="/auth/forgot-password"
+                        to="/forgot-password"
                         className="text-primary underline-offset-4 hover:underline"
                     >
                         Forgot your password?
@@ -157,7 +157,7 @@ export default function LoginForm() {
                 <div className="text-sm text-muted-foreground text-center">
                     Don't have an account?{" "}
                     <Link
-                        to="/auth/register"
+                        to="/register"
                         className="text-primary underline-offset-4 hover:underline"
                     >
                         Register

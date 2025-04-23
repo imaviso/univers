@@ -207,12 +207,12 @@ export default function ForgotPasswordForm() {
                         password.
                     </p>
                     <Button asChild className="w-full">
-                        <Link to="/auth/login">Go to Login</Link>
+                        <Link to="/login">Go to Login</Link>
                     </Button>
                 </CardContent>
                 <CardFooter className="flex justify-center border-t px-6 py-4">
                     <Link
-                        to="/auth/login"
+                        to="/login"
                         className="text-sm text-primary flex items-center hover:underline"
                     >
                         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -582,7 +582,7 @@ export default function ForgotPasswordForm() {
 
             <CardFooter className="flex justify-center border-t">
                 <Link
-                    to="/auth/login"
+                    to="/login"
                     className="text-sm text-primary flex items-center hover:underline"
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" />

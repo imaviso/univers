@@ -78,7 +78,7 @@ export default function RegistrationForm() {
             );
             console.log(formData);
             localStorage.setItem("userEmail", formData.email);
-            navigate({ from: "/auth/register", to: "/auth/verify-email" });
+            navigate({ from: "/register", to: "/verify-email" });
             toast.success("Registration successful! Please check your email.");
             setFormData(initialRegistrationFormState);
             setCurrentStep(0);
@@ -116,7 +116,7 @@ export default function RegistrationForm() {
                 <div className="text-sm text-muted-foreground">
                     Already have an account?{" "}
                     <Link
-                        to="/auth/login"
+                        to="/login"
                         className="text-primary underline-offset-4 hover:underline"
                     >
                         Login

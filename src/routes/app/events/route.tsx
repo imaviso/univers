@@ -34,7 +34,7 @@ export const Route = createFileRoute("/app/events")({
 
         if (!isAuthorized) {
             throw redirect({
-                to: "/auth/login",
+                to: "/login",
                 search: {
                     redirect: location.href,
                 },

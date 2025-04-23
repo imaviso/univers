@@ -1,7 +1,7 @@
 import RegistrationForm from "@/components/auth/registerForm";
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/auth/register")({
+export const Route = createFileRoute("/(auth)/register")({
     component: RegisterPage,
 });
 

@@ -24,7 +24,7 @@ export default function ErrorPage() {
 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
                     <Button asChild variant="outline">
-                        <Link to="/auth/login">
+                        <Link to="/login">
                             <Home className="mr-2 h-4 w-4" />
                             Back to Home
                         </Link>

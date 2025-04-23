@@ -103,6 +103,13 @@ export const settingsNavigation = [
             "VENUE_OWNER",
             "VPAA",
             "VP_ADMIN",
+            "MSDO",
+            "OPC",
+            "CORE",
+            "TSG",
+            "SSD",
+            "FAO",
+            "DEPT_HEAD",
         ],
     },
 ];
@@ -110,7 +117,7 @@ export const settingsNavigation = [
 export const authNavigation = [
     {
         name: "Login",
-        href: "/auth/login",
+        href: "/login",
         icon: Home,
         roles: [
             "SUPER_ADMIN",
@@ -119,6 +126,13 @@ export const authNavigation = [
             "VENUE_OWNER",
             "VPAA",
             "VP_ADMIN",
+            "MSDO",
+            "OPC",
+            "CORE",
+            "TSG",
+            "SSD",
+            "FAO",
+            "DEPT_HEAD",
         ],
     },
 ];

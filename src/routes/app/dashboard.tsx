@@ -45,7 +45,7 @@ export const Route = createFileRoute("/app/dashboard")({
 
         if (!isAuthorized) {
             throw redirect({
-                to: "/auth/login",
+                to: "/login",
                 search: {
                     redirect: location.href,
                 },

@@ -114,7 +114,7 @@ export const Route = createFileRoute("/app/equipments")({
 
         if (!isAuthorized) {
             throw redirect({
-                to: "/auth/login",
+                to: "/login",
                 search: {
                     redirect: location.href,
                 },

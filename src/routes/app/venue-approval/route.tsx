@@ -29,7 +29,7 @@ export const Route = createFileRoute("/app/venue-approval")({
 
         if (!isAuthorized) {
             throw redirect({
-                to: "/auth/login",
+                to: "/login",
                 search: {
                     redirect: location.href,
                 },

@@ -27,7 +27,7 @@ export const Route = createFileRoute("/app/notifications")({
 
         if (!isAuthorized) {
             throw redirect({
-                to: "/auth/login",
+                to: "/login",
                 search: {
                     redirect: location.href,
                 },

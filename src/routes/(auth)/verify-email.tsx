@@ -1,6 +1,6 @@
 import { InputOTPForm } from "@/components/auth/otp-form";
 import { createFileRoute } from "@tanstack/react-router";
-export const Route = createFileRoute("/auth/verify-email")({
+export const Route = createFileRoute("/(auth)/verify-email")({
     component: VerifyEmailPage,
 });
 

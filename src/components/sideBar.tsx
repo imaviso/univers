@@ -52,7 +52,7 @@ export function Sidebar() {
         try {
             await userSignOut();
             queryClient.clear();
-            navigate({ to: "/auth/login" });
+            navigate({ to: "/login" });
         } catch (error) {
             console.error("Logout error:", error);
         }

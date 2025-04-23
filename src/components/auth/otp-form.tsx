@@ -25,13 +25,17 @@ import { userResendVerificationCode, verifyOTP } from "@/lib/auth";
 import { type OtpInput, OtpSchema } from "@/lib/schema";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useNavigate, useRouter } from "@tanstack/react-router";
+import { redirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 export function InputOTPForm() {
+    const userEmail = localStorage.getItem("userEmail");
+    if (userEmail === null) {
+        throw redirect({ to: "/login", replace: true });
+    }
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const navigate = useNavigate();
     const router = useRouter();
@@ -44,18 +48,12 @@ export function InputOTPForm() {
         },
     });
 
-    const userEmail = localStorage.getItem("userEmail");
-    if (userEmail === null) {
-        navigate({ to: "/auth/login" });
-        return null;
-    }
-
     async function onSubmit(data: OtpInput) {
         // userEmail is guaranteed to be non-null here due to the check above
         try {
             setIsLoading(true);
             await verifyOTP(userEmail!, data.code);
-            navigate({ to: "/auth/login" });
+            navigate({ to: "/login" });
             toast.success("Verification successful! You can now log in.");
             localStorage.removeItem("userEmail");
         } catch (error) {
