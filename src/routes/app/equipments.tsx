@@ -132,7 +132,7 @@ export const Route = createFileRoute("/app/equipments")({
     // },
 });
 
-export function EquipmentInventory() {
+function EquipmentInventory() {
     const context = useRouteContext({ from: "/app/equipments" });
     const role = "role" in context ? context.role : "USER";
     const { data: currentUser } = useCurrentUser();
