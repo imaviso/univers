@@ -1,6 +1,17 @@
-import { isBefore, isSameDay, setHours, setMinutes } from "date-fns"; // Import date-fns functions
+import { isBefore } from "date-fns"; // Import date-fns functions
 import * as v from "valibot";
+import type { EventInputType, EventOutputType } from "./types"; // Adjust the import path as needed
 
+export const ImageSchema = v.pipe(
+    v.instance(File, "Image file is required."), // Check if it's a File object
+    v.mimeType(
+        ["image/jpeg", "image/png", "image/webp"], // Adjust allowed image types
+        "Invalid file type. Please select a JPG, PNG, or WEBP image.",
+    ),
+    v.maxSize(1024 * 1024 * 5, "Image file too large (max 5MB)."), // Adjust max size as needed
+);
+
+export type ImageInput = v.InferInput<typeof ImageSchema>;
 export const personalInfoSchema = v.object({
     idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),
     firstName: v.pipe(v.string(), v.nonEmpty("First name is required")),
@@ -129,21 +140,31 @@ export const eventSchema = v.pipe(
         startTime: v.date("Start date is required"),
         endTime: v.date("End date is required"),
         approvedLetter: v.pipe(
-            v.instance(FileList, "Approved letter is required."), // Use FileList for input type="file"
-            v.check((list) => list.length > 0, "Approved letter is required."),
-            v.check((list) => list.length <= 1, "Only one file allowed."),
-            v.transform((list) => list[0]), // Extract the single File object
-            v.pipe(
-                v.file("Please select a valid file."),
-                // Add mimeType/maxSize checks if necessary, matching backend expectations
-                // v.mimeType(['image/jpeg', 'image/png', 'application/pdf'], 'Invalid file type.'),
-                v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."),
+            v.array(
+                v.pipe(
+                    v.instance(File, "Each item must be a file."),
+                    v.mimeType(
+                        [
+                            "application/pdf",
+                            "image/jpeg",
+                            "image/png",
+                            "image/webp",
+                        ],
+                        "Invalid file type. Please select a PDF or image.",
+                    ),
+                    v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."), // Validation 2 for the element
+                ),
+                "Approved letter must be a list of files.", // Message for the array schema itself
             ),
+            // Validations/transformations on the array as a whole
+            v.check((arr) => arr.length > 0, "Approved letter is required."),
+            v.check((arr) => arr.length <= 1, "Only one file allowed."),
+            v.transform((arr) => arr[0]), // Transform File[] to single File
         ),
     }),
     v.forward(
         v.check(
-            (input) => !isBefore(input.startTime, input.endTime),
+            (input) => isBefore(input.startTime, input.endTime),
             "End date/time cannot be before start date/time.",
         ),
         ["endTime"],
@@ -351,31 +372,40 @@ export type EquipmentReservationFormInput = v.InferInput<
 >;
 
 export const venueSchema = v.object({
-    name: v.pipe(v.string(), v.nonEmpty("Venue name is required.")),
-    location: v.pipe(v.string(), v.nonEmpty("Venue location is required.")),
-    image: v.optional(
-        v.union([
-            // Allow empty string if no file is selected initially
-            v.literal(""),
-            // Or validate the file if provided
-            v.pipe(
-                v.file("Please select an image file."),
-                v.mimeType(
-                    ["image/jpeg", "image/png"],
-                    "Please select a JPEG or PNG file.",
-                ),
-                v.maxSize(
-                    1024 * 1024 * 10,
-                    "Please select a file smaller than 10 MB.",
-                ),
-            ),
-        ]),
+    name: v.pipe(
+        v.string("Venue Name is required"),
+        v.nonEmpty("Venue Name is required"),
+    ),
+    location: v.pipe(
+        v.string("Location is required"),
+        v.nonEmpty("Location is required"),
     ),
     venueOwnerId: v.optional(
         v.pipe(
-            v.number("Venue Owner ID must be a number."),
-            v.integer("Venue Owner ID must be an integer."),
-            v.minValue(1, "Invalid Venue Owner ID."),
+            v.number("Venue Owner ID must be a number"),
+            v.integer("Venue Owner ID must be an integer"),
+            v.minValue(1, "Invalid Venue Owner ID"),
+        ),
+    ),
+    // Update image schema for FileUpload (File[]) and make it optional
+    image: v.optional(
+        v.pipe(
+            v.array(
+                // Array of files
+                v.pipe(
+                    // Schema for each file in the array
+                    v.instance(File, "Each item must be a file."),
+                    v.mimeType(
+                        ["image/jpeg", "image/png", "image/webp"],
+                        "Invalid file type. Please select a JPG, PNG, or WEBP.",
+                    ),
+                    v.maxSize(1024 * 1024 * 10, "File too large (max 10MB)."),
+                ),
+                "Image must be a list of files.", // Message for array schema
+            ),
+            // Validations/transformations on the array as a whole
+            v.check((arr) => arr.length <= 1, "Only one file allowed."),
+            v.transform((arr) => (arr.length > 0 ? arr[0] : undefined)), // Transform File[] to single File or undefined
         ),
     ),
 });
@@ -411,3 +441,30 @@ export const setNewPasswordSchema = v.pipe(
     ),
 );
 export type SetNewPasswordInput = v.InferInput<typeof setNewPasswordSchema>;
+
+export const EquipmentStatusSchema = v.picklist([
+    "APPROVED",
+    "PENDING",
+    "CANCELED",
+    "DEFECT",
+    "MAINTENANCE",
+    "NEED_REPLACEMENT",
+    "NEW",
+]);
+
+export type EquipmentStatus = v.InferInput<typeof EquipmentStatusSchema>;
+
+export const equipmentDataSchema = v.object({
+    name: v.pipe(v.string(), v.nonEmpty("Equipment name is required.")),
+    brand: v.pipe(v.string(), v.nonEmpty("Brand is required.")),
+    availability: v.boolean("Availability must be true or false."),
+    quantity: v.pipe(
+        v.number("Quantity must be a number."),
+        v.integer("Quantity must be a whole number."),
+        v.minValue(0, "Quantity cannot be negative."),
+    ),
+    status: v.pipe(EquipmentStatusSchema, v.nonEmpty("Status is required.")),
+});
+
+export type EquipmentDTOInput = v.InferInput<typeof equipmentDataSchema>;
+export type EquipmentDTOOutput = v.InferOutput<typeof equipmentDataSchema>;

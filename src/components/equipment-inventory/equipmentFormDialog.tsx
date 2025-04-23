@@ -6,8 +6,17 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input"; // Keep Input
+import { Label } from "@/components/ui/label"; // Keep Label
 import {
     Select,
     SelectContent,
@@ -15,395 +24,414 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useEffect, useState } from "react"; // Removed useRef
+import {
+    equipmentDataSchema,
+    ImageSchema, // Keep ImageSchema for validation if needed separately
+    type EquipmentDTOInput,
+} from "@/lib/schema";
+import * as v from "valibot";
+import { STATUS_EQUIPMENT, type Equipment } from "@/lib/types";
+import { useForm } from "react-hook-form";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import {
+    FileUpload,
+    FileUploadDropzone,
+    FileUploadItem,
+    FileUploadItemDelete,
+    FileUploadItemMetadata,
+    FileUploadItemPreview,
+    FileUploadList,
+} from "../ui/file-upload"; // Import FileUpload components
+import { UploadCloud, X } from "lucide-react"; // Import icons
+
+// Default values based on EquipmentDTOInput
+const defaultValues: EquipmentDTOInput = {
+    name: "",
+    brand: "",
+    availability: true,
+    quantity: 1,
+    status: "NEW",
+};
 
 interface EquipmentFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (equipmentData: any) => void;
-    equipment?: any;
-    categories: string[];
-    locations: string[];
+    equipment?: Equipment;
+    onSubmit: (data: EquipmentDTOInput, imageFile: File | null) => void;
+    isMutating: boolean;
 }
 
 export function EquipmentFormDialog({
     isOpen,
     onClose,
-    onSubmit,
     equipment,
-    categories,
-    locations,
+    onSubmit,
+    isMutating,
 }: EquipmentFormDialogProps) {
-    const [formData, setFormData] = useState({
-        id: 0,
-        name: "",
-        category: "",
-        location: "",
-        status: "available",
-        condition: "good",
-        serialNumber: "",
-        purchaseDate: "",
-        lastMaintenance: "",
-        nextMaintenance: "",
-        notes: "",
+    // State specifically for the image file, managed by FileUpload's onValueChange
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    // State for validation errors specific to the image
+    const [imageError, setImageError] = useState<string | null>(null);
+    // State to hold the initial image URL for edit mode preview
+    const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
+
+    const formDefaultValues = equipment
+        ? {
+              name: equipment.name,
+              brand: equipment.brand,
+              availability: equipment.availability,
+              quantity: equipment.quantity,
+              status: equipment.status,
+          }
+        : defaultValues;
+
+    const form = useForm<EquipmentDTOInput>({
+        resolver: valibotResolver(equipmentDataSchema),
+        defaultValues: formDefaultValues,
+        mode: "onChange",
     });
 
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [activeTab, setActiveTab] = useState("basic");
-
-    // Reset form when dialog opens/closes or equipment changes
     useEffect(() => {
         if (isOpen) {
-            if (equipment) {
-                setFormData({
-                    id: equipment.id,
-                    name: equipment.name,
-                    category: equipment.category,
-                    location: equipment.location,
-                    status: equipment.status,
-                    condition: equipment.condition,
-                    serialNumber: equipment.serialNumber,
-                    purchaseDate: equipment.purchaseDate,
-                    lastMaintenance: equipment.lastMaintenance,
-                    nextMaintenance: equipment.nextMaintenance,
-                    notes: equipment.notes,
-                });
+            form.reset(
+                equipment
+                    ? {
+                          name: equipment.name,
+                          brand: equipment.brand,
+                          availability: equipment.availability,
+                          quantity: equipment.quantity,
+                          status: equipment.status,
+                      }
+                    : defaultValues,
+            );
+            // Reset image state
+            setImageFile(null);
+            setImageError(null);
+            // Set initial image URL for preview if editing
+            const previewUrl = equipment?.imagePath
+                ? `/uploads/equipment/${equipment.imagePath.substring(equipment.imagePath.lastIndexOf("/") + 1)}`
+                : null;
+            setInitialImageUrl(previewUrl);
+        }
+    }, [isOpen, equipment, form]);
+
+    // Handle file changes from FileUpload component
+    const handleFileValueChange = (files: File[]) => {
+        const file = files[0] || null; // Get the first file or null
+        setImageError(null); // Clear previous errors
+
+        if (file) {
+            // Validate the selected file using ImageSchema
+            const validationResult = v.safeParse(ImageSchema, file);
+            if (validationResult.success) {
+                setImageFile(file); // Set the valid file
             } else {
-                // Default values for new equipment
-                const today = new Date().toISOString().split("T")[0];
-                const sixMonthsLater = new Date();
-                sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
-
-                setFormData({
-                    id: 0,
-                    name: "",
-                    category: "",
-                    location: "",
-                    status: "available",
-                    condition: "good",
-                    serialNumber: "",
-                    purchaseDate: today,
-                    lastMaintenance: today,
-                    nextMaintenance: sixMonthsLater.toISOString().split("T")[0],
-                    notes: "",
-                });
+                // Set error message and clear the file
+                setImageError(
+                    v.flatten(validationResult.issues).root?.[0] ??
+                        "Invalid image file.",
+                );
+                setImageFile(null); // Ensure invalid file isn't kept
+                // Optionally, trigger re-render of FileUpload to clear its internal state if needed
+                // This might require passing a key that changes or using FileUpload's clear mechanism
             }
-            setErrors({});
-            setActiveTab("basic");
-        }
-    }, [isOpen, equipment]);
-
-    const handleChange = (field: string, value: string) => {
-        setFormData({ ...formData, [field]: value });
-
-        // Clear error for this field if it exists
-        if (errors[field]) {
-            const newErrors = { ...errors };
-            delete newErrors[field];
-            setErrors(newErrors);
+        } else {
+            setImageFile(null); // Clear file if array is empty
         }
     };
 
-    const validateForm = () => {
-        const newErrors: Record<string, string> = {};
+    const processSubmit = (data: EquipmentDTOInput) => {
+        // Reset image error before submit validation
+        setImageError(null);
 
-        if (!formData.name.trim()) {
-            newErrors.name = "Name is required";
+        // Validate image presence for new equipment
+        if (!equipment && !imageFile) {
+            setImageError("Image file is required.");
+            return;
         }
 
-        if (!formData.category) {
-            newErrors.category = "Category is required";
+        // Validate the current imageFile again just before submit (optional safeguard)
+        if (imageFile) {
+            const validationResult = v.safeParse(ImageSchema, imageFile);
+            if (!validationResult.success) {
+                setImageError(
+                    v.flatten(validationResult.issues).root?.[0] ??
+                        "Invalid image file.",
+                );
+                return; // Prevent submission with invalid file
+            }
         }
 
-        if (!formData.location) {
-            newErrors.location = "Location is required";
-        }
-
-        if (!formData.serialNumber.trim()) {
-            newErrors.serialNumber = "Serial number is required";
-        }
-
-        if (!formData.purchaseDate) {
-            newErrors.purchaseDate = "Purchase date is required";
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        // Call the onSubmit passed from the parent component
+        onSubmit(data, imageFile);
     };
 
-    const handleSubmit = () => {
-        if (validateForm()) {
-            onSubmit(formData);
-        }
-    };
+    // Determine the files array for FileUpload based on state
+    const currentFiles = imageFile ? [imageFile] : [];
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] overflow-auto max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>
                         {equipment ? "Edit Equipment" : "Add New Equipment"}
                     </DialogTitle>
                 </DialogHeader>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="basic">
-                            Basic Information
-                        </TabsTrigger>
-                        <TabsTrigger value="details">
-                            Details & Maintenance
-                        </TabsTrigger>
-                    </TabsList>
+                <Form {...form}>
+                    <form
+                        id="equipment-form"
+                        onSubmit={form.handleSubmit(processSubmit)}
+                        className="space-y-4 py-4"
+                    >
+                        {/* ... (Name, Brand, Quantity, Status, Availability FormFields remain the same) ... */}
+                        {/* Name */}
+                        <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Equipment Name</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="e.g., Projector Screen"
+                                            {...field}
+                                            disabled={isMutating}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                    <TabsContent value="basic" className="space-y-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Equipment Name</Label>
-                            <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) =>
-                                    handleChange("name", e.target.value)
-                                }
-                                placeholder="Enter equipment name"
+                        {/* Brand */}
+                        <FormField
+                            control={form.control}
+                            name="brand"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Brand</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="e.g., Epson, Dell"
+                                            {...field}
+                                            disabled={isMutating}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Quantity */}
+                            <FormField
+                                control={form.control}
+                                name="quantity"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Quantity</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                {...field}
+                                                onChange={(e) =>
+                                                    field.onChange(
+                                                        Number.parseInt(
+                                                            e.target.value,
+                                                            10,
+                                                        ) || 0,
+                                                    )
+                                                }
+                                                value={field.value || 0}
+                                                disabled={isMutating}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
                             />
-                            {errors.name && (
+
+                            {/* Status */}
+                            <FormField
+                                control={form.control}
+                                name="status"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Status</FormLabel>
+                                        <Select
+                                            onValueChange={field.onChange}
+                                            value={field.value}
+                                            disabled={isMutating}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {STATUS_EQUIPMENT.map(
+                                                    (statusOption) => (
+                                                        <SelectItem
+                                                            key={
+                                                                statusOption.value
+                                                            }
+                                                            value={
+                                                                statusOption.value
+                                                            }
+                                                        >
+                                                            {statusOption.label}
+                                                        </SelectItem>
+                                                    ),
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        {/* Availability */}
+                        <FormField
+                            control={form.control}
+                            name="availability"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            disabled={isMutating}
+                                        />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none">
+                                        <FormLabel>Is Available?</FormLabel>
+                                    </div>
+                                    <FormMessage className="pl-4" />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Image Upload using FileUpload */}
+                        <div className="grid gap-2">
+                            <Label>Image</Label>
+                            <FileUpload
+                                value={currentFiles} // Pass the managed file state
+                                onValueChange={handleFileValueChange} // Handle changes and validation
+                                maxFiles={1}
+                                maxSize={5 * 1024 * 1024} // 5MB
+                                accept="image/jpeg, image/png, image/webp" // Match schema
+                                disabled={isMutating}
+                                className="relative rounded-lg border border-input bg-background"
+                            >
+                                <FileUploadDropzone className="border-dashed p-4">
+                                    <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
+                                    <p className="mb-1 text-sm text-muted-foreground">
+                                        <span className="font-semibold">
+                                            Click or drag image
+                                        </span>{" "}
+                                        to upload
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        JPG, PNG, WEBP (max 5MB)
+                                    </p>
+                                </FileUploadDropzone>
+                                <FileUploadList className="p-3">
+                                    {/* Display initial image if editing and no new file selected */}
+                                    {!imageFile && initialImageUrl && (
+                                        <div className="relative flex items-center gap-2.5 rounded-md border p-2">
+                                            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                                                <img
+                                                    src={initialImageUrl}
+                                                    alt="Current equipment"
+                                                    className="size-full rounded object-cover"
+                                                    onError={(e) => {
+                                                        e.currentTarget.src =
+                                                            "/placeholder.svg";
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex min-w-0 flex-1 flex-col">
+                                                <span className="truncate text-sm font-medium text-muted-foreground">
+                                                    Current Image
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    Will be replaced if new
+                                                    image is selected
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* Display selected file */}
+                                    {currentFiles.map((file) => (
+                                        <FileUploadItem
+                                            key={file.name}
+                                            value={file}
+                                            className="p-2"
+                                        >
+                                            <FileUploadItemPreview>
+                                                {/* Default preview handles images */}
+                                            </FileUploadItemPreview>
+                                            <FileUploadItemMetadata />
+                                            <FileUploadItemDelete asChild>
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="size-7"
+                                                    disabled={isMutating}
+                                                >
+                                                    <X className="size-4" />
+                                                </Button>
+                                            </FileUploadItemDelete>
+                                        </FileUploadItem>
+                                    ))}
+                                </FileUploadList>
+                            </FileUpload>
+                            {/* Display validation error */}
+                            {imageError && (
                                 <p className="text-sm text-destructive">
-                                    {errors.name}
+                                    {imageError}
                                 </p>
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="category">Category</Label>
-                                <Select
-                                    value={formData.category}
-                                    onValueChange={(value) =>
-                                        handleChange("category", value)
-                                    }
-                                >
-                                    <SelectTrigger
-                                        className="w-full"
-                                        id="category"
-                                    >
-                                        <SelectValue placeholder="Select category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {categories.map((category) => (
-                                            <SelectItem
-                                                key={category}
-                                                value={category}
-                                            >
-                                                {category}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {errors.category && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.category}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="location">Location</Label>
-                                <Select
-                                    value={formData.location}
-                                    onValueChange={(value) =>
-                                        handleChange("location", value)
-                                    }
-                                >
-                                    <SelectTrigger
-                                        className="w-full"
-                                        id="location"
-                                    >
-                                        <SelectValue placeholder="Select location" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {locations.map((location) => (
-                                            <SelectItem
-                                                key={location}
-                                                value={location}
-                                            >
-                                                {location}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {errors.location && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.location}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="status">Status</Label>
-                                <Select
-                                    value={formData.status}
-                                    onValueChange={(value) =>
-                                        handleChange("status", value)
-                                    }
-                                >
-                                    <SelectTrigger
-                                        className="w-full"
-                                        id="status"
-                                    >
-                                        <SelectValue placeholder="Select status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="available">
-                                            Available
-                                        </SelectItem>
-                                        <SelectItem value="in-use">
-                                            In Use
-                                        </SelectItem>
-                                        <SelectItem value="maintenance">
-                                            Maintenance
-                                        </SelectItem>
-                                        <SelectItem value="out-of-order">
-                                            Out of Order
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="condition">Condition</Label>
-                                <Select
-                                    value={formData.condition}
-                                    onValueChange={(value) =>
-                                        handleChange("condition", value)
-                                    }
-                                >
-                                    <SelectTrigger
-                                        className="w-full"
-                                        id="condition"
-                                    >
-                                        <SelectValue placeholder="Select condition" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="excellent">
-                                            Excellent
-                                        </SelectItem>
-                                        <SelectItem value="good">
-                                            Good
-                                        </SelectItem>
-                                        <SelectItem value="fair">
-                                            Fair
-                                        </SelectItem>
-                                        <SelectItem value="poor">
-                                            Poor
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="serialNumber">Serial Number</Label>
-                            <Input
-                                id="serialNumber"
-                                value={formData.serialNumber}
-                                onChange={(e) =>
-                                    handleChange("serialNumber", e.target.value)
-                                }
-                                placeholder="Enter serial number"
-                            />
-                            {errors.serialNumber && (
-                                <p className="text-sm text-destructive">
-                                    {errors.serialNumber}
-                                </p>
-                            )}
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="details" className="space-y-4 py-4">
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="purchaseDate">
-                                    Purchase Date
-                                </Label>
-                                <Input
-                                    id="purchaseDate"
-                                    type="date"
-                                    value={formData.purchaseDate}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "purchaseDate",
-                                            e.target.value,
-                                        )
-                                    }
-                                />
-                                {errors.purchaseDate && (
-                                    <p className="text-sm text-destructive">
-                                        {errors.purchaseDate}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="lastMaintenance">
-                                    Last Maintenance
-                                </Label>
-                                <Input
-                                    id="lastMaintenance"
-                                    type="date"
-                                    value={formData.lastMaintenance}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "lastMaintenance",
-                                            e.target.value,
-                                        )
-                                    }
-                                />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="nextMaintenance">
-                                    Next Maintenance
-                                </Label>
-                                <Input
-                                    id="nextMaintenance"
-                                    type="date"
-                                    value={formData.nextMaintenance}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            "nextMaintenance",
-                                            e.target.value,
-                                        )
-                                    }
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="notes">Notes</Label>
-                            <Textarea
-                                id="notes"
-                                value={formData.notes}
-                                onChange={(e) =>
-                                    handleChange("notes", e.target.value)
-                                }
-                                placeholder="Enter additional notes or specifications"
-                                rows={4}
-                            />
-                        </div>
-                    </TabsContent>
-                </Tabs>
+                        {form.formState.errors.root?.serverError && (
+                            <p className="text-sm text-destructive text-center">
+                                {form.formState.errors.root.serverError.message}
+                            </p>
+                        )}
+                    </form>
+                </Form>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onClose}
+                        disabled={isMutating}
+                    >
                         Cancel
                     </Button>
-                    <Button onClick={handleSubmit}>
-                        {equipment ? "Save Changes" : "Add Equipment"}
+                    <Button
+                        type="submit"
+                        form="equipment-form"
+                        disabled={
+                            isMutating ||
+                            !form.formState.isValid ||
+                            (!equipment && !imageFile) || // Image required for new
+                            !!imageError // Disable if image error exists
+                        }
+                    >
+                        {isMutating
+                            ? "Saving..."
+                            : equipment
+                              ? "Save Changes"
+                              : "Add Equipment"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

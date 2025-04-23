@@ -1,6 +1,18 @@
 import { API_BASE_URL } from "./auth";
-import type { EventInput, EventOutput, VenueInput } from "./schema";
-import type { EventDTOPayload, UserType, Venue } from "./types";
+import type {
+    EquipmentDTOInput,
+    EquipmentDTOOutput,
+    EventInput,
+    EventOutput,
+    VenueInput,
+} from "./schema";
+import type {
+    Equipment,
+    EventDTOBackendResponse,
+    EventDTOPayload,
+    UserType,
+    Venue,
+} from "./types";
 
 // ... other imports ...
 
@@ -247,33 +259,28 @@ export const getEventById = async (eventId: string) => {
 export const createEvent = async (
     eventDTO: EventDTOPayload,
     approvedLetter: File,
-): Promise<EventOutput> => {
-    // Added return type Promise<EventOutput>
+): Promise<EventDTOBackendResponse> => {
+    // Update return type if needed
     try {
         const formData = new FormData();
 
-        // Append the DTO as a JSON string blob
-        // The backend expects a part named "event"
         formData.append(
             "event",
-            new Blob([JSON.stringify(eventDTO)], { type: "application/json" }),
+            new Blob([JSON.stringify(eventDTO)], {
+                type: "application/json",
+            }),
         );
 
-        // Append the file
-        // The backend expects a part named "approvedLetter"
         formData.append("approvedLetter", approvedLetter, approvedLetter.name);
 
         const response = await fetch(`${API_BASE_URL}/events`, {
             method: "POST",
-            // Do NOT set Content-Type header, the browser does it for FormData
             credentials: "include",
             body: formData,
         });
 
-        // Backend returns the created EventDTO as JSON on success (201)
-        return await handleApiResponse(response, true); // Expect JSON back
+        return await handleApiResponse(response, true);
     } catch (error) {
-        // Rethrow specific error or a generic one
         throw error instanceof Error
             ? error
             : new Error("An unexpected error occurred during creating event.");
@@ -381,3 +388,157 @@ export const deleteVenue = async (venueId: number) => {
 //         throw error instanceof Error ? error : new Error("An unexpected error occurred during bulk deleting venues.");
 //     }
 // };
+//
+
+export const getAllEquipments = async (
+    userId: number,
+): Promise<Equipment[]> => {
+    try {
+        const url = new URL(`${API_BASE_URL}/equipments`);
+        url.searchParams.append("userId", userId.toString());
+
+        const response = await fetch(url.toString(), {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        // Expect JSON array, handle empty success
+        const data = await handleApiResponse(response, true);
+        return data ?? []; // Default to empty array
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during fetching equipments.",
+              );
+    }
+};
+
+export const addEquipment = async ({
+    userId,
+    equipmentData,
+    imageFile,
+}: {
+    userId: number;
+    equipmentData: EquipmentDTOInput;
+    imageFile: File;
+}): Promise<Equipment> => {
+    try {
+        const formData = new FormData();
+
+        formData.append(
+            "equipment",
+            new Blob([JSON.stringify(equipmentData)], {
+                type: "application/json",
+            }),
+        );
+
+        formData.append("image", imageFile, imageFile.name);
+
+        const url = new URL(`${API_BASE_URL}/equipments`);
+        url.searchParams.append("userId", userId.toString());
+
+        const response = await fetch(url.toString(), {
+            method: "POST",
+            credentials: "include",
+            body: formData,
+        });
+        return await handleApiResponse(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during adding equipment.",
+              );
+    }
+};
+
+export const editEquipment = async ({
+    equipmentId,
+    userId, // May be needed for authorization
+    equipmentData,
+    imageFile,
+}: {
+    equipmentId: number;
+    userId: number;
+    equipmentData: EquipmentDTOInput;
+    imageFile?: File | null; // Image might be optional on update
+}): Promise<Equipment> => {
+    console.warn("editEquipment API function not fully implemented.");
+    // Example implementation using FormData (similar to addEquipment)
+    // Adjust method (PUT/PATCH), endpoint, and how image updates are handled
+    try {
+        const formData = new FormData();
+        formData.append(
+            "equipment",
+            new Blob([JSON.stringify(equipmentData)], {
+                type: "application/json",
+            }),
+        );
+        if (imageFile) {
+            formData.append("image", imageFile, imageFile.name);
+        }
+
+        const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`); // Assuming endpoint like /equipments/{id}
+        url.searchParams.append("userId", userId.toString()); // If needed
+
+        const response = await fetch(url.toString(), {
+            method: "PUT", // Or PATCH
+            credentials: "include",
+            body: formData,
+        });
+        return await handleApiResponse(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during editing equipment ${equipmentId}.`,
+              );
+    }
+};
+
+// Placeholder for deleteEquipment - Requires backend implementation
+export const deleteEquipment = async (equipmentId: number): Promise<void> => {
+    console.warn("deleteEquipment API function not fully implemented.");
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/equipments/${equipmentId}`,
+            {
+                method: "DELETE",
+                credentials: "include",
+            },
+        );
+        // Expect No Content (204) or potentially text confirmation
+        await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during deleting equipment ${equipmentId}.`,
+              );
+    }
+};
+
+// Placeholder for bulkDeleteEquipment - Requires backend implementation
+export const bulkDeleteEquipment = async (
+    equipmentIds: number[],
+): Promise<void> => {
+    console.warn("bulkDeleteEquipment API function not fully implemented.");
+    try {
+        const response = await fetch(`${API_BASE_URL}/equipments/bulk-delete`, {
+            // Example endpoint
+            method: "POST", // Or DELETE with body
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ ids: equipmentIds }),
+        });
+        // Expect No Content (204) or potentially text confirmation
+        await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during bulk deleting equipment.",
+              );
+    }
+};

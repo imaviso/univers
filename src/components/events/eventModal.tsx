@@ -39,15 +39,24 @@ import {
 import { createEvent } from "@/lib/api";
 import { eventsQueryOptions, useCurrentUser } from "@/lib/query"; // Import eventsQueryOptions
 import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
-import type { Venue } from "@/lib/types";
+import type { EventDTOPayload, Venue } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation } from "@tanstack/react-query"; // Import mutation hooks
 import { useRouteContext } from "@tanstack/react-router";
 import { startOfDay } from "date-fns";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, UploadCloud, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import {
+    FileUpload,
+    FileUploadDropzone,
+    FileUploadItem,
+    FileUploadItemDelete,
+    FileUploadItemMetadata,
+    FileUploadItemPreview,
+    FileUploadList,
+} from "../ui/file-upload";
 import { SmartDatetimeInput } from "../ui/smart-date-picker";
 
 interface EventModalProps {
@@ -74,7 +83,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
             eventVenueId: undefined,
             startTime: undefined,
             endTime: undefined,
-            approvedLetter: undefined,
+            approvedLetter: [],
         },
     });
 
@@ -107,9 +116,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
     });
     // --- End Mutation ---
 
-    const approvedLetterFileList = form.watch("approvedLetter");
-    const approvedLetterFileName = approvedLetterFileList?.[0]?.name;
-
     // Updated onSubmit function
     async function onSubmit(values: EventInput) {
         if (!currentUser?.id) {
@@ -120,13 +126,15 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
         // No need for manual try/catch or setIsSubmitting
         try {
             const outputValues = values as unknown as EventOutput;
-            const eventDTO = {
+            const eventDTO: EventDTOPayload = {
                 eventName: outputValues.eventName,
                 eventType: outputValues.eventType,
                 eventVenueId: outputValues.eventVenueId,
                 startTime: outputValues.startTime.toISOString(),
-                endTime: outputValues.startTime.toISOString(),
-                organizerId: currentUser.id,
+                endTime: outputValues.endTime.toISOString(),
+                organizer: {
+                    id: Number.parseInt(currentUser.id),
+                },
             };
 
             // Trigger the mutation
@@ -377,39 +385,71 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                 <FormField
                                     control={form.control}
                                     name="approvedLetter"
-                                    render={({
-                                        field: {
-                                            value,
-                                            onChange,
-                                            ...fieldProps
-                                        },
-                                    }) => (
+                                    render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>
                                                 Approved Letter
                                             </FormLabel>
                                             <FormControl>
-                                                <Input
-                                                    {...fieldProps}
-                                                    type="file"
+                                                <FileUpload
+                                                    value={field.value} // Expects File[]
+                                                    onValueChange={
+                                                        field.onChange
+                                                    } // Provides File[]
+                                                    maxFiles={1}
+                                                    maxSize={5 * 1024 * 1024} // 5MB
                                                     accept=".pdf, image/*"
-                                                    onChange={(event) =>
-                                                        onChange(
-                                                            event.target.files,
-                                                        )
-                                                    }
-                                                    // Use mutation pending state
                                                     disabled={
                                                         createEventMutation.isPending
                                                     }
-                                                />
+                                                    className="relative rounded-lg border border-input bg-background"
+                                                >
+                                                    <FileUploadDropzone className="border-dashed p-4">
+                                                        <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
+                                                        <p className="mb-1 text-sm text-muted-foreground">
+                                                            <span className="font-semibold">
+                                                                Click or drag
+                                                                file
+                                                            </span>{" "}
+                                                            to upload
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            PDF or Image (max
+                                                            5MB)
+                                                        </p>
+                                                    </FileUploadDropzone>
+                                                    <FileUploadList className="p-3">
+                                                        {field.value?.map(
+                                                            (file) => (
+                                                                <FileUploadItem
+                                                                    key={
+                                                                        file.name
+                                                                    }
+                                                                    value={file}
+                                                                    className="p-2"
+                                                                >
+                                                                    <FileUploadItemPreview>
+                                                                        {/* Default preview handles images/file icons */}
+                                                                    </FileUploadItemPreview>
+                                                                    <FileUploadItemMetadata />
+                                                                    <FileUploadItemDelete
+                                                                        asChild
+                                                                    >
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="icon"
+                                                                            variant="ghost"
+                                                                            className="size-7"
+                                                                        >
+                                                                            <X className="size-4" />
+                                                                        </Button>
+                                                                    </FileUploadItemDelete>
+                                                                </FileUploadItem>
+                                                            ),
+                                                        )}
+                                                    </FileUploadList>
+                                                </FileUpload>
                                             </FormControl>
-                                            {approvedLetterFileName && (
-                                                <FormDescription>
-                                                    Selected file:{" "}
-                                                    {approvedLetterFileName}
-                                                </FormDescription>
-                                            )}
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -420,18 +460,19 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                             <DialogFooter className="col-span-2">
                                 <Button
                                     variant="outline"
+                                    type="button" // Ensure it doesn't submit form
                                     onClick={onClose}
-                                    // Use mutation pending state
                                     disabled={createEventMutation.isPending}
                                 >
                                     Cancel
                                 </Button>
                                 <Button
                                     type="submit"
-                                    // Use mutation pending state
-                                    disabled={createEventMutation.isPending}
+                                    disabled={
+                                        createEventMutation.isPending ||
+                                        !form.formState.isValid // Also disable if form is invalid
+                                    }
                                 >
-                                    {/* Use mutation pending state */}
                                     {createEventMutation.isPending && (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     )}

@@ -1,5 +1,6 @@
 import {
     getAllDepartments,
+    getAllEquipments,
     getAllEvents,
     getAllUsers,
     getAllVenues,
@@ -96,3 +97,15 @@ export const departmentsQueryOptions = {
         return departments;
     },
 };
+
+export const equipmentsQueryOptions = (userId: number | undefined) =>
+    queryOptions({
+        queryKey: ["equipments", userId],
+        queryFn: async () => {
+            if (!userId) return []; // Don't fetch if userId is not available
+            const equipments = await getAllEquipments(userId);
+            return equipments;
+        },
+        enabled: !!userId, // Only run the query if userId is available
+        staleTime: 1000 * 60 * 5, // 5 minutes stale time
+    });

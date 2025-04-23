@@ -16,6 +16,23 @@ export type UserType = {
     createdAt: string;
     updatedAt: string;
 };
+
+export type UserDTO = {
+    id: number;
+    email: string;
+    firstName: string; // Ensure frontend names match backend (firstname vs firstName)
+    lastName: string; // Ensure frontend names match backend (lastname vs lastName)
+    id_number: string | null; // Match backend field name
+    phone_number: string | null; // Match backend field name
+    telephoneNumber: string | null;
+    roles: string; // Or specific role enum/type
+    departmentId: number | null;
+    emailVerified: boolean | null;
+    active: boolean;
+    createdAt: string; // Or Date
+    updatedAt: string; // Or Date
+};
+
 export type UserRole =
     | "SUPER_ADMIN"
     | "VP_ADMIN"
@@ -31,6 +48,35 @@ export type UserRole =
     | "VENUE_OWNER"
     | "EQUIPMENT_OWNER";
 
+export const STATUS_EQUIPMENT = [
+    { value: "APPROVED", label: "Approved" },
+    { value: "PENDING", label: "Pending" },
+    { value: "CANCELED", label: "Canceled" },
+    { value: "DEFECT", label: "Defect" },
+    { value: "MAINTENANCE", label: "Maintenance" },
+    { value: "NEED_REPLACEMENT", label: "Need Replacement" },
+    { value: "NEW", label: "New" },
+];
+
+export type Equipment = {
+    id: number; // Changed from string to number if backend uses Long/Integer ID
+    name: string;
+    availability: boolean;
+    brand: string;
+    quantity: number;
+    equipmentOwner: number; // ID of the owner user
+    imagePath: string; // Path to the image file
+    status: // Use the exact enum values from backend
+        | "APPROVED"
+        | "PENDING"
+        | "CANCELED"
+        | "DEFECT"
+        | "MAINTENANCE"
+        | "NEED_REPLACEMENT"
+        | "NEW";
+    createdAt: string; // ISO Date string
+    updatedAt: string; // ISO Date string
+};
 export type LoginResponse = {
     token: string;
     tokenType: string;
@@ -122,7 +168,40 @@ export type EventDTOPayload = {
     eventVenueId: number;
     startTime: string; // ISO string
     endTime: string; // ISO string
-    organizerId: number;
+    organizer: {
+        // Nested organizer object
+        id: number;
+    };
+};
+
+export type EventDTOBackendResponse = {
+    id: number;
+    eventName: string;
+    eventType: string;
+    organizer: UserDTO;
+    approvedLetterPath: string | null;
+    eventVenueId: number;
+    startTime: string; // Or Date if parsed on frontend
+    endTime: string; // Or Date if parsed on frontend
+    status: string; // e.g., "PENDING"
+};
+
+export type EventInputType = {
+    eventName: string;
+    eventType: string;
+    eventVenueId: number;
+    startTime: Date;
+    endTime: Date;
+    approvedLetter: File[]; // Input is array
+};
+
+export type EventOutputType = {
+    eventName: string;
+    eventType: string;
+    eventVenueId: number;
+    startTime: Date;
+    endTime: Date;
+    approvedLetter: File; // Output is single file
 };
 
 export type Event = {
