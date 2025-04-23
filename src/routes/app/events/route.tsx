@@ -27,10 +27,17 @@ export const Route = createFileRoute("/app/events")({
         const allowedRoles: string[] = navigationItem
             ? navigationItem.roles
             : [];
-        const isAuthorized =
-            "role" in context && // <-- Check if the key 'role' exists
-            context.role != null && // <-- Optional but good: ensure role isn't null/undefined
-            allowedRoles.includes(context.role);
+
+        if (context.authState == null) {
+            throw redirect({
+                to: "/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+
+        const isAuthorized = allowedRoles.includes(context.authState.role);
 
         if (!isAuthorized) {
             throw redirect({

@@ -13,7 +13,7 @@ export const Route = createFileRoute("/app/events/timeline")({
 
 function Events() {
     const context = useRouteContext({ from: "/app/events" });
-    const role = "role" in context ? context.role : "USER";
+    const role = context.authState?.role;
 
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const [view, setView] = useState<"list" | "timeline">("list");

@@ -14,10 +14,10 @@ export const Route = createFileRoute("/(auth)/login")({
         const allowedRoles: string[] = navigationItem
             ? navigationItem.roles
             : [];
+
         const isAuthorized =
-            "role" in context && // <-- Check if the key 'role' exists
-            context.role != null && // <-- Optional but good: ensure role isn't null/undefined
-            allowedRoles.includes(context.role);
+            context.authState?.role != null &&
+            allowedRoles.includes(context.authState.role);
 
         if (isAuthorized) {
             throw redirect({

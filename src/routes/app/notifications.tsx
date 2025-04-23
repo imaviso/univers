@@ -21,11 +21,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/app/notifications")({
     component: Notifications,
     beforeLoad: async ({ location, context }) => {
-        const isAuthorized =
-            "role" in context && // <-- Check if the key 'role' exists
-            context.role != null; // <-- Optional but good: ensure role isn't null/undefined
-
-        if (!isAuthorized) {
+        if (context.authState == null) {
             throw redirect({
                 to: "/login",
                 search: {

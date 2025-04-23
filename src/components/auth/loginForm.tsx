@@ -10,9 +10,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { userSignIn } from "@/lib/auth";
+import { userQueryOptions } from "@/lib/query";
 import { type LoginInput, loginSchema } from "@/lib/schema";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { Link, useNavigate } from "@tanstack/react-router";
+import {
+    Link,
+    redirect,
+    useNavigate,
+    useRouteContext,
+} from "@tanstack/react-router";
 import { Eye, EyeOff, LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -21,6 +27,8 @@ import { toast } from "sonner";
 export default function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const context = useRouteContext({ from: "/(auth)/login" });
+    const queryClient = context.queryClient;
 
     const navigate = useNavigate();
     const form = useForm<LoginInput>({
@@ -33,13 +41,12 @@ export default function LoginForm() {
 
     const onSubmit = async (values: LoginInput) => {
         setIsLoading(true);
-
         try {
-            console.log("Login attempt:", values);
-            const res = await userSignIn(values.email, values.password);
-            console.log("Login response:", res.user);
-            // navigate({ to: "/app/calendar" });
-            window.location.reload();
+            await userSignIn(values.email, values.password);
+            await queryClient.refetchQueries({
+                queryKey: userQueryOptions.queryKey,
+            });
+            navigate({ to: "/app/calendar", replace: true });
         } catch (error) {
             const errorMessage =
                 error instanceof Error

@@ -73,7 +73,7 @@ export const Route = createFileRoute("/app/venues/dashboard")({
 
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
-    const role = "role" in context ? context.role : "USER";
+    const role = context.authState?.role;
     const queryClient = context.queryClient;
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState("");
