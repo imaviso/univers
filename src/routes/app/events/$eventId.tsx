@@ -63,7 +63,7 @@ export const Route = createFileRoute("/app/events/$eventId")({
 
 export function EventDetailsPage() {
     const context = useRouteContext({ from: "/app/events" }); // Get parent context if needed (e.g., for role)
-    const role = "role" in context ? context.role : "USER"; // Example role access
+    const role = context.authState?.role; // Get user role from context
     // const [commentText, setCommentText] = useState(""); // Removed comment state
     const router = useRouter();
     const onBack = () => router.history.back();

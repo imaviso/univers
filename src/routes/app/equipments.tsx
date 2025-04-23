@@ -107,10 +107,16 @@ export const Route = createFileRoute("/app/equipments")({
         const allowedRoles: string[] = navigationItem
             ? navigationItem.roles
             : [];
-        const isAuthorized =
-            "role" in context &&
-            context.role != null &&
-            allowedRoles.includes(context.role);
+
+        if (context.authState == null) {
+            throw redirect({
+                to: "/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+        const isAuthorized = allowedRoles.includes(context.authState.role);
 
         if (!isAuthorized) {
             throw redirect({
@@ -134,7 +140,7 @@ export const Route = createFileRoute("/app/equipments")({
 
 function EquipmentInventory() {
     const context = useRouteContext({ from: "/app/equipments" });
-    const role = "role" in context ? context.role : "USER";
+    const role = context.authState?.role;
     const { data: currentUser } = useCurrentUser();
     const queryClient = context.queryClient;
 

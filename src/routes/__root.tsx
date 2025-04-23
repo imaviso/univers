@@ -11,7 +11,7 @@ export const Route = createRootRouteWithContext<{
     beforeLoad: async ({ context }) => {
         const authState =
             await context.queryClient.ensureQueryData(userQueryOptions);
-        return authState;
+        return { authState };
     },
     component: () => {
         return (
