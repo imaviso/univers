@@ -170,7 +170,7 @@ function EquipmentInventory() {
         useState(false);
 
     // --- Queries ---
-    const { data: equipment = []} = useSuspenseQuery(
+    const { data: equipment = [] } = useSuspenseQuery(
         equipmentsQueryOptions(currentUser),
     );
 

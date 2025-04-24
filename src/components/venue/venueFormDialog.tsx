@@ -23,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { API_BASE_URL } from "@/lib/auth";
 import {
     ImageSchema, // Import ImageSchema for validation
     type VenueInput,
@@ -43,6 +44,14 @@ import {
     FileUploadItemPreview,
     FileUploadList,
 } from "../ui/file-upload"; // Import FileUpload components
+import { Label } from "../ui/label";
+
+const defaultValues: VenueInput = {
+    name: "",
+    location: "",
+    venueOwnerId: undefined, // Use venueOwnerId for form
+    image: undefined, // Image is handled separately
+};
 
 interface VenueFormDialogProps {
     isOpen: boolean;
@@ -67,76 +76,74 @@ export function VenueFormDialog({
     const [imageError, setImageError] = useState<string | null>(null);
     const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
 
+    const isEditing = !!venue;
+    const formDefaultValues =
+        isEditing && venue
+            ? {
+                  name: venue.name,
+                  location: venue.location,
+                  venueOwnerId: venue.venueOwner?.id
+                      ? Number(venue.venueOwner.id)
+                      : undefined,
+                  image: undefined,
+              }
+            : defaultValues;
+
     const form = useForm<VenueInput>({
         resolver: valibotResolver(venueSchema),
-        defaultValues: {
-            name: "",
-            location: "",
-            image: [], // Default to empty array for FileUpload
-            venueOwnerId: undefined,
-        },
+        defaultValues: formDefaultValues,
         mode: "onChange",
     });
 
     useEffect(() => {
         if (isOpen) {
-            if (venue) {
-                form.reset({
-                    name: venue.name || "",
-                    location: venue.location || "",
-                    image: [], // Reset image field in form
-                    venueOwnerId: venue.venueOwnerId ?? undefined,
-                });
-                // Set initial image URL for preview
-                const previewUrl = venue.image
-                    ? `/uploads/venues/${venue.image.substring(venue.image.lastIndexOf("/") + 1)}` // Adjust URL as needed
-                    : null;
-                setInitialImageUrl(previewUrl);
-            } else {
-                form.reset({
-                    name: "",
-                    location: "",
-                    image: [],
-                    venueOwnerId: undefined,
-                });
-                setInitialImageUrl(null); // Clear initial image for new venue
-            }
-            // Reset local file state
+            // Reset form with appropriate defaults when dialog opens or venue changes
+            const resetValues =
+                isEditing && venue
+                    ? {
+                          name: venue.name,
+                          location: venue.location,
+                          venueOwnerId: venue.venueOwner?.id
+                              ? Number(venue.venueOwner.id)
+                              : undefined,
+                          image: undefined,
+                      }
+                    : defaultValues;
+            form.reset(resetValues);
+
             setImageFile(null);
             setImageError(null);
+            const previewUrl = `${venue?.imagePath}`;
+            setInitialImageUrl(previewUrl);
         }
-    }, [isOpen, venue, form]);
+    }, [isOpen, venue, form, isEditing]); // Add isEditing dependency
 
-    // Handle file changes from FileUpload
     const handleFileValueChange = (files: File[]) => {
         const file = files[0] || null;
-        setImageError(null);
+        setImageError(null); // Reset error on new selection
 
         if (file) {
-            // Validate using ImageSchema (or a specific venue image schema if different)
-            const validationResult = v.safeParse(ImageSchema, file); // Assuming ImageSchema is suitable
+            const validationResult = v.safeParse(ImageSchema, file);
             if (validationResult.success) {
                 setImageFile(file);
-                form.setValue("image", [file], { shouldValidate: true }); // Update form value for validation
+                form.setValue("image", file, { shouldValidate: true });
             } else {
                 setImageError(
                     v.flatten(validationResult.issues).root?.[0] ??
                         "Invalid image file.",
                 );
                 setImageFile(null);
-                form.setValue("image", [], { shouldValidate: true }); // Clear form value
+                form.setValue("image", undefined, { shouldValidate: true });
             }
         } else {
             setImageFile(null);
-            form.setValue("image", [], { shouldValidate: true }); // Clear form value
+            form.setValue("image", undefined, { shouldValidate: true });
         }
     };
 
-    // Wrapper function to handle form submission
-    const handleFormSubmit = (data: VenueInput) => {
-        setImageError(null); // Clear error on submit attempt
+    const processSubmit = (data: VenueInput) => {
+        setImageError(null); // Reset image error
 
-        // Validate the current imageFile again (optional safeguard)
         if (imageFile) {
             const validationResult = v.safeParse(ImageSchema, imageFile);
             if (!validationResult.success) {
@@ -144,35 +151,31 @@ export function VenueFormDialog({
                     v.flatten(validationResult.issues).root?.[0] ??
                         "Invalid image file.",
                 );
-                return; // Prevent submission
+                return;
             }
         }
 
-        // The schema transforms the input `data` (with image as File[])
-        // into the output type (with image as File | undefined).
-        // We pass the transformed data and the separate imageFile state.
-        const outputData = data as unknown as VenueInput;
-        onSubmit(outputData, imageFile);
+        onSubmit(data, imageFile);
     };
 
-    // Determine files for FileUpload component
     const currentFiles = imageFile ? [imageFile] : [];
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] overflow-auto max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>
-                        {venue ? "Edit Venue" : "Add New Venue"}
+                        {isEditing ? "Edit Venue" : "Add New Venue"}
                     </DialogTitle>
                 </DialogHeader>
 
                 <Form {...form}>
                     <form
-                        onSubmit={form.handleSubmit(handleFormSubmit)}
+                        id="venue-form"
+                        onSubmit={form.handleSubmit(processSubmit)}
                         className="space-y-4 py-4"
                     >
-                        {/* ... (Name, Location, Venue Owner fields remain the same) ... */}
+                        {/* Name */}
                         <FormField
                             control={form.control}
                             name="name"
@@ -181,7 +184,7 @@ export function VenueFormDialog({
                                     <FormLabel>Venue Name</FormLabel>
                                     <FormControl>
                                         <Input
-                                            placeholder="Enter venue name"
+                                            placeholder="e.g., Main Conference Hall"
                                             {...field}
                                             disabled={isLoading}
                                         />
@@ -191,6 +194,7 @@ export function VenueFormDialog({
                             )}
                         />
 
+                        {/* Location */}
                         <FormField
                             control={form.control}
                             name="location"
@@ -199,7 +203,7 @@ export function VenueFormDialog({
                                     <FormLabel>Location</FormLabel>
                                     <FormControl>
                                         <Input
-                                            placeholder="Enter full address"
+                                            placeholder="e.g., Building A, 2nd Floor"
                                             {...field}
                                             disabled={isLoading}
                                         />
@@ -209,217 +213,177 @@ export function VenueFormDialog({
                             )}
                         />
 
+                        {/* Venue Owner Select */}
                         <FormField
                             control={form.control}
                             name="venueOwnerId"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Venue Owner</FormLabel>
-                                    <FormControl>
-                                        <Select
-                                            onValueChange={(value) => {
-                                                field.onChange(
-                                                    value === "none" // Check for "none"
-                                                        ? undefined
-                                                        : Number.parseInt(
-                                                              value,
-                                                              10,
-                                                          ),
-                                                );
-                                            }}
-                                            value={
-                                                field.value?.toString() ??
-                                                "none" // Default to "none" if undefined
+                                    <Select
+                                        onValueChange={(value) => {
+                                            // Handle the special "none" value for clearing the selection
+                                            if (value === "none") {
+                                                field.onChange(undefined);
+                                            } else {
+                                                field.onChange(Number(value));
                                             }
-                                            disabled={isLoading}
-                                        >
+                                        }}
+                                        // If field.value is undefined/null, use "none", otherwise convert ID to string
+                                        value={
+                                            field.value
+                                                ? field.value.toString()
+                                                : "none"
+                                        }
+                                        disabled={isLoading}
+                                    >
+                                        <FormControl>
                                             <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select a venue owner">
-                                                    {field.value
-                                                        ? `${
-                                                              venueOwners.find(
-                                                                  (user) =>
-                                                                      Number(
-                                                                          user.id,
-                                                                      ) ===
-                                                                      field.value,
-                                                              )?.firstName
-                                                          } ${
-                                                              venueOwners.find(
-                                                                  (user) =>
-                                                                      Number(
-                                                                          user.id,
-                                                                      ) ===
-                                                                      field.value,
-                                                              )?.lastName
-                                                          }`
-                                                        : "None"}
-                                                </SelectValue>
+                                                <SelectValue placeholder="Select the owner" />
                                             </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="none">
-                                                    None
+                                        </FormControl>
+                                        <SelectContent>
+                                            {/* Use "none" as the value for the placeholder/clear option */}
+                                            <SelectItem value="none">
+                                                -
+                                            </SelectItem>
+                                            {/* Only map owners if the list is not empty */}
+                                            {venueOwners.map((owner) => (
+                                                <SelectItem
+                                                    key={owner.id}
+                                                    value={owner.id.toString()} // Value must be string
+                                                >
+                                                    {owner.firstName}{" "}
+                                                    {owner.lastName} (
+                                                    {owner.email})
                                                 </SelectItem>
-                                                {venueOwners.map((user) => (
-                                                    <SelectItem
-                                                        key={user.id}
-                                                        value={String(user.id)} // Ensure value is string
-                                                    >
-                                                        {user.firstName}{" "}
-                                                        {user.lastName} (
-                                                        {user.email})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </FormControl>
-                                    <FormDescription>
-                                        Select a user to be the owner of this
-                                        venue (optional)
-                                    </FormDescription>
+                                            ))}
+                                            {/* Remove the conditional disabled item for empty list */}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
 
-                        <FormField
-                            control={form.control}
-                            name="image" // Keep this linked to the form state for validation trigger
-                            render={(
-                                { field }, // Destructure field to avoid passing onChange directly
-                            ) => (
-                                <FormItem>
-                                    <FormLabel>Image (Optional)</FormLabel>
-                                    <FormControl>
-                                        <FileUpload
-                                            value={currentFiles} // Use local state for display
-                                            onValueChange={
-                                                handleFileValueChange
-                                            } // Use custom handler
-                                            maxFiles={1}
-                                            maxSize={10 * 1024 * 1024} // 10MB
-                                            accept="image/jpeg, image/png, image/webp" // Match schema
-                                            disabled={isLoading}
-                                            className="relative rounded-lg border border-input bg-background"
-                                        >
-                                            <FileUploadDropzone className="border-dashed p-4">
-                                                <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
-                                                <p className="mb-1 text-sm text-muted-foreground">
-                                                    <span className="font-semibold">
-                                                        Click or drag image
-                                                    </span>{" "}
-                                                    to upload
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    JPG, PNG, WEBP (max 10MB)
-                                                </p>
-                                            </FileUploadDropzone>
-                                            <FileUploadList className="p-3">
-                                                {/* Display initial image if editing and no new file selected */}
-                                                {!imageFile &&
-                                                    initialImageUrl && (
-                                                        <div className="relative flex items-center gap-2.5 rounded-md border p-2">
-                                                            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                                                                <img
-                                                                    src={
-                                                                        initialImageUrl
-                                                                    }
-                                                                    alt="Current venue"
-                                                                    className="size-full rounded object-cover"
-                                                                    onError={(
-                                                                        e,
-                                                                    ) => {
-                                                                        e.currentTarget.src =
-                                                                            "/placeholder.svg";
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                            <div className="flex min-w-0 flex-1 flex-col">
-                                                                <span className="truncate text-sm font-medium text-muted-foreground">
-                                                                    Current
-                                                                    Image
-                                                                </span>
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    Will be
-                                                                    replaced if
-                                                                    new image is
-                                                                    selected
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                {/* Display selected file */}
-                                                {currentFiles.map((file) => (
-                                                    <FileUploadItem
-                                                        key={file.name}
-                                                        value={file}
-                                                        className="p-2"
-                                                    >
-                                                        <FileUploadItemPreview>
-                                                            {/* Default preview handles images */}
-                                                        </FileUploadItemPreview>
-                                                        <FileUploadItemMetadata />
-                                                        <FileUploadItemDelete
-                                                            asChild
-                                                        >
-                                                            <Button
-                                                                type="button"
-                                                                size="icon"
-                                                                variant="ghost"
-                                                                className="size-7"
-                                                                disabled={
-                                                                    isLoading
-                                                                }
-                                                            >
-                                                                <X className="size-4" />
-                                                            </Button>
-                                                        </FileUploadItemDelete>
-                                                    </FileUploadItem>
-                                                ))}
-                                            </FileUploadList>
-                                        </FileUpload>
-                                    </FormControl>
-                                    {/* Display validation error from local state */}
-                                    {imageError && (
-                                        <p className="text-sm text-destructive">
-                                            {imageError}
-                                        </p>
-                                    )}
-                                    {/* Display form message if needed (e.g., from schema validation) */}
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <DialogFooter>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={onClose}
+                        {/* Image Upload */}
+                        <div className="grid gap-2">
+                            <Label>Image (Optional)</Label>
+                            <FileUpload
+                                value={currentFiles}
+                                onValueChange={handleFileValueChange}
+                                maxFiles={1}
+                                maxSize={5 * 1024 * 1024} // 5MB
+                                accept="image/jpeg, image/png, image/webp"
                                 disabled={isLoading}
+                                className="relative rounded-lg border border-input bg-background"
                             >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={
-                                    !form.formState.isValid ||
-                                    isLoading ||
-                                    !!imageError // Disable if image error exists
-                                }
-                            >
-                                {isLoading && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                )}
-                                {isLoading
-                                    ? "Saving..."
-                                    : venue
-                                      ? "Save Changes"
-                                      : "Add Venue"}
-                            </Button>
-                        </DialogFooter>
+                                <FileUploadDropzone className="border-dashed p-4">
+                                    <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
+                                    <p className="mb-1 text-sm text-muted-foreground">
+                                        <span className="font-semibold">
+                                            Click or drag image
+                                        </span>{" "}
+                                        to upload
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        JPG, PNG, WEBP (max 5MB)
+                                    </p>
+                                </FileUploadDropzone>
+                                <FileUploadList className="p-3">
+                                    {/* Display initial image if editing and no new file selected */}
+                                    {!imageFile && initialImageUrl && (
+                                        <div className="relative flex items-center gap-2.5 rounded-md border p-2">
+                                            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                                                <img
+                                                    src={initialImageUrl}
+                                                    alt="Current venue"
+                                                    className="size-full rounded object-cover"
+                                                    onError={(e) => {
+                                                        e.currentTarget.src =
+                                                            "/placeholder.svg"; // Fallback image
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex min-w-0 flex-1 flex-col">
+                                                <span className="truncate text-sm font-medium text-muted-foreground">
+                                                    Current Image
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    Will be replaced if new
+                                                    image is selected
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* Display selected file */}
+                                    {currentFiles.map((file) => (
+                                        <FileUploadItem
+                                            key={file.name}
+                                            value={file}
+                                            className="p-2"
+                                        >
+                                            <FileUploadItemPreview />
+                                            <FileUploadItemMetadata />
+                                            <FileUploadItemDelete asChild>
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="size-7"
+                                                    disabled={isLoading}
+                                                >
+                                                    <X className="size-4" />
+                                                </Button>
+                                            </FileUploadItemDelete>
+                                        </FileUploadItem>
+                                    ))}
+                                </FileUploadList>
+                            </FileUpload>
+                            {imageError && (
+                                <p className="text-sm text-destructive">
+                                    {imageError}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Display general form error from backend */}
+                        {form.formState.errors.root?.serverError && (
+                            <p className="text-sm text-destructive text-center">
+                                {form.formState.errors.root.serverError.message}
+                            </p>
+                        )}
                     </form>
                 </Form>
+
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onClose}
+                        disabled={isLoading}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        form="venue-form"
+                        disabled={
+                            isLoading ||
+                            !form.formState.isValid || // Check basic form validity
+                            !!imageError // Disable if image validation error exists
+                        }
+                    >
+                        {isLoading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
+                        {isLoading
+                            ? "Saving..."
+                            : isEditing
+                              ? "Save Changes"
+                              : "Add Venue"}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

@@ -227,9 +227,8 @@ export const getAllEvents = async () => {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        // Expect JSON array, handle empty success
         const data = await handleApiResponse(response, true);
-        return data ?? []; // Default to empty array
+        return data ?? [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -287,27 +286,48 @@ export const createEvent = async (
     }
 };
 
-export const createVenue = async (data: VenueInput) => {
+export const createVenue = async ({
+    venueData,
+    imageFile,
+}: {
+    venueData: VenueInput; // Form data type
+    imageFile: File | null; // Separate image file
+}): Promise<Venue> => {
+    // Returns the created Venue DTO
     try {
-        // Handle potential File object for image upload
         const formData = new FormData();
-        for (const [key, value] of Object.entries(data)) {
-            if (key === "image" && value instanceof File) {
-                formData.append(key, value);
-            } else if (value !== undefined && value !== null) {
-                // Append other fields if they exist
-                formData.append(key, String(value)); // Convert non-file values to string
-            }
+
+        // Prepare the JSON part, nesting venueOwnerId
+        const { venueOwnerId, ...restOfVenueData } = venueData;
+        const venueJsonPayload: any = { ...restOfVenueData }; // Start with name, location
+        if (venueOwnerId) {
+            // Nest owner ID according to backend DTO structure
+            venueJsonPayload.venueOwner = { id: venueOwnerId };
+        } else {
+            venueJsonPayload.venueOwner = null; // Explicitly send null if no owner selected
         }
 
-        const response = await fetch(`${API_BASE_URL}/venues`, {
+        // Append JSON part named "venue"
+        formData.append(
+            "venue",
+            new Blob([JSON.stringify(venueJsonPayload)], {
+                type: "application/json",
+            }),
+        );
+
+        // Append image file if provided, named "image"
+        if (imageFile) {
+            formData.append("image", imageFile, imageFile.name);
+        }
+
+        // Endpoint is /venues (not /admin/venues)
+        const response = await fetch(`${API_BASE_URL}/admin/venues`, {
             method: "POST",
-            // Don't set Content-Type header when using FormData, browser does it
             credentials: "include",
             body: formData, // Send FormData
         });
-        // Assuming backend returns the created venue object as JSON on success
-        return await handleApiResponse(response, true); // Expect JSON back
+        // Expect created Venue DTO back
+        return await handleApiResponse(response, true);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -315,61 +335,80 @@ export const createVenue = async (data: VenueInput) => {
     }
 };
 
-export const updateVenue = async (data: Venue) => {
+export const updateVenue = async ({
+    venueId,
+    venueData,
+    imageFile,
+}: {
+    venueId: number;
+    venueData: VenueInput; // Form data type
+    imageFile: File | null; // Optional new image file
+}): Promise<Venue> => {
+    // Returns the updated Venue DTO
     try {
-        // Handle potential File object for image upload if API supports it on PATCH
-        // This might require FormData similar to createVenue, or a separate endpoint
-        // For simplicity, assuming API accepts JSON patch and image URL update separately or handles JSON payload
-        const { id, ...updateData } = data; // Separate ID from data
+        const formData = new FormData();
 
-        // If image is a File, it cannot be directly stringified in JSON.
-        // Decide how to handle: omit, send via FormData (if API supports), or use separate endpoint.
-        // Let's assume for now we only send non-File data via JSON PATCH.
-        const jsonData: Partial<Venue> = {};
-        // Use for...of loop and ensure value is not a File before assigning
-        for (const [keyAsString, value] of Object.entries(updateData)) {
-            // Skip if the value is a File object
-            if (
-                typeof value === "object" &&
-                value !== null &&
-                value instanceof File
-            ) {
-                continue;
-            }
-            // Assert key type and assign the value
-            const key = keyAsString as keyof Venue;
-            jsonData[key] = value;
+        // Prepare the JSON part for update, nesting venueOwnerId
+        const { venueOwnerId, ...restOfVenueData } = venueData;
+        const venueJsonPayload: any = { ...restOfVenueData }; // name, location
+        if (venueOwnerId) {
+            venueJsonPayload.venueOwner = { id: venueOwnerId };
+        } else {
+            // If API expects null to remove owner, send null.
+            // If omitting the field keeps the owner, adjust accordingly.
+            venueJsonPayload.venueOwner = null; // Assuming null removes owner
         }
 
-        const response = await fetch(`${API_BASE_URL}/venues/${id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(jsonData), // Send JSON data without File
-        });
-        // Assuming backend returns the updated venue object as JSON on success
-        return await handleApiResponse(response, true); // Expect JSON back
+        // Append JSON part named "venue"
+        formData.append(
+            "venue",
+            new Blob([JSON.stringify(venueJsonPayload)], {
+                type: "application/json",
+            }),
+        );
+
+        // Append image file if provided, named "image"
+        if (imageFile) {
+            formData.append("image", imageFile, imageFile.name);
+        }
+
+        // Endpoint is PATCH /venues/{venueId}
+        const response = await fetch(
+            `${API_BASE_URL}/admin/venues/${venueId}`,
+            {
+                method: "PATCH", // Use PATCH
+                credentials: "include",
+                body: formData, // Send FormData
+            },
+        );
+        // Expect updated Venue DTO back
+        return await handleApiResponse(response, true);
     } catch (error) {
         throw error instanceof Error
             ? error
-            : new Error("An unexpected error occurred during updating venue.");
+            : new Error(
+                  `An unexpected error occurred during updating venue ${venueId}.`,
+              );
     }
 };
 
-// Change deleteVenue to accept ID instead of full object
-export const deleteVenue = async (venueId: number) => {
+export const deleteVenue = async (venueId: number): Promise<string | null> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/venues/${venueId}`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
-        // DELETE often returns 204 No Content or text confirmation
-        return await handleApiResponse(response, false); // Expect text or no content
+        const response = await fetch(
+            `${API_BASE_URL}/admin/venues/${venueId}`,
+            {
+                method: "DELETE",
+                credentials: "include",
+                // No Content-Type or body needed for standard DELETE
+            },
+        );
+        return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
             ? error
-            : new Error("An unexpected error occurred during deleting venue.");
+            : new Error(
+                  `An unexpected error occurred during deleting venue ${venueId}.`,
+              );
     }
 };
 

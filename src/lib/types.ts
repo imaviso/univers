@@ -20,17 +20,17 @@ export type UserType = {
 export type UserDTO = {
     id: number;
     email: string;
-    firstName: string; // Ensure frontend names match backend (firstname vs firstName)
-    lastName: string; // Ensure frontend names match backend (lastname vs lastName)
-    id_number: string | null; // Match backend field name
-    phone_number: string | null; // Match backend field name
+    firstName: string;
+    lastName: string;
+    id_number: string | null;
+    phone_number: string | null;
     telephoneNumber: string | null;
-    roles: string; // Or specific role enum/type
+    roles: string;
     departmentId: number | null;
     emailVerified: boolean | null;
     active: boolean;
-    createdAt: string; // Or Date
-    updatedAt: string; // Or Date
+    createdAt: string;
+    updatedAt: string;
 };
 
 export type UserRole =
@@ -156,8 +156,8 @@ export type Venue = {
     id: number;
     name: string;
     location: string;
-    venueOwner: UserType;
-    image?: string;
+    venueOwner: UserDTO | null;
+    imagePath: string | null;
     createdAt: string;
     updatedAt: string;
 };
@@ -208,8 +208,8 @@ export type Event = {
     id: number;
     eventName: string;
     eventType: string;
-    organizer: UserType; // Changed from organizerId: number
-    approvedLetterPath: string | null; // Assuming it can be null
+    organizer: UserDTO;
+    approvedLetterPath: string | null;
     eventVenueId: number;
     startTime: string;
     endTime: string;

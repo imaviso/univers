@@ -60,6 +60,7 @@ import {
     Plus,
     Search,
     Trash2,
+    UserCircle,
     Users,
 } from "lucide-react";
 import { useState } from "react";
@@ -76,6 +77,7 @@ export function VenueManagement() {
     const role = context.authState?.role;
     const queryClient = context.queryClient;
     const navigate = useNavigate();
+    // State variables
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedItems, setSelectedItems] = useState<number[]>([]);
     const [isAddVenueOpen, setIsAddVenueOpen] = useState(false);
@@ -87,277 +89,110 @@ export function VenueManagement() {
     );
     const [isReservationDialogOpen, setIsReservationDialogOpen] =
         useState(false);
+
     // --- Queries ---
-    // Fetch venues using React Query
+    // Fetch venues using suspense query (data guaranteed by loader)
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
+
+    // Fetch users (data potentially guaranteed by loader for SUPER_ADMIN)
     const { data: users = [] } = useQuery({
         ...usersQueryOptions,
-        enabled: role === "SUPER_ADMIN", // Only enable query if user is SUPER_ADMIN
+        enabled: role === "SUPER_ADMIN",
     });
 
-    // Derive venueOwners only if users were fetched
+    // Derive venueOwners list
     const venueOwners =
-        role === "SUPER_ADMIN" && users
+        role === "SUPER_ADMIN"
             ? users.filter((user: UserType) => user.role === "VENUE_OWNER")
-            : []; // Default to empty array if not SUPER_ADMIN or users not loaded yet
+            : [];
     // --- End Queries ---
 
     // --- Mutations ---
     const createVenueMutation = useMutation({
-        mutationFn: createVenue,
-        onMutate: async (newVenueData: VenueInput) => {
-            await queryClient.cancelQueries({
-                queryKey: venuesQueryOptions.queryKey,
-            });
-            const previousVenues = queryClient.getQueryData<Venue[]>(
-                venuesQueryOptions.queryKey,
-            );
-            // Optimistic update (basic - no real ID/timestamps)
-            queryClient.setQueryData<Venue[]>(
-                venuesQueryOptions.queryKey,
-                (old = []) => [
-                    ...old,
-                    {
-                        ...newVenueData,
-                        id: Math.random(), // Temporary ID
-                        image:
-                            typeof newVenueData.image === "object"
-                                ? URL.createObjectURL(
-                                      newVenueData.image as File,
-                                  )
-                                : newVenueData.image, // Handle File preview
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                    } as Venue,
-                ],
-            );
-            return { previousVenues };
-        },
-        onError: (err, newVenueData, context) => {
-            if (context?.previousVenues) {
-                queryClient.setQueryData(
-                    venuesQueryOptions.queryKey,
-                    context.previousVenues,
-                );
-            }
-            toast.error(
-                `Failed to create venue: ${err instanceof Error ? err.message : "Unknown error"}`,
-            );
-        },
-        onSuccess: () => {
-            toast.success("Venue created successfully");
-            setIsAddVenueOpen(false);
-        },
-        onSettled: () => {
+        mutationFn: createVenue, // Use the updated API function
+        onSuccess: (newVenue) => {
+            toast.success(`Venue "${newVenue.name}" created successfully.`);
             queryClient.invalidateQueries({
                 queryKey: venuesQueryOptions.queryKey,
             });
+            setIsAddVenueOpen(false);
+        },
+        onError: (error) => {
+            toast.error(`Failed to create venue: ${error.message}`);
         },
     });
 
     const updateVenueMutation = useMutation({
-        mutationFn: updateVenue,
-        onMutate: async (updatedVenueData: Venue) => {
-            await queryClient.cancelQueries({
-                queryKey: venuesQueryOptions.queryKey,
-            });
-            const previousVenues = queryClient.getQueryData<Venue[]>(
-                venuesQueryOptions.queryKey,
-            );
-            queryClient.setQueryData<Venue[]>(
-                venuesQueryOptions.queryKey,
-                (old = []) =>
-                    old.map((venue) =>
-                        venue.id === updatedVenueData.id
-                            ? updatedVenueData
-                            : venue,
-                    ),
-            );
-            return { previousVenues, updatedVenueData };
-        },
-        onError: (err, updatedVenueData, context) => {
-            if (context?.previousVenues) {
-                queryClient.setQueryData(
-                    venuesQueryOptions.queryKey,
-                    context.previousVenues,
-                );
-            }
-            toast.error(
-                `Failed to update venue: ${err instanceof Error ? err.message : "Unknown error"}`,
-            );
-        },
-        onSuccess: () => {
-            toast.success("Venue updated successfully");
-            setIsAddVenueOpen(false);
-            setEditingVenue(null);
-        },
-        onSettled: (updatedVenueData) => {
+        mutationFn: updateVenue, // Use the updated API function
+        onSuccess: (updatedVenue) => {
+            toast.success(`Venue "${updatedVenue.name}" updated successfully.`);
             queryClient.invalidateQueries({
                 queryKey: venuesQueryOptions.queryKey,
             });
-            // Optionally invalidate specific venue query if you have one
-            // queryClient.invalidateQueries({ queryKey: ['venue', updatedVenueData?.id] });
+            // Optionally invalidate specific venue query if exists: queryClient.invalidateQueries({ queryKey: ['venue', updatedVenue.id] });
+            setIsAddVenueOpen(false);
+            setEditingVenue(null);
+        },
+        onError: (error) => {
+            toast.error(`Failed to update venue: ${error.message}`);
         },
     });
 
     const deleteVenueMutation = useMutation({
-        mutationFn: deleteVenue,
-        onMutate: async (venueId: number) => {
-            await queryClient.cancelQueries({
-                queryKey: venuesQueryOptions.queryKey,
-            });
-            const previousVenues = queryClient.getQueryData<Venue[]>(
-                venuesQueryOptions.queryKey,
-            );
-            queryClient.setQueryData<Venue[]>(
-                venuesQueryOptions.queryKey,
-                (old = []) => old.filter((venue) => venue.id !== venueId),
-            );
-            return { previousVenues };
-        },
-        onError: (err, venueId, context) => {
-            if (context?.previousVenues) {
-                queryClient.setQueryData(
-                    venuesQueryOptions.queryKey,
-                    context.previousVenues,
-                );
-            }
-            toast.error(
-                `Failed to delete venue: ${err instanceof Error ? err.message : "Unknown error"}`,
-            );
-        },
-        onSuccess: () => {
-            toast.success("Venue deleted successfully");
-            setIsDeleteDialogOpen(false);
-            setVenueToDelete(null);
-        },
-        onSettled: () => {
+        mutationFn: deleteVenue, // Use the updated API function
+        onSuccess: (message, venueId) => {
+            // Success returns message string
+            toast.success(message || "Venue deleted successfully."); // Use backend message or default
             queryClient.invalidateQueries({
                 queryKey: venuesQueryOptions.queryKey,
             });
+            setIsDeleteDialogOpen(false);
+            setVenueToDelete(null);
+            setSelectedItems((prev) => prev.filter((id) => id !== venueId)); // Remove from selection
+        },
+        onError: (error) => {
+            toast.error(`Failed to delete venue: ${error.message}`);
+            setIsDeleteDialogOpen(false);
+            setVenueToDelete(null);
         },
     });
 
-    // const deleteVenuesMutation = useMutation({
-    //     mutationFn: deleteVenues, // Assumes API function exists: deleteVenues(ids: number[])
-    //     onMutate: async (venueIds: number[]) => {
-    //         await queryClient.cancelQueries({
-    //             queryKey: venuesQueryOptions.queryKey,
-    //         });
-    //         const previousVenues = queryClient.getQueryData<Venue[]>(
-    //             venuesQueryOptions.queryKey,
-    //         );
-    //         queryClient.setQueryData<Venue[]>(
-    //             venuesQueryOptions.queryKey,
-    //             (old = []) =>
-    //                 old.filter((venue) => !venueIds.includes(venue.id)),
-    //         );
-    //         return { previousVenues };
-    //     },
-    //     onError: (err, venueIds, context) => {
-    //         if (context?.previousVenues) {
-    //             queryClient.setQueryData(
-    //                 venuesQueryOptions.queryKey,
-    //                 context.previousVenues,
-    //             );
-    //         }
-    //         toast.error(
-    //             `Failed to delete venues: ${err instanceof Error ? err.message : "Unknown error"}`,
-    //         );
-    //     },
-    //     onSuccess: (data, venueIds) => {
-    //         toast.success(`Successfully deleted ${venueIds.length} venue(s)`);
-    //         setIsDeleteDialogOpen(false);
-    //         setSelectedItems([]); // Clear selection
-    //     },
-    //     onSettled: () => {
-    //         queryClient.invalidateQueries({
-    //             queryKey: venuesQueryOptions.queryKey,
-    //         });
-    //     },
-    // });
-    // // --- End Mutations ---
+    // Bulk delete mutation removed as backend endpoint is not confirmed
 
     // --- Event Handlers ---
     const handleReservationSubmit = (data: Record<string, unknown>) => {
-        // Use specific type if available
         console.log("Reservation data:", data);
         // TODO: Implement reservation mutation
         setIsReservationDialogOpen(false);
+        toast.info("Venue reservation submitted (placeholder).");
     };
 
-    const handleNavigate = (venueId: number) => {
-        navigate({ from: Route.fullPath, to: `/app/venues/${venueId}` });
-    };
-
-    // Filter venues based on search query (name and location)
-    const filteredVenues = venues.filter((venue) => {
-        const matchesSearch =
-            venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            venue.location.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesSearch;
-    });
-
-    // Simplified stats
-    const stats = {
-        total: venues.length,
-    };
-
-    // Handle bulk selection
-    const handleSelectAll = () => {
-        if (selectedItems.length === filteredVenues.length) {
-            setSelectedItems([]);
+    const handleAddOrEditSubmit = (
+        venueData: VenueInput,
+        imageFile: File | null,
+    ) => {
+        if (editingVenue) {
+            // Call update mutation
+            updateVenueMutation.mutate({
+                venueId: editingVenue.id,
+                venueData,
+                imageFile,
+            });
         } else {
-            setSelectedItems(filteredVenues.map((venue) => venue.id));
+            // Call create mutation
+            createVenueMutation.mutate({ venueData, imageFile });
         }
-    };
-
-    const handleSelectItem = (itemId: number) => {
-        setSelectedItems((prev) =>
-            prev.includes(itemId)
-                ? prev.filter((id) => id !== itemId)
-                : [...prev, itemId],
-        );
-    };
-
-    // Use mutations in handlers
-    const handleAddVenueSubmit = (venueData: VenueInput) => {
-        // The VenueFormDialog should ideally return VenueInput
-        // The API function createVenue should handle potential file upload
-        createVenueMutation.mutate(venueData);
-    };
-
-    const handleEditVenueSubmit = (venueData: VenueInput) => {
-        if (!editingVenue) return;
-        // Construct the full Venue object expected by the API
-        // The API function updateVenue should handle potential file upload
-        const updatedVenue: Venue = {
-            ...editingVenue, // Keep existing ID, createdAt
-            ...venueData,
-            // Image handling depends on how VenueFormDialog and API work
-            // If venueData.image is a File, API needs FormData. If it's a URL string, it's simpler.
-            image:
-                typeof venueData.image === "object"
-                    ? editingVenue.image
-                    : venueData.image, // Example: Keep old image URL if new one isn't a string
-            updatedAt: new Date().toISOString(), // Update timestamp locally for optimistic update
-            // Ensure venueOwnerId is a number if present
-            venueOwnerId: venueData.venueOwnerId ?? editingVenue.venueOwnerId,
-        };
-        updateVenueMutation.mutate(updatedVenue);
     };
 
     const handleDeleteConfirm = () => {
         if (venueToDelete) {
             deleteVenueMutation.mutate(venueToDelete);
         }
-        // else if (selectedItems.length > 0) {
-        //     deleteVenuesMutation.mutate(selectedItems);
-        // }
+        // Bulk delete logic removed
     };
 
     // Helper to format date strings
-    const formatDateTime = (dateString: string | null) => {
+    const formatDateTime = (dateString: string | null | undefined): string => {
         if (!dateString) return "—";
         try {
             return format(new Date(dateString), "MMM d, yyyy h:mm a");
@@ -366,19 +201,44 @@ export function VenueManagement() {
             return "Invalid Date";
         }
     };
-    // --- End Event Handlers ---
+
+    const handleNavigate = (venueId: number) => {
+        navigate({ to: `/app/venues/${venueId}` });
+    };
+
+    // Filter venues based on search query
+    const filteredVenues = venues.filter(
+        (venue) =>
+            venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            venue.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            venue.venueOwner?.firstName
+                ?.toLowerCase()
+                .includes(searchQuery.toLowerCase()) || // Search owner name
+            venue.venueOwner?.lastName
+                ?.toLowerCase()
+                .includes(searchQuery.toLowerCase()) ||
+            venue.venueOwner?.email
+                ?.toLowerCase()
+                .includes(searchQuery.toLowerCase()), // Search owner email
+    );
+
+    // Stats
+    const stats = {
+        total: venues.length,
+        // Add more stats if needed (e.g., available, under maintenance - requires status field)
+    };
 
     // --- Render Logic ---
     const isMutating =
         createVenueMutation.isPending ||
         updateVenueMutation.isPending ||
         deleteVenueMutation.isPending;
-    // || deleteVenuesMutation.isPending;
 
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
-                <header className="flex items-center justify-between border-b px-6 py-3.5">
+                {/* Header */}
+                <header className="flex items-center justify-between border-b px-6 py-3.5 h-16">
                     <h1 className="text-xl font-semibold">Venue Management</h1>
                     <div className="flex items-center gap-2">
                         <div className="relative">
@@ -393,9 +253,13 @@ export function VenueManagement() {
                         </div>
                         {role === "SUPER_ADMIN" ? (
                             <Button
-                                onClick={() => setIsAddVenueOpen(true)}
+                                onClick={() => {
+                                    setEditingVenue(null); // Clear editing state
+                                    setIsAddVenueOpen(true);
+                                }}
                                 size="sm"
                                 className="gap-1"
+                                disabled={isMutating}
                             >
                                 <Plus className="h-4 w-4" />
                                 Add Venue
@@ -405,20 +269,23 @@ export function VenueManagement() {
                                 size="sm"
                                 className="gap-1"
                                 onClick={() => setIsReservationDialogOpen(true)}
+                                disabled={isMutating} // Disable if any mutation is happening
                             >
-                                <Plus className="h-4 w-4" />
+                                <Calendar className="h-4 w-4" />
                                 Reserve Venue
                             </Button>
                         )}
                     </div>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-4 p-6 pb-0">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 p-6 pb-0">
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">
                                 Total Venues
                             </CardTitle>
+                            <Building className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
@@ -426,34 +293,17 @@ export function VenueManagement() {
                             </div>
                         </CardContent>
                     </Card>
-                    {/* Add other stats cards if needed */}
+                    {/* Add other stats cards here */}
                 </div>
 
+                {/* Filters and Actions Bar */}
                 <div className="flex items-center justify-between border-b px-6 py-2">
                     <div className="flex items-center gap-2">
-                        {selectedItems.length > 0 ? (
-                            <>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="gap-1 text-destructive"
-                                    onClick={() => setIsDeleteDialogOpen(true)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                    Delete Selected
-                                </Button>
-                                <span className="text-sm text-muted-foreground">
-                                    {selectedItems.length} venue
-                                    {selectedItems.length > 1 ? "s" : ""}{" "}
-                                    selected
-                                </span>
-                            </>
-                        ) : (
-                            <span className="text-sm text-muted-foreground">
-                                {filteredVenues.length} venue
-                                {filteredVenues.length !== 1 ? "s" : ""}
-                            </span>
-                        )}
+                        {/* Bulk Actions Removed */}
+                        <span className="text-sm text-muted-foreground">
+                            {filteredVenues.length} venue
+                            {filteredVenues.length !== 1 ? "s" : ""} found
+                        </span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -475,207 +325,357 @@ export function VenueManagement() {
                                 <TabsTrigger value="grid">
                                     {role === "SUPER_ADMIN" ? "Grid" : "Venues"}
                                 </TabsTrigger>
-                                {/* Keep reservations tab separate if needed, or integrate */}
+                                {/* Separate tab for user's reservations */}
                                 <TabsTrigger value="reservations">
                                     My Reservations
                                 </TabsTrigger>
                             </TabsList>
                         </Tabs>
-                        {/* Removed Filters and Export for simplicity */}
+                        {/* Add Export button if needed */}
+                        {/* <Button variant="outline" size="sm" className="gap-1" disabled={isMutating}>
+                        <Download className="h-4 w-4" /> Export
+                    </Button> */}
                     </div>
                 </div>
 
+                {/* Main Content Area */}
                 <div className="flex-1 overflow-auto p-6">
-                    {/* Table View */}
+                    {/* Table View (SUPER_ADMIN only) */}
                     {viewMode === "table" && role === "SUPER_ADMIN" && (
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[40px]">
-                                        <Checkbox
-                                            checked={
-                                                selectedItems.length > 0 &&
-                                                selectedItems.length ===
-                                                    filteredVenues.length
-                                            }
-                                            onCheckedChange={handleSelectAll}
-                                            aria-label="Select all venues"
-                                        />
-                                    </TableHead>
-                                    <TableHead>Venue</TableHead>{" "}
-                                    {/* Combined Name/Image */}
+                                    {/* <TableHead className="w-[40px]">
+                                    <Checkbox
+                                        // checked={selectedItems.length === filteredVenues.length && filteredVenues.length > 0}
+                                        // onCheckedChange={handleSelectAll}
+                                        aria-label="Select all"
+                                        // disabled={isMutating}
+                                    />
+                                </TableHead> */}
+                                    <TableHead>Name</TableHead>
                                     <TableHead>Location</TableHead>
-                                    <TableHead>Owner ID</TableHead>
+                                    <TableHead>Owner</TableHead>
                                     <TableHead>Created At</TableHead>
                                     <TableHead>Updated At</TableHead>
-                                    <TableHead className="w-[80px]">
+                                    <TableHead className="w-[100px]">
                                         Actions
                                     </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredVenues.map((venue) => (
-                                    <TableRow key={venue.id}>
-                                        <TableCell>
-                                            <Checkbox
-                                                checked={selectedItems.includes(
-                                                    venue.id,
-                                                )}
-                                                onCheckedChange={() =>
-                                                    handleSelectItem(venue.id)
-                                                }
-                                                aria-label={`Select venue ${venue.name}`}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                                                    <img
-                                                        src={
-                                                            venue.image ||
-                                                            "/placeholder.svg"
-                                                        }
-                                                        alt={venue.name}
-                                                        className="h-full w-full object-cover"
-                                                    />
-                                                </div>
-                                                <Button
-                                                    variant="link"
-                                                    className="p-0 h-auto text-left justify-start font-medium truncate"
-                                                    onClick={() =>
-                                                        handleNavigate(venue.id)
-                                                    }
-                                                >
-                                                    {venue.name}
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="truncate max-w-xs">
-                                            {venue.location}
-                                        </TableCell>
-                                        <TableCell>
-                                            {venue.venueOwnerId}
-                                        </TableCell>
-                                        <TableCell>
-                                            {formatDateTime(venue.createdAt)}
-                                        </TableCell>
-                                        <TableCell>
-                                            {formatDateTime(venue.updatedAt)}
-                                        </TableCell>
-                                        <TableCell>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
+                                {filteredVenues.length > 0 ? (
+                                    filteredVenues.map((venue) => (
+                                        <TableRow key={venue.id}>
+                                            {/* <TableCell>
+                                        <Checkbox
+                                            // checked={selectedItems.includes(venue.id)}
+                                            // onCheckedChange={() => handleSelectItem(venue.id)}
+                                            aria-label={`Select venue ${venue.name}`}
+                                            // disabled={isMutating}
+                                        />
+                                    </TableCell> */}
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                                                        <img
+                                                            src={
+                                                                venue.imagePath ??
+                                                                "/placeholder.svg"
+                                                            } // Construct URL
+                                                            alt={venue.name}
+                                                            className="h-full w-full object-cover"
+                                                            onError={(e) => {
+                                                                e.currentTarget.src =
+                                                                    "/placeholder.svg";
+                                                            }}
+                                                            loading="lazy"
+                                                        />
+                                                    </div>
                                                     <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                    >
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                        <span className="sr-only">
-                                                            Venue Actions
-                                                        </span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
+                                                        variant="link"
+                                                        className="p-0 h-auto text-left justify-start font-medium truncate"
                                                         onClick={() =>
                                                             handleNavigate(
                                                                 venue.id,
                                                             )
                                                         }
+                                                        title={venue.name}
                                                     >
-                                                        <Eye className="mr-2 h-4 w-4" />{" "}
-                                                        View
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            setEditingVenue(
-                                                                venue,
-                                                            );
-                                                            setIsAddVenueOpen(
-                                                                true,
-                                                            );
-                                                        }}
+                                                        {venue.name}
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell
+                                                className="truncate max-w-xs"
+                                                title={venue.location}
+                                            >
+                                                {venue.location}
+                                            </TableCell>
+                                            <TableCell>
+                                                {venue.venueOwner ? (
+                                                    <div
+                                                        title={`${venue.venueOwner.firstName} ${venue.venueOwner.lastName} (${venue.venueOwner.email})`}
                                                     >
-                                                        <Edit className="mr-2 h-4 w-4" />{" "}
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="text-destructive focus:text-destructive"
-                                                        onClick={() => {
-                                                            setVenueToDelete(
-                                                                venue.id,
-                                                            );
-                                                            setIsDeleteDialogOpen(
-                                                                true,
-                                                            );
-                                                        }}
+                                                        {
+                                                            venue.venueOwner
+                                                                .firstName
+                                                        }{" "}
+                                                        {
+                                                            venue.venueOwner
+                                                                .lastName
+                                                        }
+                                                        <div className="text-xs text-muted-foreground truncate">
+                                                            {
+                                                                venue.venueOwner
+                                                                    .email
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground">
+                                                        —
+                                                    </span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDateTime(
+                                                    venue.createdAt,
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDateTime(
+                                                    venue.updatedAt,
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
                                                     >
-                                                        <Trash2 className="mr-2 h-4 w-4" />{" "}
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {filteredVenues.length === 0 && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            disabled={
+                                                                isMutating
+                                                            }
+                                                        >
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <span className="sr-only">
+                                                                Venue Actions
+                                                            </span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleNavigate(
+                                                                    venue.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Eye className="mr-2 h-4 w-4" />{" "}
+                                                            View
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setEditingVenue(
+                                                                    venue,
+                                                                );
+                                                                setIsAddVenueOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                        >
+                                                            <Edit className="mr-2 h-4 w-4" />{" "}
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="text-destructive focus:text-destructive"
+                                                            onClick={() => {
+                                                                setVenueToDelete(
+                                                                    venue.id,
+                                                                );
+                                                                setIsDeleteDialogOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            disabled={
+                                                                deleteVenueMutation.isPending &&
+                                                                deleteVenueMutation.variables ===
+                                                                    venue.id
+                                                            }
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />{" "}
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={7} // Adjusted colspan
+                                            colSpan={6}
                                             className="text-center py-8 text-muted-foreground"
                                         >
-                                            No venues found.
+                                            No venues found matching your
+                                            search.
                                         </TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
                         </Table>
                     )}
+
                     {/* Grid View */}
                     {viewMode === "grid" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {filteredVenues.map((venue) => (
-                                <Card
-                                    key={venue.id}
-                                    className="overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow"
-                                    onClick={() => handleNavigate(venue.id)}
-                                >
-                                    <div className="aspect-video w-full overflow-hidden">
-                                        <img
-                                            src={
-                                                venue.image ||
-                                                "/placeholder.svg"
-                                            }
-                                            alt={venue.name}
-                                            className="h-full w-full object-cover"
-                                        />
-                                    </div>
-                                    <CardHeader>
-                                        <CardTitle
-                                            className="text-base font-semibold truncate"
-                                            title={venue.name}
-                                        >
-                                            {venue.name}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="text-sm text-muted-foreground flex-grow">
-                                        <div className="flex items-start gap-1.5">
-                                            <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                            <span className="line-clamp-2">
-                                                {venue.location}
-                                            </span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {filteredVenues.length > 0 ? (
+                                filteredVenues.map((venue) => (
+                                    <Card
+                                        key={venue.id}
+                                        className="overflow-hidden flex flex-col group"
+                                    >
+                                        <div className="aspect-video w-full overflow-hidden relative">
+                                            <img
+                                                src={venue.imagePath ?? null} // Construct URL
+                                                alt={venue.name}
+                                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                onError={(e) => {
+                                                    e.currentTarget.src =
+                                                        "/placeholder.svg";
+                                                }}
+                                                loading="lazy"
+                                            />
+                                            {role === "SUPER_ADMIN" && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
+                                                        <Button
+                                                            variant="secondary"
+                                                            size="icon"
+                                                            className="absolute top-2 right-2 h-7 w-7 opacity-80 group-hover:opacity-100"
+                                                            disabled={
+                                                                isMutating
+                                                            }
+                                                        >
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <span className="sr-only">
+                                                                Venue Actions
+                                                            </span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleNavigate(
+                                                                    venue.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Eye className="mr-2 h-4 w-4" />{" "}
+                                                            View Details
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setEditingVenue(
+                                                                    venue,
+                                                                );
+                                                                setIsAddVenueOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                        >
+                                                            <Edit className="mr-2 h-4 w-4" />{" "}
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            className="text-destructive focus:text-destructive"
+                                                            onClick={() => {
+                                                                setVenueToDelete(
+                                                                    venue.id,
+                                                                );
+                                                                setIsDeleteDialogOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            disabled={
+                                                                deleteVenueMutation.isPending &&
+                                                                deleteVenueMutation.variables ===
+                                                                    venue.id
+                                                            }
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />{" "}
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
                                         </div>
-                                    </CardContent>
-                                    {/* Optional Footer for quick info */}
-                                    {/* <CardFooter className="text-xs text-muted-foreground pt-2 pb-3">
-                                        <span>Owner ID: {venue.venueOwnerId}</span>
-                                    </CardFooter> */}
-                                </Card>
-                            ))}
-                            {filteredVenues.length === 0 && (
+                                        <CardHeader className="pb-2 pt-4 px-4">
+                                            <CardTitle
+                                                className="text-base font-semibold truncate"
+                                                title={venue.name}
+                                            >
+                                                {venue.name}
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="text-sm text-muted-foreground flex-grow px-4 pb-3">
+                                            <div className="flex items-start gap-1.5 mb-2">
+                                                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                                <span
+                                                    className="line-clamp-2"
+                                                    title={venue.location}
+                                                >
+                                                    {venue.location}
+                                                </span>
+                                            </div>
+                                            {venue.venueOwner && (
+                                                <div
+                                                    className="flex items-start gap-1.5"
+                                                    title={`${venue.venueOwner.firstName} ${venue.venueOwner.lastName}`}
+                                                >
+                                                    <UserCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                                    <span className="truncate">
+                                                        Owner:{" "}
+                                                        {
+                                                            venue.venueOwner
+                                                                .firstName
+                                                        }{" "}
+                                                        {
+                                                            venue.venueOwner
+                                                                .lastName
+                                                        }
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                        {role !== "SUPER_ADMIN" && ( // Show Reserve button for non-admins
+                                            <CardFooter className="p-4 pt-0">
+                                                <Button
+                                                    size="sm"
+                                                    className="w-full"
+                                                    onClick={() =>
+                                                        setIsReservationDialogOpen(
+                                                            true,
+                                                        )
+                                                    }
+                                                >
+                                                    Reserve
+                                                </Button>
+                                            </CardFooter>
+                                        )}
+                                    </Card>
+                                ))
+                            ) : (
                                 <div className="col-span-full text-center py-8 text-muted-foreground">
-                                    No venues found.
+                                    No venues found matching your search.
                                 </div>
                             )}
                         </div>
@@ -683,28 +683,30 @@ export function VenueManagement() {
 
                     {/* Reservations View */}
                     {viewMode === "reservations" && (
-                        <div className="text-center text-muted-foreground py-8">
-                            Reservation list placeholder.
-                            {/* Add reservation listing component here */}
+                        <div className="text-center text-muted-foreground py-8 border rounded-md">
+                            My Venue Reservations (Placeholder)
+                            {/* TODO: Add UserReservations component for venues */}
                         </div>
                     )}
                 </div>
             </div>
 
             {/* Dialogs */}
+            {/* Reservation Dialog (for non-admins) */}
             <VenueReservationFormDialog
                 isOpen={isReservationDialogOpen}
                 onClose={() => setIsReservationDialogOpen(false)}
                 onSubmit={handleReservationSubmit}
-                // Pass necessary props like venues list, event types, departments
                 venues={venues.map((v) => ({
                     id: v.id.toString(),
                     name: v.name,
-                }))} // Simplified for selection
-                departments={DEPARTMENTS.map((d) => d.label)} // Make sure DEPARTMENTS is imported/defined
-                isLoading={false} // Pass loading state if applicable
+                    image: v.imagePath,
+                }))} // Pass needed data
+                departments={DEPARTMENTS.map((d) => d.label)} // Pass departments
+                isLoading={false} // Pass loading state from reservation mutation if implemented
             />
 
+            {/* Add/Edit Dialog (SUPER_ADMIN only) */}
             {role === "SUPER_ADMIN" && (
                 <>
                     <VenueFormDialog
@@ -713,17 +715,13 @@ export function VenueManagement() {
                             setIsAddVenueOpen(false);
                             setEditingVenue(null);
                         }}
-                        onSubmit={
-                            editingVenue
-                                ? handleEditVenueSubmit
-                                : handleAddVenueSubmit
-                        }
-                        venue={editingVenue}
+                        onSubmit={handleAddOrEditSubmit} // Use combined handler
+                        venue={editingVenue || undefined} // Pass editing venue or undefined
                         isLoading={
                             createVenueMutation.isPending ||
                             updateVenueMutation.isPending
                         }
-                        venueOwners={venueOwners}
+                        venueOwners={venueOwners} // Pass owners list
                     />
                     <DeleteConfirmDialog
                         isOpen={isDeleteDialogOpen}
@@ -732,21 +730,9 @@ export function VenueManagement() {
                             setVenueToDelete(null);
                         }}
                         onConfirm={handleDeleteConfirm}
-                        title={
-                            venueToDelete
-                                ? "Delete Venue"
-                                : "Delete Selected Venues"
-                        }
-                        description={
-                            venueToDelete
-                                ? `Are you sure you want to delete the venue "${venues.find((v) => v.id === venueToDelete)?.name}"? This action cannot be undone.`
-                                : `Are you sure you want to delete ${selectedItems.length} selected venue(s)? This action cannot be undone.`
-                        }
-                        isLoading={
-                            deleteVenueMutation.isPending
-                            // ||
-                            // deleteVenuesMutation.isPending
-                        }
+                        title="Delete Venue"
+                        description={`Are you sure you want to delete the venue "${venues.find((v) => v.id === venueToDelete)?.name}"? This action cannot be undone.`}
+                        isDeleting={deleteVenueMutation.isPending}
                     />
                 </>
             )}
