@@ -475,3 +475,20 @@ export const equipmentDataSchema = v.object({
 
 export type EquipmentDTOInput = v.InferInput<typeof equipmentDataSchema>;
 export type EquipmentDTOOutput = v.InferOutput<typeof equipmentDataSchema>;
+
+export const departmentSchema = v.object({
+    name: v.pipe(
+        v.string("Department Name is required"),
+        v.nonEmpty("Department Name is required"),
+    ),
+    description: v.optional(v.string()),
+    deptHeadId: v.optional(
+        v.pipe(
+            v.number("Dept Head ID must be a number"),
+            v.integer("Dept Head ID must be an integer"),
+            v.minValue(1, "Invalid Dept Head ID"),
+        ),
+    ),
+});
+
+export type DepartmentInput = v.InferInput<typeof departmentSchema>;

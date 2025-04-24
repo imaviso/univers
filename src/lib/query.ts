@@ -100,14 +100,6 @@ export const venuesQueryOptions = {
     },
 };
 
-export const departmentsQueryOptions = {
-    queryKey: ["departments"],
-    queryFn: async () => {
-        const departments = await getAllDepartments();
-        return departments;
-    },
-};
-
 export const equipmentsQueryOptions = (user: UserType | null | undefined) =>
     queryOptions({
         // Include role in query key if fetch logic depends on it, or just userId if sufficient
@@ -129,3 +121,9 @@ export const equipmentsQueryOptions = (user: UserType | null | undefined) =>
         enabled: !!user,
         staleTime: 1000 * 60 * 2, // 2 minutes stale time
     });
+
+export const departmentsQueryOptions = queryOptions({
+    queryKey: ["departments"],
+    queryFn: getAllDepartments,
+    staleTime: 1000 * 60 * 5,
+});

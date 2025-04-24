@@ -2,6 +2,7 @@ import {
     BookCheck,
     BookText,
     Building,
+    Building2,
     CalendarDays,
     Home,
     LayoutGrid,
@@ -88,6 +89,12 @@ export const allNavigation = [
         href: "/app/equipment-approval/approval",
         icon: PackageCheck,
         roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER", "VP_ADMIN"],
+    },
+    {
+        name: "Departments",
+        href: "/app/departments/dashboard",
+        icon: Building2,
+        roles: ["SUPER_ADMIN", "VP_ADMIN"],
     },
 ];
 

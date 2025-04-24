@@ -272,3 +272,23 @@ export type EventApprovalDTO = {
     status: string;
     dateSigned: string | null;
 };
+
+export type DepartmentDTO = {
+    id: number;
+    name: string;
+    description: string | null;
+    deptHead: UserDTO | null;
+    deptHeadId: number | null;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type DepartmentType = {
+    id: number;
+    name: string;
+    description: string | null;
+    deptHeadName: string | null;
+    deptHeadId: number | null;
+    createdAt: string;
+    updatedAt: string;
+};

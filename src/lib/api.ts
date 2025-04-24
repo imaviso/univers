@@ -7,6 +7,8 @@ import type {
     VenueInput,
 } from "./schema";
 import type {
+    DepartmentDTO,
+    DepartmentType,
     Equipment,
     EventApprovalDTO,
     EventDTOBackendResponse,
@@ -258,25 +260,6 @@ export const getAllVenues = async (): Promise<Venue[]> => {
         throw error instanceof Error
             ? error
             : new Error("An unexpected error occurred during fetching venues.");
-    }
-};
-
-export const getAllDepartments = async () => {
-    try {
-        const response = await fetch(`${API_BASE_URL}/departments`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
-        // Expect JSON array, handle empty success
-        const data = await handleApiResponse(response, true);
-        return data ?? []; // Default to empty array
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred during fetching departments.",
-              );
     }
 };
 
@@ -723,3 +706,130 @@ export const deleteEquipment = async (
 //               );
 //     }
 // };
+
+export const getAllDepartments = async (): Promise<DepartmentType[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/departments`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        const data: DepartmentDTO[] =
+            (await handleApiResponse(response, true)) ?? [];
+
+        return data.map((dept) => ({
+            id: dept.id,
+            name: dept.name,
+            description: dept.description,
+            deptHeadName: dept.deptHead
+                ? `${dept.deptHead.firstName} ${dept.deptHead.lastName}`
+                : null,
+            deptHeadId: dept.deptHeadId,
+            createdAt: dept.createdAt,
+            updatedAt: dept.updatedAt,
+        }));
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during fetching departments.",
+              );
+    }
+};
+
+type DepartmentPayload = {
+    name: string;
+    description?: string | null;
+    deptHead?: number | null;
+};
+
+export const addDepartment = async (
+    departmentData: DepartmentPayload,
+): Promise<string> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/departments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(departmentData),
+        });
+
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during adding department.",
+              );
+    }
+};
+
+export const updateDepartment = async (
+    departmentId: number,
+    departmentData: Partial<DepartmentPayload>,
+): Promise<string> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/admin/departments/${departmentId}`,
+            {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(departmentData),
+            },
+        );
+
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during updating department ${departmentId}.`,
+              );
+    }
+};
+
+export const assignDepartmentHead = async (
+    departmentId: number,
+    userId: number,
+): Promise<string> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/admin/${departmentId}/assign-head/${userId}`,
+            {
+                method: "POST",
+                credentials: "include",
+            },
+        );
+
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during assigning head to department ${departmentId}.`,
+              );
+    }
+};
+
+export const deleteDepartment = async (
+    departmentId: number,
+): Promise<string | null> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/admin/departments/${departmentId}`,
+            {
+                method: "DELETE",
+                credentials: "include",
+            },
+        );
+
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during deleting department ${departmentId}.`,
+              );
+    }
+};
