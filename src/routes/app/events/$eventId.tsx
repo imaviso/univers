@@ -48,7 +48,7 @@ import {
     eventQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
-import type { Event } from "@/lib/types"; // Import Event type
+import type { Event, EventApprovalDTO, Venue } from "@/lib/types"; // Import Event type
 import {
     formatDateRange,
     formatDateTime,
@@ -91,6 +91,12 @@ export const Route = createFileRoute("/app/events/$eventId")({
     component: EventDetailsPage,
 });
 
+interface EventDetailsLoaderData {
+    event: Event;
+    venues: Venue[];
+    approvals: EventApprovalDTO[];
+}
+
 export function EventDetailsPage() {
     const context = useRouteContext({ from: "/app/events" });
     const role = context.authState?.role;
@@ -109,20 +115,26 @@ export function EventDetailsPage() {
 
     const hasUserApproved = approvals.some(
         (appr) =>
-            appr.signedBy ===
-            `${currentUser?.firstName} ${currentUser?.lastName}`, // Compare full names
+            // Compare based on user ID if available and reliable
+            (currentUser?.id && appr.userId === Number(currentUser.id)) ||
+            // Fallback to comparing names if ID isn't available/reliable in approval DTO
+            (!currentUser?.id &&
+                appr.signedBy ===
+                    `${currentUser?.firstName} ${currentUser?.lastName}`),
     );
 
     const canUserApprove =
         currentUser &&
         [
-            "VENUE_OWNER",
-            "EQUIPMENT_OWNER", // Note: Backend uses EQUIPMENT_OWNER for both MSDO/OPC approval logic
-            "DEPT_HEAD",
-            "VP_ADMIN",
-            "VPAA",
-            "SSD",
-            "FAO",
+            "SUPER_ADMIN",
+            "OPC",
+            "MSDO",
+            // "VENUE_OWNER",
+            // "DEPT_HEAD",
+            // "VP_ADMIN",
+            // "VPAA",
+            // "SSD",
+            // "FAO",
         ].includes(currentUser.role) &&
         !hasUserApproved &&
         event.status === "PENDING";
