@@ -129,12 +129,12 @@ export function EventDetailsPage() {
             "SUPER_ADMIN",
             "OPC",
             "MSDO",
-            // "VENUE_OWNER",
-            // "DEPT_HEAD",
-            // "VP_ADMIN",
-            // "VPAA",
-            // "SSD",
-            // "FAO",
+            "EQUIPMENT_OWNER",
+            "DEPT_HEAD",
+            "VP_ADMIN",
+            "VPAA",
+            "SSD",
+            "FAO",
         ].includes(currentUser.role) &&
         !hasUserApproved &&
         event.status === "PENDING";
