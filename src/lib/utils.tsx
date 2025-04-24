@@ -1,6 +1,8 @@
+import { Badge } from "@/components/ui/badge";
 import { type ClassValue, clsx } from "clsx";
 import { format, setHours, setMinutes } from "date-fns";
 import { twMerge } from "tailwind-merge";
+import type { Equipment } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -59,6 +61,17 @@ export const formatDateRange = (start: Date, end: Date): string => {
     return `${format(start, startFormat)} to ${format(end, endFormatFull)}`;
 };
 
+export const formatDateTime = (dateString: string | null): string => {
+    if (!dateString) return "—";
+    try {
+        // Assuming dateString is ISO 8601 or compatible
+        return format(new Date(dateString), "MMM d, yyyy h:mm a");
+    } catch (error) {
+        console.error("Error formatting date:", dateString, error);
+        return "Invalid Date";
+    }
+};
+
 export const getStatusColor = (status: string | undefined) => {
     switch (status?.toUpperCase()) {
         case "PENDING":
@@ -71,5 +84,64 @@ export const getStatusColor = (status: string | undefined) => {
             return "bg-purple-500/10 text-purple-600";
         default:
             return "bg-gray-500/10 text-gray-500";
+    }
+};
+
+export function getStatusBadgeClass(
+    status: Status | string | undefined,
+): string {
+    switch (status) {
+        case "NEW":
+            return "border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400";
+        case "PENDING":
+            return "border-yellow-500/50 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
+        case "APPROVED":
+            return "border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400";
+        case "REJECTED":
+            return "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400";
+        case "MAINTENANCE":
+            return "border-orange-500/50 bg-orange-500/10 text-orange-600 dark:text-orange-400";
+        default:
+            return "border-gray-500/50 bg-gray-500/10 text-gray-600 dark:text-gray-400";
+    }
+}
+
+export function getEquipmentNameById(
+    equipmentList: Equipment[],
+    id: string | number,
+): string | null {
+    const numericId = typeof id === "string" ? Number.parseInt(id, 10) : id;
+    const equipment = equipmentList.find((item) => item.id === numericId);
+    return equipment ? equipment.name : null;
+}
+
+export const getApproverStatusBadge = (status: string | undefined) => {
+    switch (status?.toUpperCase()) {
+        case "APPROVED":
+            return (
+                <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">
+                    Approved
+                </Badge>
+            );
+        case "DISAPPROVED": // Or REJECTED
+            return (
+                <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
+                    Disapproved
+                </Badge>
+            );
+        case "PENDING":
+            return (
+                <Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
+                    Pending
+                </Badge>
+            );
+        case "NOT_REQUIRED": // Handle if applicable
+            return (
+                <Badge className="bg-gray-500/10 text-gray-500 hover:bg-gray-500/20">
+                    Not Required
+                </Badge>
+            );
+        default:
+            return <Badge variant="outline">{status || "Unknown"}</Badge>;
     }
 };

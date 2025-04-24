@@ -27,12 +27,14 @@ import {
     type EquipmentReservationFormInput,
     equipmentReservationFormSchema,
 } from "@/lib/schema";
-import { cn } from "@/lib/utils";
+import type { Equipment, Event, Venue } from "@/lib/types";
+import { cn, getEquipmentNameById } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { format, startOfDay } from "date-fns";
 import { CalendarIcon, CloudUpload, Users, X } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { Badge } from "../ui/badge";
 import {
     FileUpload,
     FileUploadDropzone,
@@ -51,8 +53,9 @@ interface EquipmentReservationFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: EquipmentReservationFormInput) => void;
-    events: { id: string; name: string }[];
-    venues: { id: string; name: string; capacity: number }[];
+    events: Event[];
+    venues: Venue[];
+    equipment: Equipment[];
     isLoading?: boolean;
 }
 
@@ -62,6 +65,7 @@ export function EquipmentReservationFormDialog({
     onSubmit,
     events,
     venues,
+    equipment,
     isLoading = false,
 }: EquipmentReservationFormDialogProps) {
     const [step, setStep] = useState(1);
@@ -143,7 +147,7 @@ export function EquipmentReservationFormDialog({
         onClose();
     };
 
-    const selectedEquipment = form.watch("selectedEquipment") || [];
+    const selectedEquipmentIds = form.watch("selectedEquipment") || [];
     const selectedVenueId = form.watch("venueId");
     const selectedVenue = venues.find((v) => v.id === selectedVenueId);
     const selectedEventId = form.watch("eventId");
@@ -251,9 +255,9 @@ export function EquipmentReservationFormDialog({
                                                     {events.map((event) => (
                                                         <SelectItem
                                                             key={event.id}
-                                                            value={event.id}
+                                                            value={event.id.toString()}
                                                         >
-                                                            {event.name}
+                                                            {event.eventName}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -282,11 +286,10 @@ export function EquipmentReservationFormDialog({
                                                     {venues.map((venue) => (
                                                         <SelectItem
                                                             key={venue.id}
-                                                            value={venue.id}
+                                                            value={venue.id.toString()}
                                                         >
                                                             {venue.name}{" "}
-                                                            (Capacity:{" "}
-                                                            {venue.capacity})
+                                                            {venue.location}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -380,6 +383,7 @@ export function EquipmentReservationFormDialog({
                                     control={form.control}
                                     name="selectedEquipment"
                                     render={() => (
+                                        // No field needed directly, handled by EquipmentList
                                         <FormItem>
                                             <div className="mb-4">
                                                 <FormLabel className="text-base">
@@ -395,11 +399,12 @@ export function EquipmentReservationFormDialog({
                                             <FormMessage />
 
                                             <EquipmentList
+                                                equipment={equipment} // Pass fetched equipment data
                                                 selectedEquipment={
-                                                    selectedEquipment
+                                                    selectedEquipmentIds // Pass number array
                                                 }
                                                 onEquipmentChange={(
-                                                    equipmentIds,
+                                                    equipmentIds: number[], // Expect number array
                                                 ) => {
                                                     form.setValue(
                                                         "selectedEquipment",
@@ -420,7 +425,7 @@ export function EquipmentReservationFormDialog({
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>
-                                                Approved Letter
+                                                Approved Letter *
                                             </FormLabel>
                                             <FormControl>
                                                 <FileUpload
@@ -432,8 +437,8 @@ export function EquipmentReservationFormDialog({
                                                     maxFiles={1} // Limit to one file
                                                     maxSize={5 * 1024 * 1024} // 5MB limit
                                                     onFileReject={(
-                                                        reasons, // Changed variable name
-                                                        files, // Changed variable name
+                                                        reasons,
+                                                        files,
                                                     ) => {
                                                         console.log(
                                                             "File rejected:",
@@ -445,7 +450,7 @@ export function EquipmentReservationFormDialog({
                                                             {
                                                                 message:
                                                                     reasons[0]
-                                                                        .reason ?? // Use reason from the first rejection
+                                                                        ?.reason ??
                                                                     "File rejected",
                                                             },
                                                         );
@@ -522,7 +527,7 @@ export function EquipmentReservationFormDialog({
                                             Event
                                         </h5>
                                         <p className="text-sm">
-                                            {selectedEvent.name}
+                                            {selectedEvent.eventName}
                                         </p>
                                         <p className="text-sm text-muted-foreground mt-1">
                                             Purpose: {form.watch("purpose")}
@@ -540,8 +545,8 @@ export function EquipmentReservationFormDialog({
                                         <div className="flex items-center text-sm text-muted-foreground mt-1">
                                             <Users className="h-3.5 w-3.5 mr-1" />
                                             <span>
-                                                Capacity:{" "}
-                                                {selectedVenue.capacity}
+                                                Location:{" "}
+                                                {selectedVenue.location}
                                             </span>
                                         </div>
                                     </div>
@@ -571,21 +576,31 @@ export function EquipmentReservationFormDialog({
                                         </div>
                                     </div>
 
-                                    {/* Equipment */}
-                                    {selectedEquipment.length > 0 && (
+                                    {selectedEquipmentIds.length > 0 && (
                                         <div className="pt-2 pb-2 border-b">
                                             <h5 className="font-medium text-sm mb-1">
                                                 Selected Equipment
                                             </h5>
-                                            {/* Here you might want to fetch equipment names based on IDs */}
-                                            <p className="text-sm text-muted-foreground">
-                                                {selectedEquipment.join(", ")}{" "}
-                                                {/* Placeholder: Displaying IDs */}
-                                            </p>
-                                            {/* Or display as badges if you fetch names */}
-                                            {/* <div className="flex flex-wrap gap-1 mt-1">
-                                                {selectedEquipment.map(id => <Badge key={id} variant="secondary">{getEquipmentNameById(id)}</Badge>)}
-                                            </div> */}
+                                            {/* Fetch equipment names based on IDs */}
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                {selectedEquipmentIds.map(
+                                                    (id) => {
+                                                        const name =
+                                                            getEquipmentNameById(
+                                                                equipment,
+                                                                id,
+                                                            );
+                                                        return name ? (
+                                                            <Badge
+                                                                key={id}
+                                                                variant="secondary"
+                                                            >
+                                                                {name}
+                                                            </Badge>
+                                                        ) : null;
+                                                    },
+                                                )}
+                                            </div>
                                         </div>
                                     )}
 
@@ -635,7 +650,6 @@ export function EquipmentReservationFormDialog({
                                         <Button
                                             type="button"
                                             onClick={handleNext}
-                                            // Disable based on schema errors for the current step's fields
                                             disabled={
                                                 (step === 1 &&
                                                     isStep1ButtonDisabled()) ||
@@ -648,15 +662,13 @@ export function EquipmentReservationFormDialog({
                                     )}
                                     {step === 3 && (
                                         <Button
-                                            // Trigger final validation and submission
-                                            onClick={form.handleSubmit(
-                                                handleSubmit,
-                                            )}
-                                            // Disable if overall form is invalid (based on schema) or loading
-                                            disabled={
-                                                !form.formState.isValid ||
-                                                isLoading
+                                            type="button"
+                                            onClick={() =>
+                                                form.handleSubmit(
+                                                    handleSubmit,
+                                                )()
                                             }
+                                            disabled={isLoading}
                                         >
                                             {isLoading
                                                 ? "Submitting..."

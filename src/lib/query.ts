@@ -1,4 +1,5 @@
 import {
+    getAllApprovalsOfEvent,
     getAllDepartments,
     getAllEquipments,
     getAllEquipmentsAdmin,
@@ -82,6 +83,13 @@ export const eventQueryOptions = (eventId: string) =>
         queryKey: ["events", eventId],
         queryFn: () => getEventById(eventId),
         staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const eventApprovalsQueryOptions = (eventId: number) =>
+    queryOptions({
+        queryKey: ["eventApprovals", eventId],
+        queryFn: () => getAllApprovalsOfEvent(eventId),
+        staleTime: 1000 * 60 * 2, // 2 minutes stale time
     });
 
 export const venuesQueryOptions = {

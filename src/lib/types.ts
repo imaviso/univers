@@ -9,7 +9,8 @@ export type UserType = {
     role: string;
     password: string | undefined;
     department: string;
-    telephoneNumber: string; // Added based on userFormSchema and EditUserFormDialog usage
+    departmentId: number | null;
+    telephoneNumber: string;
     phoneNumber: string;
     emailVerified: boolean;
     active: boolean;
@@ -20,17 +21,17 @@ export type UserType = {
 export type UserDTO = {
     id: number;
     email: string;
-    firstName: string; // Ensure frontend names match backend (firstname vs firstName)
-    lastName: string; // Ensure frontend names match backend (lastname vs lastName)
-    id_number: string | null; // Match backend field name
-    phone_number: string | null; // Match backend field name
+    firstName: string;
+    lastName: string;
+    id_number: string | null;
+    phone_number: string | null;
     telephoneNumber: string | null;
-    roles: string; // Or specific role enum/type
+    roles: string;
     departmentId: number | null;
     emailVerified: boolean | null;
     active: boolean;
-    createdAt: string; // Or Date
-    updatedAt: string; // Or Date
+    createdAt: string;
+    updatedAt: string;
 };
 
 export type UserRole =
@@ -64,7 +65,7 @@ export type Equipment = {
     availability: boolean;
     brand: string;
     quantity: number;
-    equipmentOwner: UserType;
+    equipmentOwner: UserDTO;
     imagePath: string; // Path to the image file
     status: // Use the exact enum values from backend
         | "APPROVED"
@@ -102,6 +103,52 @@ export const ROLES = [
 ];
 
 export const DEPARTMENTS = [
+    { value: 1, label: "Vice-President for Academic Affairs (VPAA)" }, // Example ID
+    {
+        value: 2, // Example ID
+        label: "Multimedia Solutions and Documentation Office (MSDO)",
+    },
+    { value: 3, label: "Safety and Security Department (SSD)" }, // Example ID
+    { value: 4, label: "Executive Office (EO)" }, // Example ID
+    {
+        value: 5, // Example ID
+        label: "Office of Property Custodian (OPC)",
+    },
+    {
+        value: 6, // Example ID
+        label: "Finance and Accounting Office (FAO)",
+    },
+    {
+        value: 7, // Example ID
+        label: "Office of Admission and Scholarships (OAS)",
+    },
+    {
+        value: 8, // Example ID
+        label: "Students Success Office (SSO)",
+    },
+    {
+        value: 9, // Example ID
+        label: "Center for Communications, Creatives, and Marketing (CORE)",
+    },
+    { value: 10, label: "Elementary" }, // Example ID
+    { value: 11, label: "Junior High School (JHS)" }, // Example ID
+    { value: 12, label: "Senior High School (SHS)" }, // Example ID
+    { value: 13, label: "Physical Education (PE)" }, // Example ID
+    { value: 14, label: "College of Arts, Sciences, and Education (CASE)" }, // Example ID
+    {
+        value: 15, // Example ID
+        label: "College of Management, Business and Accountancy (CMBA)",
+    },
+    {
+        value: 16, // Example ID
+        label: "College of Nursing and Allied Health Services (CNAHS)",
+    },
+    { value: 17, label: "College of Engineering and Architecture (CEA)" }, // Example ID
+    { value: 18, label: "College of Criminal Justice (CCJ)" }, // Example ID
+    { value: 19, label: "College of Computer Studies (CCS)" }, // Example ID
+];
+
+export const OLD_DEPARTMENTS = [
     { value: "VPAA", label: "Vice-President for Academic Affairs (VPAA)" },
     {
         value: "MSDO",
@@ -156,8 +203,8 @@ export type Venue = {
     id: number;
     name: string;
     location: string;
-    venueOwner: UserType;
-    image?: string;
+    venueOwner: UserDTO | null;
+    imagePath: string | null;
     createdAt: string;
     updatedAt: string;
 };
@@ -208,10 +255,20 @@ export type Event = {
     id: number;
     eventName: string;
     eventType: string;
-    organizer: UserType; // Changed from organizerId: number
-    approvedLetterPath: string | null; // Assuming it can be null
+    organizer: UserDTO;
+    approvedLetterPath: string | null;
     eventVenueId: number;
     startTime: string;
     endTime: string;
     status: string;
+};
+
+export type EventApprovalDTO = {
+    id: number;
+    eventId: number;
+    department: string;
+    signedBy: string;
+    remarks: string | null;
+    status: string;
+    dateSigned: string | null;
 };

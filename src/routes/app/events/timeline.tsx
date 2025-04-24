@@ -49,13 +49,11 @@ function Events() {
                             </button>
                         </div>
                     </div>
-                    {role === "SUPER_ADMIN" && (
-                        <div className="flex items-center gap-2">
-                            <CreateEventButton
-                                onClick={() => setIsModalOpen(true)}
-                            />
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                        <CreateEventButton
+                            onClick={() => setIsModalOpen(true)}
+                        />
+                    </div>
                 </header>
                 <main className="flex-1 overflow-auto p-6">
                     {view === "list" ? <EventList /> : <EventTimeline />}
