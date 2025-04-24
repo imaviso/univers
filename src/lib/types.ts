@@ -9,7 +9,8 @@ export type UserType = {
     role: string;
     password: string | undefined;
     department: string;
-    telephoneNumber: string; // Added based on userFormSchema and EditUserFormDialog usage
+    departmentId: number | null;
+    telephoneNumber: string;
     phoneNumber: string;
     emailVerified: boolean;
     active: boolean;
@@ -102,6 +103,52 @@ export const ROLES = [
 ];
 
 export const DEPARTMENTS = [
+    { value: 1, label: "Vice-President for Academic Affairs (VPAA)" }, // Example ID
+    {
+        value: 2, // Example ID
+        label: "Multimedia Solutions and Documentation Office (MSDO)",
+    },
+    { value: 3, label: "Safety and Security Department (SSD)" }, // Example ID
+    { value: 4, label: "Executive Office (EO)" }, // Example ID
+    {
+        value: 5, // Example ID
+        label: "Office of Property Custodian (OPC)",
+    },
+    {
+        value: 6, // Example ID
+        label: "Finance and Accounting Office (FAO)",
+    },
+    {
+        value: 7, // Example ID
+        label: "Office of Admission and Scholarships (OAS)",
+    },
+    {
+        value: 8, // Example ID
+        label: "Students Success Office (SSO)",
+    },
+    {
+        value: 9, // Example ID
+        label: "Center for Communications, Creatives, and Marketing (CORE)",
+    },
+    { value: 10, label: "Elementary" }, // Example ID
+    { value: 11, label: "Junior High School (JHS)" }, // Example ID
+    { value: 12, label: "Senior High School (SHS)" }, // Example ID
+    { value: 13, label: "Physical Education (PE)" }, // Example ID
+    { value: 14, label: "College of Arts, Sciences, and Education (CASE)" }, // Example ID
+    {
+        value: 15, // Example ID
+        label: "College of Management, Business and Accountancy (CMBA)",
+    },
+    {
+        value: 16, // Example ID
+        label: "College of Nursing and Allied Health Services (CNAHS)",
+    },
+    { value: 17, label: "College of Engineering and Architecture (CEA)" }, // Example ID
+    { value: 18, label: "College of Criminal Justice (CCJ)" }, // Example ID
+    { value: 19, label: "College of Computer Studies (CCS)" }, // Example ID
+];
+
+export const OLD_DEPARTMENTS = [
     { value: "VPAA", label: "Vice-President for Academic Affairs (VPAA)" },
     {
         value: "MSDO",

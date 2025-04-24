@@ -29,22 +29,31 @@ async function handleApiResponse(response: Response, expectJson = true) {
             // If parsing fails, use the raw text or the status message
             errorMessage = errorText || errorMessage;
         }
+        if (
+            errorMessage.includes("Email already in use") ||
+            errorMessage.includes("Department already exists") ||
+            errorMessage.includes("Department does not exist") ||
+            errorMessage.includes("Invalid department head") ||
+            errorMessage.includes("User not found") ||
+            errorMessage.includes("Invalid department Id")
+        ) {
+        }
         throw new Error(errorMessage);
     }
 
-    // Handle 204 No Content specifically for JSON expectations
     if (response.status === 204 && expectJson) {
         return [];
     }
 
-    // Handle non-JSON expectations
+    if (response.status === 204 && !expectJson) {
+        return null;
+    }
+
     if (!expectJson) {
         return await response.text();
     }
 
-    // Try to parse JSON, handle potential empty body for 200 OK
     try {
-        // Check if content-type indicates JSON before parsing
         const contentType = response.headers.get("content-type");
         if (contentType?.includes("application/json")) {
             // Clone the response to read the text first, in case json() fails on empty valid response
@@ -53,7 +62,7 @@ async function handleApiResponse(response: Response, expectJson = true) {
             if (!text) {
                 // Handle cases where 200 OK might have an empty body but valid JSON (e.g., empty array/object represented as "")
                 // Depending on API contract, might return [], {}, null, or undefined
-                return undefined; // Or adjust as needed
+                return null; // Or adjust as needed
             }
             return await response.json(); // Parse the original response
         }
@@ -77,7 +86,7 @@ async function handleApiResponse(response: Response, expectJson = true) {
             );
             // Return a sensible default based on expectation, e.g., empty array for lists
             // This depends heavily on what the calling code expects on empty success
-            return undefined; // Or [], {}, null etc.
+            return null; // Or [], {}, null etc.
         }
         // Re-throw other errors
         throw error;
@@ -122,12 +131,12 @@ export const updateProfile = async (userData: UserType) => {
     }
 };
 
-export const createUser = async (
-    userData: Omit<
-        UserType,
-        "id" | "emailVerified" | "createdAt" | "updatedAt"
-    >,
-) => {
+type CreateUserInputFE = Omit<
+    UserType,
+    "id" | "emailVerified" | "createdAt" | "updatedAt" | "department"
+> & { departmentId: number | null };
+
+export const createUser = async (userData: CreateUserInputFE) => {
     try {
         const response = await fetch(`${API_BASE_URL}/admin/users`, {
             method: "POST",
@@ -144,16 +153,41 @@ export const createUser = async (
     }
 };
 
-export const updateUser = async (userData: UserType) => {
+type UpdateUserInputFE = Partial<
+    Omit<
+        UserType,
+        "id" | "createdAt" | "updatedAt" | "emailVerified" | "department"
+    > & { departmentId: number | null }
+>;
+export const updateUser = async (
+    userId: string,
+    userData: UpdateUserInputFE,
+) => {
     try {
-        // Exclude fields that shouldn't be sent on update if necessary
-        const { id, createdAt, updatedAt, emailVerified, ...updateData } =
-            userData;
-        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+        const numericUserId = Number.parseInt(userId, 10);
+        if (Number.isNaN(numericUserId)) {
+            throw new Error("Invalid User ID format for update.");
+        }
+
+        const payload: any = {};
+        if (userData.firstName !== undefined)
+            payload.firstName = userData.firstName;
+        if (userData.lastName !== undefined)
+            payload.lastName = userData.lastName;
+        if (userData.idNumber !== undefined)
+            payload.idNumber = userData.idNumber;
+        if (userData.phoneNumber !== undefined)
+            payload.phoneNumber = userData.phoneNumber;
+        if (userData.telephoneNumber !== undefined)
+            payload.telephoneNumber = userData.telephoneNumber;
+        if (userData.departmentId !== undefined)
+            payload.department_id = userData.departmentId;
+
+        const response = await fetch(`${API_BASE_URL}/users/${numericUserId}`, {
+            // Use numeric ID
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            // Only send fields allowed by the API for update
-            body: JSON.stringify(updateData),
+            body: JSON.stringify(payload),
             credentials: "include",
         });
         // Assuming backend returns text confirmation on success
@@ -165,15 +199,19 @@ export const updateUser = async (userData: UserType) => {
     }
 };
 
-export const deactivateUser = async (userData: UserType) => {
+export const deactivateUser = async (userId: string) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/users/${userData.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ active: false }), // Only send the 'active' field
-            credentials: "include",
-        });
-        // Assuming backend returns text confirmation on success
+        const numericUserId = Number.parseInt(userId, 10);
+        if (Number.isNaN(numericUserId)) {
+            throw new Error("Invalid User ID format for deactivation.");
+        }
+        const response = await fetch(
+            `${API_BASE_URL}/admin/users/${numericUserId}/deactivate`,
+            {
+                method: "DELETE",
+                credentials: "include",
+            },
+        );
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -181,6 +219,27 @@ export const deactivateUser = async (userData: UserType) => {
             : new Error(
                   "An unexpected error occurred during deactivating user.",
               );
+    }
+};
+
+export const activateUser = async (userId: string) => {
+    try {
+        const numericUserId = Number.parseInt(userId, 10);
+        if (Number.isNaN(numericUserId)) {
+            throw new Error("Invalid User ID format for activation.");
+        }
+        const response = await fetch(
+            `${API_BASE_URL}/admin/users/${numericUserId}/activate`,
+            {
+                method: "POST",
+                credentials: "include",
+            },
+        );
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error("An unexpected error occurred during activating user.");
     }
 };
 
