@@ -64,7 +64,7 @@ export type Equipment = {
     availability: boolean;
     brand: string;
     quantity: number;
-    equipmentOwner: number; // ID of the owner user
+    equipmentOwner: UserType;
     imagePath: string; // Path to the image file
     status: // Use the exact enum values from backend
         | "APPROVED"
@@ -156,10 +156,10 @@ export type Venue = {
     id: number;
     name: string;
     location: string;
-    venueOwnerId: number;
-    image?: string; // Added optional image field
-    createdAt: string; // Use string for ISO date format
-    updatedAt: string; // Use string for ISO date format
+    venueOwner: UserType;
+    image?: string;
+    createdAt: string;
+    updatedAt: string;
 };
 
 export type EventDTOPayload = {

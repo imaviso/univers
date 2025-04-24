@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { venuesQueryOptions } from "@/lib/query";
+import type { Venue } from "@/lib/types";
 import {
     createFileRoute,
     useNavigate,
@@ -67,16 +68,6 @@ export const Route = createFileRoute("/app/venues/$venueId")({
     // Add error component for better error handling
     errorComponent: () => ErrorPage(),
 });
-
-type Venue = {
-    id: number;
-    name: string;
-    location: string;
-    venueOwnerId: number;
-    image?: string; // Added optional image field
-    createdAt: string;
-    updatedAt: string;
-};
 
 export function VenueDetails() {
     const navigate = useNavigate();
@@ -232,14 +223,15 @@ export function VenueDetails() {
                                             <div className="flex items-center gap-2">
                                                 <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                                 <span className="text-sm">
-                                                    {venue.location}
+                                                    Location: {venue.location}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <UserCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                                 <span className="text-sm">
-                                                    Owner ID:{" "}
-                                                    {venue.venueOwnerId}
+                                                    Owner:{" "}
+                                                    {venue.venueOwner.firstName}{" "}
+                                                    {venue.venueOwner.lastName}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">

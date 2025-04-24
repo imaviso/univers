@@ -464,6 +464,13 @@ export const equipmentDataSchema = v.object({
         v.minValue(0, "Quantity cannot be negative."),
     ),
     status: v.pipe(EquipmentStatusSchema, v.nonEmpty("Status is required.")),
+    ownerId: v.optional(
+        v.pipe(
+            v.number("Owner ID must be a number."),
+            v.integer("Owner ID must be an integer."),
+            v.minValue(1, "Invalid Owner ID."),
+        ),
+    ),
 });
 
 export type EquipmentDTOInput = v.InferInput<typeof equipmentDataSchema>;
