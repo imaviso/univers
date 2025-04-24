@@ -33,7 +33,7 @@ async function handleApiResponse(response: Response, expectJson = true) {
 
     // Handle 204 No Content specifically for JSON expectations
     if (response.status === 204 && expectJson) {
-        return undefined; // Or return null/empty array depending on expected structure
+        return [];
     }
 
     // Handle non-JSON expectations
@@ -390,26 +390,39 @@ export const deleteVenue = async (venueId: number) => {
 // };
 //
 
-export const getAllEquipments = async (
-    userId: number,
-): Promise<Equipment[]> => {
+export const getAllEquipmentsAdmin = async (): Promise<Equipment[]> => {
     try {
-        const url = new URL(`${API_BASE_URL}/equipments`);
-        url.searchParams.append("userId", userId.toString());
-
+        const url = new URL(`${API_BASE_URL}/equipments/all`);
         const response = await fetch(url.toString(), {
             method: "GET",
-            headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        // Expect JSON array, handle empty success
-        const data = await handleApiResponse(response, true);
-        return data ?? []; // Default to empty array
+        return await handleApiResponse(response, true);
     } catch (error) {
         throw error instanceof Error
             ? error
             : new Error(
-                  "An unexpected error occurred during fetching equipments.",
+                  "An unexpected error occurred while fetching all equipment.",
+              );
+    }
+};
+
+export const getAllEquipmentsByOwner = async (
+    ownerUserId: number,
+): Promise<Equipment[]> => {
+    try {
+        const url = new URL(`${API_BASE_URL}/equipments`);
+        url.searchParams.append("userId", ownerUserId.toString());
+        const response = await fetch(url.toString(), {
+            method: "GET",
+            credentials: "include",
+        });
+        return await handleApiResponse(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred while fetching equipment for user ${ownerUserId}.`,
               );
     }
 };
@@ -426,13 +439,22 @@ export const addEquipment = async ({
     try {
         const formData = new FormData();
 
+        const { ownerId, ...restOfEquipmentData } = equipmentData;
+        const equipmentJsonPayload: any = { ...restOfEquipmentData };
+        if (ownerId) {
+            equipmentJsonPayload.equipmentOwner = { id: ownerId };
+        }
+
         formData.append(
             "equipment",
-            new Blob([JSON.stringify(equipmentData)], {
+            new Blob([JSON.stringify(equipmentJsonPayload)], {
                 type: "application/json",
             }),
         );
 
+        // Backend requires image for add? Controller says optional, service implies required.
+        // Assuming required based on previous logic. Add check if needed.
+        // if (!imageFile) throw new Error("Image file is required for adding equipment.");
         formData.append("image", imageFile, imageFile.name);
 
         const url = new URL(`${API_BASE_URL}/equipments`);
@@ -455,35 +477,40 @@ export const addEquipment = async ({
 
 export const editEquipment = async ({
     equipmentId,
-    userId, // May be needed for authorization
+    userId,
     equipmentData,
     imageFile,
 }: {
     equipmentId: number;
     userId: number;
     equipmentData: EquipmentDTOInput;
-    imageFile?: File | null; // Image might be optional on update
+    imageFile?: File | null;
 }): Promise<Equipment> => {
-    console.warn("editEquipment API function not fully implemented.");
-    // Example implementation using FormData (similar to addEquipment)
-    // Adjust method (PUT/PATCH), endpoint, and how image updates are handled
     try {
         const formData = new FormData();
+
+        const { ownerId, ...restOfEquipmentData } = equipmentData;
+        const equipmentJsonPayload: any = { ...restOfEquipmentData };
+        if (ownerId) {
+            equipmentJsonPayload.equipmentOwner = { id: ownerId };
+        }
+
         formData.append(
             "equipment",
-            new Blob([JSON.stringify(equipmentData)], {
+            new Blob([JSON.stringify(equipmentJsonPayload)], {
                 type: "application/json",
             }),
         );
+
         if (imageFile) {
             formData.append("image", imageFile, imageFile.name);
         }
 
-        const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`); // Assuming endpoint like /equipments/{id}
-        url.searchParams.append("userId", userId.toString()); // If needed
+        const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`);
+        url.searchParams.append("userId", userId.toString());
 
         const response = await fetch(url.toString(), {
-            method: "PUT", // Or PATCH
+            method: "PATCH",
             credentials: "include",
             body: formData,
         });
@@ -497,18 +524,18 @@ export const editEquipment = async ({
     }
 };
 
-// Placeholder for deleteEquipment - Requires backend implementation
-export const deleteEquipment = async (equipmentId: number): Promise<void> => {
-    console.warn("deleteEquipment API function not fully implemented.");
+export const deleteEquipment = async (
+    equipmentId: number,
+    userId: number,
+): Promise<void> => {
     try {
-        const response = await fetch(
-            `${API_BASE_URL}/equipments/${equipmentId}`,
-            {
-                method: "DELETE",
-                credentials: "include",
-            },
-        );
-        // Expect No Content (204) or potentially text confirmation
+        const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`);
+        url.searchParams.append("userId", userId.toString());
+
+        const response = await fetch(url.toString(), {
+            method: "DELETE",
+            credentials: "include",
+        });
         await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -519,26 +546,28 @@ export const deleteEquipment = async (equipmentId: number): Promise<void> => {
     }
 };
 
-// Placeholder for bulkDeleteEquipment - Requires backend implementation
-export const bulkDeleteEquipment = async (
-    equipmentIds: number[],
-): Promise<void> => {
-    console.warn("bulkDeleteEquipment API function not fully implemented.");
-    try {
-        const response = await fetch(`${API_BASE_URL}/equipments/bulk-delete`, {
-            // Example endpoint
-            method: "POST", // Or DELETE with body
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ ids: equipmentIds }),
-        });
-        // Expect No Content (204) or potentially text confirmation
-        await handleApiResponse(response, false);
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred during bulk deleting equipment.",
-              );
-    }
-};
+// export const bulkDeleteEquipment = async (
+//     equipmentIds: number[],
+//     userId: number, // Add userId if backend needs it for authorization
+// ): Promise<void> => {
+//     console.warn("bulkDeleteEquipment API function not fully implemented.");
+//     try {
+//         const url = new URL(`${API_BASE_URL}/equipments/bulk-delete`); // Example endpoint
+//         // url.searchParams.append("userId", userId.toString()); // If needed as query param
+
+//         const response = await fetch(url.toString(), {
+//             method: "POST", // Or DELETE with body
+//             headers: { "Content-Type": "application/json" },
+//             credentials: "include",
+//             body: JSON.stringify({ ids: equipmentIds /*, userId: userId */ }), // Add userId if needed in body
+//         });
+//         // Expect No Content (204) or potentially text confirmation
+//         await handleApiResponse(response, false);
+//     } catch (error) {
+//         throw error instanceof Error
+//             ? error
+//             : new Error(
+//                   "An unexpected error occurred during bulk deleting equipment.",
+//               );
+//     }
+// };

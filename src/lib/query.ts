@@ -1,6 +1,8 @@
 import {
     getAllDepartments,
     getAllEquipments,
+    getAllEquipmentsAdmin,
+    getAllEquipmentsByOwner,
     getAllEvents,
     getAllUsers,
     getAllVenues,
@@ -98,14 +100,24 @@ export const departmentsQueryOptions = {
     },
 };
 
-export const equipmentsQueryOptions = (userId: number | undefined) =>
+export const equipmentsQueryOptions = (user: UserType | null | undefined) =>
     queryOptions({
-        queryKey: ["equipments", userId],
+        // Include role in query key if fetch logic depends on it, or just userId if sufficient
+        queryKey: ["equipments", user?.id, user?.role],
         queryFn: async () => {
-            if (!userId) return []; // Don't fetch if userId is not available
-            const equipments = await getAllEquipments(userId);
-            return equipments;
+            if (!user) return []; // Don't fetch if no user
+
+            if (user.role === "SUPER_ADMIN") {
+                return await getAllEquipmentsAdmin();
+            }
+            if (user.role === "EQUIPMENT_OWNER") {
+                return await getAllEquipmentsByOwner(Number(user.id));
+            }
+            // Other roles (like ORGANIZER) might need all available equipment?
+            // Adjust this logic based on requirements. Fetching all for now.
+            // Consider if non-owners should see only 'available' equipment via a different endpoint/filter.
+            return await getAllEquipmentsAdmin(); // Defaulting to all for other roles for now
         },
-        enabled: !!userId, // Only run the query if userId is available
-        staleTime: 1000 * 60 * 5, // 5 minutes stale time
+        enabled: !!user,
+        staleTime: 1000 * 60 * 2, // 2 minutes stale time
     });

@@ -27,13 +27,13 @@ import {
 } from "@/components/ui/select";
 import {
     type EquipmentDTOInput,
-    ImageSchema, // Keep ImageSchema for validation if needed separately
+    ImageSchema,
     equipmentDataSchema,
 } from "@/lib/schema";
-import { type Equipment, STATUS_EQUIPMENT } from "@/lib/types";
+import { type Equipment, STATUS_EQUIPMENT, type UserType } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { UploadCloud, X } from "lucide-react"; // Import icons
-import { useEffect, useState } from "react"; // Removed useRef
+import { UploadCloud, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 import {
@@ -44,15 +44,15 @@ import {
     FileUploadItemMetadata,
     FileUploadItemPreview,
     FileUploadList,
-} from "../ui/file-upload"; // Import FileUpload components
+} from "../ui/file-upload";
 
-// Default values based on EquipmentDTOInput
 const defaultValues: EquipmentDTOInput = {
     name: "",
     brand: "",
     availability: true,
     quantity: 1,
     status: "NEW",
+    ownerId: undefined,
 };
 
 interface EquipmentFormDialogProps {
@@ -61,6 +61,8 @@ interface EquipmentFormDialogProps {
     equipment?: Equipment;
     onSubmit: (data: EquipmentDTOInput, imageFile: File | null) => void;
     isMutating: boolean;
+    currentUserRole: UserType["role"];
+    equipmentOwners: UserType[];
 }
 
 export function EquipmentFormDialog({
@@ -69,14 +71,16 @@ export function EquipmentFormDialog({
     equipment,
     onSubmit,
     isMutating,
+    currentUserRole,
+    equipmentOwners,
 }: EquipmentFormDialogProps) {
-    // State specifically for the image file, managed by FileUpload's onValueChange
     const [imageFile, setImageFile] = useState<File | null>(null);
-    // State for validation errors specific to the image
     const [imageError, setImageError] = useState<string | null>(null);
-    // State to hold the initial image URL for edit mode preview
     const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
 
+    const isSuperAdmin = currentUserRole === "SUPER_ADMIN";
+    const isEditing = !!equipment;
+    const isEquipmentOwner = currentUserRole === "EQUIPMENT_OWNER";
     const formDefaultValues = equipment
         ? {
               name: equipment.name,
@@ -84,6 +88,9 @@ export function EquipmentFormDialog({
               availability: equipment.availability,
               quantity: equipment.quantity,
               status: equipment.status,
+              ownerId: equipment.equipmentOwner?.id
+                  ? Number(equipment.equipmentOwner.id)
+                  : undefined,
           }
         : defaultValues;
 
@@ -103,6 +110,9 @@ export function EquipmentFormDialog({
                           availability: equipment.availability,
                           quantity: equipment.quantity,
                           status: equipment.status,
+                          ownerId: equipment.equipmentOwner?.id
+                              ? Number(equipment.equipmentOwner.id)
+                              : undefined,
                       }
                     : defaultValues,
             );
@@ -117,42 +127,44 @@ export function EquipmentFormDialog({
         }
     }, [isOpen, equipment, form]);
 
-    // Handle file changes from FileUpload component
     const handleFileValueChange = (files: File[]) => {
-        const file = files[0] || null; // Get the first file or null
-        setImageError(null); // Clear previous errors
+        const file = files[0] || null;
+        setImageError(null);
 
         if (file) {
-            // Validate the selected file using ImageSchema
             const validationResult = v.safeParse(ImageSchema, file);
             if (validationResult.success) {
-                setImageFile(file); // Set the valid file
+                setImageFile(file);
             } else {
-                // Set error message and clear the file
                 setImageError(
                     v.flatten(validationResult.issues).root?.[0] ??
                         "Invalid image file.",
                 );
-                setImageFile(null); // Ensure invalid file isn't kept
-                // Optionally, trigger re-render of FileUpload to clear its internal state if needed
-                // This might require passing a key that changes or using FileUpload's clear mechanism
+                setImageFile(null);
             }
         } else {
-            setImageFile(null); // Clear file if array is empty
+            setImageFile(null);
         }
     };
 
     const processSubmit = (data: EquipmentDTOInput) => {
-        // Reset image error before submit validation
-        setImageError(null);
+        setImageError(null); // Reset image error
 
         // Validate image presence for new equipment
-        if (!equipment && !imageFile) {
+        if (!isEditing && !imageFile) {
             setImageError("Image file is required.");
             return;
         }
 
-        // Validate the current imageFile again just before submit (optional safeguard)
+        // Validate owner selection for SUPER_ADMIN adding new equipment
+        if (isSuperAdmin && !isEditing && !data.ownerId) {
+            form.setError("ownerId", {
+                message: "Equipment Owner is required for Super Admin.",
+            });
+            return;
+        }
+
+        // Validate image file again (optional safeguard)
         if (imageFile) {
             const validationResult = v.safeParse(ImageSchema, imageFile);
             if (!validationResult.success) {
@@ -160,23 +172,23 @@ export function EquipmentFormDialog({
                     v.flatten(validationResult.issues).root?.[0] ??
                         "Invalid image file.",
                 );
-                return; // Prevent submission with invalid file
+                return;
             }
         }
 
-        // Call the onSubmit passed from the parent component
+        // NOTE: The API call (`addEquipment`/`editEquipment`) now handles the ownerId nesting.
+        // We pass the `data` object as is, which includes `ownerId` if set.
         onSubmit(data, imageFile);
     };
 
     // Determine the files array for FileUpload based on state
     const currentFiles = imageFile ? [imageFile] : [];
-
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[600px] overflow-auto max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>
-                        {equipment ? "Edit Equipment" : "Add New Equipment"}
+                        {isEditing ? "Edit Equipment" : "Add New Equipment"}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -186,7 +198,60 @@ export function EquipmentFormDialog({
                         onSubmit={form.handleSubmit(processSubmit)}
                         className="space-y-4 py-4"
                     >
-                        {/* ... (Name, Brand, Quantity, Status, Availability FormFields remain the same) ... */}
+                        {/* Conditionally render Owner Select for SUPER_ADMIN on Add */}
+                        {isSuperAdmin && !isEditing && (
+                            <FormField
+                                control={form.control}
+                                name="ownerId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Equipment Owner *</FormLabel>
+                                        <Select
+                                            onValueChange={(value) =>
+                                                field.onChange(Number(value))
+                                            } // Ensure value is number
+                                            value={field.value?.toString()} // Convert number to string for Select value
+                                            disabled={isMutating}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select the owner" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {equipmentOwners.length > 0 ? (
+                                                    equipmentOwners.map(
+                                                        (owner) => (
+                                                            <SelectItem
+                                                                // Ensure owner.id is string or number as needed by UserType
+                                                                key={owner.id}
+                                                                value={owner.id.toString()} // Value must be string
+                                                            >
+                                                                {
+                                                                    owner.firstName
+                                                                }{" "}
+                                                                {owner.lastName}{" "}
+                                                                ({owner.email})
+                                                            </SelectItem>
+                                                        ),
+                                                    )
+                                                ) : (
+                                                    <SelectItem
+                                                        value=""
+                                                        disabled
+                                                    >
+                                                        No equipment owners
+                                                        found
+                                                    </SelectItem>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+
                         {/* Name */}
                         <FormField
                             control={form.control}
@@ -240,13 +305,15 @@ export function EquipmentFormDialog({
                                                 {...field}
                                                 onChange={(e) =>
                                                     field.onChange(
+                                                        // Use parseFloat for potential decimals if needed, else parseInt
                                                         Number.parseInt(
                                                             e.target.value,
                                                             10,
                                                         ) || 0,
                                                     )
                                                 }
-                                                value={field.value || 0}
+                                                // Ensure value is treated as number for input type=number
+                                                value={Number(field.value) || 0}
                                                 disabled={isMutating}
                                             />
                                         </FormControl>
@@ -318,13 +385,15 @@ export function EquipmentFormDialog({
 
                         {/* Image Upload using FileUpload */}
                         <div className="grid gap-2">
-                            <Label>Image</Label>
+                            <Label>
+                                Image {isEditing ? "(Optional)" : "*"}
+                            </Label>
                             <FileUpload
-                                value={currentFiles} // Pass the managed file state
-                                onValueChange={handleFileValueChange} // Handle changes and validation
+                                value={currentFiles}
+                                onValueChange={handleFileValueChange}
                                 maxFiles={1}
                                 maxSize={5 * 1024 * 1024} // 5MB
-                                accept="image/jpeg, image/png, image/webp" // Match schema
+                                accept="image/jpeg, image/png, image/webp"
                                 disabled={isMutating}
                                 className="relative rounded-lg border border-input bg-background"
                             >
@@ -351,7 +420,7 @@ export function EquipmentFormDialog({
                                                     className="size-full rounded object-cover"
                                                     onError={(e) => {
                                                         e.currentTarget.src =
-                                                            "/placeholder.svg";
+                                                            "/placeholder.svg"; // Fallback image
                                                     }}
                                                 />
                                             </div>
@@ -373,9 +442,7 @@ export function EquipmentFormDialog({
                                             value={file}
                                             className="p-2"
                                         >
-                                            <FileUploadItemPreview>
-                                                {/* Default preview handles images */}
-                                            </FileUploadItemPreview>
+                                            <FileUploadItemPreview />
                                             <FileUploadItemMetadata />
                                             <FileUploadItemDelete asChild>
                                                 <Button
@@ -392,7 +459,6 @@ export function EquipmentFormDialog({
                                     ))}
                                 </FileUploadList>
                             </FileUpload>
-                            {/* Display validation error */}
                             {imageError && (
                                 <p className="text-sm text-destructive">
                                     {imageError}
@@ -422,14 +488,18 @@ export function EquipmentFormDialog({
                         form="equipment-form"
                         disabled={
                             isMutating ||
-                            !form.formState.isValid ||
-                            (!equipment && !imageFile) || // Image required for new
-                            !!imageError // Disable if image error exists
+                            !form.formState.isValid || // Check basic form validity
+                            (!isEditing && !imageFile) || // Image required for new
+                            !!imageError || // Disable if image validation error exists
+                            // Disable if SUPER_ADMIN is adding and hasn't selected owner
+                            (isSuperAdmin &&
+                                !isEditing &&
+                                !form.getValues("ownerId"))
                         }
                     >
                         {isMutating
                             ? "Saving..."
-                            : equipment
+                            : isEditing
                               ? "Save Changes"
                               : "Add Equipment"}
                     </Button>
