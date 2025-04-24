@@ -8,6 +8,7 @@ import type {
 } from "./schema";
 import type {
     Equipment,
+    EventApprovalDTO,
     EventDTOBackendResponse,
     EventDTOPayload,
     UserType,
@@ -283,6 +284,59 @@ export const createEvent = async (
         throw error instanceof Error
             ? error
             : new Error("An unexpected error occurred during creating event.");
+    }
+};
+
+export const approveEvent = async ({
+    eventId,
+    userId,
+    remarks,
+}: {
+    eventId: number;
+    userId: number;
+    remarks: string;
+}): Promise<string> => {
+    try {
+        const url = new URL(`${API_BASE_URL}/event-approval/approve`);
+        url.searchParams.append("eventId", eventId.toString());
+        url.searchParams.append("userId", userId.toString());
+        url.searchParams.append("remarks", remarks);
+
+        const response = await fetch(url.toString(), {
+            method: "PATCH",
+            credentials: "include",
+        });
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error(
+            `An unexpected error occurred during approving event ${eventId}.`,
+        );
+    }
+};
+
+export const getAllApprovalsOfEvent = async (
+    eventId: number,
+): Promise<EventApprovalDTO[]> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/event-approval/${eventId}`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during fetching approvals for event ${eventId}.`,
+              );
     }
 };
 

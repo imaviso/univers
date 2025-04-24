@@ -113,7 +113,7 @@ export function VenueFormDialog({
 
             setImageFile(null);
             setImageError(null);
-            const previewUrl = `${venue?.imagePath}`;
+            const previewUrl = venue?.imagePath ?? null;
             setInitialImageUrl(previewUrl);
         }
     }, [isOpen, venue, form, isEditing]); // Add isEditing dependency

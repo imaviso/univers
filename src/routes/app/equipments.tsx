@@ -32,29 +32,26 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
-import {
-    addEquipment,
-    bulkDeleteEquipment,
-    deleteEquipment,
-    editEquipment,
-} from "@/lib/api";
+import { addEquipment, deleteEquipment, editEquipment } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/auth";
 import { allNavigation } from "@/lib/navigation";
 import {
     equipmentsQueryOptions,
+    eventsQueryOptions,
     useCurrentUser,
     usersQueryOptions,
-} from "@/lib/query"; // Import query options and user hook
+    venuesQueryOptions,
+} from "@/lib/query";
 import type { EquipmentDTOInput } from "@/lib/schema";
-import { type Equipment, STATUS_EQUIPMENT, type UserType } from "@/lib/types"; // Import updated Equipment type
-import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import useQuery
+import { type Equipment, STATUS_EQUIPMENT, type UserType } from "@/lib/types";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
     redirect,
     useNavigate,
     useRouteContext,
 } from "@tanstack/react-router";
-import type { ColumnDef, Row } from "@tanstack/react-table"; // Import ColumnDef
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import {
     AlertTriangle,
     CalendarPlus,
@@ -65,15 +62,11 @@ import {
     Package,
     Plus,
     Trash2,
-    Wrench, // Keep if needed for Mark for Maintenance action
-} from "lucide-react"; // Import icons
-import { useMemo, useState } from "react"; // Added useMemo
+    Wrench,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-// Sample data removed, will fetch from API
-
-// Categories and Locations might need to be fetched or managed differently
-// For now, keep them if filtering is still desired, but they aren't part of the Equipment DTO
 const categories = [
     "Audio/Visual",
     "Computers",
@@ -89,18 +82,6 @@ const locations = [
     "Equipment Storage Room A",
     "Equipment Storage Room B",
     "IT Department",
-];
-
-// Sample events/venues for reservation dialog (keep as is for now)
-const events = [
-    { id: "1", name: "Annual Conference" },
-    { id: "2", name: "Team Building Workshop" },
-    { id: "3", name: "Product Launch" },
-];
-const venues = [
-    { id: "1", name: "Main Auditorium", capacity: 500 },
-    { id: "2", name: "Conference Room A", capacity: 100 },
-    { id: "3", name: "Outdoor Pavilion", capacity: 300 },
 ];
 
 export const Route = createFileRoute("/app/equipments")({
@@ -137,12 +118,13 @@ export const Route = createFileRoute("/app/equipments")({
     component: EquipmentInventory,
     errorComponent: () => <ErrorPage />,
     pendingComponent: () => <PendingPage />,
-    // loader: async ({ context }) => {
-    //     context.queryClient.ensureQueryData(equipmentsQueryOptions(context.userId));
-    //     if ("role" in context && context.role === "SUPER_ADMIN") {
-    //         context.queryClient.ensureQueryData(usersQueryOptions);
-    //     }
-    // },
+    loader: async ({ context }) => {
+        context.queryClient.ensureQueryData(
+            equipmentsQueryOptions(context.authState),
+        );
+        context.queryClient.ensureQueryData(venuesQueryOptions);
+        context.queryClient.ensureQueryData(eventsQueryOptions);
+    },
 });
 
 function EquipmentInventory() {
@@ -173,6 +155,9 @@ function EquipmentInventory() {
     const { data: equipment = [] } = useSuspenseQuery(
         equipmentsQueryOptions(currentUser),
     );
+
+    const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
+    const { data: events = [] } = useSuspenseQuery(eventsQueryOptions);
 
     // Fetch all users ONLY if the current user is SUPER_ADMIN (for owner selection)
     const { data: allUsers = [] } = useQuery({
@@ -1041,7 +1026,6 @@ function EquipmentInventory() {
                     />
                 )}
 
-                {/* Reservation Dialog for non-admins/owners */}
                 {role !== "SUPER_ADMIN" && role !== "EQUIPMENT_OWNER" && (
                     <EquipmentReservationFormDialog
                         isOpen={isReservationDialogOpen}
@@ -1049,9 +1033,8 @@ function EquipmentInventory() {
                         onSubmit={handleReserveEquipment}
                         events={events}
                         venues={venues}
-
-                        // Pass available equipment list if needed for selection within dialog
-                        // availableEquipment={equipment.filter(e => e.availability)}
+                        equipment={equipment}
+                        // isLoading={reservationMutation.isPending}
                     />
                 )}
             </div>

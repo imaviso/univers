@@ -4,11 +4,12 @@ import {
 } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
     ArrowLeft,
+    CheckCircle2,
     Clock,
     Edit,
     MapPin,
@@ -30,10 +32,31 @@ import {
     Trash2,
 } from "lucide-react";
 
-import { eventQueryOptions, venuesQueryOptions } from "@/lib/query"; // Import query options
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { approveEvent } from "@/lib/api";
+import {
+    eventApprovalsQueryOptions,
+    eventQueryOptions,
+    venuesQueryOptions,
+} from "@/lib/query"; // Import query options
 import type { Event } from "@/lib/types"; // Import Event type
-import { formatDateRange, getInitials, getStatusColor } from "@/lib/utils"; // Import helpers
-import { useSuspenseQuery } from "@tanstack/react-query"; // Import suspense query hook
+import {
+    formatDateRange,
+    formatDateTime,
+    getApproverStatusBadge,
+    getInitials,
+    getStatusColor,
+} from "@/lib/utils"; // Import helpers
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query"; // Import suspense query hook
 import {
     // Link, // Removed if not used
     createFileRoute,
@@ -41,39 +64,96 @@ import {
     useRouteContext,
     useRouter,
 } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/events/$eventId")({
     loader: async ({ params: { eventId }, context: { queryClient } }) => {
-        // Fetch the specific event
+        const eventIdNum = Number.parseInt(eventId, 10);
+        if (Number.isNaN(eventIdNum)) {
+            throw notFound(); // Invalid event ID format
+        }
         const event = await queryClient.ensureQueryData(
             eventQueryOptions(eventId),
         );
 
-        if (!event) {
-            throw notFound(); // Throw 404 if event not found
+        if (!event || Object.keys(event).length === 0) {
+            throw notFound();
         }
 
-        // Ensure venues are available (might already be cached by parent route)
         const venues = await queryClient.ensureQueryData(venuesQueryOptions);
+        const approvals = await queryClient.ensureQueryData(
+            eventApprovalsQueryOptions(eventIdNum),
+        );
 
-        return { event, venues }; // Return fetched data
+        return { event, venues, approvals };
     },
     component: EventDetailsPage,
 });
 
 export function EventDetailsPage() {
-    const context = useRouteContext({ from: "/app/events" }); // Get parent context if needed (e.g., for role)
-    const role = context.authState?.role; // Get user role from context
-    // const [commentText, setCommentText] = useState(""); // Removed comment state
+    const context = useRouteContext({ from: "/app/events" });
+    const role = context.authState?.role;
+    const currentUser = context.authState;
     const router = useRouter();
+    const queryClient = context.queryClient;
     const onBack = () => router.history.back();
 
-    // Use data fetched by the loader
-    const { event, venues } = Route.useLoaderData();
-    // Create venue map
+    const { event, venues, approvals } = Route.useLoaderData();
+    const eventIdNum = event.id;
+
+    const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+    const [approvalRemarks, setApprovalRemarks] = useState("");
+
     const venueMap = new Map(venues.map((venue) => [venue.id, venue.name]));
 
-    // Format date range using helper
+    const hasUserApproved = approvals.some(
+        (appr) =>
+            appr.signedBy ===
+            `${currentUser?.firstName} ${currentUser?.lastName}`, // Compare full names
+    );
+
+    const canUserApprove =
+        currentUser &&
+        [
+            "VENUE_OWNER",
+            "EQUIPMENT_OWNER", // Note: Backend uses EQUIPMENT_OWNER for both MSDO/OPC approval logic
+            "DEPT_HEAD",
+            "VP_ADMIN",
+            "VPAA",
+            "SSD",
+            "FAO",
+        ].includes(currentUser.role) &&
+        !hasUserApproved &&
+        event.status === "PENDING";
+
+    const approveMutation = useMutation({
+        mutationFn: approveEvent,
+        onSuccess: (message) => {
+            toast.success(message || "Event approved successfully.");
+            queryClient.invalidateQueries({
+                queryKey: eventApprovalsQueryOptions(eventIdNum).queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventQueryOptions(eventIdNum).queryKey,
+            });
+            setIsApprovalDialogOpen(false);
+            setApprovalRemarks("");
+        },
+        onError: (error) => {
+            toast.error(`Approval failed: ${error.message}`);
+        },
+    });
+
+    const handleApproveClick = () => {
+        if (!currentUser) return;
+        approveMutation.mutate({
+            eventId: eventIdNum,
+            userId: Number.parseInt(currentUser.id, 10),
+            remarks: approvalRemarks,
+        });
+    };
+
     let dateDisplayString = "Date not available";
     if (
         typeof event.startTime === "string" &&
@@ -118,20 +198,15 @@ export function EventDetailsPage() {
     return (
         <div className="flex h-screen bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
-                <header className="flex items-center justify-between border-b px-6 py-3.5">
+                <header className="flex items-center justify-between border-b px-6 py-3.5 sticky top-0 bg-background z-10">
+                    {" "}
                     <div className="flex items-center gap-4">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={onBack} // Use direct call
-                        >
+                        <Button variant="ghost" size="icon" onClick={onBack}>
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
-                        {/* Use real event name */}
                         <h1 className="text-xl font-semibold">
                             {event.eventName}
                         </h1>
-                        {/* Use real status */}
                         <Badge className={`${getStatusColor(event.status)}`}>
                             {event.status
                                 ? event.status.charAt(0).toUpperCase() +
@@ -140,43 +215,78 @@ export function EventDetailsPage() {
                         </Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                        {/* Keep role-based actions if needed */}
+                        {/* Show Approve Button if user can approve */}
+                        {canUserApprove && (
+                            <Dialog
+                                open={isApprovalDialogOpen}
+                                onOpenChange={setIsApprovalDialogOpen}
+                            >
+                                <DialogTrigger asChild>
+                                    <Button size="sm" className="gap-1">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        Approve Event
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Approve Event</DialogTitle>
+                                        <DialogDescription>
+                                            Add optional remarks for your
+                                            approval.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-4">
+                                        <Textarea
+                                            placeholder="Enter remarks (optional)..."
+                                            value={approvalRemarks}
+                                            onChange={(e) =>
+                                                setApprovalRemarks(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            rows={4}
+                                        />
+                                    </div>
+                                    <DialogFooter>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() =>
+                                                setIsApprovalDialogOpen(false)
+                                            }
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={handleApproveClick}
+                                            disabled={approveMutation.isPending}
+                                        >
+                                            {approveMutation.isPending
+                                                ? "Approving..."
+                                                : "Confirm Approval"}
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        )}
                         {role === "SUPER_ADMIN" && (
                             <>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     className="gap-1"
-                                    // onClick={() => navigate({ to: `/app/events/${event.id}/edit` })} // Example edit navigation
+                                    // onClick={() => navigate({ to: `/app/events/${event.id}/edit` })}
                                 >
                                     <Edit className="h-4 w-4" />
                                     Edit
                                 </Button>
                                 <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        {/* Add real actions here */}
-                                        <DropdownMenuItem>
-                                            Duplicate
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem>
-                                            Archive
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem className="text-destructive">
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            Delete
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
+                                    {/* ... existing dropdown ... */}
                                 </DropdownMenu>
                             </>
                         )}
                     </div>
                 </header>
-                <main className="flex-1 overflow-auto">
+                <ScrollArea className="flex-1">
                     <div className="p-6 space-y-6">
                         {/* Event Overview Card */}
                         <Card>
@@ -391,11 +501,64 @@ export function EventDetailsPage() {
                                 </div>
                             </CardContent>
                         </Card>
-
-                        {/* Removed Tabbed Content (Agenda, Team, Tasks, Resources, Comments) */}
-                        {/* You can add these back if you fetch the corresponding data */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Approval Status</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {approvals.length > 0 ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Approver</TableHead>
+                                                <TableHead>
+                                                    Department
+                                                </TableHead>
+                                                <TableHead>
+                                                    Date Signed
+                                                </TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Remarks</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {approvals.map((approval) => (
+                                                <TableRow key={approval.id}>
+                                                    <TableCell>
+                                                        {approval.signedBy}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {approval.department}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {approval.dateSigned
+                                                            ? formatDateTime(
+                                                                  approval.dateSigned,
+                                                              )
+                                                            : "—"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {getApproverStatusBadge(
+                                                            approval.status,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {approval.remarks ||
+                                                            "—"}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                        No approval records found yet.
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
-                </main>
+                </ScrollArea>
             </div>
         </div>
     );

@@ -64,7 +64,7 @@ export type Equipment = {
     availability: boolean;
     brand: string;
     quantity: number;
-    equipmentOwner: UserType;
+    equipmentOwner: UserDTO;
     imagePath: string; // Path to the image file
     status: // Use the exact enum values from backend
         | "APPROVED"
@@ -214,4 +214,14 @@ export type Event = {
     startTime: string;
     endTime: string;
     status: string;
+};
+
+export type EventApprovalDTO = {
+    id: number;
+    eventId: number;
+    department: string;
+    signedBy: string;
+    remarks: string | null;
+    status: string;
+    dateSigned: string | null;
 };
