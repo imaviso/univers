@@ -9,7 +9,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { parseDate } from "chrono-node";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { Calendar as CalendarIcon, LucideTextCursorInput } from "lucide-react";
 import React from "react";
 import type { ActiveModifiers } from "react-day-picker";
@@ -99,7 +99,8 @@ const inputBase =
 const naturalInputValidationPattern =
     "^[A-Z][a-z]{2}sd{1,2},sd{4},sd{1,2}:d{2}s[AP]M$";
 
-const DEFAULT_SIZE = 96;
+// Adjust DEFAULT_SIZE for 30-minute increments (24 hours * 2 slots/hour)
+const DEFAULT_SIZE = 48;
 
 /**
  * Smart time input Docs: {@link: https://shadcn-extension.vercel.app/docs/smart-time-input}
@@ -137,11 +138,6 @@ export const SmartDatetimeInput = React.forwardRef<
     > &
         SmartDatetimeInputProps
 >(({ className, value, onValueChange, placeholder, disabled }, ref) => {
-    // ? refactor to be only used with controlled input
-    /*  const [dateTime, setDateTime] = React.useState<Date | undefined>(
-    value ?? undefined
-  ); */
-
     const [Time, setTime] = React.useState<string>("");
 
     const onTimeChange = React.useCallback((time: string) => {
@@ -183,7 +179,7 @@ const TimePicker = () => {
     const { value, onValueChange, Time, onTimeChange, disabled } =
         useSmartDateInput();
     const [activeIndex, setActiveIndex] = React.useState(-1);
-    const timestamp = 15;
+    const timestamp = 30;
 
     const formateSelectedTime = React.useCallback(
         (time: string, hour: number, partStamp: number) => {
@@ -194,16 +190,11 @@ const TimePicker = () => {
 
             if (!newVal) return;
 
-            newVal.setHours(
-                hour,
-                partStamp === 0 ? Number.parseInt("00") : timestamp * partStamp,
-            );
-
-            // ? refactor needed check if we want to use the new date
+            newVal.setHours(hour, partStamp * timestamp);
 
             onValueChange(newVal);
         },
-        [value],
+        [value, onValueChange, onTimeChange, disabled, timestamp],
     );
 
     const handleKeydown = React.useCallback(
@@ -245,8 +236,6 @@ const TimePicker = () => {
 
                 const timeValue = currentElm.textContent ?? "";
 
-                // this should work now haha that hour is what does the trick
-
                 const PM_AM = timeValue.split(" ")[1];
                 const PM_AM_hour = Number.parseInt(
                     timeValue.split(" ")[0].split(":")[0],
@@ -260,9 +249,10 @@ const TimePicker = () => {
                           ? 12
                           : PM_AM_hour + 12;
 
-                const part = Math.floor(
-                    Number.parseInt(timeValue.split(" ")[0].split(":")[1]) / 15,
-                );
+                const part =
+                    Number.parseInt(timeValue.split(" ")[0].split(":")[1]) === 0
+                        ? 0
+                        : 1;
 
                 formateSelectedTime(timeValue, hour, part);
             };
@@ -299,13 +289,13 @@ const TimePicker = () => {
     const handleClick = React.useCallback(
         (hour: number, part: number, PM_AM: string, currentIndex: number) => {
             formateSelectedTime(
-                `${hour}:${part === 0 ? "00" : timestamp * part} ${PM_AM}`,
+                `${hour}:${part === 0 ? "00" : timestamp} ${PM_AM}`,
                 hour,
                 part,
             );
             setActiveIndex(currentIndex);
         },
-        [formateSelectedTime],
+        [formateSelectedTime, timestamp],
     );
 
     const currentTime = React.useMemo(() => {
@@ -327,18 +317,15 @@ const TimePicker = () => {
                 PM_AM === "AM" ? hours : hours === 12 ? hours : hours + 12;
             const formattedHours = formatIndex;
 
-            for (let j = 0; j <= 3; j++) {
+            for (let j = 0; j <= 1; j++) {
                 const diff = Math.abs(j * timestamp - minutes);
                 const selected =
-                    PM_AM === (formattedHours >= 12 ? "PM" : "AM") &&
-                    (minutes <= 53
-                        ? diff < Math.ceil(timestamp / 2)
-                        : diff < timestamp);
+                    PM_AM === (formattedHours >= 12 ? "PM" : "AM") && diff < 15;
 
                 if (selected) {
                     const trueIndex =
                         activeIndex === -1
-                            ? formattedHours * 4 + j
+                            ? formattedHours * 2 + j
                             : activeIndex;
 
                     setActiveIndex(trueIndex);
@@ -355,7 +342,7 @@ const TimePicker = () => {
         };
 
         getCurrentElementTime();
-    }, [Time, activeIndex]);
+    }, [Time, activeIndex, timestamp]);
 
     const height = React.useMemo(() => {
         if (!document) return;
@@ -370,8 +357,6 @@ const TimePicker = () => {
             <Scroller
                 withNavigation
                 scrollTriggerMode="press"
-                //onKeyDown={handleKeydown}
-                //className="h-[90%] w-full focus-visible:outline-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-0 py-0.5"
                 style={{
                     height,
                 }}
@@ -385,61 +370,24 @@ const TimePicker = () => {
                         const PM_AM = i >= 12 ? "PM" : "AM";
                         const formatIndex =
                             i > 12 ? i % 12 : i === 0 || i === 12 ? 12 : i;
-                        return Array.from({ length: 4 }).map((_, part) => {
-                            // Create a candidate date using the current value's date if available or today's date.
-                            const baseDate =
-                                value && !disabled
-                                    ? new Date(value)
-                                    : getValidBaseDate(disabled);
-                            const candidateDate = new Date(
-                                baseDate.getFullYear(),
-                                baseDate.getMonth(),
-                                baseDate.getDate(),
-                                i,
-                                part === 0 ? 0 : timestamp * part,
-                                0,
-                                0,
-                            );
-                            // Use the matcher if provided to decide if this candidate should be disabled.
-                            let candidateDisabled =
-                                typeof disabled === "function"
-                                    ? disabled(candidateDate)
-                                    : false;
-
-                            // Additional check: if the candidate is for today and its time is past, disable it.
-                            const now = new Date();
-                            if (
-                                !candidateDisabled &&
-                                candidateDate.getFullYear() ===
-                                    now.getFullYear() &&
-                                candidateDate.getMonth() === now.getMonth() &&
-                                candidateDate.getDate() === now.getDate() &&
-                                candidateDate < now
-                            ) {
-                                candidateDisabled = true;
-                            }
-
-                            if (candidateDisabled) return null;
+                        return Array.from({ length: 2 }).map((_, part) => {
+                            const minutes = part * timestamp;
+                            const trueIndex = i * 2 + part;
 
                             const diff = Math.abs(
-                                part * timestamp - currentTime.minutes,
+                                minutes - currentTime.minutes,
                             );
 
-                            const trueIndex = i * 4 + part;
-
-                            // ? refactor : add the select of the default time on the current device (H:MM)
                             const isSelected =
                                 (currentTime.hours === i ||
                                     currentTime.hours === formatIndex) &&
                                 Time.split(" ")[1] === PM_AM &&
-                                (currentTime.minutes <= 53
-                                    ? diff < Math.ceil(timestamp / 2)
-                                    : diff < timestamp);
+                                diff < 15;
 
                             const isSuggested = !value && isSelected;
 
                             const currentValue = `${formatIndex}:${
-                                part === 0 ? "00" : timestamp * part
+                                minutes === 0 ? "00" : minutes
                             } ${PM_AM}`;
 
                             return (
@@ -461,6 +409,19 @@ const TimePicker = () => {
                                     onClick={() =>
                                         handleClick(i, part, PM_AM, trueIndex)
                                     }
+                                    onKeyDown={(e) => {
+                                        if (
+                                            e.key === "Enter" ||
+                                            e.key === " "
+                                        ) {
+                                            handleClick(
+                                                i,
+                                                part,
+                                                PM_AM,
+                                                trueIndex,
+                                            );
+                                        }
+                                    }}
                                     onFocus={() =>
                                         isSuggested && setActiveIndex(trueIndex)
                                     }
@@ -502,20 +463,16 @@ const NaturalLanguageInput = React.forwardRef<
 
     const handleParse = React.useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
-            // parse the date string when the input field loses focus
             const parsedDateTime = parseDateTime(e.currentTarget.value);
             if (parsedDateTime) {
-                // If a matcher function was passed, prevent selecting a disabled (past) date
                 if (
                     disabled &&
                     typeof disabled != "boolean" &&
                     disabled(parsedDateTime)
                 ) {
-                    // Invalid input--time already passed
                     return;
                 }
                 const PM_AM = parsedDateTime.getHours() >= 12 ? "PM" : "AM";
-                //fix the time format for this value
 
                 const PM_AM_hour = parsedDateTime.getHours();
 
@@ -537,7 +494,7 @@ const NaturalLanguageInput = React.forwardRef<
     const handleKeydown = React.useCallback(
         (e: React.KeyboardEvent<HTMLInputElement>) => {
             switch (e.key) {
-                case "Enter":
+                case "Enter": {
                     const parsedDateTime = parseDateTime(e.currentTarget.value);
                     if (parsedDateTime) {
                         if (
@@ -549,7 +506,6 @@ const NaturalLanguageInput = React.forwardRef<
                         }
                         const PM_AM =
                             parsedDateTime.getHours() >= 12 ? "PM" : "AM";
-                        //fix the time format for this value
 
                         const PM_AM_hour = parsedDateTime.getHours();
 
@@ -567,6 +523,7 @@ const NaturalLanguageInput = React.forwardRef<
                         );
                     }
                     break;
+                }
             }
         },
         [value],
@@ -610,9 +567,7 @@ const DateTimeLocalInput = ({
             m: ActiveModifiers,
             e: React.MouseEvent,
         ) => {
-            // if fully disabled, do nothing
             if (typeof disabled === "boolean" && disabled) return;
-            // if disabled is a matcher function and selected date should be disabled, do nothing
             if (typeof disabled === "function" && disabled(selectedDate))
                 return;
 

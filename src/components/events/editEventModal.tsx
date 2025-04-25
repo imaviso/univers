@@ -1,0 +1,507 @@
+import { Button } from "@/components/ui/button";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { updateEvent } from "@/lib/api";
+import { eventQueryOptions, eventsQueryOptions } from "@/lib/query";
+import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
+import type { Event, EventDTOPayload, Venue } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { startOfDay } from "date-fns";
+import { Check, ChevronsUpDown, Loader2, UploadCloud, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import {
+    FileUpload,
+    FileUploadDropzone,
+    FileUploadItem,
+    FileUploadItemDelete,
+    FileUploadItemMetadata,
+    FileUploadItemPreview,
+    FileUploadList,
+} from "../ui/file-upload";
+import { SmartDatetimeInput } from "../ui/smart-date-picker";
+
+interface EditEventModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    event: Event; // Pass the full event object
+    venues: Venue[];
+}
+
+const eventTypes = ["External", "Program-based", "Admin", "SSG/Advocay-based"];
+
+// Helper to create a placeholder File object for existing letter
+const createPlaceholderFile = (filename: string): File => {
+    return new File([], filename, { type: "text/plain" }); // Use a dummy type
+};
+
+export function EditEventModal({
+    isOpen,
+    onClose,
+    event,
+    venues,
+}: EditEventModalProps) {
+    const queryClient = useQueryClient();
+    const [currentLetterFilename, setCurrentLetterFilename] = useState<
+        string | null
+    >(null);
+
+    const form = useForm<EventInput>({
+        resolver: valibotResolver(eventSchema),
+        defaultValues: {
+            eventName: "",
+            eventType: undefined,
+            eventVenueId: undefined,
+            startTime: undefined,
+            endTime: undefined,
+            approvedLetter: [], // Initialize as empty array
+        },
+        mode: "onChange",
+    });
+
+    // --- Pre-populate form ---
+    useEffect(() => {
+        if (isOpen && event) {
+            const startTime = event.startTime
+                ? new Date(event.startTime)
+                : undefined;
+            const endTime = event.endTime ? new Date(event.endTime) : undefined;
+            const filename = event.approvedLetterPath
+                ? (event.approvedLetterPath.split("/").pop() ?? null)
+                : null;
+            setCurrentLetterFilename(filename);
+
+            form.reset({
+                eventName: event.eventName,
+                eventType: event.eventType,
+                eventVenueId: event.eventVenueId,
+                startTime: startTime,
+                endTime: endTime,
+                // If there's an existing letter, create a placeholder File object
+                // This satisfies the schema's initial File[] requirement without needing the actual File blob
+                approvedLetter: filename
+                    ? [createPlaceholderFile(filename)]
+                    : [],
+            });
+        } else if (!isOpen) {
+            form.reset(); // Reset form when closing
+            setCurrentLetterFilename(null);
+        }
+    }, [isOpen, event, form]);
+
+    // --- Mutation ---
+    const updateEventMutation = useMutation({
+        mutationFn: updateEvent,
+        onSuccess: (message) => {
+            toast.success(message || "Event updated successfully.");
+            // Invalidate relevant queries
+            queryClient.invalidateQueries({
+                queryKey: eventQueryOptions(event.id).queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryOptions.queryKey,
+            });
+            onClose(); // Close modal on success
+        },
+        onError: (error) => {
+            console.error("Update Mutation error", error);
+            toast.error(
+                `Failed to update event: ${error instanceof Error ? error.message : "Please try again."}`,
+            );
+            // Optionally reset form state or specific fields on error
+            // form.setError("root.serverError", { message: error.message });
+        },
+    });
+    // --- End Mutation ---
+
+    // --- Submit Handler ---
+    async function onSubmit(values: EventInput) {
+        // The schema transforms approvedLetter: File[] to approvedLetter: File
+        const outputValues = values as unknown as EventOutput;
+
+        // Check if the file in the form is the placeholder or a new file
+        const letterFileToSend =
+            outputValues.approvedLetter && outputValues.approvedLetter.size > 0 // Real file has size > 0
+                ? outputValues.approvedLetter
+                : undefined; // Don't send placeholder or if no file
+
+        const eventData: Partial<EventDTOPayload> = {
+            eventName: outputValues.eventName,
+            eventType: outputValues.eventType,
+            eventVenueId: outputValues.eventVenueId,
+            startTime: outputValues.startTime.toISOString(),
+            endTime: outputValues.endTime.toISOString(),
+            // Organizer ID shouldn't change on update usually, but include if needed
+            // organizer: { id: event.organizer.id }
+        };
+
+        updateEventMutation.mutate({
+            eventId: event.id,
+            eventData,
+            approvedLetter: letterFileToSend, // Send the actual file or undefined
+        });
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                    <DialogTitle className="text-xl">Edit Event</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <Form {...form}>
+                        <form
+                            onSubmit={form.handleSubmit(onSubmit)}
+                            className="grid grid-cols-2 gap-4"
+                        >
+                            {/* Event Name */}
+                            <div className="col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="eventName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Event Name</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Enter event name"
+                                                    {...field}
+                                                    disabled={
+                                                        updateEventMutation.isPending
+                                                    }
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            {/* Event Type */}
+                            <FormField
+                                control={form.control}
+                                name="eventType"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Event Type</FormLabel>
+                                        <Select
+                                            onValueChange={field.onChange}
+                                            value={field.value} // Use value for controlled component
+                                            disabled={
+                                                updateEventMutation.isPending
+                                            }
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select event type" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {eventTypes.map((type) => (
+                                                    <SelectItem
+                                                        key={type}
+                                                        value={type}
+                                                    >
+                                                        {type}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Venue */}
+                            <FormField
+                                control={form.control}
+                                name="eventVenueId"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Venue</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                        variant="outline"
+                                                        disabled={
+                                                            updateEventMutation.isPending
+                                                        }
+                                                        className={cn(
+                                                            "w-full justify-between",
+                                                            !field.value &&
+                                                                "text-muted-foreground",
+                                                        )}
+                                                    >
+                                                        {field.value
+                                                            ? venues.find(
+                                                                  (v) =>
+                                                                      v.id ===
+                                                                      field.value,
+                                                              )?.name
+                                                            : "Select venue"}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                <Command>
+                                                    <CommandInput placeholder="Search venue..." />
+                                                    <CommandList>
+                                                        <CommandEmpty>
+                                                            No venue found.
+                                                        </CommandEmpty>
+                                                        <CommandGroup>
+                                                            {venues.map(
+                                                                (venue) => (
+                                                                    <CommandItem
+                                                                        value={
+                                                                            venue.name
+                                                                        }
+                                                                        key={
+                                                                            venue.id
+                                                                        }
+                                                                        onSelect={() => {
+                                                                            form.setValue(
+                                                                                "eventVenueId",
+                                                                                venue.id,
+                                                                                {
+                                                                                    shouldValidate: true,
+                                                                                },
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                venue.id ===
+                                                                                    field.value
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0",
+                                                                            )}
+                                                                        />
+                                                                        {
+                                                                            venue.name
+                                                                        }
+                                                                    </CommandItem>
+                                                                ),
+                                                            )}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Start Date & Time */}
+                            <div>
+                                <FormField
+                                    control={form.control}
+                                    name="startTime"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                Start Date & Time
+                                            </FormLabel>
+                                            <FormControl>
+                                                <SmartDatetimeInput
+                                                    value={field.value}
+                                                    onValueChange={
+                                                        field.onChange
+                                                    }
+                                                    disabled={(date) =>
+                                                        date <
+                                                            startOfDay(
+                                                                new Date(),
+                                                            ) ||
+                                                        updateEventMutation.isPending
+                                                    }
+                                                    placeholder="Select start date and time"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            {/* End Date & Time */}
+                            <div>
+                                <FormField
+                                    control={form.control}
+                                    name="endTime"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                End Date & Time
+                                            </FormLabel>
+                                            <FormControl>
+                                                <SmartDatetimeInput
+                                                    value={field.value}
+                                                    onValueChange={
+                                                        field.onChange
+                                                    }
+                                                    disabled={(date) =>
+                                                        date <
+                                                            startOfDay(
+                                                                new Date(),
+                                                            ) ||
+                                                        updateEventMutation.isPending
+                                                    }
+                                                    placeholder="Select end date and time"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="approvedLetter"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                Approved Letter
+                                            </FormLabel>
+                                            <FormControl>
+                                                <FileUpload
+                                                    value={field.value} // Expects File[]
+                                                    onValueChange={
+                                                        field.onChange
+                                                    } // Provides File[]
+                                                    maxFiles={1}
+                                                    maxSize={5 * 1024 * 1024} // 5MB
+                                                    accept=".pdf, image/*"
+                                                    disabled={
+                                                        updateEventMutation.isPending
+                                                    }
+                                                    className="relative rounded-lg border border-input bg-background"
+                                                >
+                                                    <FileUploadDropzone className="border-dashed p-4">
+                                                        <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
+                                                        <p className="mb-1 text-sm text-muted-foreground">
+                                                            <span className="font-semibold">
+                                                                Click or drag
+                                                                file
+                                                            </span>{" "}
+                                                            to upload
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            PDF or Image (max
+                                                            5MB)
+                                                        </p>
+                                                    </FileUploadDropzone>
+                                                    <FileUploadList className="p-3">
+                                                        {field.value?.map(
+                                                            (file) => (
+                                                                <FileUploadItem
+                                                                    key={
+                                                                        file.name
+                                                                    }
+                                                                    value={file}
+                                                                    className="p-2"
+                                                                >
+                                                                    <FileUploadItemPreview>
+                                                                        {/* Default preview handles images/file icons */}
+                                                                    </FileUploadItemPreview>
+                                                                    <FileUploadItemMetadata />
+                                                                    <FileUploadItemDelete
+                                                                        asChild
+                                                                    >
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="icon"
+                                                                            variant="ghost"
+                                                                            className="size-7"
+                                                                        >
+                                                                            <X className="size-4" />
+                                                                        </Button>
+                                                                    </FileUploadItemDelete>
+                                                                </FileUploadItem>
+                                                            ),
+                                                        )}
+                                                    </FileUploadList>
+                                                </FileUpload>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            {/* Footer */}
+                            <DialogFooter className="col-span-2">
+                                <Button
+                                    variant="outline"
+                                    type="button"
+                                    onClick={onClose}
+                                    disabled={updateEventMutation.isPending}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={
+                                        updateEventMutation.isPending
+                                        // ||
+                                        // !form.formState.isValid
+                                        // ||
+                                        // !form.formState.isDirty // Disable if not valid or no changes made
+                                    }
+                                >
+                                    {updateEventMutation.isPending && (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    )}
+                                    Save Changes
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}

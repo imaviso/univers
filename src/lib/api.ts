@@ -329,6 +329,73 @@ export const createEvent = async (
     }
 };
 
+export const updateEvent = async ({
+    eventId,
+    eventData,
+    approvedLetter,
+}: {
+    eventId: number;
+    eventData: Partial<EventDTOPayload>; // Use Partial as not all fields might be updated
+    approvedLetter?: File | null;
+}): Promise<string> => {
+    try {
+        const formData = new FormData();
+
+        // Append the event data as a JSON blob
+        formData.append(
+            "event",
+            new Blob([JSON.stringify(eventData)], {
+                type: "application/json",
+            }),
+        );
+
+        // Append the optional approved letter file
+        if (approvedLetter) {
+            formData.append(
+                "approvedLetter",
+                approvedLetter,
+                approvedLetter.name,
+            );
+        }
+
+        const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+            method: "PATCH",
+            credentials: "include",
+            body: formData,
+        });
+
+        // Expect a string message on success
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during updating event ${eventId}.`,
+              );
+    }
+};
+
+export const cancelEvent = async (eventId: number): Promise<string> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/events/${eventId}/cancel`,
+            {
+                method: "PATCH",
+                credentials: "include",
+            },
+        );
+
+        // Expect a string message on success
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during canceling event ${eventId}.`,
+              );
+    }
+};
+
 export const approveEvent = async ({
     eventId,
     userId,
