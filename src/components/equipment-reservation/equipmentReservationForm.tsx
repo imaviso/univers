@@ -32,7 +32,7 @@ import { cn, getEquipmentNameById } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { format, startOfDay } from "date-fns";
 import { CalendarIcon, CloudUpload, Users, X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Badge } from "../ui/badge";
 import {
@@ -173,6 +173,16 @@ export function EquipmentReservationFormDialog({
         const errors = form.formState.errors;
         return !!(errors.selectedEquipment || errors.approvedLetter);
     };
+
+    // Define the callback using useCallback
+    const handleEquipmentListChange = useCallback(
+        (equipmentIds: string[]) => {
+            form.setValue("selectedEquipment", equipmentIds, {
+                shouldValidate: true, // Keep validation for now
+            });
+        },
+        [form], // Dependency array includes 'form' from useForm
+    );
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogClose}>
@@ -381,9 +391,9 @@ export function EquipmentReservationFormDialog({
                             <>
                                 <FormField
                                     control={form.control}
-                                    name="selectedEquipment"
+                                    name="selectedEquipment" // This field now holds string[]
                                     render={() => (
-                                        // No field needed directly, handled by EquipmentList
+                                        // No need for field object if using setValue
                                         <FormItem>
                                             <div className="mb-4">
                                                 <FormLabel className="text-base">
@@ -399,21 +409,15 @@ export function EquipmentReservationFormDialog({
                                             <FormMessage />
 
                                             <EquipmentList
-                                                equipment={equipment} // Pass fetched equipment data
+                                                equipment={equipment}
+                                                // Pass the watched string[] state
                                                 selectedEquipment={
-                                                    selectedEquipmentIds // Pass number array
+                                                    selectedEquipmentIds
                                                 }
-                                                onEquipmentChange={(
-                                                    equipmentIds: number[], // Expect number array
-                                                ) => {
-                                                    form.setValue(
-                                                        "selectedEquipment",
-                                                        equipmentIds,
-                                                        {
-                                                            shouldValidate: true,
-                                                        },
-                                                    );
-                                                }}
+                                                // Pass the memoized callback
+                                                onEquipmentChange={
+                                                    handleEquipmentListChange
+                                                }
                                             />
                                         </FormItem>
                                     )}
@@ -588,7 +592,7 @@ export function EquipmentReservationFormDialog({
                                                         const name =
                                                             getEquipmentNameById(
                                                                 equipment,
-                                                                id,
+                                                                Number(id),
                                                             );
                                                         return name ? (
                                                             <Badge

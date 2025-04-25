@@ -335,7 +335,7 @@ export const equipmentReservationFormSchema = v.pipe(
         endDateTime: v.date("End date/time is required"),
         purpose: v.optional(v.string()),
         selectedEquipment: v.pipe(
-            v.array(v.number()),
+            v.array(v.string()),
             v.minLength(1, "Please select at least one equipment."),
         ),
         approvedLetter: v.pipe(
