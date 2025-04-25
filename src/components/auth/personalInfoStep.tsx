@@ -129,7 +129,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                                         {DEPARTMENTS.map((dept) => (
                                             <SelectItem
                                                 key={dept.value}
-                                                value={dept.value}
+                                                value={dept.value.toString()}
                                             >
                                                 {dept.label}
                                             </SelectItem>

@@ -79,7 +79,7 @@ export function EventList() {
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {filteredEvents.map((event: Event) => {
+                    {events.map((event: Event) => {
                         let dateDisplayString = "Date not available";
 
                         if (
