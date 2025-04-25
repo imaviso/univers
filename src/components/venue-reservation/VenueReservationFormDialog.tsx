@@ -105,7 +105,7 @@ export function VenueReservationFormDialog({
         // Perform the comparison using loose equality (==) to handle type difference
         // eslint-disable-next-line eqeqeq
         // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
-                        return v.id == targetVenueIdNumber;
+        return v.id == targetVenueIdNumber;
     });
 
     if (step === 4) {

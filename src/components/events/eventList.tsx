@@ -7,14 +7,18 @@ import {
     CardHeader,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { eventsQueryOptions, useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import query options
+import { getCurrentUser } from "@/lib/auth";
+import {
+    eventsQueryOptions,
+    useCurrentUser,
+    venuesQueryOptions,
+} from "@/lib/query"; // Import query options
 import type { Event } from "@/lib/types";
 import { formatDateRange, getInitials } from "@/lib/utils";
 import { useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import { ChevronRight, Clock, MapPin, Paperclip, Tag } from "lucide-react";
 import { Avatar, AvatarFallback } from "../ui/avatar";
-import { getCurrentUser } from "@/lib/auth";
 
 const getStatusColor = (status: string | undefined) => {
     switch (

@@ -427,9 +427,7 @@ function EquipmentInventory() {
                 cell: ({ row }) => {
                     const item = row.original;
                     // Construct image URL - Assuming imagePath is just the filename
-                    const imageUrl = item.imagePath
-                        ? `${API_BASE_URL}/uploads/equipment/${item.imagePath}` // Adjust path as needed
-                        : "/placeholder.svg";
+                    const imageUrl = item.imagePath;
 
                     return (
                         <div className="flex items-center gap-3">
@@ -811,9 +809,8 @@ function EquipmentInventory() {
                     {viewMode === "grid" && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             {filteredEquipment.map((item) => {
-                                const imageUrl = item.imagePath
-                                    ? `${API_BASE_URL}/uploads/equipment/${item.imagePath}`
-                                    : "/placeholder.svg";
+                                const imageUrl =
+                                    item.imagePath ?? "/placeholder.svg";
                                 const canManage =
                                     role === "SUPER_ADMIN" ||
                                     (role === "EQUIPMENT_OWNER" &&
