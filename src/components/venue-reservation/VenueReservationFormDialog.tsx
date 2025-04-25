@@ -91,9 +91,34 @@ export function VenueReservationFormDialog({
         onClose();
     };
 
-    const selectedVenue = venues.find(
-        (v) => v.id === Number(form.watch("venue")),
-    );
+    const watchedVenueIdString = form.watch("venue");
+    const targetVenueIdNumber = Number(watchedVenueIdString); // Convert once outside the loop
+
+    // Calculate selectedVenue based on the watched value
+    const selectedVenue = venues.find((v) => {
+        // Log the comparison details specifically when step 4 is active (Optional: remove after confirming fix)
+        if (step === 4) {
+            console.log(
+                `Comparing target ID: ${targetVenueIdNumber} (type: ${typeof targetVenueIdNumber}) with venue.id: ${v.id} (type: ${typeof v.id})`,
+            );
+        }
+        // Perform the comparison using loose equality (==) to handle type difference
+        // eslint-disable-next-line eqeqeq
+        // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
+                        return v.id == targetVenueIdNumber;
+    });
+
+    if (step === 4) {
+        console.log("--- Step 4 Summary Render ---");
+        console.log("Watched Venue ID (string):", watchedVenueIdString);
+        console.log(
+            "Converted Target Venue ID (number):",
+            targetVenueIdNumber, // Use the variable
+        );
+        console.log("Venues Array:", venues); // Check if venues array is populated
+        console.log("Calculated selectedVenue:", selectedVenue); // Check if find was successful
+        console.log("-----------------------------");
+    }
 
     const handleNext = async () => {
         console.log("handleNext called, current step:", step);
@@ -345,7 +370,7 @@ export function VenueReservationFormDialog({
                                                                     <div className="w-20 h-14 rounded overflow-hidden bg-muted">
                                                                         <img
                                                                             src={
-                                                                                venue.image ||
+                                                                                venue.imagePath ||
                                                                                 "/placeholder.svg"
                                                                             }
                                                                             alt={
@@ -617,7 +642,7 @@ export function VenueReservationFormDialog({
                             </div>
                         )}
                         {/* Step 4: Reservation Summary */}
-                        {step === 4 && selectedVenue && (
+                        {step === 4 && (
                             <div className="space-y-4">
                                 <h3 className="text-lg font-medium">
                                     Reservation Summary
@@ -629,12 +654,12 @@ export function VenueReservationFormDialog({
                                             Venue
                                         </h5>
                                         <p className="text-sm font-semibold">
-                                            {selectedVenue.name}
+                                            {selectedVenue?.name}
                                         </p>
                                         <div className="flex items-center text-sm text-muted-foreground mt-1">
                                             <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
                                             <span>
-                                                {selectedVenue.location}
+                                                {selectedVenue?.location}
                                             </span>
                                         </div>
                                     </div>
