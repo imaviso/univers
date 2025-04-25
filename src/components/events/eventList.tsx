@@ -7,13 +7,14 @@ import {
     CardHeader,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { eventsQueryOptions, venuesQueryOptions } from "@/lib/query"; // Import query options
+import { eventsQueryOptions, useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import query options
 import type { Event } from "@/lib/types";
 import { formatDateRange, getInitials } from "@/lib/utils";
 import { useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import { ChevronRight, Clock, MapPin, Paperclip, Tag } from "lucide-react";
 import { Avatar, AvatarFallback } from "../ui/avatar";
+import { getCurrentUser } from "@/lib/auth";
 
 const getStatusColor = (status: string | undefined) => {
     switch (
@@ -27,6 +28,8 @@ const getStatusColor = (status: string | undefined) => {
             return "bg-red-500/10 text-red-600 hover:bg-red-500/20";
         case "COMPLETED": // Assuming 'COMPLETED' might be a status
             return "bg-purple-500/10 text-purple-600 hover:bg-purple-500/20";
+        case "CANCELED":
+            return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20";
         default:
             return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20";
     }
@@ -36,7 +39,7 @@ export function EventList() {
     const navigate = useNavigate();
     const { data: events = [] } = useSuspenseQuery(eventsQueryOptions);
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
-
+    const { data: currentUser } = useCurrentUser();
     // Create maps for quick lookups
     const venueMap = new Map(venues.map((venue) => [venue.id, venue.name]));
 
@@ -47,6 +50,23 @@ export function EventList() {
             console.warn("Attempted to navigate with invalid event ID");
         }
     };
+
+    const filteredEvents = events.filter((event: Event) => {
+        // SUPER_ADMIN sees everything
+        if (currentUser?.role === "SUPER_ADMIN") {
+            return true;
+        }
+        // Non-admins: Hide canceled events
+        if (event.status?.toUpperCase() === "CANCELED") {
+            return false;
+        }
+        // Non-admins: Show pending only if current user is the organizer
+        if (event.status?.toUpperCase() === "PENDING") {
+            return String(event.organizer?.id) === currentUser?.id;
+        }
+        // Non-admins: Show all other statuses (Approved, Completed, etc.)
+        return true;
+    });
 
     return (
         <div className="space-y-4">
@@ -59,7 +79,7 @@ export function EventList() {
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {events.map((event: Event) => {
+                    {filteredEvents.map((event: Event) => {
                         let dateDisplayString = "Date not available";
 
                         if (

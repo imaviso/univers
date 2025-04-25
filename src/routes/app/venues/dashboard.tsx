@@ -656,7 +656,7 @@ export function VenueManagement() {
                                                 </div>
                                             )}
                                         </CardContent>
-                                        {role !== "SUPER_ADMIN" && ( // Show Reserve button for non-admins
+                                        {/* {role !== "SUPER_ADMIN" && ( // Show Reserve button for non-admins
                                             <CardFooter className="p-4 pt-0">
                                                 <Button
                                                     size="sm"
@@ -670,7 +670,7 @@ export function VenueManagement() {
                                                     Reserve
                                                 </Button>
                                             </CardFooter>
-                                        )}
+                                        )} */}
                                     </Card>
                                 ))
                             ) : (

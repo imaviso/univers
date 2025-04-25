@@ -30,6 +30,7 @@ import {
     Paperclip, // Added for approved letter
     Tag, // Added for event type
     Trash2,
+    XCircle,
 } from "lucide-react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -42,10 +43,11 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { approveEvent } from "@/lib/api";
+import { approveEvent, cancelEvent, updateEvent } from "@/lib/api";
 import {
     eventApprovalsQueryOptions,
     eventQueryOptions,
+    eventsQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
 import type { Event, EventApprovalDTO, Venue } from "@/lib/types"; // Import Event type
@@ -66,6 +68,9 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
+import { EditEventModal } from "@/components/events/editEventModal";
+import { set } from "date-fns";
 
 export const Route = createFileRoute("/app/events/$eventId")({
     loader: async ({ params: { eventId }, context: { queryClient } }) => {
@@ -110,6 +115,9 @@ export function EventDetailsPage() {
 
     const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
     const [approvalRemarks, setApprovalRemarks] = useState("");
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const venueMap = new Map(venues.map((venue) => [venue.id, venue.name]));
 
@@ -122,6 +130,9 @@ export function EventDetailsPage() {
                 appr.signedBy ===
                     `${currentUser?.firstName} ${currentUser?.lastName}`),
     );
+
+    const isOrganizer = currentUser?.id === String(event.organizer.id); // Compare IDs as strings or numbers consistently
+    const isSuperAdmin = role === "SUPER_ADMIN";
 
     const canUserApprove =
         currentUser &&
@@ -138,6 +149,12 @@ export function EventDetailsPage() {
         ].includes(currentUser.role) &&
         !hasUserApproved &&
         event.status === "PENDING";
+
+    const canCancelEvent =
+        event.status !== "CANCELED" && event.status !== "COMPLETED";
+    // Determine if the event can be edited (similar logic, maybe stricter)
+    const canEditEvent =
+        event.status !== "CANCELED" && event.status !== "COMPLETED";
 
     const approveMutation = useMutation({
         mutationFn: approveEvent,
@@ -157,6 +174,62 @@ export function EventDetailsPage() {
         },
     });
 
+    const cancelEventMutation = useMutation({
+        mutationFn: cancelEvent,
+        onSuccess: (message) => {
+            toast.success(message || "Event canceled successfully.");
+            // Invalidate event details and list
+            queryClient.invalidateQueries({
+                queryKey: eventQueryOptions(eventIdNum).queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryOptions.queryKey,
+            });
+            setIsCancelDialogOpen(false); // Close the dialog
+        },
+        onError: (error) => {
+            toast.error(`Cancellation failed: ${error.message}`);
+        },
+    });
+
+    // Mutation for updating the event (Setup, UI not implemented here)
+    const updateEventMutation = useMutation({
+        mutationFn: updateEvent,
+        onSuccess: (message) => {
+            toast.success(message || "Event updated successfully.");
+            // Invalidate event details and list
+            queryClient.invalidateQueries({
+                queryKey: eventQueryOptions(eventIdNum).queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryOptions.queryKey,
+            });
+            // TODO: Close edit modal/navigate back if applicable
+        },
+        onError: (error) => {
+            toast.error(`Update failed: ${error.message}`);
+        },
+    });
+
+    const deleteEventMutation = useMutation({
+        mutationFn: cancelEvent,
+        onSuccess: (message) => {
+            toast.success(message || "Event deleted successfully.");
+            // Invalidate the list query
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryOptions.queryKey,
+            });
+            setIsDeleteDialogOpen(false); // Close the dialog
+            // Navigate back to the events list after successful deletion
+            router.navigate({ to: "/app/events" });
+        },
+        onError: (error) => {
+            toast.error(`Deletion failed: ${error.message}`);
+            // Optionally close dialog on error too, or keep it open for retry
+            // setIsDeleteDialogOpen(false);
+        },
+    });
+
     const handleApproveClick = () => {
         if (!currentUser) return;
         approveMutation.mutate({
@@ -164,6 +237,28 @@ export function EventDetailsPage() {
             userId: Number.parseInt(currentUser.id, 10),
             remarks: approvalRemarks,
         });
+    };
+
+    const handleCancelClick = () => {
+        setIsCancelDialogOpen(true);
+    };
+
+    // Handler for confirming the cancellation
+    const handleConfirmCancel = () => {
+        cancelEventMutation.mutate(eventIdNum);
+    };
+
+    const handleDeleteClick = () => {
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        deleteEventMutation.mutate(eventIdNum);
+    };
+
+    // Placeholder handler for edit (e.g., navigate to an edit page)
+    const handleEditClick = () => {
+        setIsEditModalOpen(true);
     };
 
     let dateDisplayString = "Date not available";
@@ -280,19 +375,65 @@ export function EventDetailsPage() {
                                 </DialogContent>
                             </Dialog>
                         )}
-                        {role === "SUPER_ADMIN" && (
+
+                        {(isOrganizer || isSuperAdmin) && (
                             <>
+                                {/* Edit Button */}
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     className="gap-1"
-                                    // onClick={() => navigate({ to: `/app/events/${event.id}/edit` })}
+                                    onClick={handleEditClick} // Use updated handler
+                                    disabled={
+                                        !canEditEvent ||
+                                        updateEventMutation.isPending
+                                    }
                                 >
                                     <Edit className="h-4 w-4" />
                                     Edit
                                 </Button>
+                                {/* More Options Dropdown */}
                                 <DropdownMenu>
-                                    {/* ... existing dropdown ... */}
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            // Disable dropdown if no actions are available
+                                            disabled={
+                                                !canCancelEvent && !isSuperAdmin
+                                            }
+                                        >
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        {/* Cancel Event Item */}
+                                        {/* <DropdownMenuItem
+                                            className="text-orange-600 focus:text-orange-700 focus:bg-orange-100"
+                                            onClick={handleCancelClick}
+                                            disabled={
+                                                !canCancelEvent ||
+                                                cancelEventMutation.isPending
+                                            }
+                                        >
+                                            <XCircle className="mr-2 h-4 w-4" />
+                                            Cancel Event
+                                        </DropdownMenuItem> */}
+                                        {/* Delete Event Item (Only for SUPER_ADMIN) */}
+                                        {isSuperAdmin && (
+                                            <DropdownMenuItem
+                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                onClick={handleDeleteClick} // Use delete handler
+                                                disabled={
+                                                    deleteEventMutation.isPending
+                                                } // Disable during delete mutation
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Cancel Event
+                                            </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
                                 </DropdownMenu>
                             </>
                         )}
@@ -572,6 +713,24 @@ export function EventDetailsPage() {
                     </div>
                 </ScrollArea>
             </div>
+            <DeleteConfirmDialog
+                isOpen={isDeleteDialogOpen}
+                onClose={() => setIsDeleteDialogOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Cancel Event"
+                description={`Are you sure you want to permanently cancel the event "${event.eventName}"? This action cannot be undone.`}
+                isLoading={deleteEventMutation.isPending}
+                confirmText="Yes, Cancel Event"
+                confirmVariant="destructive"
+            />
+            {role === "SUPER_ADMIN" && (
+                <EditEventModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    event={event} // Pass the loaded event data
+                    venues={venues} // Pass the loaded venues data
+                />
+            )}
         </div>
     );
 }

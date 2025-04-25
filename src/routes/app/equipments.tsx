@@ -938,7 +938,7 @@ function EquipmentInventory() {
                                                 )}
                                         </CardContent>
                                         {/* Add Reserve button for non-admins/owners in grid view */}
-                                        {role !== "SUPER_ADMIN" &&
+                                        {/* {role !== "SUPER_ADMIN" &&
                                             role !== "EQUIPMENT_OWNER" &&
                                             item.availability && (
                                                 <CardFooter className="p-4 pt-0">
@@ -957,7 +957,7 @@ function EquipmentInventory() {
                                                         Reserve
                                                     </Button>
                                                 </CardFooter>
-                                            )}
+                                            )} */}
                                     </Card>
                                 );
                             })}
