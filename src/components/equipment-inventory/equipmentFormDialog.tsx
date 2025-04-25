@@ -120,10 +120,7 @@ export function EquipmentFormDialog({
             setImageFile(null);
             setImageError(null);
             // Set initial image URL for preview if editing
-            const previewUrl = equipment?.imagePath
-                ? `/uploads/equipment/${equipment.imagePath.substring(equipment.imagePath.lastIndexOf("/") + 1)}`
-                : null;
-            setInitialImageUrl(previewUrl);
+            const previewUrl = equipment?.imagePath;
         }
     }, [isOpen, equipment, form]);
 

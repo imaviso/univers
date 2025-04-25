@@ -201,7 +201,7 @@ export function VenueDetails() {
                                     <div className="rounded-lg overflow-hidden border aspect-video">
                                         <img
                                             src={
-                                                venue.image ||
+                                                venue.imagePath ||
                                                 "/placeholder.svg"
                                             }
                                             alt={venue.name}
@@ -230,8 +230,11 @@ export function VenueDetails() {
                                                 <UserCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                                 <span className="text-sm">
                                                     Owner:{" "}
-                                                    {venue.venueOwner.firstName}{" "}
-                                                    {venue.venueOwner.lastName}
+                                                    {
+                                                        venue.venueOwner
+                                                            ?.firstName
+                                                    }{" "}
+                                                    {venue.venueOwner?.lastName}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">

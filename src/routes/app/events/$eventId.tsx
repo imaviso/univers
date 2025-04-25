@@ -33,6 +33,7 @@ import {
     XCircle,
 } from "lucide-react";
 
+import { EditEventModal } from "@/components/events/editEventModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Table,
@@ -43,6 +44,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { approveEvent, cancelEvent, updateEvent } from "@/lib/api";
 import {
     eventApprovalsQueryOptions,
@@ -66,11 +68,9 @@ import {
     useRouteContext,
     useRouter,
 } from "@tanstack/react-router";
+import { set } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
-import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
-import { EditEventModal } from "@/components/events/editEventModal";
-import { set } from "date-fns";
 
 export const Route = createFileRoute("/app/events/$eventId")({
     loader: async ({ params: { eventId }, context: { queryClient } }) => {
@@ -285,22 +285,6 @@ export function EventDetailsPage() {
         ? `${event.organizer.firstName} ${event.organizer.lastName}`
         : "Unknown Organizer";
     // const organizerAvatar = event.organizer?.avatarUrl; // If avatar exists
-    let approvedLetterUrl: string | null = null;
-    if (event.approvedLetterPath) {
-        // Example: Extract filename if path is like '/path/to/static/dir/filename.ext'
-        const filename = event.approvedLetterPath.split("/").pop();
-        if (filename) {
-            // Example: Assuming files are served under '/api/files/approved-letters/'
-            approvedLetterUrl = `/api/files/approved-letters/${filename}`;
-            // If served directly from root static path:
-            // approvedLetterUrl = `/approved-letters/${filename}`;
-        } else {
-            console.error(
-                "Could not extract filename from approvedLetterPath:",
-                event.approvedLetterPath,
-            );
-        }
-    }
 
     return (
         <div className="flex h-screen bg-background">
@@ -527,58 +511,55 @@ export function EventDetailsPage() {
                                         </div>
 
                                         {/* Approved Letter - Updated */}
-                                        {event.approvedLetterPath &&
-                                            approvedLetterUrl && (
-                                                <div>
-                                                    <h3 className="text-sm font-medium text-muted-foreground">
-                                                        Approved Letter
-                                                    </h3>
-                                                    <Dialog>
-                                                        <DialogTrigger asChild>
-                                                            <div className="flex items-center gap-2 mt-1 cursor-pointer text-blue-600 hover:underline">
-                                                                <Paperclip className="h-4 w-4" />
-                                                                <span className="text-sm">
-                                                                    View
-                                                                    Attached
-                                                                    Letter
-                                                                </span>
-                                                            </div>
-                                                        </DialogTrigger>
-                                                        <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
+                                        {event.approvedLetterUrl && (
+                                            <div>
+                                                <h3 className="text-sm font-medium text-muted-foreground">
+                                                    Approved Letter
+                                                </h3>
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <div className="flex items-center gap-2 mt-1 cursor-pointer text-blue-600 hover:underline">
+                                                            <Paperclip className="h-4 w-4" />
+                                                            <span className="text-sm">
+                                                                View Attached
+                                                                Letter
+                                                            </span>
+                                                        </div>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
+                                                        {" "}
+                                                        {/* Adjust size */}
+                                                        <DialogHeader>
+                                                            <DialogTitle>
+                                                                Approved Letter
+                                                            </DialogTitle>
+                                                            <DialogDescription>
+                                                                Viewing the
+                                                                letter for
+                                                                event:{" "}
+                                                                {
+                                                                    event.eventName
+                                                                }
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="mt-4 max-h-[70vh] overflow-auto">
                                                             {" "}
-                                                            {/* Adjust size */}
-                                                            <DialogHeader>
-                                                                <DialogTitle>
-                                                                    Approved
-                                                                    Letter
-                                                                </DialogTitle>
-                                                                <DialogDescription>
-                                                                    Viewing the
-                                                                    letter for
-                                                                    event:{" "}
-                                                                    {
-                                                                        event.eventName
-                                                                    }
-                                                                </DialogDescription>
-                                                            </DialogHeader>
-                                                            <div className="mt-4 max-h-[70vh] overflow-auto">
-                                                                {" "}
-                                                                {/* Limit height and allow scroll */}
-                                                                {/* Display image - adjust if it could be PDF */}
-                                                                <img
-                                                                    src={
-                                                                        approvedLetterUrl
-                                                                    }
-                                                                    alt="Approved Letter"
-                                                                    className="max-w-full h-auto mx-auto"
-                                                                />
-                                                                {/* For PDF, you might use: */}
-                                                                {/* <iframe src={approvedLetterUrl} width="100%" height="600px" title="Approved Letter"></iframe> */}
-                                                            </div>
-                                                        </DialogContent>
-                                                    </Dialog>
-                                                </div>
-                                            )}
+                                                            {/* Limit height and allow scroll */}
+                                                            {/* Display image - adjust if it could be PDF */}
+                                                            <img
+                                                                src={
+                                                                    event.approvedLetterUrl
+                                                                }
+                                                                alt="Approved Letter"
+                                                                className="max-w-full h-auto mx-auto"
+                                                            />
+                                                            {/* For PDF, you might use: */}
+                                                            {/* <iframe src={approvedLetterUrl} width="100%" height="600px" title="Approved Letter"></iframe> */}
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
+                                        )}
 
                                         {/* Removed Attendees */}
                                     </div>

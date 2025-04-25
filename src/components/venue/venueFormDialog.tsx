@@ -72,9 +72,8 @@ export function VenueFormDialog({
     venueOwners,
 }: VenueFormDialogProps) {
     // State for the image file
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imageError, setImageError] = useState<string | null>(null);
     const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
 
     const isEditing = !!venue;
     const formDefaultValues =
@@ -111,54 +110,25 @@ export function VenueFormDialog({
                     : defaultValues;
             form.reset(resetValues);
 
-            setImageFile(null);
-            setImageError(null);
             const previewUrl = venue?.imagePath ?? null;
             setInitialImageUrl(previewUrl);
         }
     }, [isOpen, venue, form, isEditing]); // Add isEditing dependency
 
     const handleFileValueChange = (files: File[]) => {
-        const file = files[0] || null;
-        setImageError(null); // Reset error on new selection
-
-        if (file) {
-            const validationResult = v.safeParse(ImageSchema, file);
-            if (validationResult.success) {
-                setImageFile(file);
-                form.setValue("image", file, { shouldValidate: true });
-            } else {
-                setImageError(
-                    v.flatten(validationResult.issues).root?.[0] ??
-                        "Invalid image file.",
-                );
-                setImageFile(null);
-                form.setValue("image", undefined, { shouldValidate: true });
-            }
-        } else {
-            setImageFile(null);
-            form.setValue("image", undefined, { shouldValidate: true });
-        }
+        setImageFiles(files); // Update local state for FileUpload component
+        // Set the value (File[] or empty array) in the form.
+        // The resolver will validate this against the schema (which expects File[], transforms to File | undefined)
+        form.setValue("image", files, { shouldValidate: true });
     };
 
+    // Simplified submit handler - validation happens via form.handleSubmit
     const processSubmit = (data: VenueInput) => {
-        setImageError(null); // Reset image error
-
-        if (imageFile) {
-            const validationResult = v.safeParse(ImageSchema, imageFile);
-            if (!validationResult.success) {
-                setImageError(
-                    v.flatten(validationResult.issues).root?.[0] ??
-                        "Invalid image file.",
-                );
-                return;
-            }
-        }
-
-        onSubmit(data, imageFile);
+        onSubmit(data, imageFiles[0] ?? null);
     };
 
-    const currentFiles = imageFile ? [imageFile] : [];
+    // Use imageFiles state for FileUpload component value
+    const currentFiles = imageFiles;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -266,86 +236,105 @@ export function VenueFormDialog({
                             )}
                         />
 
-                        {/* Image Upload */}
-                        <div className="grid gap-2">
-                            <Label>Image (Optional)</Label>
-                            <FileUpload
-                                value={currentFiles}
-                                onValueChange={handleFileValueChange}
-                                maxFiles={1}
-                                maxSize={5 * 1024 * 1024} // 5MB
-                                accept="image/jpeg, image/png, image/webp"
-                                disabled={isLoading}
-                                className="relative rounded-lg border border-input bg-background"
-                            >
-                                <FileUploadDropzone className="border-dashed p-4">
-                                    <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
-                                    <p className="mb-1 text-sm text-muted-foreground">
-                                        <span className="font-semibold">
-                                            Click or drag image
-                                        </span>{" "}
-                                        to upload
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        JPG, PNG, WEBP (max 5MB)
-                                    </p>
-                                </FileUploadDropzone>
-                                <FileUploadList className="p-3">
-                                    {/* Display initial image if editing and no new file selected */}
-                                    {!imageFile && initialImageUrl && (
-                                        <div className="relative flex items-center gap-2.5 rounded-md border p-2">
-                                            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                                                <img
-                                                    src={initialImageUrl}
-                                                    alt="Current venue"
-                                                    className="size-full rounded object-cover"
-                                                    onError={(e) => {
-                                                        e.currentTarget.src =
-                                                            "/placeholder.svg"; // Fallback image
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="flex min-w-0 flex-1 flex-col">
-                                                <span className="truncate text-sm font-medium text-muted-foreground">
-                                                    Current Image
-                                                </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    Will be replaced if new
-                                                    image is selected
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {/* Display selected file */}
-                                    {currentFiles.map((file) => (
-                                        <FileUploadItem
-                                            key={file.name}
-                                            value={file}
-                                            className="p-2"
+                        <FormField
+                            control={form.control}
+                            name="image"
+                            render={() => (
+                                <FormItem>
+                                    <FormLabel>Image (Optional)</FormLabel>
+                                    <FormControl>
+                                        <FileUpload
+                                            value={currentFiles} // Use local state for display
+                                            onValueChange={
+                                                handleFileValueChange
+                                            } // Updates local state and form state
+                                            maxFiles={1}
+                                            maxSize={10 * 1024 * 1024} // 10MB (sync with schema)
+                                            accept="image/jpeg, image/png, image/webp" // Sync with schema
+                                            disabled={isLoading}
+                                            className="relative rounded-lg border border-input bg-background"
                                         >
-                                            <FileUploadItemPreview />
-                                            <FileUploadItemMetadata />
-                                            <FileUploadItemDelete asChild>
-                                                <Button
-                                                    type="button"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="size-7"
-                                                    disabled={isLoading}
-                                                >
-                                                    <X className="size-4" />
-                                                </Button>
-                                            </FileUploadItemDelete>
-                                        </FileUploadItem>
-                                    ))}
-                                </FileUploadList>
-                            </FileUpload>
-                            {imageError && (
-                                <p className="text-sm text-destructive">
-                                    {imageError}
-                                </p>
+                                            <FileUploadDropzone className="border-dashed p-4">
+                                                <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
+                                                <p className="mb-1 text-sm text-muted-foreground">
+                                                    <span className="font-semibold">
+                                                        Click or drag image
+                                                    </span>{" "}
+                                                    to upload
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    JPG, PNG, WEBP (max 10MB)
+                                                </p>
+                                            </FileUploadDropzone>
+                                            <FileUploadList className="p-3">
+                                                {/* Display initial image */}
+                                                {currentFiles.length === 0 &&
+                                                    initialImageUrl && (
+                                                        <div className="relative flex items-center gap-2.5 rounded-md border p-2">
+                                                            {/* ... initial image display ... */}
+                                                            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                                                                <img
+                                                                    src={
+                                                                        initialImageUrl
+                                                                    }
+                                                                    alt="Current venue"
+                                                                    className="size-full rounded object-cover"
+                                                                    onError={(
+                                                                        e,
+                                                                    ) => {
+                                                                        e.currentTarget.src =
+                                                                            "/placeholder.svg"; // Fallback image
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <div className="flex min-w-0 flex-1 flex-col">
+                                                                <span className="truncate text-sm font-medium text-muted-foreground">
+                                                                    Current
+                                                                    Image
+                                                                </span>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    Will be
+                                                                    replaced if
+                                                                    new image is
+                                                                    selected
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                {/* Display selected file */}
+                                                {currentFiles.map((file) => (
+                                                    <FileUploadItem
+                                                        key={file.name}
+                                                        value={file}
+                                                        className="p-2"
+                                                    >
+                                                        <FileUploadItemPreview />
+                                                        <FileUploadItemMetadata />
+                                                        <FileUploadItemDelete
+                                                            asChild
+                                                        >
+                                                            <Button
+                                                                type="button"
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="size-7"
+                                                                disabled={
+                                                                    isLoading
+                                                                }
+                                                            >
+                                                                <X className="size-4" />
+                                                            </Button>
+                                                        </FileUploadItemDelete>
+                                                    </FileUploadItem>
+                                                ))}
+                                            </FileUploadList>
+                                        </FileUpload>
+                                    </FormControl>
+                                    {/* Display validation error from react-hook-form */}
+                                    <FormMessage />
+                                </FormItem>
                             )}
-                        </div>
+                        />
 
                         {/* Display general form error from backend */}
                         {form.formState.errors.root?.serverError && (
@@ -368,11 +357,7 @@ export function VenueFormDialog({
                     <Button
                         type="submit"
                         form="venue-form"
-                        disabled={
-                            isLoading ||
-                            !form.formState.isValid || // Check basic form validity
-                            !!imageError // Disable if image validation error exists
-                        }
+                        disabled={isLoading || !form.formState.isValid}
                     >
                         {isLoading ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
