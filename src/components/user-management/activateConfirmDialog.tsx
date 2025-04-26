@@ -41,7 +41,7 @@ export function ActivateConfirmDialog({
                         onClick={onConfirm}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                        Activate
+                        {isLoading ? "Processing..." : "Activate"}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -159,10 +159,9 @@ export const updateProfile = async ({
 
         // Remove undefined fields from the payload before stringifying
         for (const key of Object.keys(userDtoPayload)) {
-            if (
-                userDtoPayload[key as keyof typeof userDtoPayload] === undefined
-            ) {
-                delete userDtoPayload[key as keyof typeof userDtoPayload];
+            const k = key as keyof Partial<UserDTO>;
+            if (userDtoPayload[k] === undefined) {
+                delete userDtoPayload[k];
             }
         }
 
@@ -227,15 +226,10 @@ export type UpdateUserInputFE = Partial<
     > & { departmentId: number | null }
 >;
 export const updateUser = async (
-    userId: string,
+    userId: number,
     userData: UpdateUserInputFE,
 ) => {
     try {
-        const numericUserId = Number.parseInt(userId, 10);
-        if (Number.isNaN(numericUserId)) {
-            throw new Error("Invalid User ID format for update.");
-        }
-
         const payload: Partial<UserDTO> = {};
         if (userData.firstName !== undefined)
             payload.firstName = userData.firstName;
@@ -250,7 +244,7 @@ export const updateUser = async (
         if (userData.departmentId !== undefined)
             payload.departmentId = userData.departmentId;
 
-        const response = await fetch(`${API_BASE_URL}/users/${numericUserId}`, {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
             // Use numeric ID
             method: "PATCH",
             headers: { "Content-Type": "application/json" },

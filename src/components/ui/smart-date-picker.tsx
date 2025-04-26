@@ -181,7 +181,7 @@ const TimePicker = () => {
     const [activeIndex, setActiveIndex] = React.useState(-1);
     const timestamp = 30;
 
-    const formateSelectedTime = React.useCallback(
+    const formatSelectedTime = React.useCallback(
         (time: string, hour: number, partStamp: number) => {
             onTimeChange(time);
 
@@ -254,7 +254,7 @@ const TimePicker = () => {
                         ? 0
                         : 1;
 
-                formateSelectedTime(timeValue, hour, part);
+                formatSelectedTime(timeValue, hour, part);
             };
 
             const reset = () => {
@@ -283,19 +283,19 @@ const TimePicker = () => {
                     break;
             }
         },
-        [activeIndex, formateSelectedTime],
+        [activeIndex, formatSelectedTime],
     );
 
     const handleClick = React.useCallback(
         (hour: number, part: number, PM_AM: string, currentIndex: number) => {
-            formateSelectedTime(
+            formatSelectedTime(
                 `${hour}:${part === 0 ? "00" : timestamp} ${PM_AM}`,
                 hour,
                 part,
             );
             setActiveIndex(currentIndex);
         },
-        [formateSelectedTime],
+        [formatSelectedTime],
     );
 
     const currentTime = React.useMemo(() => {

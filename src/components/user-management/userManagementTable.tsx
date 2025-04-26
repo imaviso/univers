@@ -144,7 +144,7 @@ export function UserDataTable() {
                 payload.departmentId !== null // Check if departmentId is provided and not null
                     ? DEPARTMENTS.find(
                           (d) => d.value === payload.departmentId, // Compare with number ID
-                      )?.label || "Unknown Dept"
+                      )?.label
                     : undefined; // If departmentId is null or undefined, keep label undefined
 
             queryClient.setQueryData<UserType[]>(

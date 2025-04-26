@@ -137,21 +137,23 @@ export function AccountSettings() {
     // Other State
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
     useEffect(() => {
-        // Only reset if there's no pending avatar file change
+        setProfileForm((prev) => ({
+            ...prev,
+            firstName: user?.firstName ?? "",
+            lastName: user?.lastName ?? "",
+        }));
+    }, [user?.firstName, user?.lastName]);
+
+    // update avatarUrl when profileImagePath changes and no local file is staged
+    useEffect(() => {
         if (!profileForm.avatarFile) {
-            setProfileForm(getInitialProfileState(user));
-        } else {
-            // If there is a pending avatar, just update names/other fields
             setProfileForm((prev) => ({
                 ...prev,
-                firstName: user?.firstName || "",
-                lastName: user?.lastName || "",
-                // Keep existing avatarFile and preview URL
+                avatarUrl: user?.profileImagePath || undefined,
             }));
         }
-    }, [user]);
+    }, [user?.profileImagePath, profileForm.avatarFile]);
 
     const updateProfileMutation = useMutation({
         // Pass the correct input type to mutationFn
@@ -191,7 +193,11 @@ export function AccountSettings() {
             // Backend returns a success message string
             toast.success(message || "Profile updated successfully");
             // Reset avatar file state after successful upload
-            setProfileForm((prev) => ({ ...prev, avatarFile: null }));
+            setProfileForm((prev) => ({
+                ...prev,
+                avatarFile: null,
+                avatarUrl: undefined, // let react-query refetch decide the new src
+            }));
         },
         onSettled: () => {
             // Invalidate to refetch the latest user data (including potentially new avatar URL)

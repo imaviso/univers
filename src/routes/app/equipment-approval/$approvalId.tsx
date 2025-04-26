@@ -26,42 +26,42 @@ import { ArrowLeft, CheckCircle2, X } from "lucide-react";
 import { useState } from "react";
 import { initialReservations } from "../equipment-approval/approval";
 type EquipmentItem = {
-  id: string;
-  name: string;
-  owner: string; // Changed back to string
-  quantity: number;
+    id: string;
+    name: string;
+    owner: string; // Changed back to string
+    quantity: number;
 };
 
 type Approver = {
-  name: string;
-  department: string;
-  role: string;
-  dateSigned: string | null; // Keep as string | null
-  status: string;
+    name: string;
+    department: string;
+    role: string;
+    dateSigned: string | null; // Keep as string | null
+    status: string;
 };
 
 // Define ReservationType explicitly
 type ReservationType = {
-  id: number;
-  eventName: string;
-  venue: string;
-  venueId: number;
-  department: string;
-  contactNumber: string;
-  userName: string;
-  eventDate: string;
-  startTime: string;
-  endTime: string;
-  status: string;
-  createdAt: string;
-  equipment: EquipmentItem[];
-  remarks: {
-    MSDO: string;
-    OPC: string;
-  };
-  approvers: Approver[];
-  purpose?: string; // Keep optional
-  disapprovalNote?: string; // Keep optional
+    id: number;
+    eventName: string;
+    venue: string;
+    venueId: number;
+    department: string;
+    contactNumber: string;
+    userName: string;
+    eventDate: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+    createdAt: string;
+    equipment: EquipmentItem[];
+    remarks: {
+        MSDO: string;
+        OPC: string;
+    };
+    approvers: Approver[];
+    purpose?: string; // Keep optional
+    disapprovalNote?: string; // Keep optional
 };
 export const Route = createFileRoute("/app/equipment-approval/$approvalId")({
     component: EquipmentReservationDetails,
@@ -83,7 +83,8 @@ export const Route = createFileRoute("/app/equipment-approval/$approvalId")({
 export function EquipmentReservationDetails() {
     const navigate = useNavigate();
     const { reservation: initialReservation } = Route.useLoaderData();
-    const [reservation, setReservation] = useState<ReservationType>(initialReservation);
+    const [reservation, setReservation] =
+        useState<ReservationType>(initialReservation);
     const [activeTab, setActiveTab] = useState("details");
     const [activeRemarksTab, setActiveRemarksTab] = useState("MSDO");
 
@@ -139,7 +140,9 @@ export function EquipmentReservationDetails() {
 
     const handleAddRemarks = (role: string) => {
         setCurrentApproverRole(role);
-        setRemarksText(reservation.remarks[role as keyof typeof reservation.remarks] || ""); // Use type assertion for dynamic key
+        setRemarksText(
+            reservation.remarks[role as keyof typeof reservation.remarks] || "",
+        ); // Use type assertion for dynamic key
         setIsRemarksDialogOpen(true);
     };
 
@@ -771,7 +774,9 @@ export function EquipmentReservationDetails() {
                                                     approver: Approver,
                                                     index: number,
                                                 ) => (
-                                                    <TableRow key={`${approver.name}-${approver.role}`}>
+                                                    <TableRow
+                                                        key={`${approver.name}-${approver.role}`}
+                                                    >
                                                         <TableCell>
                                                             {approver.name}
                                                         </TableCell>
