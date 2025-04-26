@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { CalendarIcon } from "lucide-react";
 import { useState } from "react";
+import type { DateRange } from "react-day-picker";
 
 const categories = [
     { id: "personal", name: "Personal", color: "bg-yellow-500" },
@@ -24,10 +25,7 @@ const categories = [
 
 export type FilterState = {
     categories: string[];
-    dateRange: {
-        from: Date | undefined;
-        to: Date | undefined;
-    };
+    dateRange: DateRange | undefined;
     timeRange: {
         start: string | undefined;
         end: string | undefined;
@@ -40,13 +38,9 @@ type FilterProps = {
 
 export default function Filter({ onFilterChange }: FilterProps) {
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [dateRange, setDateRange] = useState<{
-        from: Date | undefined;
-        to: Date | undefined;
-    }>({
-        from: undefined,
-        to: undefined,
-    });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(
+        undefined,
+    );
     const [timeRange, setTimeRange] = useState<{
         start: string | undefined;
         end: string | undefined;
@@ -66,7 +60,7 @@ export default function Filter({ onFilterChange }: FilterProps) {
     const handleApplyFilters = () => {
         onFilterChange({
             categories: selectedCategories,
-            dateRange,
+            dateRange: dateRange || { from: undefined, to: undefined },
             timeRange,
         });
     };
@@ -109,7 +103,7 @@ export default function Filter({ onFilterChange }: FilterProps) {
                             className="w-full justify-start text-left font-normal"
                         >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange.from ? (
+                            {dateRange?.from ? (
                                 dateRange.to ? (
                                     <>
                                         {dateRange.from.toDateString()} -{" "}
@@ -127,7 +121,7 @@ export default function Filter({ onFilterChange }: FilterProps) {
                         <Calendar
                             initialFocus
                             mode="range"
-                            defaultMonth={dateRange.from}
+                            defaultMonth={dateRange?.from}
                             selected={dateRange}
                             onSelect={setDateRange}
                             numberOfMonths={2}
@@ -149,7 +143,7 @@ export default function Filter({ onFilterChange }: FilterProps) {
                         <SelectContent>
                             {Array.from({ length: 24 }).map((_, i) => (
                                 <SelectItem
-                                    key={i}
+                                    key={`${i.toString().padStart(2, "0")}:00`}
                                     value={`${i.toString().padStart(2, "0")}:00`}
                                 >
                                     {`${i.toString().padStart(2, "0")}:00`}
@@ -168,7 +162,7 @@ export default function Filter({ onFilterChange }: FilterProps) {
                         <SelectContent>
                             {Array.from({ length: 24 }).map((_, i) => (
                                 <SelectItem
-                                    key={i}
+                                    key={`${i.toString().padStart(2, "0")}:00`}
                                     value={`${i.toString().padStart(2, "0")}:00`}
                                 >
                                     {`${i.toString().padStart(2, "0")}:00`}

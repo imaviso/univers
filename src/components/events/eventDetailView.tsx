@@ -408,7 +408,7 @@ export function EventDetailView() {
                                     <div className="space-y-3">
                                         {event.team.map((member, index) => (
                                             <div
-                                                key={index}
+                                                key={member.name}
                                                 className="flex items-center gap-3"
                                             >
                                                 <Avatar className="h-10 w-10">

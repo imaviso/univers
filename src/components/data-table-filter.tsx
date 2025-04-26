@@ -48,6 +48,7 @@ import { Ellipsis } from "lucide-react";
 import {
     cloneElement,
     isValidElement,
+    useCallback, // Add useCallback import
     useEffect,
     useMemo,
     useRef,
@@ -93,7 +94,8 @@ export function DataTableFilterMobileContainer({
     const [showRightBlur, setShowRightBlur] = useState(true);
 
     // Check if there's content to scroll and update blur states
-    const checkScroll = () => {
+    const checkScroll = useCallback(() => {
+        // Use imported useCallback directly
         if (scrollContainerRef.current) {
             const { scrollLeft, scrollWidth, clientWidth } =
                 scrollContainerRef.current;
@@ -105,7 +107,7 @@ export function DataTableFilterMobileContainer({
             // Add a small buffer (1px) to account for rounding errors
             setShowRightBlur(scrollLeft + clientWidth < scrollWidth - 1);
         }
-    };
+    }, []); // Dependencies: scrollContainerRef, setShowLeftBlur, setShowRightBlur are stable
 
     // Log blur states for debugging
     // useEffect(() => {
@@ -123,12 +125,12 @@ export function DataTableFilterMobileContainer({
                 resizeObserver.disconnect();
             };
         }
-    }, []);
+    }, [checkScroll]); // Add checkScroll dependency
 
-    // Update blur states when children change
+    // Update blur states when checkScroll changes (and implicitly on mount)
     useEffect(() => {
         checkScroll();
-    }, [children]);
+    }, [checkScroll]); // Add checkScroll, remove children
 
     return (
         <div className="relative w-full overflow-x-hidden">
@@ -224,7 +226,7 @@ export function TableFilter<TData>({ table }: { table: Table<TData> }) {
                                 <TableFilterMenuItem
                                     key={column.id}
                                     column={column}
-                                    table={table}
+                                    // table={table} // Removed - Not a prop of TableFilterMenuItem
                                     setProperty={setProperty}
                                 />
                             ))}

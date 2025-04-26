@@ -10,13 +10,15 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import type { Event } from "@/lib/types";
+import { format, isSameDay } from "date-fns";
 import { Clock, Edit, MapPin, Trash, Users, X } from "lucide-react";
 import { useState } from "react";
 
 interface EventDetailsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    event: any;
+    event: Event;
 }
 
 const getStatusColor = (status: string) => {
@@ -100,7 +102,9 @@ export function EventDetailsModal({
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[650px]">
                 <DialogHeader>
-                    <DialogTitle className="text-xl">{event.title}</DialogTitle>
+                    <DialogTitle className="text-xl">
+                        {event.eventName}
+                    </DialogTitle>
                 </DialogHeader>
 
                 <div className="flex justify-between items-center">
@@ -140,15 +144,20 @@ export function EventDetailsModal({
                             <div className="flex items-center gap-2 text-sm">
                                 <Clock className="h-4 w-4 text-muted-foreground" />
                                 <span>
-                                    {event.endDate
-                                        ? `${event.date} to ${event.endDate}`
-                                        : event.date}
+                                    {format(new Date(event.startTime), "PPP")}
+                                    {isSameDay(
+                                        new Date(event.startTime),
+                                        new Date(event.endTime),
+                                    )
+                                        ? ` ${format(new Date(event.startTime), "p")} - ${format(new Date(event.endTime), "p")}`
+                                        : ` to ${format(new Date(event.endTime), "PPP")}`}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-2 text-sm">
+                            {/* TODO: Add location display - requires venue details */}
+                            {/* <div className="flex items-center gap-2 text-sm">
                                 <MapPin className="h-4 w-4 text-muted-foreground" />
                                 <span>{event.location}</span>
-                            </div>
+                            </div> */}
                             <div className="flex items-center gap-2 text-sm">
                                 <Users className="h-4 w-4 text-muted-foreground" />
                                 <span>Expected attendees: 120</span>
@@ -157,22 +166,24 @@ export function EventDetailsModal({
 
                         <Separator />
 
-                        <div>
+                        {/* TODO: Add description display if available in Event type */}
+                        {/* <div>
                             <h3 className="font-medium mb-2">Description</h3>
                             <p className="text-sm text-muted-foreground">
                                 {event.description ||
                                     "Join us for this exciting event! More details will be provided closer to the date."}
                             </p>
-                        </div>
+                        </div> */}
 
                         <Separator />
 
-                        <div>
+                        {/* TODO: Add facility display - requires venue details */}
+                        {/* <div>
                             <h3 className="font-medium mb-2">Facility</h3>
                             <p className="text-sm text-muted-foreground">
                                 {event.facility || "Main Conference Hall"}
                             </p>
-                        </div>
+                        </div> */}
                     </TabsContent>
 
                     <TabsContent value="team" className="space-y-4 pt-4">
@@ -181,7 +192,7 @@ export function EventDetailsModal({
                             <div className="space-y-3">
                                 {teamMembers.map((member, index) => (
                                     <div
-                                        key={index}
+                                        key={member.name}
                                         className="flex items-center gap-3"
                                     >
                                         <Avatar className="h-8 w-8">

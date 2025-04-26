@@ -13,6 +13,7 @@ import type {
     EventApprovalDTO,
     EventDTOBackendResponse,
     EventDTOPayload,
+    UserDTO,
     UserType,
     Venue,
 } from "./types";
@@ -37,10 +38,15 @@ async function handleApiResponse(response: Response, expectJson = true) {
             errorMessage.includes("Department does not exist") ||
             errorMessage.includes("Invalid department head") ||
             errorMessage.includes("User not found") ||
-            errorMessage.includes("Invalid department Id")
+            errorMessage.includes("Invalid department Id") ||
+            errorMessage.includes("User does not exist")
         ) {
         }
         throw new Error(errorMessage);
+    }
+
+    if (response.status === 204) {
+        return expectJson ? null : "";
     }
 
     if (response.status === 204 && expectJson) {
@@ -112,17 +118,75 @@ export const getAllUsers = async () => {
     }
 };
 
-export const updateProfile = async (userData: UserType) => {
+type UpdateProfileInput = {
+    userId: string;
+    data: Partial<
+        Pick<
+            UserType,
+            | "firstName"
+            | "lastName"
+            | "phoneNumber"
+            | "idNumber"
+            | "departmentId"
+        >
+    >;
+    imageFile?: File | null;
+};
+
+export const updateProfile = async ({
+    userId,
+    data,
+    imageFile,
+}: UpdateProfileInput): Promise<string> => {
     try {
-        // Exclude fields that shouldn't be sent on update if necessary
-        const { id, createdAt, updatedAt, emailVerified, ...updateData } =
-            userData;
-        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+        const numericUserId = Number.parseInt(userId, 10);
+        if (Number.isNaN(numericUserId)) {
+            throw new Error("Invalid User ID format.");
+        }
+
+        const formData = new FormData();
+
+        // Construct the DTO payload matching backend expectations
+        const userDtoPayload: Partial<UserDTO> = {
+            // Map frontend fields to backend DTO fields
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone_number: data.phoneNumber, // Map phoneNumber to phone_number
+            id_number: data.idNumber, // Map idNumber to id_number
+            departmentId: data.departmentId, // Keep departmentId as is if backend expects it directly
+            // Add other fields from UserDTO if needed, ensuring they are optional or handled correctly
+        };
+
+        // Remove undefined fields from the payload before stringifying
+        for (const key of Object.keys(userDtoPayload)) {
+            if (
+                userDtoPayload[key as keyof typeof userDtoPayload] === undefined
+            ) {
+                delete userDtoPayload[key as keyof typeof userDtoPayload];
+            }
+        }
+
+        // Append the JSON data as a blob part named "userDTO"
+        formData.append(
+            "userDTO", // Name must match the backend @RequestPart or inferred name
+            new Blob([JSON.stringify(userDtoPayload)], {
+                type: "application/json",
+            }),
+        );
+
+        // Append the image file if provided, named "image"
+        if (imageFile) {
+            formData.append("image", imageFile, imageFile.name);
+        }
+
+        const response = await fetch(`${API_BASE_URL}/users/${numericUserId}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updateData),
             credentials: "include",
+            body: formData, // Send FormData
+            // No 'Content-Type' header needed; browser sets it for FormData
         });
+
+        // Expect a string message on success
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -208,7 +272,7 @@ export const deactivateUser = async (userId: string) => {
             throw new Error("Invalid User ID format for deactivation.");
         }
         const response = await fetch(
-            `${API_BASE_URL}/admin/users/${numericUserId}/deactivate`,
+            `${API_BASE_URL}/admin/users/${numericUserId}`,
             {
                 method: "DELETE",
                 credentials: "include",
@@ -231,7 +295,7 @@ export const activateUser = async (userId: string) => {
             throw new Error("Invalid User ID format for activation.");
         }
         const response = await fetch(
-            `${API_BASE_URL}/admin/users/${numericUserId}/activate`,
+            `${API_BASE_URL}/admin/users/${numericUserId}`,
             {
                 method: "POST",
                 credentials: "include",

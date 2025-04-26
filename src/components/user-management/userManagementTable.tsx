@@ -92,6 +92,7 @@ import {
 import { useRouteContext } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { toast } from "sonner";
+import { ActivateConfirmDialog } from "./activateConfirmDialog";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 import { EditUserFormDialog } from "./editUserFormDialog";
 // --- End Import ---
@@ -726,10 +727,7 @@ export function UserDataTable() {
                                         className="text-green-600" // Style for activate
                                         onClick={() => {
                                             setSelectedUser(user);
-                                            // Option 1: Use a separate confirmation dialog
-                                            // setActivateDialogOpen(true);
-                                            // Option 2: Directly call handler (less safe)
-                                            handleActivateUser(); // Or open confirmation dialog first
+                                            setActivateDialogOpen(true);
                                         }}
                                         disabled={
                                             activateUserMutation.isPending
@@ -1014,18 +1012,17 @@ export function UserDataTable() {
                     isOpen={deleteDialogOpen}
                     onClose={() => {
                         setDeleteDialogOpen(false);
-                        setSelectedUser(null); // Clear selection on close
+                        setSelectedUser(null);
                     }}
                     title="Deactivate User"
                     description={`Are you sure you want to deactivate user ${selectedUser.firstName} ${selectedUser.lastName}? This action will mark the user as inactive.`}
-                    onConfirm={handleDeactivateUser} // Use the correct handler
-                    isLoading={deactivateUserMutation.isPending} // Pass loading state
+                    onConfirm={handleDeactivateUser}
+                    isLoading={deactivateUserMutation.isPending}
                 />
             )}
 
-            {/* Optional: Activate Confirmation Dialog (similar to DeleteConfirmDialog) */}
-            {/* {selectedUser && (
-                <ActivateConfirmDialog // Create this component if needed
+            {selectedUser && (
+                <ActivateConfirmDialog
                     isOpen={activateDialogOpen}
                     onClose={() => {
                         setActivateDialogOpen(false);
@@ -1036,7 +1033,7 @@ export function UserDataTable() {
                     onConfirm={handleActivateUser}
                     isLoading={activateUserMutation.isPending}
                 />
-            )} */}
+            )}
         </div>
     );
 }

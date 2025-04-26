@@ -119,16 +119,16 @@ function Carousel({
                 canScrollNext,
             }}
         >
-            <div
+            <section
                 onKeyDownCapture={handleKeyDown}
                 className={cn("relative", className)}
-                role="region"
+                // role="region" // Removed as <section> has implicit region role
                 aria-roledescription="carousel"
                 data-slot="carousel"
                 {...props}
             >
                 {children}
-            </div>
+            </section>
         </CarouselContext.Provider>
     );
 }

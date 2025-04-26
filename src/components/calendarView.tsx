@@ -66,9 +66,11 @@ export default function CalendarView({ filters }: CalendarViewProps) {
                 filters.categories.length === 0 ||
                 filters.categories.includes(event.category);
             const dateMatch =
-                (!filters.dateRange.from ||
+                !filters.dateRange ||
+                ((!filters.dateRange.from ||
                     event.date >= filters.dateRange.from) &&
-                (!filters.dateRange.to || event.date <= filters.dateRange.to);
+                    (!filters.dateRange.to ||
+                        event.date <= filters.dateRange.to));
             return categoryMatch && dateMatch;
         });
         setFilteredEvents(filtered);
@@ -139,7 +141,11 @@ export default function CalendarView({ filters }: CalendarViewProps) {
                     </div>
                 ))}
                 {Array.from({ length: firstDayOfMonth }).map((_, index) => (
-                    <div key={`empty-${index}`} className="h-32 border" />
+                    <div
+                        // biome-ignore lint/suspicious/noArrayIndexKey: Index is acceptable for static placeholder divs
+                        key={`calendar-start-placeholder-${index}`}
+                        className="h-32 border"
+                    />
                 ))}
                 {Array.from({ length: daysInMonth }).map((_, index) => {
                     const day = index + 1;

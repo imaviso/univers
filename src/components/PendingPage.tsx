@@ -2,8 +2,8 @@ export default function PendingPage() {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background">
             <div className="relative w-20 h-20">
-                <div className="absolute inset-0 rounded-full border-4 border-primary/30"></div>
-                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-primary/30" />
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin" />
             </div>
             <h2 className="text-xl font-medium mt-6">
                 Processing your request

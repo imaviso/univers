@@ -33,11 +33,30 @@ export default function StepIndicator({
                     const isCompleted = index < currentStep;
                     const isCurrent = index === currentStep;
 
+                    const handleInteraction = () => {
+                        onStepClick?.(index);
+                    };
+
+                    const handleKeyDown = (
+                        event: React.KeyboardEvent<HTMLLIElement>,
+                    ) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleInteraction();
+                        }
+                    };
+
                     return (
                         <li
-                            key={index}
+                            key={step.title}
                             className="flex flex-col items-center"
-                            onClick={() => onStepClick && onStepClick(index)}
+                            onClick={
+                                onStepClick ? handleInteraction : undefined
+                            }
+                            onKeyDown={onStepClick ? handleKeyDown : undefined}
+                            role={onStepClick ? "button" : undefined}
+                            tabIndex={onStepClick ? 0 : undefined}
+                            aria-current={isCurrent ? "step" : undefined}
                         >
                             <div
                                 className={cn(

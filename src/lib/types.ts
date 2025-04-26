@@ -16,6 +16,7 @@ export type UserType = {
     active: boolean;
     createdAt: string;
     updatedAt: string;
+    profileImagePath: string | null;
 };
 
 export type UserDTO = {

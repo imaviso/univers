@@ -13,12 +13,7 @@ import { userSignIn } from "@/lib/auth";
 import { userQueryOptions } from "@/lib/query";
 import { type LoginInput, loginSchema } from "@/lib/schema";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import {
-    Link,
-    redirect,
-    useNavigate,
-    useRouteContext,
-} from "@tanstack/react-router";
+import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
 import { Eye, EyeOff, LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";

@@ -65,8 +65,6 @@ export const Route = createFileRoute("/app/venues/$venueId")({
 
         return { venue /*, reservations */ };
     },
-    // Add error component for better error handling
-    errorComponent: () => ErrorPage(),
 });
 
 export function VenueDetails() {
