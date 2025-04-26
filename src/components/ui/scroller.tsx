@@ -95,10 +95,18 @@ const Scroller = React.forwardRef<HTMLDivElement, ScrollerProps>(
                 if (!container) return;
 
                 const scrollMap: Record<ScrollDirection, () => void> = {
-                    up: () => (container.scrollTop -= scrollStep),
-                    down: () => (container.scrollTop += scrollStep),
-                    left: () => (container.scrollLeft -= scrollStep),
-                    right: () => (container.scrollLeft += scrollStep),
+                    up: () => {
+                        container.scrollTop -= scrollStep;
+                    },
+                    down: () => {
+                        container.scrollTop += scrollStep;
+                    },
+                    left: () => {
+                        container.scrollLeft -= scrollStep;
+                    },
+                    right: () => {
+                        container.scrollLeft += scrollStep;
+                    },
                 };
 
                 scrollMap[direction]();

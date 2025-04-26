@@ -125,9 +125,7 @@ export const userSignOut = async () => {
     }
 };
 
-export const getCurrentUser = async (
-    authState: UserType | null,
-): Promise<UserType | null> => {
+export const getCurrentUser = async (): Promise<UserType | null> => {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
             method: "GET",

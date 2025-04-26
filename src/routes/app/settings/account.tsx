@@ -34,6 +34,7 @@ import {
 } from "@/lib/auth";
 import { useCurrentUser, userQueryOptions } from "@/lib/query"; // Corrected import name
 import {
+    ImageSchema,
     type OtpInput,
     OtpSchema,
     type SetNewPasswordInput,
@@ -53,6 +54,7 @@ import {
     Mail,
     Moon,
     Sun,
+    X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { use, useEffect, useState } from "react";
@@ -78,18 +80,17 @@ type EmailDialogStep = "input" | "verify" | "success"; // Steps for email change
 type EditableProfile = {
     firstName: string;
     lastName: string;
-    // avatarFile?: File | null;
-    // avatarUrl?: string;
+    avatarFile?: File | null;
+    avatarUrl?: string;
 };
 
-// Initial state helper for profile
 const getInitialProfileState = (
     user: UserType | undefined,
 ): EditableProfile => ({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
-    // avatarUrl: user?.avatarUrl || "/placeholder.svg?height=100&width=100",
-    // avatarFile: null,
+    avatarUrl: user?.profileImagePath || undefined,
+    avatarFile: null,
 });
 // --- End Types and Initial States ---
 
@@ -101,13 +102,10 @@ export function AccountSettings() {
         return <ErrorPage />;
     }
 
-    // --- State ---
-    // Profile Form State
     const [profileForm, setProfileForm] = useState<EditableProfile>(() =>
         getInitialProfileState(user),
     );
 
-    // Password Dialog State
     const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] =
         useState(false);
     const [passwordDialogStep, setPasswordDialogStep] =
@@ -137,39 +135,52 @@ export function AccountSettings() {
     const [isChangeEmailDialogOpen, setIsChangeEmailDialogOpen] =
         useState(false);
     // Other State
-    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false); // Keep if 2FA card is used
-    // --- End State ---
+    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
-    // --- Effects ---
-    // Update profile form state if user data loads/changes
     useEffect(() => {
-        setProfileForm(getInitialProfileState(user));
-    }, [user]);
-    // --- End Effects ---
+        setProfileForm((prev) => ({
+            ...prev,
+            firstName: user?.firstName ?? "",
+            lastName: user?.lastName ?? "",
+        }));
+    }, [user?.firstName, user?.lastName]);
 
-    // --- Mutations ---
+    // update avatarUrl when profileImagePath changes and no local file is staged
+    useEffect(() => {
+        if (!profileForm.avatarFile) {
+            setProfileForm((prev) => ({
+                ...prev,
+                avatarUrl: user?.profileImagePath || undefined,
+            }));
+        }
+    }, [user?.profileImagePath, profileForm.avatarFile]);
+
     const updateProfileMutation = useMutation({
-        mutationFn: updateProfile,
-        onMutate: async (updatedUserData: Partial<UserType>) => {
+        // Pass the correct input type to mutationFn
+        mutationFn: (
+            payload: Parameters<typeof updateProfile>[0], // Use parameters type
+        ) => updateProfile(payload),
+        onMutate: async (payload: Parameters<typeof updateProfile>[0]) => {
             await queryClient.cancelQueries({
                 queryKey: userQueryOptions.queryKey,
             });
             const previousUserData = queryClient.getQueryData<UserType>(
                 userQueryOptions.queryKey,
             );
+            // Optimistically update only the data part, not the file
             queryClient.setQueryData<UserType | undefined>(
                 userQueryOptions.queryKey,
-                (old) => (old ? { ...old, ...updatedUserData } : undefined),
+                (old) => (old ? { ...old, ...payload.data } : undefined),
             );
             return { previousUserData };
         },
-        onError: (err, updatedUserData, context) => {
+        onError: (err, payload, context) => {
             if (context?.previousUserData) {
                 queryClient.setQueryData(
                     userQueryOptions.queryKey,
                     context.previousUserData,
                 );
-                // Reset profile form on error
+                // Reset profile form on error, including avatar state
                 setProfileForm(
                     getInitialProfileState(context.previousUserData),
                 );
@@ -178,19 +189,24 @@ export function AccountSettings() {
                 `Failed to update profile: ${err instanceof Error ? err.message : "Unknown error"}`,
             );
         },
-        onSuccess: () => {
-            toast.success("Profile updated successfully");
+        onSuccess: (message) => {
+            // Backend returns a success message string
+            toast.success(message || "Profile updated successfully");
+            // Reset avatar file state after successful upload
+            setProfileForm((prev) => ({
+                ...prev,
+                avatarFile: null,
+                avatarUrl: undefined, // let react-query refetch decide the new src
+            }));
         },
         onSettled: () => {
+            // Invalidate to refetch the latest user data (including potentially new avatar URL)
             queryClient.invalidateQueries({
                 queryKey: userQueryOptions.queryKey,
             });
         },
     });
-    // --- End Mutations ---
 
-    // --- Handlers ---
-    // Profile Handlers
     const handleProfileChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
@@ -201,9 +217,46 @@ export function AccountSettings() {
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            console.log("Avatar file selected:", file);
-            toast.info("Avatar upload not fully implemented yet.");
-            // TODO: Implement avatar upload logic (state, preview, API)
+            // Validate the file using the schema
+            const result = v.safeParse(ImageSchema, file);
+            if (!result.success) {
+                const errorMessage =
+                    v.flatten(result.issues).root?.[0] || "Invalid image file.";
+                toast.error(`Avatar Error: ${errorMessage}`);
+                // Clear the input field if validation fails
+                e.target.value = "";
+                return;
+            }
+
+            // Validation passed, update state
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfileForm((prev) => ({
+                    ...prev,
+                    avatarFile: file,
+                    avatarUrl: reader.result as string, // Show preview
+                }));
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Handle case where user cancels file selection (optional)
+            // Maybe revert to original avatar if needed, or do nothing
+        }
+    };
+
+    const handleRemoveAvatar = () => {
+        setProfileForm((prev) => ({
+            ...prev,
+            avatarFile: null,
+            // Revert to original user avatar URL or placeholder
+            avatarUrl: getInitialProfileState(user).avatarUrl,
+        }));
+        // Reset the file input visually
+        const input = document.getElementById(
+            "avatar-upload",
+        ) as HTMLInputElement;
+        if (input) {
+            input.value = "";
         }
     };
 
@@ -212,25 +265,46 @@ export function AccountSettings() {
             toast.error("User data not available.");
             return;
         }
-        const updatePayload: Partial<UserType> = {
-            id: user.id,
-            firstName: profileForm.firstName,
-            lastName: profileForm.lastName,
-            // Include other fields like avatar if implemented
-        };
 
-        if (
-            updatePayload.firstName === user.firstName &&
-            updatePayload.lastName === user.lastName
-        ) {
+        // Check if there are any changes
+        const hasNameChange =
+            profileForm.firstName !== user.firstName ||
+            profileForm.lastName !== user.lastName;
+        const hasAvatarChange = !!profileForm.avatarFile;
+
+        if (!hasNameChange && !hasAvatarChange) {
             toast.info("No changes detected.");
             return;
         }
-        updateProfileMutation.mutate(updatePayload as UserType);
+
+        // Prepare the data payload for the API
+        const dataPayload: Partial<Pick<UserType, "firstName" | "lastName">> =
+            {};
+        if (hasNameChange) {
+            dataPayload.firstName = profileForm.firstName;
+            dataPayload.lastName = profileForm.lastName;
+        }
+        // Add other editable fields here if needed (e.g., phoneNumber, idNumber)
+        // dataPayload.phoneNumber = profileForm.phoneNumber;
+        // dataPayload.idNumber = profileForm.idNumber;
+
+        // Call the mutation with userId, data, and the image file
+        updateProfileMutation.mutate({
+            userId: user.id,
+            data: dataPayload,
+            imageFile: profileForm.avatarFile, // Pass the file state
+        });
     };
 
     const handleCancelProfileChanges = () => {
-        setProfileForm(getInitialProfileState(user));
+        setProfileForm(getInitialProfileState(user)); // Reset form to initial state
+        // Reset the file input visually
+        const input = document.getElementById(
+            "avatar-upload",
+        ) as HTMLInputElement;
+        if (input) {
+            input.value = "";
+        }
         toast.info("Profile changes discarded.");
     };
 
@@ -417,8 +491,6 @@ export function AccountSettings() {
             setEmailDialogStep("input"); // Go back
             return;
         }
-        none;
-
         setEmailOtpError(null);
         setIsVerifyingEmailCode(true);
         try {
@@ -464,9 +536,11 @@ export function AccountSettings() {
     const initials = user
         ? `${user.firstName?.charAt(0)}${user.lastName?.charAt(0)}`
         : "UV";
+
     const profileHasChanges = user
         ? profileForm.firstName !== user.firstName ||
-          profileForm.lastName !== user.lastName
+          profileForm.lastName !== user.lastName ||
+          !!profileForm.avatarFile // Check if a new avatar file is staged
         : false;
     // --- End Derived State ---
 
@@ -494,32 +568,38 @@ export function AccountSettings() {
                         <div className="relative group">
                             <Avatar className="h-24 w-24">
                                 <AvatarImage
-                                    src={
-                                        "/placeholder.svg?height=100&width=100"
-                                    }
+                                    src={profileForm.avatarUrl}
                                     alt={profileForm.firstName}
                                 />
                                 <AvatarFallback>{initials}</AvatarFallback>
                             </Avatar>
                             <Label
                                 htmlFor="avatar-upload"
-                                className="absolute bottom-0 right-0 cursor-pointer"
+                                className="absolute bottom-0 right-0 cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-full p-1.5 border group-hover:opacity-100 opacity-60 transition-opacity"
+                                title="Change avatar"
                             >
+                                <Camera className="h-4 w-4" />
+                                <span className="sr-only">Change avatar</span>
+                            </Label>
+                            {profileForm.avatarFile && (
                                 <Button
+                                    type="button"
+                                    variant="ghost"
                                     size="icon"
-                                    variant="secondary"
-                                    className="h-8 w-8 rounded-full pointer-events-none"
-                                    asChild
+                                    className="absolute top-0 right-0 h-6 w-6 rounded-full bg-background/50 hover:bg-destructive/80 hover:text-destructive-foreground text-muted-foreground"
+                                    onClick={handleRemoveAvatar}
+                                    title="Remove selected avatar"
                                 >
-                                    <span>
-                                        <Camera className="h-4 w-4" />
+                                    <X className="h-4 w-4" />
+                                    <span className="sr-only">
+                                        Remove selected avatar
                                     </span>
                                 </Button>
-                            </Label>
+                            )}
                             <Input
                                 id="avatar-upload"
                                 type="file"
-                                accept="image/*"
+                                accept="image/jpeg, image/png, image/webp" // Specify accepted types
                                 className="hidden"
                                 onChange={handleAvatarChange}
                                 disabled={updateProfileMutation.isPending}

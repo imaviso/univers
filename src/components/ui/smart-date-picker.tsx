@@ -181,7 +181,7 @@ const TimePicker = () => {
     const [activeIndex, setActiveIndex] = React.useState(-1);
     const timestamp = 30;
 
-    const formateSelectedTime = React.useCallback(
+    const formatSelectedTime = React.useCallback(
         (time: string, hour: number, partStamp: number) => {
             onTimeChange(time);
 
@@ -194,7 +194,7 @@ const TimePicker = () => {
 
             onValueChange(newVal);
         },
-        [value, onValueChange, onTimeChange, disabled, timestamp],
+        [value, onValueChange, onTimeChange, disabled],
     );
 
     const handleKeydown = React.useCallback(
@@ -254,7 +254,7 @@ const TimePicker = () => {
                         ? 0
                         : 1;
 
-                formateSelectedTime(timeValue, hour, part);
+                formatSelectedTime(timeValue, hour, part);
             };
 
             const reset = () => {
@@ -283,19 +283,19 @@ const TimePicker = () => {
                     break;
             }
         },
-        [activeIndex, formateSelectedTime],
+        [activeIndex, formatSelectedTime],
     );
 
     const handleClick = React.useCallback(
         (hour: number, part: number, PM_AM: string, currentIndex: number) => {
-            formateSelectedTime(
+            formatSelectedTime(
                 `${hour}:${part === 0 ? "00" : timestamp} ${PM_AM}`,
                 hour,
                 part,
             );
             setActiveIndex(currentIndex);
         },
-        [formateSelectedTime, timestamp],
+        [formatSelectedTime],
     );
 
     const currentTime = React.useMemo(() => {
@@ -342,7 +342,7 @@ const TimePicker = () => {
         };
 
         getCurrentElementTime();
-    }, [Time, activeIndex, timestamp]);
+    }, [Time, activeIndex]);
 
     const height = React.useMemo(() => {
         if (!document) return;
@@ -459,7 +459,7 @@ const NaturalLanguageInput = React.forwardRef<
         }:${new Date().getMinutes()} ${hour >= 12 ? "PM" : "AM"}`;
         setInputValue(value ? formatDateTime(value) : "");
         onTimeChange(value ? Time : timeVal);
-    }, [value, Time]);
+    }, [value, Time, onTimeChange]);
 
     const handleParse = React.useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -467,7 +467,7 @@ const NaturalLanguageInput = React.forwardRef<
             if (parsedDateTime) {
                 if (
                     disabled &&
-                    typeof disabled != "boolean" &&
+                    typeof disabled !== "boolean" &&
                     disabled(parsedDateTime)
                 ) {
                     return;
@@ -488,7 +488,7 @@ const NaturalLanguageInput = React.forwardRef<
                 onTimeChange(`${hour}:${parsedDateTime.getMinutes()} ${PM_AM}`);
             }
         },
-        [value],
+        [disabled, onValueChange, onTimeChange],
     );
 
     const handleKeydown = React.useCallback(
@@ -499,7 +499,7 @@ const NaturalLanguageInput = React.forwardRef<
                     if (parsedDateTime) {
                         if (
                             disabled &&
-                            typeof disabled != "boolean" &&
+                            typeof disabled !== "boolean" &&
                             disabled(parsedDateTime)
                         ) {
                             return;
@@ -526,7 +526,7 @@ const NaturalLanguageInput = React.forwardRef<
                 }
             }
         },
-        [value],
+        [disabled, onValueChange, onTimeChange],
     );
 
     return (
@@ -561,12 +561,8 @@ const DateTimeLocalInput = ({
     const { value, onValueChange, Time } = useSmartDateInput();
 
     const formateSelectedDate = React.useCallback(
-        (
-            date: Date | undefined,
-            selectedDate: Date,
-            m: ActiveModifiers,
-            e: React.MouseEvent,
-        ) => {
+        (selectedDate: Date | undefined) => {
+            if (!selectedDate) return;
             if (typeof disabled === "boolean" && disabled) return;
             if (typeof disabled === "function" && disabled(selectedDate))
                 return;
@@ -581,7 +577,7 @@ const DateTimeLocalInput = ({
                 onValueChange(parsedDateTime);
             }
         },
-        [value, Time],
+        [disabled, Time, onValueChange],
     );
 
     return (

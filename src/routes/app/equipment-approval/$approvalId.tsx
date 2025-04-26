@@ -25,6 +25,44 @@ import { format } from "date-fns";
 import { ArrowLeft, CheckCircle2, X } from "lucide-react";
 import { useState } from "react";
 import { initialReservations } from "../equipment-approval/approval";
+type EquipmentItem = {
+    id: string;
+    name: string;
+    owner: string; // Changed back to string
+    quantity: number;
+};
+
+type Approver = {
+    name: string;
+    department: string;
+    role: string;
+    dateSigned: string | null; // Keep as string | null
+    status: string;
+};
+
+// Define ReservationType explicitly
+type ReservationType = {
+    id: number;
+    eventName: string;
+    venue: string;
+    venueId: number;
+    department: string;
+    contactNumber: string;
+    userName: string;
+    eventDate: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+    createdAt: string;
+    equipment: EquipmentItem[];
+    remarks: {
+        MSDO: string;
+        OPC: string;
+    };
+    approvers: Approver[];
+    purpose?: string; // Keep optional
+    disapprovalNote?: string; // Keep optional
+};
 export const Route = createFileRoute("/app/equipment-approval/$approvalId")({
     component: EquipmentReservationDetails,
     loader: async ({ params: { approvalId } }) => {
@@ -45,7 +83,8 @@ export const Route = createFileRoute("/app/equipment-approval/$approvalId")({
 export function EquipmentReservationDetails() {
     const navigate = useNavigate();
     const { reservation: initialReservation } = Route.useLoaderData();
-    const [reservation, setReservation] = useState(initialReservation);
+    const [reservation, setReservation] =
+        useState<ReservationType>(initialReservation);
     const [activeTab, setActiveTab] = useState("details");
     const [activeRemarksTab, setActiveRemarksTab] = useState("MSDO");
 
@@ -72,7 +111,7 @@ export function EquipmentReservationDetails() {
         // In a real app, you would call an API to update the reservation status
         const updatedReservation = {
             ...reservation,
-            approvers: reservation.approvers.map((approver: any) => {
+            approvers: reservation.approvers.map((approver: Approver) => {
                 if (
                     approver.role.includes(role) &&
                     approver.status === "pending"
@@ -89,7 +128,7 @@ export function EquipmentReservationDetails() {
 
         // Check if all approvers have approved
         const allApproved = updatedReservation.approvers.every(
-            (approver: any) => approver.status === "approved",
+            (approver: Approver) => approver.status === "approved",
         );
         if (allApproved) {
             updatedReservation.status = "approved";
@@ -101,7 +140,9 @@ export function EquipmentReservationDetails() {
 
     const handleAddRemarks = (role: string) => {
         setCurrentApproverRole(role);
-        setRemarksText(reservation.remarks[role] || "");
+        setRemarksText(
+            reservation.remarks[role as keyof typeof reservation.remarks] || "",
+        ); // Use type assertion for dynamic key
         setIsRemarksDialogOpen(true);
     };
 
@@ -127,7 +168,7 @@ export function EquipmentReservationDetails() {
             ...reservation,
             status: "disapproved",
             disapprovalNote: disapprovalNote,
-            approvers: reservation.approvers.map((approver: any) => {
+            approvers: reservation.approvers.map((approver: Approver) => {
                 if (approver.status === "pending") {
                     return {
                         ...approver,
@@ -237,12 +278,12 @@ export function EquipmentReservationDetails() {
 
     // Check if current user is an approver with pending status
     const isPendingMSDOApprover = reservation.approvers.some(
-        (approver: any) =>
+        (approver: Approver) =>
             approver.role.includes("MSDO") && approver.status === "pending",
     );
 
     const isPendingOPCApprover = reservation.approvers.some(
-        (approver: any) =>
+        (approver: Approver) =>
             approver.role.includes("OPC") && approver.status === "pending",
     );
 
@@ -513,17 +554,17 @@ export function EquipmentReservationDetails() {
                                             <TableBody>
                                                 {reservation.equipment
                                                     .filter(
-                                                        (item: any) =>
+                                                        (item: EquipmentItem) =>
                                                             item.owner ===
                                                             "MSDO",
                                                     )
                                                     .map(
                                                         (
-                                                            item: any,
+                                                            item: EquipmentItem,
                                                             index: number,
                                                         ) => (
                                                             <TableRow
-                                                                key={index}
+                                                                key={item.id}
                                                             >
                                                                 <TableCell>
                                                                     {item.name}
@@ -537,7 +578,7 @@ export function EquipmentReservationDetails() {
                                                         ),
                                                     )}
                                                 {reservation.equipment.filter(
-                                                    (item: any) =>
+                                                    (item: EquipmentItem) =>
                                                         item.owner === "MSDO",
                                                 ).length === 0 && (
                                                     <TableRow>
@@ -621,17 +662,17 @@ export function EquipmentReservationDetails() {
                                             <TableBody>
                                                 {reservation.equipment
                                                     .filter(
-                                                        (item: any) =>
+                                                        (item: EquipmentItem) =>
                                                             item.owner ===
                                                             "OPC",
                                                     )
                                                     .map(
                                                         (
-                                                            item: any,
+                                                            item: EquipmentItem,
                                                             index: number,
                                                         ) => (
                                                             <TableRow
-                                                                key={index}
+                                                                key={item.id}
                                                             >
                                                                 <TableCell>
                                                                     {item.name}
@@ -645,7 +686,7 @@ export function EquipmentReservationDetails() {
                                                         ),
                                                     )}
                                                 {reservation.equipment.filter(
-                                                    (item: any) =>
+                                                    (item: EquipmentItem) =>
                                                         item.owner === "OPC",
                                                 ).length === 0 && (
                                                     <TableRow>
@@ -730,10 +771,12 @@ export function EquipmentReservationDetails() {
                                         <TableBody>
                                             {reservation.approvers.map(
                                                 (
-                                                    approver: any,
+                                                    approver: Approver,
                                                     index: number,
                                                 ) => (
-                                                    <TableRow key={index}>
+                                                    <TableRow
+                                                        key={`${approver.name}-${approver.role}`}
+                                                    >
                                                         <TableCell>
                                                             {approver.name}
                                                         </TableCell>

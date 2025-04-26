@@ -92,9 +92,9 @@ export function EquipmentReservationFormDialog({
             !!eventId &&
             !!venueId &&
             startDateTime instanceof Date &&
-            !isNaN(startDateTime.getTime()) &&
+            !Number.isNaN(startDateTime.getTime()) &&
             endDateTime instanceof Date &&
-            !isNaN(endDateTime.getTime()) &&
+            !Number.isNaN(endDateTime.getTime()) &&
             endDateTime > startDateTime // Schema enforces this via forward check
         );
     };
@@ -149,9 +149,13 @@ export function EquipmentReservationFormDialog({
 
     const selectedEquipmentIds = form.watch("selectedEquipment") || [];
     const selectedVenueId = form.watch("venueId");
-    const selectedVenue = venues.find((v) => v.id === selectedVenueId);
+    const selectedVenue = venues.find(
+        (v) => v.id === Number.parseInt(selectedVenueId, 10),
+    );
     const selectedEventId = form.watch("eventId");
-    const selectedEvent = events.find((e) => e.id === selectedEventId);
+    const selectedEvent = events.find(
+        (e) => e.id === Number.parseInt(selectedEventId, 10),
+    );
 
     const handleDialogClose = () => {
         form.reset();
@@ -454,7 +458,8 @@ export function EquipmentReservationFormDialog({
                                                             {
                                                                 message:
                                                                     reasons[0]
-                                                                        ?.reason ??
+                                                                        ?.errors[0]
+                                                                        ?.message ??
                                                                     "File rejected",
                                                             },
                                                         );
@@ -481,7 +486,9 @@ export function EquipmentReservationFormDialog({
                                                         {field.value?.map(
                                                             (file, index) => (
                                                                 <FileUploadItem
-                                                                    key={index}
+                                                                    key={
+                                                                        file.name
+                                                                    }
                                                                     value={file}
                                                                 >
                                                                     <FileUploadItemPreview />
@@ -619,7 +626,7 @@ export function EquipmentReservationFormDialog({
                                                 {form
                                                     .watch("approvedLetter")
                                                     ?.map((file, index) => (
-                                                        <li key={index}>
+                                                        <li key={file.name}>
                                                             {file.name}
                                                         </li>
                                                     ))}

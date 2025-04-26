@@ -57,7 +57,7 @@ export function AssignHeadDialog({
             return;
         }
         const userIdNumber = Number(selectedUserId);
-        if (isNaN(userIdNumber)) {
+        if (Number.isNaN(userIdNumber)) {
             toast.error("Invalid user selected.");
             return;
         }

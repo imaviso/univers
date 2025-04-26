@@ -346,10 +346,13 @@ export function VenueReservationFormDialog({
                                                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                                                     {venues.length > 0 ? (
                                                         venues.map((venue) => (
-                                                            <div
+                                                            <button // Change div to button
+                                                                type="button" // Add type="button"
                                                                 key={venue.id}
                                                                 className={cn(
-                                                                    "border rounded-lg p-3 cursor-pointer transition-all",
+                                                                    "border rounded-lg p-3 cursor-pointer transition-all text-left w-full", // Add text-left and w-full
+                                                                    // Reset button default styles
+                                                                    "bg-transparent hover:bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                                                     field.value ===
                                                                         String(
                                                                             venue.id,
@@ -357,13 +360,32 @@ export function VenueReservationFormDialog({
                                                                         ? "border-primary bg-primary/5"
                                                                         : "hover:border-primary/50",
                                                                 )}
-                                                                onClick={() =>
+                                                                onClick={() => {
                                                                     field.onChange(
                                                                         String(
                                                                             venue.id,
                                                                         ),
-                                                                    )
-                                                                }
+                                                                    );
+                                                                }}
+                                                                // Keep onKeyDown for consistency, though Enter/Space are handled by button
+                                                                onKeyDown={(
+                                                                    e,
+                                                                ) => {
+                                                                    if (
+                                                                        e.key ===
+                                                                            "Enter" ||
+                                                                        e.key ===
+                                                                            " "
+                                                                    ) {
+                                                                        // e.preventDefault(); // No longer needed
+                                                                        field.onChange(
+                                                                            String(
+                                                                                venue.id,
+                                                                            ),
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                // No tabIndex or role needed
                                                             >
                                                                 {/* Venue details */}
                                                                 <div className="flex items-start gap-3">
@@ -395,7 +417,7 @@ export function VenueReservationFormDialog({
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
+                                                            </button> // Change closing tag
                                                         ))
                                                     ) : (
                                                         <div className="text-center py-8 text-muted-foreground">
@@ -565,21 +587,18 @@ export function VenueReservationFormDialog({
                                                     maxFiles={1} // Schema implies 1 file based on array(file()) structure
                                                     maxSize={10 * 1024 * 1024} // 10MB
                                                     onFileReject={(
-                                                        reasons,
-                                                        files,
+                                                        file: File, // Correct parameter: single file
+                                                        message: string, // Correct parameter: rejection message
                                                     ) => {
                                                         console.log(
                                                             "File rejected:",
-                                                            reasons,
-                                                            files,
+                                                            file.name,
+                                                            message,
                                                         );
                                                         form.setError(
                                                             "approvedLetter",
                                                             {
-                                                                message:
-                                                                    reasons[0]
-                                                                        ?.reason ??
-                                                                    "File rejected",
+                                                                message: `File "${file.name}" rejected: ${message}`, // Use the provided message
                                                             },
                                                         );
                                                     }}
@@ -605,7 +624,9 @@ export function VenueReservationFormDialog({
                                                         {field.value?.map(
                                                             (file, index) => (
                                                                 <FileUploadItem
-                                                                    key={index}
+                                                                    key={
+                                                                        file.name
+                                                                    }
                                                                     value={file}
                                                                 >
                                                                     <FileUploadItemPreview />
@@ -741,7 +762,7 @@ export function VenueReservationFormDialog({
                                                     .watch("approvedLetter")
                                                     ?.map((file, index) => (
                                                         <li
-                                                            key={index}
+                                                            key={file.name}
                                                             className="break-words"
                                                         >
                                                             {file.name}

@@ -13,6 +13,7 @@ import type {
     EventApprovalDTO,
     EventDTOBackendResponse,
     EventDTOPayload,
+    UserDTO,
     UserType,
     Venue,
 } from "./types";
@@ -37,10 +38,15 @@ async function handleApiResponse(response: Response, expectJson = true) {
             errorMessage.includes("Department does not exist") ||
             errorMessage.includes("Invalid department head") ||
             errorMessage.includes("User not found") ||
-            errorMessage.includes("Invalid department Id")
+            errorMessage.includes("Invalid department Id") ||
+            errorMessage.includes("User does not exist")
         ) {
         }
         throw new Error(errorMessage);
+    }
+
+    if (response.status === 204) {
+        return expectJson ? null : "";
     }
 
     if (response.status === 204 && expectJson) {
@@ -112,17 +118,74 @@ export const getAllUsers = async () => {
     }
 };
 
-export const updateProfile = async (userData: UserType) => {
+type UpdateProfileInput = {
+    userId: string;
+    data: Partial<
+        Pick<
+            UserType,
+            | "firstName"
+            | "lastName"
+            | "phoneNumber"
+            | "idNumber"
+            | "departmentId"
+        >
+    >;
+    imageFile?: File | null;
+};
+
+export const updateProfile = async ({
+    userId,
+    data,
+    imageFile,
+}: UpdateProfileInput): Promise<string> => {
     try {
-        // Exclude fields that shouldn't be sent on update if necessary
-        const { id, createdAt, updatedAt, emailVerified, ...updateData } =
-            userData;
-        const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+        const numericUserId = Number.parseInt(userId, 10);
+        if (Number.isNaN(numericUserId)) {
+            throw new Error("Invalid User ID format.");
+        }
+
+        const formData = new FormData();
+
+        // Construct the DTO payload matching backend expectations
+        const userDtoPayload: Partial<UserDTO> = {
+            // Map frontend fields to backend DTO fields
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone_number: data.phoneNumber, // Map phoneNumber to phone_number
+            id_number: data.idNumber, // Map idNumber to id_number
+            departmentId: data.departmentId, // Keep departmentId as is if backend expects it directly
+            // Add other fields from UserDTO if needed, ensuring they are optional or handled correctly
+        };
+
+        // Remove undefined fields from the payload before stringifying
+        for (const key of Object.keys(userDtoPayload)) {
+            const k = key as keyof Partial<UserDTO>;
+            if (userDtoPayload[k] === undefined) {
+                delete userDtoPayload[k];
+            }
+        }
+
+        // Append the JSON data as a blob part named "userDTO"
+        formData.append(
+            "userDTO", // Name must match the backend @RequestPart or inferred name
+            new Blob([JSON.stringify(userDtoPayload)], {
+                type: "application/json",
+            }),
+        );
+
+        // Append the image file if provided, named "image"
+        if (imageFile) {
+            formData.append("image", imageFile, imageFile.name);
+        }
+
+        const response = await fetch(`${API_BASE_URL}/users/${numericUserId}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updateData),
             credentials: "include",
+            body: formData, // Send FormData
+            // No 'Content-Type' header needed; browser sets it for FormData
         });
+
+        // Expect a string message on success
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -155,37 +218,33 @@ export const createUser = async (userData: CreateUserInputFE) => {
     }
 };
 
-type UpdateUserInputFE = Partial<
+export type UpdateUserInputFE = Partial<
+    // Add export keyword
     Omit<
         UserType,
         "id" | "createdAt" | "updatedAt" | "emailVerified" | "department"
     > & { departmentId: number | null }
 >;
 export const updateUser = async (
-    userId: string,
+    userId: number,
     userData: UpdateUserInputFE,
 ) => {
     try {
-        const numericUserId = Number.parseInt(userId, 10);
-        if (Number.isNaN(numericUserId)) {
-            throw new Error("Invalid User ID format for update.");
-        }
-
-        const payload: any = {};
+        const payload: Partial<UserDTO> = {};
         if (userData.firstName !== undefined)
             payload.firstName = userData.firstName;
         if (userData.lastName !== undefined)
             payload.lastName = userData.lastName;
         if (userData.idNumber !== undefined)
-            payload.idNumber = userData.idNumber;
+            payload.id_number = userData.idNumber;
         if (userData.phoneNumber !== undefined)
-            payload.phoneNumber = userData.phoneNumber;
+            payload.phone_number = userData.phoneNumber;
         if (userData.telephoneNumber !== undefined)
             payload.telephoneNumber = userData.telephoneNumber;
         if (userData.departmentId !== undefined)
-            payload.department_id = userData.departmentId;
+            payload.departmentId = userData.departmentId;
 
-        const response = await fetch(`${API_BASE_URL}/users/${numericUserId}`, {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
             // Use numeric ID
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -208,7 +267,7 @@ export const deactivateUser = async (userId: string) => {
             throw new Error("Invalid User ID format for deactivation.");
         }
         const response = await fetch(
-            `${API_BASE_URL}/admin/users/${numericUserId}/deactivate`,
+            `${API_BASE_URL}/admin/users/${numericUserId}`,
             {
                 method: "DELETE",
                 credentials: "include",
@@ -231,7 +290,7 @@ export const activateUser = async (userId: string) => {
             throw new Error("Invalid User ID format for activation.");
         }
         const response = await fetch(
-            `${API_BASE_URL}/admin/users/${numericUserId}/activate`,
+            `${API_BASE_URL}/admin/users/${numericUserId}`,
             {
                 method: "POST",
                 credentials: "include",
@@ -462,12 +521,16 @@ export const createVenue = async ({
 
         // Prepare the JSON part, nesting venueOwnerId
         const { venueOwnerId, ...restOfVenueData } = venueData;
-        const venueJsonPayload: any = { ...restOfVenueData }; // Start with name, location
+        const venueJsonPayload: {
+            name: string;
+            location: string;
+            venueOwner?: { id: number };
+        } = { ...restOfVenueData }; // Start with name, location
         if (venueOwnerId) {
             // Nest owner ID according to backend DTO structure
             venueJsonPayload.venueOwner = { id: venueOwnerId };
         } else {
-            venueJsonPayload.venueOwner = null; // Explicitly send null if no owner selected
+            // If no owner selected, venueOwner remains undefined, which is handled by JSON.stringify
         }
 
         // Append JSON part named "venue"
@@ -513,13 +576,17 @@ export const updateVenue = async ({
 
         // Prepare the JSON part for update, nesting venueOwnerId
         const { venueOwnerId, ...restOfVenueData } = venueData;
-        const venueJsonPayload: any = { ...restOfVenueData }; // name, location
+        const venueJsonPayload: Partial<{
+            name: string;
+            location: string;
+            venueOwner?: { id: number };
+        }> = { ...restOfVenueData }; // name, location
         if (venueOwnerId) {
             venueJsonPayload.venueOwner = { id: venueOwnerId };
         } else {
             // If API expects null to remove owner, send null.
             // If omitting the field keeps the owner, adjust accordingly.
-            venueJsonPayload.venueOwner = null; // Assuming null removes owner
+            venueJsonPayload.venueOwner = undefined; // Explicitly set to undefined to potentially remove it
         }
 
         // Append JSON part named "venue"
@@ -642,7 +709,12 @@ export const addEquipment = async ({
         const formData = new FormData();
 
         const { ownerId, ...restOfEquipmentData } = equipmentData;
-        const equipmentJsonPayload: any = { ...restOfEquipmentData };
+        const equipmentJsonPayload: {
+            name: string;
+            brand: string;
+            quantity: number;
+            equipmentOwner?: { id: number };
+        } = { ...restOfEquipmentData };
         if (ownerId) {
             equipmentJsonPayload.equipmentOwner = { id: ownerId };
         }
@@ -692,7 +764,12 @@ export const editEquipment = async ({
         const formData = new FormData();
 
         const { ownerId, ...restOfEquipmentData } = equipmentData;
-        const equipmentJsonPayload: any = { ...restOfEquipmentData };
+        const equipmentJsonPayload: Partial<{
+            name: string;
+            brand: string;
+            quantity: number;
+            equipmentOwner?: { id: number };
+        }> = { ...restOfEquipmentData };
         if (ownerId) {
             equipmentJsonPayload.equipmentOwner = { id: ownerId };
         }

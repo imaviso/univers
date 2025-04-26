@@ -553,7 +553,13 @@ export function DepartmentDataTable() {
                 enableHiding: false,
             },
         ],
-        [USER_OPTIONS], // Add USER_OPTIONS dependency
+        [
+            setAssignHeadOpen,
+            setEditDialogOpen,
+            setDeleteDialogOpen,
+            setSelectedDepartment,
+            USER_OPTIONS,
+        ], // Add USER_OPTIONS dependency
     );
 
     // --- Table Instance ---

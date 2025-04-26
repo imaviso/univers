@@ -73,7 +73,12 @@ import {
 // --- Import your custom filter components ---
 // Adjust the import path as necessary
 import { DataTableFilter } from "@/components/data-table-filter";
-import { activateUser, deactivateUser, updateUser } from "@/lib/api";
+import {
+    type UpdateUserInputFE,
+    activateUser,
+    deactivateUser,
+    updateUser,
+} from "@/lib/api"; // Import UpdateUserInputFE
 import {
     deleteDialogAtom,
     editDialogAtom,
@@ -83,7 +88,7 @@ import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 import { usersQueryOptions } from "@/lib/query";
 import type { UserFormInput } from "@/lib/schema";
-import { DEPARTMENTS, ROLES, type UserType } from "@/lib/types";
+import { DEPARTMENTS, ROLES, type UserRole, type UserType } from "@/lib/types"; // Import UserRole
 import {
     useMutation,
     useQueryClient,
@@ -92,6 +97,7 @@ import {
 import { useRouteContext } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { toast } from "sonner";
+import { ActivateConfirmDialog } from "./activateConfirmDialog";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 import { EditUserFormDialog } from "./editUserFormDialog";
 // --- End Import ---
@@ -121,7 +127,7 @@ export function UserDataTable() {
             payload,
         }: {
             userId: string;
-            payload: Partial<Omit<UserFormInput, "confirmPassword">>;
+            payload: Partial<UpdateUserInputFE>; // Use the type expected by updateUser
         }) => updateUser(userId, payload),
         onMutate: async ({ userId, payload }) => {
             // Destructure args
@@ -132,30 +138,47 @@ export function UserDataTable() {
                 usersQueryOptions.queryKey,
             );
 
-            // Find department label for optimistic update
-            const deptLabel = payload.department
-                ? DEPARTMENTS.find(
-                      (d) => String(d.value) === payload.department,
-                  )?.label || "Unknown Dept"
-                : undefined;
+            // Find department label for optimistic update using departmentId
+            const deptLabel =
+                payload.departmentId !== undefined &&
+                payload.departmentId !== null // Check if departmentId is provided and not null
+                    ? DEPARTMENTS.find(
+                          (d) => d.value === payload.departmentId, // Compare with number ID
+                      )?.label
+                    : undefined; // If departmentId is null or undefined, keep label undefined
 
             queryClient.setQueryData<UserType[]>(
                 usersQueryOptions.queryKey,
                 (old = []) =>
-                    old.map((user) =>
-                        user.id === userId // Use userId from args
-                            ? {
-                                  ...user,
-                                  ...payload, // Apply payload changes
-                                  departmentId: payload.department
-                                      ? Number.parseInt(payload.department, 10)
-                                      : user.departmentId, // Update ID
-                                  department: deptLabel ?? user.department, // Update label
-                                  password: user.password, // Keep existing password hash/undefined in optimistic update
-                                  updatedAt: new Date().toISOString(),
-                              }
-                            : user,
-                    ),
+                    old.map((user) => {
+                        if (user.id !== userId) return user; // Use userId from args
+
+                        // Construct the updated user object carefully
+                        const updatedUser = {
+                            ...user,
+                            ...payload, // Apply payload changes (firstName, lastName, etc.)
+                            // Explicitly handle role update with cast if payload.role exists
+                            role:
+                                payload.role !== undefined
+                                    ? (payload.role as UserRole)
+                                    : user.role,
+                            // Update departmentId and department label based on payload.departmentId
+                            departmentId:
+                                payload.departmentId !== undefined // If departmentId is in payload (even if null)
+                                    ? payload.departmentId // Use the value from payload (can be number or null)
+                                    : user.departmentId, // Otherwise, keep the old ID
+                            department:
+                                payload.departmentId !== undefined // If departmentId was in payload
+                                    ? (deptLabel ?? // Use the found label (or null if deptId was null)
+                                      (payload.departmentId === null
+                                          ? ""
+                                          : "Unknown Dept")) // Handle null ID explicitly or fallback
+                                    : user.department, // Otherwise, keep the old label
+                            password: user.password, // Keep existing password hash/undefined
+                            updatedAt: new Date().toISOString(),
+                        };
+                        return updatedUser;
+                    }),
             );
             return { previousUsers };
         },
@@ -312,7 +335,8 @@ export function UserDataTable() {
             apiPayload.lastName = userData.lastName;
         if (userData.idNumber !== undefined)
             apiPayload.idNumber = userData.idNumber;
-        if (userData.role !== undefined) apiPayload.role = userData.role;
+        if (userData.role !== undefined)
+            apiPayload.role = userData.role as UserRole; // Cast to UserRole
         if (departmentId !== undefined) apiPayload.departmentId = departmentId; // Use numeric ID
         if (userData.telephoneNumber !== undefined)
             apiPayload.telephoneNumber = userData.telephoneNumber;
@@ -726,10 +750,7 @@ export function UserDataTable() {
                                         className="text-green-600" // Style for activate
                                         onClick={() => {
                                             setSelectedUser(user);
-                                            // Option 1: Use a separate confirmation dialog
-                                            // setActivateDialogOpen(true);
-                                            // Option 2: Directly call handler (less safe)
-                                            handleActivateUser(); // Or open confirmation dialog first
+                                            setActivateDialogOpen(true);
                                         }}
                                         disabled={
                                             activateUserMutation.isPending
@@ -1014,18 +1035,17 @@ export function UserDataTable() {
                     isOpen={deleteDialogOpen}
                     onClose={() => {
                         setDeleteDialogOpen(false);
-                        setSelectedUser(null); // Clear selection on close
+                        setSelectedUser(null);
                     }}
                     title="Deactivate User"
                     description={`Are you sure you want to deactivate user ${selectedUser.firstName} ${selectedUser.lastName}? This action will mark the user as inactive.`}
-                    onConfirm={handleDeactivateUser} // Use the correct handler
-                    isLoading={deactivateUserMutation.isPending} // Pass loading state
+                    onConfirm={handleDeactivateUser}
+                    isLoading={deactivateUserMutation.isPending}
                 />
             )}
 
-            {/* Optional: Activate Confirmation Dialog (similar to DeleteConfirmDialog) */}
-            {/* {selectedUser && (
-                <ActivateConfirmDialog // Create this component if needed
+            {selectedUser && (
+                <ActivateConfirmDialog
                     isOpen={activateDialogOpen}
                     onClose={() => {
                         setActivateDialogOpen(false);
@@ -1036,7 +1056,7 @@ export function UserDataTable() {
                     onConfirm={handleActivateUser}
                     isLoading={activateUserMutation.isPending}
                 />
-            )} */}
+            )}
         </div>
     );
 }

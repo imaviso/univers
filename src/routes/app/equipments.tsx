@@ -1018,7 +1018,7 @@ function EquipmentInventory() {
                         description={
                             equipmentToDelete
                                 ? "Are you sure you want to permanently delete this equipment?"
-                                : `Are you sure you want to permanently delete the selected equipment items?` // This part is now unused
+                                : "Are you sure you want to permanently delete the selected equipment items?" // This part is now unused
                         }
                     />
                 )}

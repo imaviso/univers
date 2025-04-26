@@ -480,15 +480,15 @@ const venues = [
     { id: 8, name: "Rooftop Terrace" },
 ];
 
+type ViewMode = "all" | "pending" | "approved" | "disapproved";
+
 export function VenueReservationApproval() {
     const navigate = useNavigate();
     const [reservations, setReservations] = useState(initialReservations);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [venueFilter, setVenueFilter] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<
-        "all" | "pending" | "approved" | "disapproved"
-    >("all");
+    const [viewMode, setViewMode] = useState<ViewMode>("all");
 
     // Filter reservations based on search query, status, and venue filters
     const filteredReservations = reservations.filter((reservation) => {
@@ -674,7 +674,9 @@ export function VenueReservationApproval() {
                     <div className="flex items-center gap-2">
                         <Tabs
                             value={viewMode}
-                            onValueChange={(value) => setViewMode(value as any)}
+                            onValueChange={(value) =>
+                                setViewMode(value as ViewMode)
+                            }
                         >
                             <TabsList>
                                 <TabsTrigger value="all">All</TabsTrigger>

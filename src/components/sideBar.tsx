@@ -262,7 +262,12 @@ export function Sidebar() {
                                 <Tooltip delayDuration={700}>
                                     <TooltipTrigger asChild>
                                         <Avatar className="h-8 w-8">
-                                            <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                                            <AvatarImage
+                                                src={
+                                                    user?.profileImagePath ||
+                                                    undefined
+                                                }
+                                            />
                                             <AvatarFallback>JD</AvatarFallback>
                                         </Avatar>
                                     </TooltipTrigger>
@@ -286,7 +291,12 @@ export function Sidebar() {
                                 <TooltipTrigger asChild>
                                     <div className="flex items-center gap-2">
                                         <Avatar className="h-8 w-8">
-                                            <AvatarImage src="/placeholder.svg?height=32&width=32" />
+                                            <AvatarImage
+                                                src={
+                                                    user?.profileImagePath ||
+                                                    undefined
+                                                }
+                                            />
                                             <AvatarFallback>
                                                 {initials}
                                             </AvatarFallback>
