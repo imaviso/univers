@@ -19,6 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import type { EventApprovalDTO } from "@/lib/types";
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { ArrowLeft, CheckCircle2, Download, FileText, X } from "lucide-react";
@@ -69,7 +70,13 @@ function ReservationDetails() {
                     <p className="text-muted-foreground mb-4">
                         The requested reservation could not be found.
                     </p>
-                    <Button onClick={() => router.navigate("/app/venues")}>
+                    <Button
+                        onClick={() =>
+                            router.navigate({
+                                to: "/app/venue-approval/approval",
+                            })
+                        }
+                    >
                         Back to Approvals
                     </Button>
                 </div>
@@ -82,16 +89,25 @@ function ReservationDetails() {
         const updatedReservation = {
             ...reservation,
             status: "approved",
-            approvers: reservation.approvers.map((approver: any) => {
-                if (approver.status === "pending") {
-                    return {
-                        ...approver,
-                        status: "approved",
-                        dateSigned: new Date().toISOString(),
-                    };
-                }
-                return approver;
-            }),
+            approvers: reservation.approvers.map(
+                (approver: {
+                    name: string;
+                    idNumber: string;
+                    department: string;
+                    role: string;
+                    dateSigned: string | null;
+                    status: string;
+                }) => {
+                    if (approver.status === "pending") {
+                        return {
+                            ...approver,
+                            status: "approved",
+                            dateSigned: new Date().toISOString(),
+                        };
+                    }
+                    return approver;
+                },
+            ),
         };
 
         setReservation(updatedReservation);
@@ -106,16 +122,25 @@ function ReservationDetails() {
             ...reservation,
             status: "disapproved",
             disapprovalNote: disapprovalNote,
-            approvers: reservation.approvers.map((approver: any) => {
-                if (approver.status === "pending") {
-                    return {
-                        ...approver,
-                        status: "disapproved",
-                        dateSigned: new Date().toISOString(),
-                    };
-                }
-                return approver;
-            }),
+            approvers: reservation.approvers.map(
+                (approver: {
+                    name: string;
+                    idNumber: string;
+                    department: string;
+                    role: string;
+                    dateSigned: string | null;
+                    status: string;
+                }) => {
+                    if (approver.status === "pending") {
+                        return {
+                            ...approver,
+                            status: "disapproved",
+                            dateSigned: new Date().toISOString(),
+                        };
+                    }
+                    return approver;
+                },
+            ),
         };
 
         setReservation(updatedReservation);
@@ -126,7 +151,7 @@ function ReservationDetails() {
 
     const handleNavigateToVenue = (venueId: number) => {
         // Navigate to venue details page
-        router.push(`/venues/${venueId}`);
+        router.navigate({ to: `/app/venues/${venueId}` });
     };
 
     // Status badge styling
@@ -436,8 +461,20 @@ function ReservationDetails() {
                                 </TableHeader>
                                 <TableBody>
                                     {reservation.approvers.map(
-                                        (approver: any, index: number) => (
-                                            <TableRow key={index}>
+                                        (
+                                            approver: {
+                                                name: string;
+                                                idNumber: string;
+                                                department: string;
+                                                role: string;
+                                                dateSigned: string | null;
+                                                status: string;
+                                            },
+                                            index: number,
+                                        ) => (
+                                            <TableRow key={approver.idNumber}>
+                                                {" "}
+                                                {/* Use idNumber as key */}
                                                 <TableCell>
                                                     {approver.name}
                                                 </TableCell>

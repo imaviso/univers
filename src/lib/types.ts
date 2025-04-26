@@ -6,7 +6,7 @@ export type UserType = {
     firstName: string;
     lastName: string;
     email: string;
-    role: string;
+    role: UserRole; // Use the specific UserRole union type
     password: string | undefined;
     department: string;
     departmentId: number | null;
@@ -16,7 +16,7 @@ export type UserType = {
     active: boolean;
     createdAt: string;
     updatedAt: string;
-    profileImagePath: string | null;
+    profileImagePath?: string | null;
 };
 
 export type UserDTO = {

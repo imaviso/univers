@@ -1,7 +1,7 @@
 import {
     getAllApprovalsOfEvent,
     getAllDepartments,
-    getAllEquipments,
+    // getAllEquipments, // Removed unused/incorrect import
     getAllEquipmentsAdmin,
     getAllEquipmentsByOwner,
     getAllEvents,
@@ -11,7 +11,8 @@ import {
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import type { UserType } from "./types";
+import type { AnyRoute } from "@tanstack/react-router"; // Added AnyRoute import
+import type { UserRole, UserType } from "./types"; // Import UserRole
 
 export const userQueryOptions = {
     queryKey: ["currentUser"],
@@ -28,19 +29,19 @@ export const useCurrentUser = () => {
     return query;
 };
 
+// Define a type for route options that includes skipAuth
+type RouteOptionsWithAuth = {
+    skipAuth?: boolean;
+    // Add other potential properties from RouteOptions if known/needed
+};
+
 export const isAuthenticated = async (
-    requiredRoles?: (
-        | "ORGANIZER"
-        | "SUPER_ADMIN"
-        | "EQUIPMENT_OWNER"
-        | "VPAA"
-        | "VP_ADMIN"
-        | "VENUE_OWNER"
-    )[], // Array of roles
-    route?: any,
+    requiredRoles?: UserRole[], // Allow any UserRole in the array
+    route?: AnyRoute, // Keep AnyRoute type
 ): Promise<boolean> => {
     try {
-        if (route?.options?.skipAuth) {
+        if ((route?.options as RouteOptionsWithAuth)?.skipAuth) {
+            // Cast to the defined type
             return true;
         }
 

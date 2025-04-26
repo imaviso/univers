@@ -219,7 +219,8 @@ export const createUser = async (userData: CreateUserInputFE) => {
     }
 };
 
-type UpdateUserInputFE = Partial<
+export type UpdateUserInputFE = Partial<
+    // Add export keyword
     Omit<
         UserType,
         "id" | "createdAt" | "updatedAt" | "emailVerified" | "department"
@@ -235,19 +236,19 @@ export const updateUser = async (
             throw new Error("Invalid User ID format for update.");
         }
 
-        const payload: any = {};
+        const payload: Partial<UserDTO> = {};
         if (userData.firstName !== undefined)
             payload.firstName = userData.firstName;
         if (userData.lastName !== undefined)
             payload.lastName = userData.lastName;
         if (userData.idNumber !== undefined)
-            payload.idNumber = userData.idNumber;
+            payload.id_number = userData.idNumber;
         if (userData.phoneNumber !== undefined)
-            payload.phoneNumber = userData.phoneNumber;
+            payload.phone_number = userData.phoneNumber;
         if (userData.telephoneNumber !== undefined)
             payload.telephoneNumber = userData.telephoneNumber;
         if (userData.departmentId !== undefined)
-            payload.department_id = userData.departmentId;
+            payload.departmentId = userData.departmentId;
 
         const response = await fetch(`${API_BASE_URL}/users/${numericUserId}`, {
             // Use numeric ID
@@ -526,12 +527,16 @@ export const createVenue = async ({
 
         // Prepare the JSON part, nesting venueOwnerId
         const { venueOwnerId, ...restOfVenueData } = venueData;
-        const venueJsonPayload: any = { ...restOfVenueData }; // Start with name, location
+        const venueJsonPayload: {
+            name: string;
+            location: string;
+            venueOwner?: { id: number };
+        } = { ...restOfVenueData }; // Start with name, location
         if (venueOwnerId) {
             // Nest owner ID according to backend DTO structure
             venueJsonPayload.venueOwner = { id: venueOwnerId };
         } else {
-            venueJsonPayload.venueOwner = null; // Explicitly send null if no owner selected
+            // If no owner selected, venueOwner remains undefined, which is handled by JSON.stringify
         }
 
         // Append JSON part named "venue"
@@ -577,13 +582,17 @@ export const updateVenue = async ({
 
         // Prepare the JSON part for update, nesting venueOwnerId
         const { venueOwnerId, ...restOfVenueData } = venueData;
-        const venueJsonPayload: any = { ...restOfVenueData }; // name, location
+        const venueJsonPayload: Partial<{
+            name: string;
+            location: string;
+            venueOwner?: { id: number };
+        }> = { ...restOfVenueData }; // name, location
         if (venueOwnerId) {
             venueJsonPayload.venueOwner = { id: venueOwnerId };
         } else {
             // If API expects null to remove owner, send null.
             // If omitting the field keeps the owner, adjust accordingly.
-            venueJsonPayload.venueOwner = null; // Assuming null removes owner
+            venueJsonPayload.venueOwner = undefined; // Explicitly set to undefined to potentially remove it
         }
 
         // Append JSON part named "venue"
@@ -706,7 +715,12 @@ export const addEquipment = async ({
         const formData = new FormData();
 
         const { ownerId, ...restOfEquipmentData } = equipmentData;
-        const equipmentJsonPayload: any = { ...restOfEquipmentData };
+        const equipmentJsonPayload: {
+            name: string;
+            brand: string;
+            quantity: number;
+            equipmentOwner?: { id: number };
+        } = { ...restOfEquipmentData };
         if (ownerId) {
             equipmentJsonPayload.equipmentOwner = { id: ownerId };
         }
@@ -756,7 +770,12 @@ export const editEquipment = async ({
         const formData = new FormData();
 
         const { ownerId, ...restOfEquipmentData } = equipmentData;
-        const equipmentJsonPayload: any = { ...restOfEquipmentData };
+        const equipmentJsonPayload: Partial<{
+            name: string;
+            brand: string;
+            quantity: number;
+            equipmentOwner?: { id: number };
+        }> = { ...restOfEquipmentData };
         if (ownerId) {
             equipmentJsonPayload.equipmentOwner = { id: ownerId };
         }
