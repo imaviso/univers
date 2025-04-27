@@ -51,13 +51,13 @@ function BreadcrumbLink({
 
 function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
     return (
+        // biome-ignore lint/a11y/useFocusableInteractive: <explanation>
         <span
             data-slot="breadcrumb-page"
             role="link"
             aria-disabled="true"
             aria-current="page"
             className={cn("text-foreground font-normal", className)}
-            tabIndex={0} // Add tabIndex to make it focusable
             {...props}
         />
     );

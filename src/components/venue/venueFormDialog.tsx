@@ -191,20 +191,10 @@ export function VenueFormDialog({
                                 <FormItem>
                                     <FormLabel>Venue Owner</FormLabel>
                                     <Select
-                                        onValueChange={(value) => {
-                                            // Handle the special "none" value for clearing the selection
-                                            if (value === "none") {
-                                                field.onChange(undefined);
-                                            } else {
-                                                field.onChange(Number(value));
-                                            }
-                                        }}
-                                        // If field.value is undefined/null, use "none", otherwise convert ID to string
-                                        value={
-                                            field.value
-                                                ? field.value.toString()
-                                                : "none"
-                                        }
+                                        onValueChange={(value) =>
+                                            field.onChange(Number(value))
+                                        } // Ensure value is number
+                                        value={field.value?.toString()}
                                         disabled={isLoading}
                                     >
                                         <FormControl>
@@ -213,22 +203,16 @@ export function VenueFormDialog({
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {/* Use "none" as the value for the placeholder/clear option */}
-                                            <SelectItem value="none">
-                                                -
-                                            </SelectItem>
-                                            {/* Only map owners if the list is not empty */}
                                             {venueOwners.map((owner) => (
                                                 <SelectItem
                                                     key={owner.id}
-                                                    value={owner.id.toString()} // Value must be string
+                                                    value={owner.id.toString()}
                                                 >
                                                     {owner.firstName}{" "}
                                                     {owner.lastName} (
                                                     {owner.email})
                                                 </SelectItem>
                                             ))}
-                                            {/* Remove the conditional disabled item for empty list */}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
