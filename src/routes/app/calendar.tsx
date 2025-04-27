@@ -67,8 +67,22 @@ export const Route = createFileRoute("/app/calendar")({
         }
     },
 });
-// Sample events data
-const events = [
+import type { Event } from "@/lib/types"; // Import the shared Event type
+
+// Define Local Event Type for sample data
+interface LocalEventType {
+    id: number;
+    title: string;
+    date: string;
+    endDate?: string;
+    location: string;
+    status: "planning" | "confirmed" | "completed";
+    color: string;
+    workspace: string;
+}
+
+// Sample events data using LocalEventType
+const events: LocalEventType[] = [
     {
         id: 1,
         title: "Annual Tech Conference",
@@ -205,11 +219,10 @@ export function Calendar() {
     const role = context.authState?.role;
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [selectedEvent, setSelectedEvent] = useState<any>(null);
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null); // Use shared Event type
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-    const [calendarView, setCalendarView] = useState<"month" | "week" | "day">(
-        "month",
-    );
+    type CalendarViewType = "month" | "week" | "day";
+    const [calendarView, setCalendarView] = useState<CalendarViewType>("month");
     const [filters, setFilters] = useState({
         workspaces: [] as string[],
         statuses: [] as string[],
@@ -258,9 +271,38 @@ export function Calendar() {
         }
     };
 
-    // Open event details
-    const handleEventClick = (event: any) => {
-        setSelectedEvent(event);
+    // Open event details - Transform LocalEventType to Event
+    const handleEventClick = (localEvent: LocalEventType) => {
+        // Transform localEvent (EventType) to the shared Event type
+        const transformedEvent: Event = {
+            id: localEvent.id,
+            eventName: localEvent.title,
+            eventType: "Sample Type", // Placeholder
+            organizer: {
+                // Placeholder - requires actual user data
+                id: 0,
+                email: "organizer@example.com",
+                firstName: "Sample",
+                lastName: "Organizer",
+                id_number: null,
+                phone_number: null,
+                telephoneNumber: null,
+                roles: "ORGANIZER",
+                departmentId: null,
+                emailVerified: true,
+                active: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            },
+            approvedLetterPath: null, // Placeholder
+            eventVenueId: 0, // Placeholder - requires actual venue data
+            startTime: new Date(localEvent.date).toISOString(), // Convert to ISO string
+            endTime: localEvent.endDate
+                ? new Date(localEvent.endDate).toISOString()
+                : new Date(localEvent.date).toISOString(), // Use start date if no end date
+            status: localEvent.status.toUpperCase(), // Match Event status format (e.g., PLANNING)
+        };
+        setSelectedEvent(transformedEvent);
         setIsDetailsModalOpen(true);
     };
 
@@ -343,6 +385,7 @@ export function Calendar() {
                 <div className="grid grid-cols-7 gap-1">
                     {/* Empty cells for days before the first day of the month */}
                     {Array.from({ length: firstDayOfMonth }).map((_, index) => (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: Static layout elements
                         <div key={`empty-${index}`} className="h-32 p-1" />
                     ))}
 
@@ -358,18 +401,39 @@ export function Calendar() {
                                     {day.day}
                                 </div>
                                 <div className="space-y-1 overflow-auto max-h-[calc(100%-24px)]">
-                                    {day.events.map((event) => (
-                                        <div
-                                            key={event.id}
-                                            className={`${getStatusColor(event.status)} text-white text-xs p-1 rounded truncate cursor-pointer`}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleEventClick(event);
-                                            }}
-                                        >
-                                            {event.title}
-                                        </div>
-                                    ))}
+                                    {day.events.map(
+                                        (
+                                            localEvent, // Use localEvent variable name
+                                        ) => (
+                                            <button
+                                                key={localEvent.id}
+                                                type="button" // Explicitly set type for button
+                                                className={cn(
+                                                    `${getStatusColor(localEvent.status)} text-white text-xs p-1 rounded truncate cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
+                                                    "w-full text-left block h-auto", // Reset button styles
+                                                )}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEventClick(
+                                                        localEvent,
+                                                    ); // Pass localEvent
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (
+                                                        e.key === "Enter" ||
+                                                        e.key === " "
+                                                    ) {
+                                                        e.stopPropagation();
+                                                        handleEventClick(
+                                                            localEvent,
+                                                        ); // Pass localEvent
+                                                    }
+                                                }}
+                                            >
+                                                {localEvent.title}
+                                            </button>
+                                        ),
+                                    )}
                                 </div>
                                 {day.events.length === 0 && (
                                     <Button
@@ -381,7 +445,9 @@ export function Calendar() {
                                             handleCellClick(new Date(day.date));
                                         }}
                                     >
-                                        <Plus className="h-3 w-3" />
+                                        <Plus className="h-3 w-3">
+                                            <title>Add Event</title>
+                                        </Plus>
                                     </Button>
                                 )}
                             </div>
@@ -427,23 +493,42 @@ export function Calendar() {
                             onClick={() => handleCellClick(day.fullDate)}
                         >
                             <div className="space-y-1">
-                                {day.events.map((event) => (
-                                    <div
-                                        key={event.id}
-                                        className={`${getStatusColor(event.status)} text-white text-xs p-2 rounded cursor-pointer`}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEventClick(event);
-                                        }}
-                                    >
-                                        <div className="font-medium">
-                                            {event.title}
-                                        </div>
-                                        <div className="text-[10px] opacity-90">
-                                            {event.location}
-                                        </div>
-                                    </div>
-                                ))}
+                                {day.events.map(
+                                    (
+                                        localEvent, // Use localEvent variable name
+                                    ) => (
+                                        <button
+                                            key={localEvent.id}
+                                            type="button" // Explicitly set type for button
+                                            className={cn(
+                                                `${getStatusColor(localEvent.status)} text-white text-xs p-2 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
+                                                "w-full text-left block h-auto", // Reset button styles
+                                            )}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEventClick(localEvent); // Pass localEvent
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (
+                                                    e.key === "Enter" ||
+                                                    e.key === " "
+                                                ) {
+                                                    e.stopPropagation();
+                                                    handleEventClick(
+                                                        localEvent,
+                                                    ); // Pass localEvent
+                                                }
+                                            }}
+                                        >
+                                            <div className="font-medium">
+                                                {localEvent.title}
+                                            </div>
+                                            <div className="text-[10px] opacity-90">
+                                                {localEvent.location}
+                                            </div>
+                                        </button>
+                                    ),
+                                )}
                             </div>
                         </Card>
                     ))}
@@ -491,34 +576,37 @@ export function Calendar() {
                             />
                         ))}
 
-                        {dayEvents.map((event) => {
+                        {dayEvents.map((localEvent) => {
+                            // Use localEvent variable name
                             // For demo purposes, position events randomly within the day view
                             // In a real app, you would calculate position based on event start/end times
                             const top = Math.floor(Math.random() * 70) + 5;
                             const height = Math.floor(Math.random() * 10) + 5;
 
                             return (
-                                <div
-                                    key={event.id}
-                                    className={`${getStatusColor(event.status)} text-white text-xs p-2 rounded absolute left-2 right-2 cursor-pointer`}
+                                <button
+                                    type="button" // Add type="button" for semantic correctness
+                                    key={localEvent.id}
+                                    className={`${getStatusColor(localEvent.status)} text-white text-xs p-2 rounded absolute left-2 right-2 cursor-pointer text-left block w-full`} // Added text-left, block, w-full for button styling
                                     style={{
                                         top: `${top}%`,
                                         height: `${height}%`,
                                     }}
-                                    onClick={() => handleEventClick(event)}
+                                    onClick={() => handleEventClick(localEvent)} // Pass localEvent
+                                    // onKeyDown is implicitly handled by button element
                                 >
                                     <div className="font-medium">
-                                        {event.title}
+                                        {localEvent.title}
                                     </div>
                                     <div className="text-[10px] opacity-90">
-                                        {event.location}
+                                        {localEvent.location}
                                     </div>
-                                </div>
+                                </button>
                             );
                         })}
                     </Card>
                 </div>
-            </div>
+            </div> // Fix incorrect closing tag
         );
     };
 
@@ -699,11 +787,13 @@ export function Calendar() {
                 }}
                 initialDate={createEventDate}
             /> */}
-            <EventDetailsModal
-                isOpen={isDetailsModalOpen}
-                onClose={() => setIsDetailsModalOpen(false)}
-                event={selectedEvent}
-            />
+            {selectedEvent && ( // Conditionally render only when selectedEvent is not null
+                <EventDetailsModal
+                    isOpen={isDetailsModalOpen}
+                    onClose={() => setIsDetailsModalOpen(false)}
+                    event={selectedEvent}
+                />
+            )}
         </>
     );
 }

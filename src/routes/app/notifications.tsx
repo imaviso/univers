@@ -54,19 +54,37 @@ export function Notifications() {
         );
 
     const handleMarkAllAsRead = () => {
-        notifications.forEach((notification) => markAsRead(notification.id));
+        for (const notification of notifications) {
+            markAsRead(notification.id);
+        }
     };
 
     const getNotificationIcon = (type: Notification["type"]) => {
         switch (type) {
             case "success":
-                return <Bell className="h-6 w-6 text-green-500" />;
+                return (
+                    <Bell className="h-6 w-6 text-green-500">
+                        <title>Success Notification Icon</title>
+                    </Bell>
+                );
             case "error":
-                return <Bell className="h-6 w-6 text-red-500" />;
+                return (
+                    <Bell className="h-6 w-6 text-red-500">
+                        <title>Error Notification Icon</title>
+                    </Bell>
+                );
             case "warning":
-                return <Bell className="h-6 w-6 text-yellow-500" />;
+                return (
+                    <Bell className="h-6 w-6 text-yellow-500">
+                        <title>Warning Notification Icon</title>
+                    </Bell>
+                );
             default:
-                return <Bell className="h-6 w-6 text-blue-500" />;
+                return (
+                    <Bell className="h-6 w-6 text-blue-500">
+                        <title>Default Notification Icon</title>
+                    </Bell>
+                );
         }
     };
 
@@ -94,7 +112,9 @@ export function Notifications() {
                             size="sm"
                             className="gap-2"
                         >
-                            <Bell className="h-4 w-4" />
+                            <Bell className="h-4 w-4">
+                                <title>Test Notification Icon</title>
+                            </Bell>
                             Test Notification
                         </Button>
                         <Input
@@ -107,7 +127,9 @@ export function Notifications() {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="icon">
-                                    <Filter className="h-4 w-4" />
+                                    <Filter className="h-4 w-4">
+                                        <title>Filter Icon</title>
+                                    </Filter>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -130,7 +152,9 @@ export function Notifications() {
                             size="sm"
                             onClick={handleMarkAllAsRead}
                         >
-                            <Check className="mr-2 h-4 w-4" />
+                            <Check className="mr-2 h-4 w-4">
+                                <title>Mark All Read Icon</title>
+                            </Check>
                             Mark all as read
                         </Button>
                         <Button
@@ -138,7 +162,9 @@ export function Notifications() {
                             size="sm"
                             onClick={clearNotifications}
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 h-4 w-4">
+                                <title>Clear All Icon</title>
+                            </Trash2>
                             Clear all
                         </Button>
                     </div>

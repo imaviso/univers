@@ -51,7 +51,11 @@ import {
     useNavigate,
     useRouteContext,
 } from "@tanstack/react-router";
-import type { ColumnDef, Row } from "@tanstack/react-table";
+import type {
+    ColumnDef,
+    Row,
+    Table as TanstackTable,
+} from "@tanstack/react-table"; // Import Table as TanstackTable
 import {
     AlertTriangle,
     CalendarPlus,
@@ -64,7 +68,7 @@ import {
     Trash2,
     Wrench,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react"; // Added useCallback
 import { toast } from "sonner";
 
 const categories = [
@@ -207,10 +211,15 @@ function EquipmentInventory() {
         },
     });
 
-    const deleteMutation = useMutation({
-        mutationFn: deleteEquipment, // API function expects (equipmentId, userId)
-        onSuccess: (_, deletedId) => {
-            // Variables passed to mutate are second arg
+    const deleteMutation = useMutation<
+        void, // Return type of mutationFn
+        Error, // Error type
+        { equipmentId: number; userId: number } // Variables type
+    >({
+        mutationFn: ({ equipmentId, userId }) =>
+            deleteEquipment(equipmentId, userId), // Destructure variables
+        onSuccess: (_, variables) => {
+            // variables contains { equipmentId, userId }
             toast.success("Equipment deleted successfully.");
             queryClient.invalidateQueries({
                 queryKey: equipmentsQueryOptions(currentUser).queryKey, // Invalidate based on user
@@ -229,16 +238,20 @@ function EquipmentInventory() {
     // const bulkDeleteMutation = useMutation({ ... });
 
     // --- Event Handlers ---
-    const handleReserveEquipment = (data: any) => {
+    const handleReserveEquipment = (data: Record<string, unknown>) => {
+        // Use Record<string, unknown> instead of any
         console.log("Reservation data:", data);
         // TODO: Implement reservation logic/mutation
         setIsReservationDialogOpen(false);
     };
 
-    const handleEditEquipment = (equipmentData: Equipment) => {
-        setEditingEquipment(equipmentData);
-        setIsAddEquipmentOpen(true);
-    };
+    const handleEditEquipment = useCallback(
+        (equipmentData: Equipment) => {
+            setEditingEquipment(equipmentData);
+            setIsAddEquipmentOpen(true);
+        },
+        [], // State setters are stable, no need to include them
+    );
 
     const confirmDelete = () => {
         if (!currentUser) return; // Should not happen if page loaded
@@ -336,7 +349,7 @@ function EquipmentInventory() {
     }, [equipment]);
 
     // Status badge styling
-    const getStatusBadge = (status: Equipment["status"]) => {
+    const getStatusBadge = useCallback((status: Equipment["status"]) => {
         // ... (badge logic remains the same) ...
         switch (status) {
             case "APPROVED":
@@ -367,13 +380,14 @@ function EquipmentInventory() {
                     </Badge>
                 );
             default:
+                // This case should be unreachable given the type definition
                 return (
                     <Badge variant="outline" className="capitalize">
-                        {status?.toLowerCase() ?? "unknown"}
+                        unknown
                     </Badge>
                 );
         }
-    };
+    }, []); // Empty dependency array as it doesn't depend on component scope
 
     // DataTable columns definition
     const columns: ColumnDef<Equipment>[] = useMemo(
@@ -384,7 +398,7 @@ function EquipmentInventory() {
                       {
                           id: "select",
                           header: (
-                              { table }: { table: any }, // Use any for table type if needed
+                              { table }: { table: TanstackTable<Equipment> }, // Use imported Table type
                           ) => (
                               <Checkbox
                                   checked={
@@ -408,10 +422,13 @@ function EquipmentInventory() {
                                   // Disable selection if user cannot manage this specific item
                                   disabled={
                                       !(
-                                          role === "SUPER_ADMIN" ||
-                                          (role === "EQUIPMENT_OWNER" &&
-                                              row.original.equipmentOwner
-                                                  ?.id === currentUser?.id)
+                                          (
+                                              role === "SUPER_ADMIN" ||
+                                              (role === "EQUIPMENT_OWNER" &&
+                                                  row.original.equipmentOwner
+                                                      ?.id ===
+                                                      Number(currentUser?.id))
+                                          ) // Compare numbers
                                       )
                                   }
                               />
@@ -568,6 +585,8 @@ function EquipmentInventory() {
             editMutation.isPending,
             deleteMutation.isPending,
             deleteMutation.variables,
+            getStatusBadge, // Added dependency
+            handleEditEquipment, // Added dependency
         ],
     ); // Add mutation states/variables
 
@@ -763,8 +782,18 @@ function EquipmentInventory() {
                                 data={filteredEquipment}
                                 searchColumn="name"
                                 searchPlaceholder="Search equipment..."
-                                // Row selection logic might need adjustment if IDs are numbers
+                                // Pass selection state directly
+                                rowSelection={selectedItems.reduce(
+                                    (acc, id) => {
+                                        acc[id] = true; // Convert array of IDs to RowSelectionState format
+                                        return acc;
+                                    },
+                                    {} as Record<number, boolean>,
+                                )}
+                                // Pass the state updater function
                                 onRowSelectionChange={(updater) => {
+                                    // updater is OnChangeFn<RowSelectionState>
+                                    // It gives the new state or a function to compute it
                                     const currentSelection =
                                         selectedItems.reduce(
                                             (acc, id) => {
@@ -779,6 +808,7 @@ function EquipmentInventory() {
                                             ? updater(currentSelection)
                                             : updater;
 
+                                    // Convert back to array of IDs for our state
                                     const selectedIds = Object.entries(
                                         newSelectionState,
                                     )
@@ -786,22 +816,8 @@ function EquipmentInventory() {
                                         .map(([id]) => Number(id));
                                     setSelectedItems(selectedIds);
                                 }}
-                                state={{
-                                    rowSelection: selectedItems.reduce(
-                                        (acc, id) => {
-                                            acc[id] = true;
-                                            return acc;
-                                        },
-                                        {} as Record<number, boolean>,
-                                    ),
-                                }}
-                                // Pass function to determine if row can be selected
-                                enableRowSelection={(row: Row<Equipment>) =>
-                                    role === "SUPER_ADMIN" ||
-                                    (role === "EQUIPMENT_OWNER" &&
-                                        row.original.equipmentOwner?.id ===
-                                            currentUser?.id)
-                                }
+                                // No need for state prop anymore
+                                // No need for enableRowSelection prop anymore (handled internally by DataTable)
                             />
                         )}
 
@@ -815,12 +831,11 @@ function EquipmentInventory() {
                                     role === "SUPER_ADMIN" ||
                                     (role === "EQUIPMENT_OWNER" &&
                                         item.equipmentOwner?.id ===
-                                            currentUser?.id);
+                                            Number(currentUser?.id)); // Compare numbers
                                 const isMutatingItem =
                                     deleteMutation.isPending &&
                                     deleteMutation.variables?.equipmentId ===
                                         item.id;
-
                                 return (
                                     <Card
                                         key={item.id}
@@ -1007,7 +1022,8 @@ function EquipmentInventory() {
                             setEquipmentToDelete(null);
                         }}
                         onConfirm={confirmDelete}
-                        isDeleting={
+                        isLoading={
+                            // Renamed prop
                             deleteMutation.isPending /* || bulkDeleteMutation.isPending */
                         }
                         title={
