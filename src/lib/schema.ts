@@ -1,6 +1,6 @@
 import { isBefore } from "date-fns"; // Import date-fns functions
 import * as v from "valibot";
-import type { EventInputType, EventOutputType } from "./types"; // Adjust the import path as needed
+import { type EventInputType, type EventOutputType, ROLES } from "./types"; // Adjust the import path as needed
 
 export const ImageSchema = v.pipe(
     v.instance(File, "Image file is required."), // Check if it's a File object
@@ -179,7 +179,7 @@ export const userFormSchema = v.pipe(
         idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),
         firstName: v.pipe(v.string(), v.nonEmpty("First name is required")),
         lastName: v.pipe(v.string(), v.nonEmpty("Last name is required")),
-        department: v.pipe(v.string(), v.nonEmpty("Department is required")),
+        department: v.string("Department selection is required."),
         email: v.pipe(
             v.string(),
             v.nonEmpty("Email is required"),
@@ -245,6 +245,27 @@ export const userFormSchema = v.pipe(
 );
 
 export type UserFormInput = v.InferInput<typeof userFormSchema>;
+
+export const editUserFormSchema = v.object({
+    idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),
+    firstName: v.pipe(v.string(), v.nonEmpty("First name is required")),
+    lastName: v.pipe(v.string(), v.nonEmpty("Last name is required")),
+    email: v.pipe(
+        v.string(),
+        v.nonEmpty("Email is required"),
+        v.email("Invalid email format"),
+    ),
+    role: v.pipe(v.string(), v.nonEmpty("Role is required")),
+    departmentId: v.string("Department selection is required."),
+    telephoneNumber: v.pipe(
+        v.string(),
+        v.nonEmpty("Telephone number is required"),
+    ),
+    phoneNumber: v.optional(v.string(), ""),
+});
+
+export type EditUserFormInput = v.InferInput<typeof editUserFormSchema>;
+export type EditUserFormOutput = v.InferOutput<typeof editUserFormSchema>;
 
 export const venueReservationFormSchema = v.object({
     email: v.pipe(v.string(), v.email("Please enter a valid email address")),

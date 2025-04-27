@@ -1,7 +1,7 @@
 import ErrorPage from "@/components/ErrorPage";
 import PendingPage from "@/components/PendingPage";
 import { allNavigation } from "@/lib/navigation";
-import { usersQueryOptions } from "@/lib/query";
+import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/user-management")({
@@ -40,6 +40,7 @@ export const Route = createFileRoute("/app/user-management")({
     errorComponent: () => <ErrorPage />,
     loader: async ({ context: { queryClient } }) => {
         queryClient.ensureQueryData(usersQueryOptions);
+        queryClient.ensureQueryData(departmentsQueryOptions);
     },
 });
 

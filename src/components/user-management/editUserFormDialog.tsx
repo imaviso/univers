@@ -9,7 +9,7 @@ import {
 import {
     Form,
     FormControl,
-    FormDescription,
+    // FormDescription, // Removed as password fields are gone
     FormField,
     FormItem,
     FormLabel,
@@ -23,25 +23,27 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { type UserFormInput, userFormSchema } from "@/lib/schema";
-import type { UserType } from "@/lib/types";
+// Import the specific type needed for the onSubmit prop
+import type { UpdateUserInputFE } from "@/lib/api";
+import {
+    type EditUserFormInput,
+    type EditUserFormOutput,
+    editUserFormSchema,
+} from "@/lib/schema";
+import type { DepartmentType, UserRole, UserType } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Switch } from "../ui/switch";
-
-type EditUser = Omit<UserType, "password">; //
 
 interface UserFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
     isLoading?: boolean;
-    onSubmit: (
-        userData: Partial<Omit<UserFormInput, "confirmPassword">>,
-    ) => void;
-    user?: EditUser;
+    // Update onSubmit prop to expect UpdateUserInputFE
+    onSubmit: (userData: EditUserFormOutput) => void;
+    user?: EditUserFormInput;
     roles: { value: string; label: string }[];
-    departments: { value: string; label: string }[];
+    departments: DepartmentType[];
 }
 
 export function EditUserFormDialog({
@@ -53,32 +55,48 @@ export function EditUserFormDialog({
     roles,
     departments,
 }: UserFormDialogProps) {
-    const form = useForm<UserFormInput>({
-        resolver: valibotResolver(userFormSchema),
+    const form = useForm<EditUserFormInput>({
+        // Keep the original schema for potential create use case or full validation display
+        resolver: valibotResolver(editUserFormSchema),
         defaultValues: {
             idNumber: "",
             firstName: "",
             lastName: "",
             email: "",
-            password: "",
-            confirmPassword: "",
             role: "",
-            department: "",
+            departmentId: "",
             telephoneNumber: "",
             phoneNumber: "",
-            active: true,
-            emailVerified: false,
         },
         mode: "onChange",
     });
 
-    const handleFormSubmit = (values: UserFormInput) => {
-        const { confirmPassword, emailVerified, ...dataToSubmit } = values;
+    const handleFormSubmit = (values: EditUserFormInput) => {
+        // Destructure only the fields needed for UpdateUserInputFE
+        const {
+            idNumber,
+            firstName,
+            lastName,
+            role,
+            email,
+            departmentId,
+            telephoneNumber,
+            phoneNumber,
+            // Exclude password, confirmPassword, active, emailVerified
+        } = values;
 
-        const payload: Partial<Omit<UserFormInput, "confirmPassword">> = {
-            ...dataToSubmit,
-            password: dataToSubmit.password || undefined,
+        // Construct the payload matching UpdateUserInputFE
+        const payload = {
+            idNumber,
+            firstName,
+            lastName,
+            role: role as UserRole,
+            email,
+            departmentId,
+            telephoneNumber,
+            phoneNumber: phoneNumber ?? "",
         };
+
         onSubmit(payload);
     };
 
@@ -89,32 +107,25 @@ export function EditUserFormDialog({
                     idNumber: user.idNumber || "",
                     firstName: user.firstName || "",
                     lastName: user.lastName || "",
-                    email: user.email || "",
-                    password: "",
-                    confirmPassword: "",
+                    email: user.email || "", // Keep for display
                     role: user.role || "",
-                    department: user.departmentId
+                    departmentId: user.departmentId
                         ? String(user.departmentId)
                         : "",
                     telephoneNumber: user.telephoneNumber || "",
                     phoneNumber: user.phoneNumber || "",
-                    active: user.active ?? true,
-                    emailVerified: user.emailVerified ?? false,
                 });
             } else {
+                // Reset for potential "Add New User" case (if this dialog is reused)
                 form.reset({
                     idNumber: "",
                     firstName: "",
                     lastName: "",
                     email: "",
-                    password: "",
-                    confirmPassword: "",
                     role: "",
-                    department: "",
+                    departmentId: "",
                     telephoneNumber: "",
                     phoneNumber: "",
-                    active: true,
-                    emailVerified: false,
                 });
             }
         }
@@ -131,106 +142,69 @@ export function EditUserFormDialog({
 
                 <Form {...form}>
                     <form
-                        onSubmit={(e) => e.preventDefault()}
+                        onSubmit={(e) => e.preventDefault()} // Prevent default form submission
                         className="space-y-4 py-4"
                     >
-                        <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="idNumber"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>ID Number</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter ID number"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="role"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Role</FormLabel>
-                                            <Select
-                                                onValueChange={field.onChange}
-                                                defaultValue={field.value}
-                                            >
-                                                <FormControl>
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Select a role" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {roles.map((role) => (
-                                                        <SelectItem
-                                                            key={role.value}
-                                                            value={role.value}
-                                                        >
-                                                            {role.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="firstName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>First Name</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter First Name"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="lastName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Last Name</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter Last Name"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
+                        {/* ... ID Number and Role fields ... */}
+                        <FormField
+                            control={form.control}
+                            name="idNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>ID Number</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Enter ID number"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="role"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Role</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        // Use value prop for controlled component
+                                        value={field.value}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select a role" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent className="w-[--radix-select-trigger-width]">
+                                            {roles.map((role) => (
+                                                <SelectItem
+                                                    key={role.value}
+                                                    value={role.value}
+                                                    className="overflow-hidden text-ellipsis whitespace-nowrap"
+                                                >
+                                                    {role.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        {/* ... First Name and Last Name fields ... */}
+                        <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
-                                name="email"
+                                name="firstName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel>First Name</FormLabel>
                                         <FormControl>
                                             <Input
-                                                placeholder="Enter email"
-                                                type="email"
+                                                placeholder="Enter First Name"
                                                 {...field}
                                             />
                                         </FormControl>
@@ -239,157 +213,127 @@ export function EditUserFormDialog({
                                 )}
                             />
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="password"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>
-                                                Password (Optional)
-                                            </FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Leave blank to keep current"
-                                                    type="password"
-                                                    {...field}
-                                                    value={field.value ?? ""}
-                                                />
-                                            </FormControl>
-                                            <FormDescription>
-                                                Leave blank if not changing the
-                                                password.
-                                            </FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="confirmPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>
-                                                Confirm Password (Optional)
-                                            </FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Leave blank to keep current"
-                                                    type="password"
-                                                    {...field}
-                                                    value={field.value ?? ""}
-                                                />
-                                            </FormControl>
-                                            <FormDescription>
-                                                Leave blank if not changing the
-                                                password.
-                                            </FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="phoneNumber"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>
-                                                Phone Number (Optional)
-                                            </FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter phone number"
-                                                    type="tel"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="telephoneNumber"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>
-                                                Telephone Number
-                                            </FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter telephone number"
-                                                    type="tel"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
                             <FormField
                                 control={form.control}
-                                name="department"
+                                name="lastName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Department</FormLabel>
-                                        <Select
-                                            onValueChange={field.onChange}
-                                            defaultValue={field.value}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select a department" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {departments.map(
-                                                    (department) => (
-                                                        <SelectItem
-                                                            key={
-                                                                department.value
-                                                            }
-                                                            value={
-                                                                department.value
-                                                            }
-                                                        >
-                                                            {department.label}
-                                                        </SelectItem>
-                                                    ),
-                                                )}
-                                            </SelectContent>
-                                        </Select>
+                                        <FormLabel>Last Name</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter Last Name"
+                                                {...field}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
+                        </div>
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="User email"
+                                            type="email"
+                                            {...field}
+                                            className="bg-muted/50" // Optional: visual indication
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* ... Phone Number and Telephone Number fields ... */}
+                        <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
-                                name="active"
+                                name="phoneNumber"
                                 render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                                        <div className="space-y-0.5">
-                                            <FormLabel>Active</FormLabel>
-                                            <FormDescription>
-                                                Toggle to activate or deactivate
-                                                user account
-                                            </FormDescription>
-                                        </div>
+                                    <FormItem>
+                                        <FormLabel>
+                                            Phone Number (Optional)
+                                        </FormLabel>
                                         <FormControl>
-                                            <Switch
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
+                                            <Input
+                                                placeholder="Enter phone number"
+                                                type="tel"
+                                                // Ensure value is handled correctly (controlled component)
+                                                {...field}
+                                                value={field.value || undefined} // Handle null/undefined
                                             />
                                         </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="telephoneNumber"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Telephone Number</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter telephone number"
+                                                type="tel"
+                                                // Ensure value is handled correctly
+                                                {...field}
+                                                value={field.value || ""} // Handle null/undefined
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
+                        {/* ... Department field ... */}
+                        <FormField
+                            control={form.control}
+                            name="departmentId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Department</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        value={field.value || ""}
+                                    >
+                                        <FormControl>
+                                            {/* The trigger sets the perceived width in the form */}
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select a department" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        {/* Constrain the dropdown panel's width */}
+                                        <SelectContent
+                                            // Use popper to avoid stretching the dialog, adjust width as needed
+                                            // w-[--radix-select-trigger-width] ensures it matches the trigger width
+                                            // max-h-[200px] adds vertical scroll if list is long
+                                            className="w-[--radix-select-trigger-width] max-h-[200px]"
+                                        >
+                                            {departments.map((department) => (
+                                                <SelectItem
+                                                    key={department.id}
+                                                    value={department.id.toString()}
+                                                    title={department.name}
+                                                    className="overflow-hidden text-ellipsis whitespace-nowrap"
+                                                >
+                                                    {department.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        {/* Active switch removed */}
                     </form>
                     <DialogFooter>
                         <Button
@@ -401,7 +345,12 @@ export function EditUserFormDialog({
                         </Button>
                         <Button
                             type="button"
-                            disabled={!form.formState.isValid || isLoading}
+                            // Consider if isValid check needs adjustment if schema includes non-submitted fields
+                            disabled={
+                                !form.formState.isDirty ||
+                                !form.formState.isValid ||
+                                isLoading
+                            }
                             onClick={form.handleSubmit(handleFormSubmit)}
                         >
                             {user ? "Save Changes" : "Create User"}

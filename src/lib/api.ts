@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "./auth";
 import type {
+    EditUserFormInput,
     EquipmentDTOInput,
     EquipmentDTOOutput,
     EventInput,
@@ -14,6 +15,7 @@ import type {
     EventDTOBackendResponse,
     EventDTOPayload,
     UserDTO,
+    UserRole,
     UserType,
     Venue,
 } from "./types";
@@ -153,7 +155,7 @@ export const updateProfile = async ({
             lastName: data.lastName,
             phone_number: data.phoneNumber, // Map phoneNumber to phone_number
             id_number: data.idNumber, // Map idNumber to id_number
-            departmentId: data.departmentId, // Keep departmentId as is if backend expects it directly
+            departmentId: Number(data.departmentId), // Keep departmentId as is if backend expects it directly
             // Add other fields from UserDTO if needed, ensuring they are optional or handled correctly
         };
 
@@ -218,40 +220,76 @@ export const createUser = async (userData: CreateUserInputFE) => {
     }
 };
 
-export type UpdateUserInputFE = Partial<
-    // Add export keyword
-    Omit<
-        UserType,
-        "id" | "createdAt" | "updatedAt" | "emailVerified" | "department"
-    > & { departmentId: number | null }
->;
-export const updateUser = async (
-    userId: number,
-    userData: UpdateUserInputFE,
-) => {
+export const updateUser = async ({
+    userId,
+    userData,
+    imageFile,
+}: {
+    userId: string;
+    userData: EditUserFormInput;
+    imageFile?: File | null;
+}): Promise<string> => {
     try {
-        const payload: Partial<UserDTO> = {};
-        if (userData.firstName !== undefined)
-            payload.firstName = userData.firstName;
-        if (userData.lastName !== undefined)
-            payload.lastName = userData.lastName;
-        if (userData.idNumber !== undefined)
-            payload.id_number = userData.idNumber;
-        if (userData.phoneNumber !== undefined)
-            payload.phone_number = userData.phoneNumber;
-        if (userData.telephoneNumber !== undefined)
-            payload.telephoneNumber = userData.telephoneNumber;
-        if (userData.departmentId !== undefined)
-            payload.departmentId = userData.departmentId;
+        const numericUserId = Number.parseInt(userId, 10);
+        if (Number.isNaN(numericUserId)) {
+            throw new Error("Invalid User ID format.");
+        }
 
-        const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
-            // Use numeric ID
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            credentials: "include",
-        });
-        // Assuming backend returns text confirmation on success
+        const formData = new FormData();
+
+        const userDtoPayload: Partial<{
+            firstName: string;
+            lastName: string;
+            idNumber: string;
+            email: string;
+            phoneNumber?: string;
+            telephoneNumber: string;
+            role: UserRole;
+            departmentId: number | null;
+        }> = {};
+
+        if (userData.firstName !== undefined)
+            userDtoPayload.firstName = userData.firstName;
+        if (userData.lastName !== undefined)
+            userDtoPayload.lastName = userData.lastName;
+        if (userData.idNumber !== undefined)
+            userDtoPayload.idNumber = userData.idNumber;
+        if (userData.email !== undefined) userDtoPayload.email = userData.email;
+        if (userData.phoneNumber !== undefined)
+            userDtoPayload.phoneNumber = userData.phoneNumber;
+        if (userData.telephoneNumber !== undefined)
+            userDtoPayload.telephoneNumber = userData.telephoneNumber;
+        if (userData.role !== undefined)
+            if (userData.departmentId !== undefined)
+                userDtoPayload.departmentId = Number(userData.departmentId);
+
+        for (const key of Object.keys(userDtoPayload)) {
+            const k = key as keyof typeof userDtoPayload;
+            if (userDtoPayload[k] === undefined) {
+                delete userDtoPayload[k];
+            }
+        }
+
+        formData.append(
+            "userDTO",
+            new Blob([JSON.stringify(userDtoPayload)], {
+                type: "application/json",
+            }),
+        );
+
+        if (imageFile) {
+            formData.append("image", imageFile, imageFile.name);
+        }
+
+        const response = await fetch(
+            `${API_BASE_URL}/admin/users/${numericUserId}`,
+            {
+                method: "PATCH",
+                credentials: "include",
+                body: formData,
+            },
+        );
+
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
