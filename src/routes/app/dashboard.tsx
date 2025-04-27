@@ -60,9 +60,8 @@ export const Route = createFileRoute("/app/dashboard")({
 });
 
 function Dashboard() {
-    const [period, setPeriod] = useState<"day" | "week" | "month" | "year">(
-        "month",
-    );
+    type Period = "day" | "week" | "month" | "year";
+    const [period, setPeriod] = useState<Period>("month");
 
     // Sample stats data
     const stats = {
@@ -83,7 +82,9 @@ function Dashboard() {
                     <div className="flex items-center gap-2">
                         <Tabs
                             defaultValue="month"
-                            onValueChange={(value) => setPeriod(value as any)}
+                            onValueChange={(value) =>
+                                setPeriod(value as Period)
+                            }
                         >
                             <TabsList>
                                 <TabsTrigger value="day">Day</TabsTrigger>
@@ -103,7 +104,9 @@ function Dashboard() {
                                     <CardTitle className="text-sm font-medium">
                                         Total Events
                                     </CardTitle>
-                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    <Calendar className="h-4 w-4 text-muted-foreground">
+                                        <title>Total Events Icon</title>
+                                    </Calendar>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">
@@ -119,7 +122,9 @@ function Dashboard() {
                                     <CardTitle className="text-sm font-medium">
                                         Upcoming Events
                                     </CardTitle>
-                                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                                    <CalendarDays className="h-4 w-4 text-muted-foreground">
+                                        <title>Upcoming Events Icon</title>
+                                    </CalendarDays>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">
@@ -135,7 +140,9 @@ function Dashboard() {
                                     <CardTitle className="text-sm font-medium">
                                         Total Attendees
                                     </CardTitle>
-                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                    <Users className="h-4 w-4 text-muted-foreground">
+                                        <title>Total Attendees Icon</title>
+                                    </Users>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">
@@ -151,7 +158,9 @@ function Dashboard() {
                                     <CardTitle className="text-sm font-medium">
                                         Completion Rate
                                     </CardTitle>
-                                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                                    <TrendingUp className="h-4 w-4 text-muted-foreground">
+                                        <title>Completion Rate Icon</title>
+                                    </TrendingUp>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">

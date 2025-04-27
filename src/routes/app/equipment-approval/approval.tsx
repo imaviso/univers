@@ -75,8 +75,43 @@ export const Route = createFileRoute("/app/equipment-approval/approval")({
     },
 });
 
+// Define types based on sample data
+interface EquipmentItem {
+    id: string;
+    name: string;
+    owner: string;
+    quantity: number;
+}
+
+interface Approver {
+    name: string;
+    department: string;
+    role: string;
+    dateSigned: string | null;
+    status: "pending" | "approved" | "disapproved";
+}
+
+interface Reservation {
+    id: number;
+    eventName: string;
+    venue: string;
+    venueId: number;
+    department: string;
+    contactNumber: string;
+    userName: string;
+    eventDate: string;
+    startTime: string;
+    endTime: string;
+    status: "pending" | "approved" | "disapproved";
+    createdAt: string;
+    equipment: EquipmentItem[];
+    remarks: { [key: string]: string };
+    approvers: Approver[];
+    disapprovalNote?: string;
+}
+
 // Sample equipment reservation data
-export const initialReservations = [
+export const initialReservations: Reservation[] = [
     {
         id: 1,
         eventName: "Computer Science Department Meeting",
@@ -338,13 +373,13 @@ const equipmentOwners = [
 
 export function EquipmentReservationApproval() {
     const navigate = useNavigate();
-    const [reservations, setReservations] = useState(initialReservations);
+    const [reservations, setReservations] =
+        useState<Reservation[]>(initialReservations);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [ownerFilter, setOwnerFilter] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<
-        "all" | "pending" | "approved" | "disapproved"
-    >("all");
+    type ViewMode = "all" | "pending" | "approved" | "disapproved";
+    const [viewMode, setViewMode] = useState<ViewMode>("all");
 
     // Filter reservations based on search query, status, and owner filters
     const filteredReservations = reservations.filter((reservation) => {
@@ -452,7 +487,10 @@ export function EquipmentReservationApproval() {
     };
 
     // Count equipment by owner
-    const countEquipmentByOwner = (equipment: any[], owner: string) => {
+    const countEquipmentByOwner = (
+        equipment: EquipmentItem[],
+        owner: string,
+    ) => {
         return equipment.filter((item) => item.owner === owner).length;
     };
 
@@ -465,7 +503,9 @@ export function EquipmentReservationApproval() {
                     </h1>
                     <div className="flex items-center gap-2">
                         <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground">
+                                <title>Search Icon</title>
+                            </Search>
                             <Input
                                 type="search"
                                 placeholder="Search reservations..."
@@ -545,7 +585,9 @@ export function EquipmentReservationApproval() {
                     <div className="flex items-center gap-2">
                         <Tabs
                             value={viewMode}
-                            onValueChange={(value) => setViewMode(value as any)}
+                            onValueChange={(value) =>
+                                setViewMode(value as ViewMode)
+                            }
                         >
                             <TabsList>
                                 <TabsTrigger value="all">All</TabsTrigger>
@@ -574,11 +616,16 @@ export function EquipmentReservationApproval() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Owners</SelectItem>
-                                {equipmentOwners.map((owner) => (
-                                    <SelectItem key={owner.id} value={owner.id}>
-                                        {owner.name}
-                                    </SelectItem>
-                                ))}
+                                {equipmentOwners.map(
+                                    (owner: { id: string; name: string }) => (
+                                        <SelectItem
+                                            key={owner.id}
+                                            value={owner.id}
+                                        >
+                                            {owner.name}
+                                        </SelectItem>
+                                    ),
+                                )}
                             </SelectContent>
                         </Select>
 

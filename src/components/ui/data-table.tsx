@@ -1,6 +1,8 @@
 import {
     type ColumnDef,
     type ColumnFiltersState,
+    type OnChangeFn, // Import OnChangeFn
+    type RowSelectionState, // Import RowSelectionState
     type SortingState,
     type VisibilityState,
     flexRender,
@@ -50,6 +52,9 @@ interface DataTableProps<TData, TValue> {
     searchPlaceholder?: string;
     showColumnToggle?: boolean;
     showPagination?: boolean;
+    // Add props for controlled row selection
+    rowSelection?: RowSelectionState;
+    onRowSelectionChange?: OnChangeFn<RowSelectionState>;
 }
 
 export function DataTable<TData, TValue>({
@@ -59,13 +64,17 @@ export function DataTable<TData, TValue>({
     searchPlaceholder = "Search...",
     showColumnToggle = true,
     showPagination = true,
+    // Destructure new props
+    rowSelection,
+    onRowSelectionChange,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
         {},
     );
-    const [rowSelection, setRowSelection] = useState({});
+    // Remove internal row selection state
+    // const [rowSelection, setRowSelection] = useState({});
 
     const table = useReactTable({
         data,
@@ -73,7 +82,8 @@ export function DataTable<TData, TValue>({
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         onColumnVisibilityChange: setColumnVisibility,
-        onRowSelectionChange: setRowSelection,
+        // Use props for row selection
+        onRowSelectionChange: onRowSelectionChange,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
@@ -82,8 +92,13 @@ export function DataTable<TData, TValue>({
             sorting,
             columnFilters,
             columnVisibility,
+            // Use prop for row selection state
             rowSelection,
         },
+        // Conditionally enable row selection features if handler is provided
+        enableRowSelection: !!onRowSelectionChange,
+        // enableMultiRowSelection: true, // Optional: Keep default or make configurable
+        // enableSubRowSelection: false, // Optional: Keep default or make configurable
     });
 
     return (
