@@ -6,36 +6,34 @@ import {
     type VisibilityState,
     flexRender,
     getCoreRowModel,
-    getFacetedRowModel, // Often needed for DataTableFilter
-    getFacetedUniqueValues, // Often needed for DataTableFilter
-    getFilteredRowModel, // Keep this
+    getFacetedRowModel,
+    getFacetedUniqueValues,
+    getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
-    // Import filter function type if provided by Tanstack Table or your filter component
-    // FilterFnOption,
 } from "@tanstack/react-table";
 import {
     ArrowUpDown,
-    BuildingIcon, // Icon for Department
-    CalendarIcon, // Icon for Last Active (Date)
-    CheckCircleIcon, // Icon for Active Status
+    BuildingIcon,
+    CalendarIcon,
+    CheckCircleIcon,
     ChevronDown,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
     FingerprintIcon,
-    IdCardIcon, // Icon for ID Number
-    ListFilterIcon, // Generic Filter Icon or for Status
+    IdCardIcon,
+    ListFilterIcon,
     MoreHorizontal,
     PhoneIcon,
     UserCheck,
-    UserIcon, // Icon for User Name
+    UserIcon,
     UserX,
     UsersIcon,
-    VerifiedIcon, // Icon for Role
-    XCircleIcon, // Icon for Inactive Status
+    VerifiedIcon,
+    XCircleIcon,
 } from "lucide-react";
 import * as React from "react";
 
@@ -59,8 +57,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-// Remove the direct Input import if DataTableFilter handles all filtering
-// import { Input } from "@/components/ui/input"
 import {
     Table,
     TableBody,
@@ -70,15 +66,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 
-// --- Import your custom filter components ---
-// Adjust the import path as necessary
 import { DataTableFilter } from "@/components/data-table-filter";
-import {
-    type UpdateUserInputFE,
-    activateUser,
-    deactivateUser,
-    updateUser,
-} from "@/lib/api"; // Import UpdateUserInputFE
+import { activateUser, deactivateUser, updateUser } from "@/lib/api";
 import {
     deleteDialogAtom,
     editDialogAtom,
@@ -86,9 +75,10 @@ import {
 } from "@/lib/atoms";
 import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
-import { usersQueryOptions } from "@/lib/query";
-import type { UserFormInput } from "@/lib/schema";
-import { DEPARTMENTS, ROLES, type UserRole, type UserType } from "@/lib/types"; // Import UserRole
+import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
+import type { EditUserFormInput, UserFormInput } from "@/lib/schema";
+// Remove DEPARTMENTS constant import
+import { ROLES, type UserRole, type UserType } from "@/lib/types";
 import {
     useMutation,
     useQueryClient,
@@ -100,9 +90,7 @@ import { toast } from "sonner";
 import { ActivateConfirmDialog } from "./activateConfirmDialog";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 import { EditUserFormDialog } from "./editUserFormDialog";
-// --- End Import ---
 
-// The main DataTable component
 export function UserDataTable() {
     const context = useRouteContext({ from: "/app/user-management" });
     const queryClient = context.queryClient;
@@ -118,19 +106,39 @@ export function UserDataTable() {
     const [activateDialogOpen, setActivateDialogOpen] = React.useState(false);
 
     const { data: initialUsers } = useSuspenseQuery(usersQueryOptions);
+    // Fetch actual departments data
+    const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
+
+    const departmentMap = React.useMemo(() => {
+        const map = new Map<number, string>();
+        for (const dept of departmentsData ?? []) {
+            map.set(dept.id, dept.name);
+        }
+        return map;
+    }, [departmentsData]);
+
+    const usersWithDeptNames = React.useMemo(() => {
+        return (initialUsers ?? []).map((user: UserType) => ({
+            ...user,
+            departmentName:
+                departmentMap.get(Number(user.departmentId)) ?? "Unknown Dept",
+        }));
+    }, [initialUsers, departmentMap]);
+
+    console.log("usersWithDeptNames", usersWithDeptNames);
 
     // --- Mutations ---
     const updateUserMutation = useMutation({
-        // Pass userId and payload to mutationFn
         mutationFn: ({
             userId,
             payload,
+            imageFile,
         }: {
             userId: string;
-            payload: Partial<UpdateUserInputFE>; // Use the type expected by updateUser
-        }) => updateUser(userId, payload),
+            payload: EditUserFormInput;
+            imageFile?: File | null;
+        }) => updateUser({ userId, userData: payload, imageFile }),
         onMutate: async ({ userId, payload }) => {
-            // Destructure args
             await queryClient.cancelQueries({
                 queryKey: usersQueryOptions.queryKey,
             });
@@ -138,43 +146,47 @@ export function UserDataTable() {
                 usersQueryOptions.queryKey,
             );
 
-            // Find department label for optimistic update using departmentId
-            const deptLabel =
-                payload.departmentId !== undefined &&
-                payload.departmentId !== null // Check if departmentId is provided and not null
-                    ? DEPARTMENTS.find(
-                          (d) => d.value === payload.departmentId, // Compare with number ID
-                      )?.label
-                    : undefined; // If departmentId is null or undefined, keep label undefined
-
             queryClient.setQueryData<UserType[]>(
                 usersQueryOptions.queryKey,
                 (old = []) =>
                     old.map((user) => {
-                        if (user.id !== userId) return user; // Use userId from args
+                        if (user.id !== userId) return user;
 
-                        // Construct the updated user object carefully
-                        const updatedUser = {
+                        const updatedUser: UserType = {
                             ...user,
-                            ...payload, // Apply payload changes (firstName, lastName, etc.)
-                            // Explicitly handle role update with cast if payload.role exists
+                            // Apply basic payload fields directly
+                            ...(payload.firstName && {
+                                firstName: payload.firstName,
+                            }),
+                            ...(payload.lastName && {
+                                lastName: payload.lastName,
+                            }),
+                            ...(payload.idNumber && {
+                                idNumber: payload.idNumber,
+                            }),
+                            ...(payload.phoneNumber && {
+                                phoneNumber: payload.phoneNumber,
+                            }),
+                            ...(payload.telephoneNumber && {
+                                telephoneNumber: payload.telephoneNumber,
+                            }),
+                            // Handle role update
                             role:
                                 payload.role !== undefined
                                     ? (payload.role as UserRole)
                                     : user.role,
-                            // Update departmentId and department label based on payload.departmentId
+                            // Update departmentId and department name based on payload
                             departmentId:
-                                payload.departmentId !== undefined // If departmentId is in payload (even if null)
-                                    ? payload.departmentId // Use the value from payload (can be number or null)
-                                    : user.departmentId, // Otherwise, keep the old ID
-                            department:
-                                payload.departmentId !== undefined // If departmentId was in payload
-                                    ? (deptLabel ?? // Use the found label (or null if deptId was null)
-                                      (payload.departmentId === null
-                                          ? ""
-                                          : "Unknown Dept")) // Handle null ID explicitly or fallback
-                                    : user.department, // Otherwise, keep the old label
-                            password: user.password, // Keep existing password hash/undefined
+                                payload.departmentId !== undefined
+                                    ? payload.departmentId // Use payload value (number or null)
+                                    : user.departmentId, // Keep old ID if not in payload
+                            email: user.email,
+                            password: user.password,
+                            emailVerified: user.emailVerified,
+                            active: user.active,
+                            createdAt: user.createdAt,
+                            profileImagePath: user.profileImagePath,
+                            // Update updatedAt timestamp
                             updatedAt: new Date().toISOString(),
                         };
                         return updatedUser;
@@ -183,7 +195,6 @@ export function UserDataTable() {
             return { previousUsers };
         },
         onError: (err, variables, context) => {
-            // variables includes userId and payload
             if (context?.previousUsers) {
                 queryClient.setQueryData(
                     usersQueryOptions.queryKey,
@@ -195,7 +206,6 @@ export function UserDataTable() {
             toast.error(errorMessage);
         },
         onSuccess: (data) => {
-            // Backend returns string message
             toast.success(data || "User updated successfully");
             setEditDialogOpen(false);
             setSelectedUser(null);
@@ -204,13 +214,14 @@ export function UserDataTable() {
             queryClient.invalidateQueries({
                 queryKey: usersQueryOptions.queryKey,
             });
+            // Also invalidate departments if the update could affect department heads shown elsewhere
+            // queryClient.invalidateQueries({ queryKey: departmentsQueryOptions.queryKey });
         },
     });
 
     const deactivateUserMutation = useMutation({
-        mutationFn: deactivateUser, // API function expects userId string
+        mutationFn: deactivateUser,
         onMutate: async (userId: string) => {
-            // Expect userId string
             await queryClient.cancelQueries({
                 queryKey: usersQueryOptions.queryKey,
             });
@@ -221,8 +232,12 @@ export function UserDataTable() {
                 usersQueryOptions.queryKey,
                 (old = []) =>
                     old.map((user) =>
-                        user.id === userId // Match by ID
-                            ? { ...user, active: false } // Optimistically set active to false
+                        user.id === userId
+                            ? {
+                                  ...user,
+                                  active: false,
+                                  updatedAt: new Date().toISOString(),
+                              }
                             : user,
                     ),
             );
@@ -242,9 +257,8 @@ export function UserDataTable() {
             toast.error(errorMessage);
         },
         onSuccess: (data) => {
-            // Backend returns string message
             toast.success(data || "User deactivated successfully");
-            setDeleteDialogOpen(false); // Close the correct dialog
+            setDeleteDialogOpen(false);
             setSelectedUser(null);
         },
         onSettled: () => {
@@ -254,11 +268,9 @@ export function UserDataTable() {
         },
     });
 
-    // Add activateUserMutation
     const activateUserMutation = useMutation({
-        mutationFn: activateUser, // API function expects userId string
+        mutationFn: activateUser,
         onMutate: async (userId: string) => {
-            // Expect userId string
             await queryClient.cancelQueries({
                 queryKey: usersQueryOptions.queryKey,
             });
@@ -269,8 +281,12 @@ export function UserDataTable() {
                 usersQueryOptions.queryKey,
                 (old = []) =>
                     old.map((user) =>
-                        user.id === userId // Match by ID
-                            ? { ...user, active: true } // Optimistically set active to true
+                        user.id === userId
+                            ? {
+                                  ...user,
+                                  active: true,
+                                  updatedAt: new Date().toISOString(),
+                              }
                             : user,
                     ),
             );
@@ -288,9 +304,8 @@ export function UserDataTable() {
             toast.error(errorMessage);
         },
         onSuccess: (data) => {
-            // Backend returns string message
             toast.success(data || "User activated successfully");
-            setActivateDialogOpen(false); // Close the activate dialog if used
+            setActivateDialogOpen(false);
             setSelectedUser(null);
         },
         onSettled: () => {
@@ -299,70 +314,35 @@ export function UserDataTable() {
             });
         },
     });
-
     // --- End Mutations ---
 
     // --- Event Handlers ---
-    const handleEditUser = (
-        userData: Partial<Omit<UserFormInput, "confirmPassword">>,
-    ) => {
+    // onSubmit for EditUserFormDialog
+    const handleEditUserSubmit = (payload: EditUserFormInput) => {
         if (!selectedUser) return;
-
-        // Map department string ID back to number if present
-        const departmentId = userData.department
-            ? Number.parseInt(userData.department, 10)
-            : undefined;
-        if (userData.department && Number.isNaN(departmentId!)) {
-            toast.error("Invalid Department ID selected for update.");
-            return;
-        }
-
-        // Prepare payload for the API (UpdateUserInputFE)
-        const apiPayload: Partial<
-            Omit<
-                UserType,
-                | "id"
-                | "createdAt"
-                | "updatedAt"
-                | "emailVerified"
-                | "department"
-            >
-        > & { departmentId?: number | null } = {};
-
-        if (userData.firstName !== undefined)
-            apiPayload.firstName = userData.firstName;
-        if (userData.lastName !== undefined)
-            apiPayload.lastName = userData.lastName;
-        if (userData.idNumber !== undefined)
-            apiPayload.idNumber = userData.idNumber;
-        if (userData.role !== undefined)
-            apiPayload.role = userData.role as UserRole; // Cast to UserRole
-        if (departmentId !== undefined) apiPayload.departmentId = departmentId; // Use numeric ID
-        if (userData.telephoneNumber !== undefined)
-            apiPayload.telephoneNumber = userData.telephoneNumber;
-        if (userData.phoneNumber !== undefined)
-            apiPayload.phoneNumber = userData.phoneNumber || "";
-        if (userData.active !== undefined) apiPayload.active = userData.active;
-        if (userData.password) apiPayload.password = userData.password; // Include password only if provided
-
+        // Note: The payload from EditUserFormDialog already contains departmentId (number | null)
+        // and other fields matching UpdateUserInputFE.
+        // If image upload is needed from the edit dialog, it needs to be handled here too.
         updateUserMutation.mutate({
             userId: selectedUser.id,
-            payload: apiPayload,
+            payload: payload,
+            // imageFile: /* pass image file if collected from dialog */,
         });
     };
 
     const handleDeactivateUser = () => {
         if (selectedUser) {
-            deactivateUserMutation.mutate(selectedUser.id); // Pass only the ID
+            deactivateUserMutation.mutate(selectedUser.id);
         }
     };
 
-    // Add handler for activation
     const handleActivateUser = () => {
         if (selectedUser) {
-            activateUserMutation.mutate(selectedUser.id); // Pass only the ID
+            activateUserMutation.mutate(selectedUser.id);
         }
     };
+
+    // --- Filter Options ---
     const ACTIVE_OPTIONS = React.useMemo(() => {
         const users = initialUsers || [];
         const uniqueActiveStates = Array.from(
@@ -370,7 +350,7 @@ export function UserDataTable() {
         ) as boolean[];
         return uniqueActiveStates.map((isActive) => ({
             value: String(isActive),
-            label: isActive ? "Active" : "Inactive", // Use more descriptive labels
+            label: isActive ? "Active" : "Inactive",
             icon: isActive ? CheckCircleIcon : XCircleIcon,
         }));
     }, [initialUsers]);
@@ -382,31 +362,29 @@ export function UserDataTable() {
         ) as boolean[];
         return uniqueVerifiedStates.map((isVerified) => ({
             value: String(isVerified),
-            label: isVerified ? "Verified" : "Not Verified", // Descriptive labels
-            icon: isVerified ? VerifiedIcon : XCircleIcon, // Use VerifiedIcon
+            label: isVerified ? "Verified" : "Not Verified",
+            icon: isVerified ? VerifiedIcon : XCircleIcon,
         }));
     }, [initialUsers]);
 
     const ROLE_OPTIONS = React.useMemo(
         () =>
             ROLES.map((role) => ({
-                // Use predefined ROLES for consistency
                 value: role.value,
                 label: role.label,
-                // Add icon if desired
             })),
-        [], // ROLES is constant
+        [],
     );
 
+    // Derive DEPARTMENT_OPTIONS from fetched departmentsData
     const DEPARTMENT_OPTIONS = React.useMemo(
         () =>
-            DEPARTMENTS.map((dept) => ({
-                // Use predefined DEPARTMENTS
-                value: String(dept.value), // Use string ID for filter value
-                label: dept.label,
+            (departmentsData ?? []).map((dept) => ({
+                value: dept.name,
+                label: dept.name,
                 icon: BuildingIcon,
             })),
-        [], // DEPARTMENTS is constant
+        [departmentsData],
     );
 
     // --- Define the columns with filter metadata ---
@@ -438,7 +416,7 @@ export function UserDataTable() {
                 enableSorting: false,
                 enableHiding: false,
             },
-            // ... User column (Name, Email, Avatar) ...
+            // ... User column ...
             {
                 accessorFn: (row) => `${row.firstName} ${row.lastName}`,
                 id: "name",
@@ -462,6 +440,12 @@ export function UserDataTable() {
                     return (
                         <div className="flex items-center space-x-3">
                             <Avatar>
+                                {user.profileImagePath && (
+                                    <AvatarImage
+                                        src={user.profileImagePath}
+                                        alt={fullName}
+                                    />
+                                )}
                                 <AvatarFallback>{getInitials()}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -492,7 +476,7 @@ export function UserDataTable() {
                 meta: defineMeta((row: UserType) => row.idNumber, {
                     displayName: "ID Number",
                     type: "text",
-                    icon: FingerprintIcon,
+                    icon: FingerprintIcon, // Changed icon
                 }) as ColumnMeta<UserType, unknown>,
             },
             // ... Role column ...
@@ -514,14 +498,30 @@ export function UserDataTable() {
                     const roleInfo = ROLES.find(
                         (role) => role.value === roleValue,
                     );
-                    const getBadgeVariant = (role: string) => {
-                        /* ...badge logic... */ return "";
-                    }; // Keep your badge logic
+                    // Define or import getBadgeVariant logic if needed
+                    const getBadgeVariant = (role: string): string => {
+                        switch (role) {
+                            case "SUPER_ADMIN":
+                                return "bg-red-100 text-red-800";
+                            case "VP_ADMIN":
+                                return "bg-purple-100 text-purple-800";
+                            case "ORGANIZER":
+                                return "bg-blue-100 text-blue-800";
+                            case "DEPT_HEAD":
+                                return "bg-yellow-100 text-yellow-800";
+                            case "VENUE_OWNER":
+                                return "bg-indigo-100 text-indigo-800";
+                            case "EQUIPMENT_OWNER":
+                                return "bg-teal-100 text-teal-800";
+                            default:
+                                return "bg-gray-100 text-gray-800";
+                        }
+                    };
 
                     return (
                         <Badge
                             className={`font-medium capitalize px-2 py-0.5 ${getBadgeVariant(roleValue)}`}
-                            variant="outline"
+                            variant="outline" // Base variant, colors applied via className
                         >
                             {roleInfo ? roleInfo.label : roleValue}
                         </Badge>
@@ -532,7 +532,7 @@ export function UserDataTable() {
                     displayName: "Role",
                     type: "option",
                     icon: UsersIcon,
-                    options: ROLE_OPTIONS, // Use updated ROLE_OPTIONS
+                    options: ROLE_OPTIONS,
                 }) as ColumnMeta<UserType, unknown>,
             },
             // ... Phone Number column ...
@@ -560,9 +560,9 @@ export function UserDataTable() {
                     icon: PhoneIcon,
                 }) as ColumnMeta<UserType, unknown>,
             },
-            // ... Department column ...
+            // --- Department column ---
             {
-                accessorKey: "department", // Display the department string name
+                accessorKey: "departmentName",
                 header: ({ column }) => (
                     <Button
                         variant="ghost"
@@ -574,16 +574,19 @@ export function UserDataTable() {
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 ),
-                cell: ({ row }) => <div>{row.getValue("department")}</div>,
-                // Filter using departmentId (represented as string in options)
+                cell: ({ row }) => (
+                    <div>{row.getValue("departmentName") || "-"}</div>
+                ),
                 filterFn: filterFn("option"),
-                meta: defineMeta((row: UserType) => String(row.departmentId), {
-                    // Filter by string ID
-                    displayName: "Department",
-                    type: "option",
-                    icon: BuildingIcon,
-                    options: DEPARTMENT_OPTIONS, // Use updated DEPARTMENT_OPTIONS
-                }) as ColumnMeta<UserType, unknown>,
+                meta: defineMeta(
+                    (row: UserType) => String(row.departmentId ?? ""),
+                    {
+                        displayName: "Department",
+                        type: "option",
+                        icon: BuildingIcon,
+                        options: DEPARTMENT_OPTIONS,
+                    },
+                ) as ColumnMeta<UserType, unknown>,
             },
             // ... Verified column ...
             {
@@ -594,7 +597,7 @@ export function UserDataTable() {
                     return (
                         <Badge
                             variant={emailVerified ? "default" : "outline"}
-                            className={`capitalize ${emailVerified ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`} // Example styling
+                            className={`capitalize ${emailVerified ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
                         >
                             {emailVerified ? "Verified" : "Not Verified"}
                         </Badge>
@@ -605,19 +608,19 @@ export function UserDataTable() {
                     displayName: "Verified",
                     type: "option",
                     icon: VerifiedIcon,
-                    options: VERIFIED_OPTIONS, // Use updated options
+                    options: VERIFIED_OPTIONS,
                 }) as ColumnMeta<UserType, unknown>,
             },
             // ... Active column ...
             {
                 accessorKey: "active",
-                header: "Status", // Rename header for clarity
+                header: "Status",
                 cell: ({ row }) => {
                     const isActive = row.original.active;
                     return (
                         <Badge
-                            variant={isActive ? "default" : "destructive"} // Use destructive for inactive
-                            className={`capitalize ${isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`} // Example styling
+                            variant={isActive ? "default" : "destructive"}
+                            className={`capitalize ${isActive ? "bg-green-100 text-green-800" : "bg-destructive text-destructive-foreground"}`}
                         >
                             {isActive ? "Active" : "Inactive"}
                         </Badge>
@@ -625,10 +628,10 @@ export function UserDataTable() {
                 },
                 filterFn: filterFn("option"),
                 meta: defineMeta((row: UserType) => String(row.active), {
-                    displayName: "Status", // Match header
+                    displayName: "Status",
                     type: "option",
                     icon: ListFilterIcon,
-                    options: ACTIVE_OPTIONS, // Use updated options
+                    options: ACTIVE_OPTIONS,
                 }) as ColumnMeta<UserType, unknown>,
             },
             // ... Created At column ...
@@ -661,7 +664,7 @@ export function UserDataTable() {
                             day: "numeric",
                             hour: "2-digit",
                             minute: "2-digit",
-                            hour12: true, // Use AM/PM
+                            hour12: true,
                         }).format(date);
                         return (
                             <div className="text-right font-medium">
@@ -704,8 +707,8 @@ export function UserDataTable() {
                     const [, setEditDialogOpen] = useAtom(editDialogAtom);
                     const [, setSelectedUser] = useAtom(selectedUserAtom);
                     const [, setDeleteDialogOpen] = useAtom(deleteDialogAtom);
-                    // Add setter for activate dialog if using separate one
-                    // const [, setActivateDialogOpen] = useAtom(activateDialogAtom);
+                    // Use the state setter directly, not from atom
+                    // const [, setActivateDialogOpen] = useAtom(activateDialogAtom); // Remove if using local state
 
                     return (
                         <DropdownMenu>
@@ -719,42 +722,38 @@ export function UserDataTable() {
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem
                                     onClick={() => {
-                                        setSelectedUser(user); // Set user first
-                                        setEditDialogOpen(true); // Then open dialog
+                                        setSelectedUser(user);
+                                        setEditDialogOpen(true);
                                     }}
                                 >
                                     <UserIcon className="mr-2 h-4 w-4" /> Edit
                                     User
                                 </DropdownMenuItem>
-                                {/* Add View Details if needed */}
-                                {/* <DropdownMenuItem onClick={() => console.log(`Viewing details for: ${user.id}`)}>
-                                    View Details
-                                </DropdownMenuItem> */}
                                 <DropdownMenuSeparator />
                                 {user.active ? (
                                     <DropdownMenuItem
-                                        className="text-destructive"
+                                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
                                         onClick={() => {
                                             setSelectedUser(user);
                                             setDeleteDialogOpen(true);
                                         }}
                                         disabled={
                                             deactivateUserMutation.isPending
-                                        } // Disable while mutation runs
+                                        }
                                     >
                                         <UserX className="mr-2 h-4 w-4" />{" "}
                                         Deactivate User
                                     </DropdownMenuItem>
                                 ) : (
                                     <DropdownMenuItem
-                                        className="text-green-600" // Style for activate
+                                        className="text-green-600 focus:text-green-700 focus:bg-green-100"
                                         onClick={() => {
                                             setSelectedUser(user);
-                                            setActivateDialogOpen(true);
+                                            setActivateDialogOpen(true); // Use local state setter
                                         }}
                                         disabled={
                                             activateUserMutation.isPending
-                                        } // Disable while mutation runs
+                                        }
                                     >
                                         <UserCheck className="mr-2 h-4 w-4" />{" "}
                                         Activate User
@@ -769,124 +768,142 @@ export function UserDataTable() {
         ],
         [
             ROLE_OPTIONS,
-            DEPARTMENT_OPTIONS,
+            DEPARTMENT_OPTIONS, // Use derived options
             ACTIVE_OPTIONS,
             VERIFIED_OPTIONS,
             deactivateUserMutation.isPending,
             activateUserMutation.isPending,
-        ], // Add mutation pending states to dependencies
+        ],
     );
 
     const table = useReactTable({
-        data: initialUsers || [],
+        data: usersWithDeptNames || [],
         columns,
         state: {
-            // Order matters for state dependencies
             sorting,
             columnVisibility,
             rowSelection,
             columnFilters,
         },
-        // --- Enable features needed by DataTableFilter ---
-        onColumnFiltersChange: setColumnFilters, // Connect filter state
-        getFilteredRowModel: getFilteredRowModel(), // Basic filtering
-        getFacetedRowModel: getFacetedRowModel(), // Needed for list-based filters
-        getFacetedUniqueValues: getFacetedUniqueValues(), // Needed for list-based filters
-        // --- End Enable features ---
+        onColumnFiltersChange: setColumnFilters,
+        getFilteredRowModel: getFilteredRowModel(),
+        getFacetedRowModel: getFacetedRowModel(),
+        getFacetedUniqueValues: getFacetedUniqueValues(),
         onSortingChange: setSorting,
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         getSortedRowModel: getSortedRowModel(),
-        // Optional: Define column meta globally if needed, though per-column is shown above
-        // meta: {},
-        // debugTable: true, // Uncomment for debugging
-        // debugHeaders: true,
-        // debugColumns: true,
     });
+
+    // Prepare departments prop for the dialog
+    const dialogDepartments = React.useMemo(
+        () =>
+            (departmentsData ?? []).map((d) => ({
+                value: String(d.id), // String ID for value
+                label: d.name, // Name for label
+            })),
+        [departmentsData],
+    );
 
     return (
         <div className="w-full space-y-4">
-            <div className="flex items-center justify-end">
+            {/* ... Filter/Column Toggle UI ... */}
+            <div className="flex items-center justify-between">
+                {" "}
+                {/* Changed justify-end to justify-between */}
+                {/* Filter Component */}
                 <DataTableFilter table={table} />
-                {Object.keys(table.getState().rowSelection).length > 0 && (
-                    <Button
-                        variant="destructive"
-                        className="ml-2 h-7 !px-2"
-                        onClick={() => {
-                            const selectedRowIds = Object.keys(
-                                table.getState().rowSelection,
-                            );
-                            console.log(
-                                "Deleting rows with ids:",
-                                selectedRowIds,
-                            );
-                            // TODO: Add deletion logic here
-                        }}
-                    >
-                        Delete
-                    </Button>
-                )}
-                {/* Position it */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="ml-2">
-                            Columns <ChevronDown className="ml-2 h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        {table
-                            .getAllColumns()
-                            .filter((column) => column.getCanHide()) // Filter out non-hidable columns (select, actions)
-                            .map((column) => {
-                                // Use displayName from meta if available, otherwise format ID
-                                const displayName =
-                                    (
-                                        column.columnDef.meta as
-                                            | { displayName?: string }
-                                            | undefined
-                                    )?.displayName || column.id;
-                                return (
-                                    <DropdownMenuCheckboxItem
-                                        key={column.id}
-                                        className="capitalize"
-                                        checked={column.getIsVisible()}
-                                        onCheckedChange={(value) =>
-                                            column.toggleVisibility(!!value)
-                                        }
-                                    >
-                                        {displayName}
-                                    </DropdownMenuCheckboxItem>
+                {/* Right-aligned Buttons */}
+                <div className="flex items-center space-x-2">
+                    {Object.keys(table.getState().rowSelection).length > 0 && (
+                        <Button
+                            variant="destructive"
+                            size="sm" // Use size prop
+                            className="h-8" // Keep height consistent if needed
+                            onClick={() => {
+                                const selectedRowIds = Object.keys(
+                                    table.getState().rowSelection,
                                 );
-                            })}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                                const selectedUsers = table
+                                    .getSelectedRowModel()
+                                    .rows.map((row) => row.original);
+                                console.log("Deleting users:", selectedUsers);
+                                // TODO: Implement bulk delete mutation
+                                // bulkDeleteMutation.mutate(selectedUsers.map(u => u.id));
+                                toast.warning(
+                                    "Bulk delete not yet implemented.",
+                                );
+                            }}
+                        >
+                            Delete (
+                            {Object.keys(table.getState().rowSelection).length})
+                        </Button>
+                    )}
+                    {/* Column Visibility Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="h-8">
+                                {" "}
+                                {/* Consistent height */}
+                                Columns <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {table
+                                .getAllColumns()
+                                .filter((column) => column.getCanHide())
+                                .map((column) => {
+                                    const displayName =
+                                        (
+                                            column.columnDef.meta as
+                                                | { displayName?: string }
+                                                | undefined
+                                        )?.displayName || column.id;
+                                    return (
+                                        <DropdownMenuCheckboxItem
+                                            key={column.id}
+                                            className="capitalize"
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) =>
+                                                column.toggleVisibility(!!value)
+                                            }
+                                        >
+                                            {displayName}
+                                        </DropdownMenuCheckboxItem>
+                                    );
+                                })}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
-            {/* --- Table Rendering (remains mostly the same) --- */}
+            {/* --- Table Rendering --- */}
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead
-                                            key={header.id}
-                                            colSpan={header.colSpan}
-                                        >
-                                            {" "}
-                                            {/* Add colSpan */}
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext(),
-                                                  )}
-                                        </TableHead>
-                                    );
-                                })}
+                                {headerGroup.headers.map((header) => (
+                                    <TableHead
+                                        key={header.id}
+                                        colSpan={header.colSpan}
+                                        style={{
+                                            width:
+                                                header.getSize() !== 150
+                                                    ? `${header.getSize()}px`
+                                                    : undefined,
+                                        }} // Apply width if not default
+                                    >
+                                        {header.isPlaceholder
+                                            ? null
+                                            : flexRender(
+                                                  header.column.columnDef
+                                                      .header,
+                                                  header.getContext(),
+                                              )}
+                                    </TableHead>
+                                ))}
                             </TableRow>
                         ))}
                     </TableHeader>
@@ -896,11 +913,22 @@ export function UserDataTable() {
                                 <TableRow
                                     key={row.id}
                                     data-state={
-                                        row.getIsSelected() && "selected"
+                                        row.getIsSelected()
+                                            ? "selected"
+                                            : undefined
                                     }
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
+                                        <TableCell
+                                            key={cell.id}
+                                            style={{
+                                                width:
+                                                    cell.column.getSize() !==
+                                                    150
+                                                        ? `${cell.column.getSize()}px`
+                                                        : undefined,
+                                            }}
+                                        >
                                             {flexRender(
                                                 cell.column.columnDef.cell,
                                                 cell.getContext(),
@@ -912,7 +940,7 @@ export function UserDataTable() {
                         ) : (
                             <TableRow>
                                 <TableCell
-                                    colSpan={table.getAllColumns().length} // Use dynamic colspan
+                                    colSpan={columns.length} // Use columns length
                                     className="h-24 text-center"
                                 >
                                     No results.
@@ -922,94 +950,90 @@ export function UserDataTable() {
                     </TableBody>
                 </Table>
             </div>
-            {/* --- Pagination and Selection Count (remains the same) --- */}
+            {/* --- Pagination --- */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <p className="text-sm text-muted-foreground">
-                        Showing{" "}
-                        <strong>
-                            {table.getState().pagination.pageIndex *
-                                table.getState().pagination.pageSize +
-                                1}
-                            -
-                            {Math.min(
-                                (table.getState().pagination.pageIndex + 1) *
-                                    table.getState().pagination.pageSize,
-                                table.getFilteredRowModel().rows.length,
-                            )}
-                        </strong>{" "}
-                        of{" "}
-                        <strong>
-                            {table.getFilteredRowModel().rows.length}
-                        </strong>{" "}
-                        results
-                    </p>
-                    <Select
-                        value={table.getState().pagination.pageSize.toString()}
-                        onValueChange={(value) => {
-                            table.setPageSize(Number(value));
-                        }}
-                    >
-                        <SelectTrigger className="h-8 w-[70px]">
-                            <SelectValue
-                                placeholder={
-                                    table.getState().pagination.pageSize
-                                }
-                            />
-                        </SelectTrigger>
-                        <SelectContent side="top">
-                            {[5, 10, 20, 30, 40, 50].map((pageSize) => (
-                                <SelectItem
-                                    key={pageSize}
-                                    value={pageSize.toString()}
-                                >
-                                    {pageSize}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                {/* Row Selection Count */}
+                <div className="flex-1 text-sm text-muted-foreground">
+                    {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                    {table.getFilteredRowModel().rows.length} row(s) selected.
                 </div>
-                <div className="flex items-center space-x-2">
-                    <Button
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        onClick={() => table.setPageIndex(0)}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        <span className="sr-only">Go to first page</span>
-                        <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        <span className="sr-only">Go to previous page</span>
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        <span className="sr-only">Go to next page</span>
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        onClick={() =>
-                            table.setPageIndex(table.getPageCount() - 1)
-                        }
-                        disabled={!table.getCanNextPage()}
-                    >
-                        <span className="sr-only">Go to last page</span>
-                        <ChevronsRight className="h-4 w-4" />
-                    </Button>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center space-x-6 lg:space-x-8">
+                    <div className="flex items-center space-x-2">
+                        <p className="text-sm font-medium">Rows per page</p>
+                        <Select
+                            value={`${table.getState().pagination.pageSize}`}
+                            onValueChange={(value) => {
+                                table.setPageSize(Number(value));
+                            }}
+                        >
+                            <SelectTrigger className="h-8 w-[70px]">
+                                <SelectValue
+                                    placeholder={
+                                        table.getState().pagination.pageSize
+                                    }
+                                />
+                            </SelectTrigger>
+                            <SelectContent side="top">
+                                {[5, 10, 20, 30, 40, 50].map((pageSize) => (
+                                    <SelectItem
+                                        key={pageSize}
+                                        value={`${pageSize}`}
+                                    >
+                                        {pageSize}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                        Page {table.getState().pagination.pageIndex + 1} of{" "}
+                        {table.getPageCount()}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Button
+                            variant="outline"
+                            className="hidden h-8 w-8 p-0 lg:flex"
+                            onClick={() => table.setPageIndex(0)}
+                            disabled={!table.getCanPreviousPage()}
+                        >
+                            <span className="sr-only">Go to first page</span>
+                            <ChevronsLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                        >
+                            <span className="sr-only">Go to previous page</span>
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="h-8 w-8 p-0"
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                        >
+                            <span className="sr-only">Go to next page</span>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="hidden h-8 w-8 p-0 lg:flex"
+                            onClick={() =>
+                                table.setPageIndex(table.getPageCount() - 1)
+                            }
+                            disabled={!table.getCanNextPage()}
+                        >
+                            <span className="sr-only">Go to last page</span>
+                            <ChevronsRight className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </div>
+            {/* --- Dialogs --- */}
             {selectedUser && (
                 <EditUserFormDialog
                     isOpen={editDialogOpen}
@@ -1018,18 +1042,13 @@ export function UserDataTable() {
                         setSelectedUser(null);
                     }}
                     isLoading={updateUserMutation.isPending}
-                    onSubmit={handleEditUser}
-                    user={selectedUser} // Pass selectedUser which matches EditUser type
+                    onSubmit={handleEditUserSubmit}
+                    user={selectedUser}
                     roles={ROLES}
-                    // Map department IDs back to strings for the dialog's Select
-                    departments={DEPARTMENTS.map((d) => ({
-                        value: String(d.value),
-                        label: d.label,
-                    }))}
+                    departments={departmentsData}
                 />
             )}
 
-            {/* Deactivate Dialog */}
             {selectedUser && (
                 <DeleteConfirmDialog
                     isOpen={deleteDialogOpen}

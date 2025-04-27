@@ -8,8 +8,7 @@ export type UserType = {
     email: string;
     role: UserRole; // Use the specific UserRole union type
     password: string | undefined;
-    department: string;
-    departmentId: number | null;
+    departmentId: string | null;
     telephoneNumber: string;
     phoneNumber: string;
     emailVerified: boolean;

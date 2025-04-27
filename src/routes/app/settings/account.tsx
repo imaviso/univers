@@ -207,6 +207,10 @@ export function AccountSettings() {
         },
     });
 
+    const handleDeleteAccount = () => {
+        toast.error("Delete account feature is not implemented yet.");
+    };
+
     const handleProfileChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
@@ -432,6 +436,7 @@ export function AccountSettings() {
 
     // Email Dialog Handlers
     const handleOpenChangeEmailDialog = () => {
+        toast.error("Change email feature is not implemented yet.");
         // Reset state when opening
         setEmailDialogStep("input");
         setEmailForm(initialChangeEmailState);
@@ -815,7 +820,9 @@ export function AccountSettings() {
                     </p>
                 </CardContent>
                 <CardFooter>
-                    <Button variant="destructive">Delete Account</Button>
+                    <Button variant="destructive" onClick={handleDeleteAccount}>
+                        Delete Account
+                    </Button>
                 </CardFooter>
             </Card>
 
