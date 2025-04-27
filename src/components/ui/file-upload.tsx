@@ -962,6 +962,7 @@ const FileUploadItem = React.forwardRef<HTMLDivElement, FileUploadItemProps>(
         return (
             <FileUploadItemContext.Provider value={itemContext}>
                 <ItemPrimitive
+                    // biome-ignore lint/a11y/useSemanticElements: <explanation>
                     role="listitem"
                     id={id}
                     aria-setsize={fileCount}
@@ -1213,6 +1214,7 @@ const FileUploadItemProgress = React.forwardRef<
                     className,
                 )}
             >
+                {/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
                 <svg
                     className="rotate-[-90deg] transform"
                     width={size}
