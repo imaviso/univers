@@ -5,14 +5,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { eventsQueryOptions, venuesQueryOptions } from "@/lib/query"; // Import query options
+import {
+    eventsQueryOptions,
+    getApprovedEventsQuery, // Import query for approved events
+    useCurrentUser, // Import hook to get current user
+    venuesQueryOptions,
+} from "@/lib/query"; // Import query options
 import type { Event } from "@/lib/types"; // Import Event type
 import { formatDateRange, getInitials, getStatusColor } from "@/lib/utils"; // Import helpers
-import { useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
 import { format, getMonth, getYear } from "date-fns"; // Import date functions
 import {
-    // CalendarDays, // Removed, not using Q2 badge anymore
     CheckCircle,
     ChevronRight,
     Circle,
@@ -21,9 +25,6 @@ import {
     Paperclip, // Added for approved letter
     Tag, // Added for event type
 } from "lucide-react";
-
-// Sample timeline data removed
-// const timelineEvents = [ ... ];
 
 // Updated status icon logic based on backend statuses
 const getStatusIcon = (status: string | undefined) => {
@@ -55,15 +56,31 @@ interface MonthGroup {
 
 export function EventTimeline() {
     const navigate = useNavigate();
-    // Fetch events and venues data
-    const { data: events = [] } = useSuspenseQuery(eventsQueryOptions);
+    const { data: currentUser } = useCurrentUser(); // Get current user
+
+    // Fetch venues data
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
+
+    // Fetch approved events (for non-admins)
+    const { data: approvedEvents = [] } = useSuspenseQuery(
+        getApprovedEventsQuery,
+    );
+
+    // Fetch all events (only enabled for SUPER_ADMIN)
+    const { data: allEvents = [] } = useQuery({
+        ...eventsQueryOptions,
+        enabled: currentUser?.role === "SUPER_ADMIN",
+    });
+
+    // Determine the source of events based on user role
+    const timelineEventsSource =
+        currentUser?.role === "SUPER_ADMIN" ? allEvents : approvedEvents;
 
     // Create a map for quick venue lookup
     const venueMap = new Map(venues.map((venue) => [venue.id, venue.name]));
 
-    // Group events by month and year
-    const groupedEvents = events.reduce(
+    // Group events by month and year using the selected source
+    const groupedEvents = timelineEventsSource.reduce(
         (acc, event: Event) => {
             // Ensure startTime is valid before parsing
             if (typeof event.startTime !== "string") {
@@ -95,27 +112,27 @@ export function EventTimeline() {
             }
             acc[groupId].events.push(event);
             // Sort events within the month group by start time
-            acc[groupId].events.sort(
-                (a: { startTime: Date }, b: { startTime: Date }) => {
-                    const timeA = a.startTime
-                        ? new Date(`${a.startTime}Z`).getTime()
-                        : 0;
-                    const timeB = b.startTime
-                        ? new Date(`${b.startTime}Z`).getTime()
-                        : 0;
-                    // Handle potential NaN during sorting
-                    if (Number.isNaN(timeA) && Number.isNaN(timeB)) return 0;
-                    if (Number.isNaN(timeA)) return 1; // Put invalid dates last
-                    if (Number.isNaN(timeB)) return -1;
-                    return timeA - timeB;
-                },
-            );
+            acc[groupId].events.sort((a: Event, b: Event) => {
+                // Use Event type for sorting
+                const timeA = a.startTime
+                    ? new Date(`${a.startTime}Z`).getTime()
+                    : 0;
+                const timeB = b.startTime
+                    ? new Date(`${b.startTime}Z`).getTime()
+                    : 0;
+                // Handle potential NaN during sorting
+                if (Number.isNaN(timeA) && Number.isNaN(timeB)) return 0;
+                if (Number.isNaN(timeA)) return 1; // Put invalid dates last
+                if (Number.isNaN(timeB)) return -1;
+                return timeA - timeB;
+            });
 
             return acc;
         },
         {} as Record<string, MonthGroup>,
     );
 
+    // Sort the month groups
     const timelineData: MonthGroup[] = (
         Object.values(groupedEvents) as MonthGroup[]
     ).sort((a, b) => {
@@ -137,7 +154,6 @@ export function EventTimeline() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Event Timeline</h2>
-                {/* Removed Q2 Badge */}
             </div>
 
             {timelineData.length === 0 ? (
@@ -157,7 +173,6 @@ export function EventTimeline() {
                                     const organizerName = event.organizer
                                         ? `${event.organizer.firstName} ${event.organizer.lastName}`
                                         : "Unknown Organizer";
-                                    // const organizerAvatar = event.organizer?.avatarUrl;
 
                                     // Format date range
                                     let dateDisplayString =
@@ -197,8 +212,6 @@ export function EventTimeline() {
                                                 `temp-${Math.random()}`
                                             }
                                             className="overflow-hidden border-l-4"
-                                            // Optional: Style border based on status
-                                            // style={{ borderLeftColor: ... }}
                                         >
                                             <CardHeader>
                                                 <div className="flex items-start justify-between">
@@ -207,14 +220,12 @@ export function EventTimeline() {
                                                             event.status,
                                                         )}
                                                         <h4 className="font-medium">
-                                                            {event.eventName}{" "}
-                                                            {/* Use eventName */}
+                                                            {event.eventName}
                                                         </h4>
                                                     </div>
                                                     <Badge
                                                         className={`${getStatusColor(event.status)}`}
                                                     >
-                                                        {/* Use actual status */}
                                                         {event.status
                                                             ? event.status
                                                                   .charAt(0)
@@ -240,8 +251,7 @@ export function EventTimeline() {
                                                     <Clock className="h-4 w-4" />
                                                     <span>
                                                         {dateDisplayString}
-                                                    </span>{" "}
-                                                    {/* Use formatted date */}
+                                                    </span>
                                                 </div>
                                                 {/* Venue */}
                                                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
@@ -255,7 +265,6 @@ export function EventTimeline() {
                                                 <div className="flex items-center justify-between gap-2">
                                                     <div className="flex items-center gap-2">
                                                         <Avatar className="h-6 w-6">
-                                                            {/* <AvatarImage src={organizerAvatar} /> */}
                                                             <AvatarFallback>
                                                                 {getInitials(
                                                                     organizerName,

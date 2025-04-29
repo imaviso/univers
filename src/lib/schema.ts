@@ -174,6 +174,66 @@ export const eventSchema = v.pipe(
 export type EventInput = v.InferInput<typeof eventSchema>;
 export type EventOutput = v.InferOutput<typeof eventSchema>;
 
+export const editEventSchema = v.pipe(
+    v.object({
+        eventName: v.optional(
+            v.pipe(
+                v.string(),
+                v.nonEmpty("Event Name cannot be empty if provided"),
+            ),
+        ),
+        eventType: v.optional(
+            v.pipe(
+                v.string(),
+                v.nonEmpty("Event Type cannot be empty if provided"),
+            ),
+        ),
+        eventVenueId: v.optional(
+            v.pipe(
+                v.number("Venue ID must be a number"),
+                v.integer("Venue ID must be an integer"),
+                v.minValue(1, "Please select a valid facility."),
+            ),
+        ),
+        startTime: v.optional(v.date()),
+        endTime: v.optional(v.date()),
+        approvedLetter: v.optional(
+            v.pipe(
+                v.array(
+                    v.pipe(
+                        v.instance(File, "Each item must be a file."),
+                        v.mimeType(
+                            [
+                                "application/pdf",
+                                "image/jpeg",
+                                "image/png",
+                                "image/webp",
+                            ],
+                            "Invalid file type. Please select a PDF or image.",
+                        ),
+                        v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."),
+                    ),
+                    "Approved letter must be a list of files.",
+                ),
+                v.check((arr) => arr.length <= 1, "Only one file allowed."),
+                v.transform((arr) => (arr.length > 0 ? arr[0] : undefined)),
+            ),
+        ),
+    }),
+    v.forward(
+        v.check((input) => {
+            if (input.startTime && input.endTime) {
+                return isBefore(input.startTime, input.endTime);
+            }
+            return true;
+        }, "End date/time cannot be before start date/time."),
+        ["endTime"],
+    ),
+);
+
+export type EditEventInput = v.InferInput<typeof editEventSchema>;
+export type EditEventOutput = v.InferOutput<typeof editEventSchema>;
+
 export const userFormSchema = v.pipe(
     v.object({
         idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),

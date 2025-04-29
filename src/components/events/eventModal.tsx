@@ -37,7 +37,12 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { createEvent } from "@/lib/api";
-import { eventsQueryOptions, useCurrentUser } from "@/lib/query"; // Import eventsQueryOptions
+import {
+    eventsQueryOptions,
+    getApprovedEventsQuery,
+    getOwnEventsQueryOptions,
+    useCurrentUser,
+} from "@/lib/query"; // Import eventsQueryOptions
 import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
 import type { EventDTOPayload, Venue } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -72,9 +77,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
     const context = useRouteContext({ from: "/app/events/timeline" });
     const queryClient = context.queryClient;
 
-    // Remove local isSubmitting state, use mutation.isPending instead
-    // const [isSubmitting, setIsSubmitting] = useState(false);
-
     const form = useForm<EventInput>({
         resolver: valibotResolver(eventSchema),
         defaultValues: {
@@ -87,43 +89,87 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
         },
     });
 
-    // --- Mutation ---
     const createEventMutation = useMutation({
         mutationFn: ({
             eventDTO,
             approvedLetter,
         }: {
-            eventDTO: Parameters<typeof createEvent>[0]; // Get type from api function
-            approvedLetter: Parameters<typeof createEvent>[1];
-        }) => createEvent(eventDTO, approvedLetter), // Call the API function
-        onSuccess: (createdEvent) => {
-            // Invalidate the events query to refetch data
+            eventDTO: EventDTOPayload;
+            approvedLetter: File;
+        }) => createEvent(eventDTO, approvedLetter),
+
+        onMutate: async ({ eventDTO, approvedLetter }) => {
+            const ownEventsKey = getOwnEventsQueryOptions.queryKey;
+
+            await queryClient.cancelQueries({ queryKey: ownEventsKey });
+
+            const previousOwnEvents =
+                queryClient.getQueryData<EventOutput[]>(ownEventsKey);
+
+            // Create an optimistic event object (approximating EventOutput)
+            // Note: This won't have the real ID or backend-generated fields yet.
+            //       The structure should match what getOwnEvents returns.
+            const optimisticEvent: EventOutput & {
+                id: number;
+                status: string;
+            } = {
+                // Add temporary id and status
+                id: Date.now(), // Temporary ID for the optimistic update
+                eventName: eventDTO.eventName,
+                eventType: eventDTO.eventType,
+                eventVenueId: eventDTO.eventVenueId,
+                startTime: new Date(eventDTO.startTime),
+                endTime: new Date(eventDTO.endTime),
+                approvedLetter: approvedLetter,
+                status: "PENDING",
+            };
+
+            queryClient.setQueryData<EventOutput[]>(ownEventsKey, (old) => [
+                ...(old ?? []),
+                optimisticEvent,
+            ]);
+
+            return { previousOwnEvents };
+        },
+
+        onError: (err, variables, context) => {
+            console.error("Mutation error", err);
+            toast.error(
+                `Failed to create event: ${err instanceof Error ? err.message : "Please try again."}`,
+            );
+            if (context?.previousOwnEvents) {
+                queryClient.setQueryData(
+                    getOwnEventsQueryOptions.queryKey,
+                    context.previousOwnEvents,
+                );
+            }
+        },
+
+        onSettled: () => {
             queryClient.invalidateQueries({
-                queryKey: eventsQueryOptions.queryKey,
+                queryKey: getOwnEventsQueryOptions.queryKey,
             });
+            queryClient.invalidateQueries({
+                queryKey: getApprovedEventsQuery.queryKey,
+            });
+            // queryClient.invalidateQueries({ queryKey: eventsQueryOptions.queryKey });
+        },
+
+        onSuccess: (createdEvent) => {
             toast.success("Event Created", {
                 description: `Event ${createdEvent.eventName} created successfully.`,
             });
-            onClose(); // Close modal on success
-            form.reset(); // Reset form
-        },
-        onError: (error) => {
-            console.error("Mutation error", error);
-            toast.error(
-                `Failed to create event: ${error instanceof Error ? error.message : "Please try again."}`,
-            );
+            onClose();
+            form.reset();
         },
     });
-    // --- End Mutation ---
 
-    // Updated onSubmit function
     async function onSubmit(values: EventInput) {
         if (!currentUser?.id) {
             toast.error("You must be logged in to create an event.");
             return;
         }
 
-        // No need for manual try/catch or setIsSubmitting
         try {
             const outputValues = values as unknown as EventOutput;
             const eventDTO: EventDTOPayload = {
@@ -137,7 +183,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                 },
             };
 
-            // Trigger the mutation
             createEventMutation.mutate({
                 eventDTO,
                 approvedLetter: outputValues.approvedLetter,

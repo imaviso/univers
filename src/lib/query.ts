@@ -7,7 +7,9 @@ import {
     getAllEvents,
     getAllUsers,
     getAllVenues,
+    getApprovedEvents,
     getEventById,
+    getOwnEvents,
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { queryOptions, useQuery } from "@tanstack/react-query";
@@ -79,11 +81,29 @@ export const eventsQueryOptions = {
     },
 };
 
+export const getOwnEventsQueryOptions = {
+    queryKey: ["ownEvents"],
+    queryFn: async () => {
+        const ownEvents = await getOwnEvents();
+        return ownEvents;
+    },
+    staleTime: 1000 * 60 * 5,
+};
+
+export const getApprovedEventsQuery = {
+    queryKey: ["approvedEvents"],
+    queryFn: async () => {
+        const approvedEvents = await getApprovedEvents();
+        return approvedEvents;
+    },
+    staleTime: 1000 * 60 * 5,
+};
+
 export const eventQueryOptions = (eventId: string) =>
     queryOptions({
         queryKey: ["events", eventId],
         queryFn: () => getEventById(eventId),
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 60 * 5,
     });
 
 export const eventApprovalsQueryOptions = (eventId: number) =>

@@ -38,7 +38,11 @@ import {
 } from "@/components/ui/select";
 import { updateEvent } from "@/lib/api";
 import { eventQueryOptions, eventsQueryOptions } from "@/lib/query";
-import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
+import {
+    type EditEventInput,
+    type EditEventOutput,
+    editEventSchema,
+} from "@/lib/schema";
 import type { Event, EventDTOPayload, Venue } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
@@ -84,8 +88,8 @@ export function EditEventModal({
         string | null
     >(null);
 
-    const form = useForm<EventInput>({
-        resolver: valibotResolver(eventSchema),
+    const form = useForm<EditEventInput>({
+        resolver: valibotResolver(editEventSchema),
         defaultValues: {
             eventName: "",
             eventType: undefined,
@@ -131,10 +135,10 @@ export function EditEventModal({
     const updateEventMutation = useMutation({
         mutationFn: updateEvent,
         onSuccess: (message) => {
-            toast.success(message || "Event updated successfully.");
+            toast.success("Event updated successfully.");
             // Invalidate relevant queries
-            queryClient.invalidateQueries({
-                queryKey: eventQueryOptions(event.id).queryKey,
+            queryClient.refetchQueries({
+                queryKey: eventQueryOptions(String(event.id)).queryKey,
             });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryOptions.queryKey,
@@ -153,9 +157,9 @@ export function EditEventModal({
     // --- End Mutation ---
 
     // --- Submit Handler ---
-    async function onSubmit(values: EventInput) {
+    async function onSubmit(values: EditEventInput) {
         // The schema transforms approvedLetter: File[] to approvedLetter: File
-        const outputValues = values as unknown as EventOutput;
+        const outputValues = values as unknown as EditEventOutput;
 
         // Check if the file in the form is the placeholder or a new file
         const letterFileToSend =

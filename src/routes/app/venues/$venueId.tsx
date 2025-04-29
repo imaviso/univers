@@ -200,7 +200,7 @@ export function VenueDetails() {
                                         <img
                                             src={
                                                 venue.imagePath ||
-                                                "/placeholder.svg"
+                                                "https://cit.edu/wp-content/uploads/2023/07/GLE-Building.jpg"
                                             }
                                             alt={venue.name}
                                             className="w-full h-full object-cover"
