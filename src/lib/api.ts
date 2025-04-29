@@ -11,6 +11,7 @@ import type {
     DepartmentDTO,
     DepartmentType,
     Equipment,
+    Event,
     EventApprovalDTO,
     EventDTOBackendResponse,
     EventDTOPayload,
@@ -542,6 +543,42 @@ export const getAllApprovalsOfEvent = async (
             ? error
             : new Error(
                   `An unexpected error occurred during fetching approvals for event ${eventId}.`,
+              );
+    }
+};
+
+export const getOwnEvents = async (): Promise<Event[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/users/me/events`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during fetching own events.",
+              );
+    }
+};
+
+export const getApprovedEvents = async (): Promise<Event[]> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/events/approved`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during fetching own events.",
               );
     }
 };

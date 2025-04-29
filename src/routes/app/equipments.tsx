@@ -452,9 +452,6 @@ function EquipmentInventory() {
                                 src={imageUrl}
                                 alt={item.name}
                                 className="h-10 w-10 rounded object-cover"
-                                onError={(e) => {
-                                    e.currentTarget.src = "/placeholder.svg";
-                                }}
                                 loading="lazy"
                             />
                             <div>
@@ -825,8 +822,7 @@ function EquipmentInventory() {
                     {viewMode === "grid" && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             {filteredEquipment.map((item) => {
-                                const imageUrl =
-                                    item.imagePath ?? "/placeholder.svg";
+                                const imageUrl = item.imagePath;
                                 const canManage =
                                     role === "SUPER_ADMIN" ||
                                     (role === "EQUIPMENT_OWNER" &&
@@ -846,10 +842,6 @@ function EquipmentInventory() {
                                                 src={imageUrl}
                                                 alt={item.name}
                                                 className="aspect-video w-full object-cover"
-                                                onError={(e) => {
-                                                    e.currentTarget.src =
-                                                        "/placeholder.svg";
-                                                }}
                                                 loading="lazy"
                                             />
                                             <div className="absolute top-2 right-2 flex flex-col items-end gap-1">

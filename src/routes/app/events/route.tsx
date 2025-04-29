@@ -3,7 +3,8 @@ import PendingPage from "@/components/PendingPage";
 import { allNavigation } from "@/lib/navigation";
 import {
     eventsQueryOptions,
-    usersQueryOptions,
+    getApprovedEventsQuery,
+    getOwnEventsQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
@@ -52,8 +53,12 @@ export const Route = createFileRoute("/app/events")({
     errorComponent: () => <ErrorPage />,
     pendingComponent: () => <PendingPage />,
     loader: async ({ context }) => {
-        context.queryClient.ensureQueryData(eventsQueryOptions);
+        if (context.authState?.role === "SUPER_ADMIN") {
+            context.queryClient.ensureQueryData(eventsQueryOptions);
+        }
         context.queryClient.ensureQueryData(venuesQueryOptions);
+        context.queryClient.ensureQueryData(getOwnEventsQueryOptions);
+        context.queryClient.ensureQueryData(getApprovedEventsQuery);
     },
 });
 

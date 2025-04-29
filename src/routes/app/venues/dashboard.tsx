@@ -381,14 +381,10 @@ export function VenueManagement() {
                                                         <img
                                                             src={
                                                                 venue.imagePath ??
-                                                                "/placeholder.svg"
+                                                                "https://cit.edu/wp-content/uploads/2023/07/GLE-Building.jpg"
                                                             } // Construct URL
                                                             alt={venue.name}
                                                             className="h-full w-full object-cover"
-                                                            onError={(e) => {
-                                                                e.currentTarget.src =
-                                                                    "/placeholder.svg";
-                                                            }}
                                                             loading="lazy"
                                                         />
                                                     </div>

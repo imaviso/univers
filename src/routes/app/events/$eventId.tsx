@@ -33,6 +33,7 @@ import {
     XCircle,
 } from "lucide-react";
 
+import { CancelConfirmDialog } from "@/components/events/cancelEventDialog";
 import { EditEventModal } from "@/components/events/editEventModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -50,9 +51,16 @@ import {
     eventApprovalsQueryOptions,
     eventQueryOptions,
     eventsQueryOptions,
+    getApprovedEventsQuery,
+    getOwnEventsQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
-import type { Event, EventApprovalDTO, Venue } from "@/lib/types"; // Import Event type
+import type {
+    Event,
+    EventApprovalDTO,
+    EventDTOPayload,
+    Venue,
+} from "@/lib/types"; // Import Event type
 import {
     formatDateRange,
     formatDateTime,
@@ -131,7 +139,7 @@ export function EventDetailsPage() {
                     `${currentUser?.firstName} ${currentUser?.lastName}`),
     );
 
-    const isOrganizer = currentUser?.id === String(event.organizer.id); // Compare IDs as strings or numbers consistently
+    const isOrganizer = currentUser?.id === event.organizer.id;
     const isSuperAdmin = role === "SUPER_ADMIN";
 
     const canUserApprove =
@@ -152,9 +160,11 @@ export function EventDetailsPage() {
 
     const canCancelEvent =
         event.status !== "CANCELED" && event.status !== "COMPLETED";
-    // Determine if the event can be edited (similar logic, maybe stricter)
+
     const canEditEvent =
-        event.status !== "CANCELED" && event.status !== "COMPLETED";
+        (isOrganizer || isSuperAdmin) && // User must be organizer OR super admin
+        event.status !== "CANCELED" && // Event must not be canceled
+        event.status !== "COMPLETED"; // Event must not be completed
 
     const approveMutation = useMutation({
         mutationFn: approveEvent,
@@ -183,9 +193,13 @@ export function EventDetailsPage() {
                 queryKey: eventQueryOptions(eventIdNum).queryKey,
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryOptions.queryKey,
+                queryKey: getApprovedEventsQuery.queryKey,
             });
-            setIsCancelDialogOpen(false); // Close the dialog
+            queryClient.invalidateQueries({
+                queryKey: getOwnEventsQueryOptions.queryKey,
+            });
+            setIsCancelDialogOpen(false);
+            onBack();
         },
         onError: (error) => {
             toast.error(`Cancellation failed: ${error.message}`);
@@ -194,40 +208,165 @@ export function EventDetailsPage() {
 
     // Mutation for updating the event (Setup, UI not implemented here)
     const updateEventMutation = useMutation({
-        mutationFn: updateEvent,
-        onSuccess: (message) => {
-            toast.success(message || "Event updated successfully.");
-            // Invalidate event details and list
-            queryClient.invalidateQueries({
-                queryKey: eventQueryOptions(eventIdNum).queryKey,
-            });
-            queryClient.invalidateQueries({
-                queryKey: eventsQueryOptions.queryKey,
-            });
-            // TODO: Close edit modal/navigate back if applicable
+        mutationFn: updateEvent, // API function: updateEvent({ eventId, eventData, approvedLetter? })
+
+        onMutate: async (variables: {
+            eventId: number;
+            eventData: Partial<EventDTOPayload>;
+            approvedLetter?: File | null;
+        }) => {
+            const { eventId, eventData, approvedLetter } = variables;
+            const eventDetailsKey = eventQueryOptions(
+                eventId.toString(),
+            ).queryKey;
+            const approvedEventsKey = getApprovedEventsQuery.queryKey;
+            const ownEventsKey = getOwnEventsQueryOptions.queryKey; // Assuming organizer might see this list
+
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({ queryKey: eventDetailsKey });
+            await queryClient.cancelQueries({ queryKey: approvedEventsKey });
+            await queryClient.cancelQueries({ queryKey: ownEventsKey });
+
+            // Snapshot previous values
+            const previousEventDetails =
+                queryClient.getQueryData<Event>(eventDetailsKey);
+            const previousApprovedEvents =
+                queryClient.getQueryData<Event[]>(approvedEventsKey);
+            const previousOwnEvents =
+                queryClient.getQueryData<Event[]>(ownEventsKey); // Snapshot own events too
+
+            // Optimistically update the event details
+            if (previousEventDetails) {
+                const optimisticEventDetails: Event = {
+                    ...previousEventDetails,
+                    eventName:
+                        eventData.eventName ?? previousEventDetails.eventName,
+                    eventType:
+                        eventData.eventType ?? previousEventDetails.eventType,
+                    eventVenueId:
+                        eventData.eventVenueId ??
+                        previousEventDetails.eventVenueId,
+                    startTime:
+                        eventData.startTime ?? previousEventDetails.startTime, // Keep as string for now
+                    endTime: eventData.endTime ?? previousEventDetails.endTime, // Keep as string for now
+                    // Note: approvedLetterUrl cannot be optimistically updated easily without backend response
+                    // status might change based on edits, but we'll keep it for now unless logic dictates otherwise
+                };
+                queryClient.setQueryData(
+                    eventDetailsKey,
+                    optimisticEventDetails,
+                );
+            }
+
+            // Optimistically update the event in the lists (approved and own)
+            const updateList = (
+                list: Event[] | undefined,
+            ): Event[] | undefined => {
+                return list?.map((ev) =>
+                    ev.id === eventId
+                        ? {
+                              ...ev,
+                              eventName: eventData.eventName ?? ev.eventName,
+                              eventType: eventData.eventType ?? ev.eventType,
+                              eventVenueId:
+                                  eventData.eventVenueId ?? ev.eventVenueId,
+                              startTime: eventData.startTime ?? ev.startTime,
+                              endTime: eventData.endTime ?? ev.endTime,
+                              // status might change?
+                          }
+                        : ev,
+                );
+            };
+
+            queryClient.setQueryData(approvedEventsKey, updateList);
+            queryClient.setQueryData(ownEventsKey, updateList); // Update own events list optimistically
+
+            // Return context with snapshots
+            return {
+                previousEventDetails,
+                previousApprovedEvents,
+                previousOwnEvents, // Include own events snapshot
+            };
         },
-        onError: (error) => {
+
+        onError: (error, variables, context) => {
             toast.error(`Update failed: ${error.message}`);
+            // Rollback on error
+            if (context?.previousEventDetails) {
+                queryClient.setQueryData(
+                    eventQueryOptions(variables.eventId.toString()).queryKey,
+                    context.previousEventDetails,
+                );
+            }
+            if (context?.previousApprovedEvents) {
+                queryClient.setQueryData(
+                    getApprovedEventsQuery.queryKey,
+                    context.previousApprovedEvents,
+                );
+            }
+            if (context?.previousOwnEvents) {
+                // Rollback own events
+                queryClient.setQueryData(
+                    getOwnEventsQueryOptions.queryKey,
+                    context.previousOwnEvents,
+                );
+            }
+        },
+
+        onSettled: (data, error, variables) => {
+            // Always refetch after error or success to ensure consistency
+            queryClient.invalidateQueries({
+                queryKey: eventQueryOptions(variables.eventId.toString())
+                    .queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: getApprovedEventsQuery.queryKey,
+            });
+            queryClient.invalidateQueries({
+                // Invalidate own events too
+                queryKey: getOwnEventsQueryOptions.queryKey,
+            });
+            queryClient.invalidateQueries({
+                // Also invalidate approvals in case status changed
+                queryKey: eventApprovalsQueryOptions(variables.eventId)
+                    .queryKey,
+            });
+        },
+
+        onSuccess: (message) => {
+            // API returns string message on success
+            toast.success(message || "Event updated successfully.");
+            setIsEditModalOpen(false); // Close the edit modal on success
+            // Navigation or other UI updates can happen here if needed
+            // Invalidation is handled in onSettled
         },
     });
 
+    // Using cancelEvent for delete action for now as per original code
     const deleteEventMutation = useMutation({
-        mutationFn: cancelEvent,
+        mutationFn: cancelEvent, // Still using cancelEvent based on original code
         onSuccess: (message) => {
-            toast.success(message || "Event deleted successfully.");
-            // Invalidate the list query
+            toast.success(message || "Event deleted successfully."); // Changed message for clarity
+            // Invalidate relevant lists
             queryClient.invalidateQueries({
-                queryKey: eventsQueryOptions.queryKey,
+                queryKey: getApprovedEventsQuery.queryKey,
             });
+            queryClient.invalidateQueries({
+                queryKey: getOwnEventsQueryOptions.queryKey,
+            });
+            // Remove the specific event query from cache if it exists
+            queryClient.removeQueries({
+                queryKey: eventQueryOptions(eventIdNum.toString()).queryKey,
+            });
+
             setIsDeleteDialogOpen(false); // Close the dialog
-            // Navigate back to the events list after successful deletion
-            router.navigate({ to: "/app/events" });
+            onBack();
         },
         onError: (error) => {
             toast.error(`Deletion failed: ${error.message}`);
-            // Optionally close dialog on error too, or keep it open for retry
-            // setIsDeleteDialogOpen(false);
         },
+        // Optimistic deletion could remove the item from lists in onMutate
+        // and add it back in onError.
     });
 
     const handleApproveClick = () => {
@@ -393,7 +532,7 @@ export function EventDetailsPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         {/* Cancel Event Item */}
-                                        {/* <DropdownMenuItem
+                                        <DropdownMenuItem
                                             className="text-orange-600 focus:text-orange-700 focus:bg-orange-100"
                                             onClick={handleCancelClick}
                                             disabled={
@@ -403,7 +542,7 @@ export function EventDetailsPage() {
                                         >
                                             <XCircle className="mr-2 h-4 w-4" />
                                             Cancel Event
-                                        </DropdownMenuItem> */}
+                                        </DropdownMenuItem>
                                         {/* Delete Event Item (Only for SUPER_ADMIN) */}
                                         {isSuperAdmin && (
                                             <DropdownMenuItem
@@ -414,7 +553,7 @@ export function EventDetailsPage() {
                                                 } // Disable during delete mutation
                                             >
                                                 <Trash2 className="mr-2 h-4 w-4" />
-                                                Cancel Event
+                                                Delete Event
                                             </DropdownMenuItem>
                                         )}
                                     </DropdownMenuContent>
@@ -704,7 +843,15 @@ export function EventDetailsPage() {
                 confirmText="Yes, Cancel Event"
                 confirmVariant="destructive"
             />
-            {role === "SUPER_ADMIN" && (
+            <CancelConfirmDialog
+                isOpen={isCancelDialogOpen}
+                onClose={() => setIsCancelDialogOpen(false)}
+                onConfirm={handleConfirmCancel}
+                title="Cancel Event"
+                description={`Are you sure you want to cancel the event "${event.eventName}"?`}
+                isLoading={cancelEventMutation.isPending}
+            />
+            {(isOrganizer || isSuperAdmin) && (
                 <EditEventModal
                     isOpen={isEditModalOpen}
                     onClose={() => setIsEditModalOpen(false)}

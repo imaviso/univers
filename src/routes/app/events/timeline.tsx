@@ -2,6 +2,7 @@ import { CreateEventButton } from "@/components/events/createEventButton";
 import { EventList } from "@/components/events/eventList";
 import { EventModal } from "@/components/events/eventModal";
 import { EventTimeline } from "@/components/events/eventTimeline";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 import { venuesQueryOptions } from "@/lib/query";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
@@ -13,14 +14,19 @@ export const Route = createFileRoute("/app/events/timeline")({
 
 function Events() {
     const context = useRouteContext({ from: "/app/events" });
-    const role = context.authState?.role;
 
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const [view, setView] = useState<"list" | "timeline">("list");
+    const [activeTab, setActiveTab] = useState<"all" | "mine">("mine");
     const [isModalOpen, setIsModalOpen] = useState(false);
+
     return (
         <div className="bg-background">
-            <div className="flex flex-col flex-1 overflow-hidden">
+            <Tabs
+                value={activeTab}
+                onValueChange={(value) => setActiveTab(value as "all" | "mine")}
+                className="flex flex-col flex-1 overflow-hidden"
+            >
                 <header className="flex items-center justify-between border-b px-6 py-4">
                     <div className="flex items-center gap-4">
                         <h1 className="text-xl font-semibold">Events</h1>
@@ -49,16 +55,38 @@ function Events() {
                             </button>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-4">
+                        {view === "list" && (
+                            <TabsList className="grid grid-cols-2">
+                                <TabsTrigger value="mine">
+                                    My Events
+                                </TabsTrigger>
+                                <TabsTrigger value="all">
+                                    All Events
+                                </TabsTrigger>
+                            </TabsList>
+                        )}
                         <CreateEventButton
                             onClick={() => setIsModalOpen(true)}
                         />
                     </div>
                 </header>
+
                 <main className="flex-1 overflow-auto p-6">
-                    {view === "list" ? <EventList /> : <EventTimeline />}
+                    {view === "list" && (
+                        <>
+                            <TabsContent value="all" className="mt-0">
+                                <EventList activeTab="all" />
+                            </TabsContent>
+                            <TabsContent value="mine" className="mt-0">
+                                <EventList activeTab="mine" />
+                            </TabsContent>
+                        </>
+                    )}
+
+                    {view === "timeline" && <EventTimeline />}
                 </main>
-            </div>
+            </Tabs>
             <EventModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
