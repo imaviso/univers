@@ -1,7 +1,7 @@
 import {
+    deleteNotifications,
     getAllApprovalsOfEvent,
     getAllDepartments,
-    // getAllEquipments, // Removed unused/incorrect import
     getAllEquipmentsAdmin,
     getAllEquipmentsByOwner,
     getAllEvents,
@@ -9,11 +9,20 @@ import {
     getAllVenues,
     getApprovedEvents,
     getEventById,
+    getNotifications,
     getOwnEvents,
+    getUnreadNotificationCount,
+    markAllNotificationsRead,
+    markNotificationsRead,
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import type { AnyRoute } from "@tanstack/react-router"; // Added AnyRoute import
+import {
+    queryOptions,
+    useMutation,
+    useQuery,
+    useQueryClient,
+} from "@tanstack/react-query";
+import { type AnyRoute, useRouteContext } from "@tanstack/react-router"; // Added AnyRoute import
 import type { UserRole, UserType } from "./types"; // Import UserRole
 
 export const userQueryOptions = {
@@ -148,3 +157,82 @@ export const departmentsQueryOptions = queryOptions({
     queryFn: getAllDepartments,
     staleTime: 1000 * 60 * 5,
 });
+
+export const notificationsQueryKeys = {
+    all: ["notifications"] as const,
+    lists: () => [...notificationsQueryKeys.all, "list"] as const,
+    list: (params: { page: number; size: number }) =>
+        [...notificationsQueryKeys.lists(), params] as const,
+    count: () => [...notificationsQueryKeys.all, "count"] as const,
+};
+
+export const notificationsQueryOptions = (params: {
+    page: number;
+    size: number;
+}) =>
+    queryOptions({
+        queryKey: notificationsQueryKeys.list(params),
+        queryFn: () => getNotifications(params.page, params.size),
+        placeholderData: (previousData) => previousData, // Keep previous data while loading next page
+        staleTime: 1000 * 60 * 1, // 1 minute stale time
+    });
+
+export const unreadNotificationsCountQueryOptions = queryOptions({
+    queryKey: notificationsQueryKeys.count(),
+    queryFn: getUnreadNotificationCount,
+    staleTime: 1000 * 30, // 30 seconds stale time
+});
+
+// --- Notification Mutations ---
+
+export const useMarkNotificationsReadMutation = () => {
+    const context = useRouteContext({ from: "/app" });
+    const queryClient = context.queryClient;
+    return useMutation({
+        mutationFn: markNotificationsRead,
+        onSuccess: () => {
+            // Invalidate both the list and the count
+            queryClient.invalidateQueries({
+                queryKey: notificationsQueryKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: notificationsQueryKeys.count(),
+            });
+        },
+        // Optional: Add onMutate for optimistic updates
+    });
+};
+
+export const useMarkAllNotificationsReadMutation = () => {
+    const context = useRouteContext({ from: "/app" });
+    const queryClient = context.queryClient;
+    return useMutation({
+        mutationFn: markAllNotificationsRead,
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: notificationsQueryKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: notificationsQueryKeys.count(),
+            });
+        },
+        // Optional: Add onMutate for optimistic updates
+    });
+};
+
+export const useDeleteNotificationsMutation = () => {
+    const context = useRouteContext({ from: "/app" });
+    const queryClient = context.queryClient;
+    return useMutation({
+        mutationFn: deleteNotifications,
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: notificationsQueryKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: notificationsQueryKeys.count(),
+            });
+        },
+        // Optional: Add onMutate for optimistic updates
+    });
+};
