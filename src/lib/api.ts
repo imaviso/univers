@@ -496,22 +496,23 @@ export const cancelEvent = async (eventId: number): Promise<string> => {
 
 export const approveEvent = async ({
     eventId,
-    userId,
     remarks,
 }: {
     eventId: number;
-    userId: number;
     remarks: string;
 }): Promise<string> => {
     try {
-        const url = new URL(`${API_BASE_URL}/event-approval/approve`);
-        url.searchParams.append("eventId", eventId.toString());
-        url.searchParams.append("userId", userId.toString());
-        url.searchParams.append("remarks", remarks);
+        const url = `${API_BASE_URL}/event-approval/${eventId}/approve`;
 
-        const response = await fetch(url.toString(), {
+        const payload = { remarks: remarks || "" };
+
+        const response = await fetch(url, {
             method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+            },
             credentials: "include",
+            body: JSON.stringify(payload),
         });
         return await handleApiResponse(response, false);
     } catch (error) {

@@ -373,7 +373,6 @@ export function EventDetailsPage() {
         if (!currentUser) return;
         approveMutation.mutate({
             eventId: eventIdNum,
-            userId: Number.parseInt(currentUser.id, 10),
             remarks: approvalRemarks,
         });
     };
