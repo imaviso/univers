@@ -161,8 +161,8 @@ export const departmentsQueryOptions = queryOptions({
 export const notificationsQueryKeys = {
     all: ["notifications"] as const,
     lists: () => [...notificationsQueryKeys.all, "list"] as const,
-    list: (params: { page: number; size: number }) =>
-        [...notificationsQueryKeys.lists(), params] as const,
+    list: (page: number, size: number) =>
+        [...notificationsQueryKeys.lists(), page, size] as const,
     count: () => [...notificationsQueryKeys.all, "count"] as const,
 };
 
@@ -171,7 +171,7 @@ export const notificationsQueryOptions = (params: {
     size: number;
 }) =>
     queryOptions({
-        queryKey: notificationsQueryKeys.list(params),
+        queryKey: notificationsQueryKeys.list(params.page, params.size),
         queryFn: () => getNotifications(params.page, params.size),
         placeholderData: (previousData) => previousData, // Keep previous data while loading next page
         staleTime: 1000 * 60 * 1, // 1 minute stale time

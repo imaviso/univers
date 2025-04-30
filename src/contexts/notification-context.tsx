@@ -50,12 +50,10 @@ export function NotificationCenter() {
     const { data: countData } = useQuery(unreadNotificationsCountQueryOptions);
     const unreadCount = countData?.unreadCount ?? 0;
 
-    // Fetch latest few notifications for dropdown display
+    const params = { page: 0, size: 7 } as const;
     const { data: notificationsData, isLoading: isLoadingNotifications } =
-        useQuery(
-            // Added isLoading
-            notificationsQueryOptions({ page: 0, size: 7 }), // Fetch first 7 (consistent with other dropdown)
-        );
+        useQuery(notificationsQueryOptions(params));
+
     const notifications = notificationsData?.content ?? [];
 
     // Mutations

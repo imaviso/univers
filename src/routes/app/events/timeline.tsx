@@ -52,9 +52,7 @@ function Events() {
                                 {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
                                 <button
                                     onClick={() => setView("timeline")}
-                                    className={
-                                        "px-3 py-1 text-sm rounded-md text-muted-foreground hover:bg-muted"
-                                    }
+                                    className="px-3 py-1 text-sm rounded-md text-muted-foreground hover:bg-muted"
                                 >
                                     Timeline
                                 </button>

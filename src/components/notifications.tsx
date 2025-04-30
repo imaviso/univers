@@ -28,11 +28,9 @@ import {
     Hash, // Added for eventId
     Info,
     type LucideIcon,
-    Tag, // Added for type
     User, // Added for approver
     XCircle,
 } from "lucide-react";
-import { useState } from "react";
 
 // Helper function to generate a title
 const generateNotificationTitle = (notification: NotificationDTO): string => {
@@ -59,7 +57,9 @@ const getNotificationStyle = (
     notification: NotificationDTO,
 ): { Icon: LucideIcon; color: string } => {
     // Check nested message object
-    const messageText = notification.message?.message?.toLowerCase() || "";
+    const rawMessage = notification.message?.message;
+    const messageText =
+        typeof rawMessage === "string" ? rawMessage.toLowerCase() : "";
 
     // Check nested type and fallback to relatedEntityType
     const type =
@@ -92,11 +92,10 @@ export function NotificationDropdown() {
     const { data: countData } = useQuery(unreadNotificationsCountQueryOptions);
     const unreadCount = countData?.unreadCount ?? 0;
 
-    // Fetch latest few notifications for dropdown display
+    const notificationsParams = { page: 0, size: 7 } as const;
+
     const { data: notificationsData, isLoading: isLoadingNotifications } =
-        useQuery(
-            notificationsQueryOptions({ page: 0, size: 7 }), // Fetch first 7
-        );
+        useQuery(notificationsQueryOptions(notificationsParams));
     const notifications = notificationsData?.content ?? [];
 
     // Mutations

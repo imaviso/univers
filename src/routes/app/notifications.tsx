@@ -129,9 +129,10 @@ function NotificationsPage() {
                 const searchLower = searchQuery.toLowerCase();
                 // Search within the nested message text and top-level entity type
                 return (
-                    notification.message?.message // Access nested message
-                        ?.toLowerCase()
-                        .includes(searchLower) ||
+                    (typeof notification.message?.message === "string" &&
+                        notification.message.message
+                            .toLowerCase()
+                            .includes(searchLower)) ||
                     notification.relatedEntityType
                         ?.toLowerCase()
                         .includes(searchLower) ||
@@ -211,7 +212,10 @@ function NotificationsPage() {
             notification.message?.type?.toLowerCase() ||
             notification.relatedEntityType?.toLowerCase() ||
             "";
-        const messageText = notification.message?.message?.toLowerCase() || ""; // Access nested message
+        const messageText =
+            typeof notification.message?.message === "string"
+                ? notification.message.message.toLowerCase()
+                : "";
 
         if (messageText.includes("error") || type.includes("error")) {
             return { Icon: XCircle, color: "text-red-500" };
