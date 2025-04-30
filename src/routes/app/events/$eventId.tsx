@@ -86,9 +86,7 @@ export const Route = createFileRoute("/app/events/$eventId")({
         if (Number.isNaN(eventIdNum)) {
             throw notFound(); // Invalid event ID format
         }
-        const event = await queryClient.ensureQueryData(
-            eventQueryOptions(eventId),
-        );
+        const event = await queryClient.fetchQuery(eventQueryOptions(eventId));
 
         if (!event || Object.keys(event).length === 0) {
             throw notFound();
@@ -173,8 +171,20 @@ export function EventDetailsPage() {
             queryClient.invalidateQueries({
                 queryKey: eventApprovalsQueryOptions(eventIdNum).queryKey,
             });
+            queryClient.refetchQueries({
+                queryKey: eventApprovalsQueryOptions(eventIdNum).queryKey,
+            });
             queryClient.invalidateQueries({
                 queryKey: eventQueryOptions(eventIdNum).queryKey,
+            });
+            queryClient.refetchQueries({
+                queryKey: eventQueryOptions(eventIdNum).queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryOptions.queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: getApprovedEventsQuery.queryKey,
             });
             setIsApprovalDialogOpen(false);
             setApprovalRemarks("");
@@ -191,6 +201,9 @@ export function EventDetailsPage() {
             // Invalidate event details and list
             queryClient.invalidateQueries({
                 queryKey: eventQueryOptions(eventIdNum).queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryOptions.queryKey,
             });
             queryClient.invalidateQueries({
                 queryKey: getApprovedEventsQuery.queryKey,
@@ -327,6 +340,10 @@ export function EventDetailsPage() {
                 queryKey: getOwnEventsQueryOptions.queryKey,
             });
             queryClient.invalidateQueries({
+                // Invalidate own events too
+                queryKey: eventsQueryOptions.queryKey,
+            });
+            queryClient.invalidateQueries({
                 // Also invalidate approvals in case status changed
                 queryKey: eventApprovalsQueryOptions(variables.eventId)
                     .queryKey,
@@ -354,6 +371,10 @@ export function EventDetailsPage() {
             queryClient.invalidateQueries({
                 queryKey: getOwnEventsQueryOptions.queryKey,
             });
+            queryClient.invalidateQueries({
+                // Invalidate own events too
+                queryKey: eventsQueryOptions.queryKey,
+            });
             // Remove the specific event query from cache if it exists
             queryClient.removeQueries({
                 queryKey: eventQueryOptions(eventIdNum.toString()).queryKey,
@@ -373,7 +394,6 @@ export function EventDetailsPage() {
         if (!currentUser) return;
         approveMutation.mutate({
             eventId: eventIdNum,
-            userId: Number.parseInt(currentUser.id, 10),
             remarks: approvalRemarks,
         });
     };

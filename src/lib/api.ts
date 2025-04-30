@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./auth";
+import type { NotificationDTO, Page } from "./notifications";
 import type {
     EditUserFormInput,
     EquipmentDTOInput,
@@ -496,22 +497,23 @@ export const cancelEvent = async (eventId: number): Promise<string> => {
 
 export const approveEvent = async ({
     eventId,
-    userId,
     remarks,
 }: {
     eventId: number;
-    userId: number;
     remarks: string;
 }): Promise<string> => {
     try {
-        const url = new URL(`${API_BASE_URL}/event-approval/approve`);
-        url.searchParams.append("eventId", eventId.toString());
-        url.searchParams.append("userId", userId.toString());
-        url.searchParams.append("remarks", remarks);
+        const url = `${API_BASE_URL}/event-approval/${eventId}/approve`;
 
-        const response = await fetch(url.toString(), {
+        const payload = { remarks: remarks || "" };
+
+        const response = await fetch(url, {
             method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+            },
             credentials: "include",
+            body: JSON.stringify(payload),
         });
         return await handleApiResponse(response, false);
     } catch (error) {
@@ -1049,6 +1051,126 @@ export const deleteDepartment = async (
             ? error
             : new Error(
                   `An unexpected error occurred during deleting department ${departmentId}.`,
+              );
+    }
+};
+
+export const getNotifications = async (
+    page = 0,
+    size = 10,
+): Promise<Page<NotificationDTO>> => {
+    try {
+        const url = new URL(`${API_BASE_URL}/notifications`);
+        url.searchParams.append("page", page.toString());
+        url.searchParams.append("size", size.toString());
+        // Add sort parameters if needed, e.g., url.searchParams.append("sort", "createdAt,desc");
+
+        const response = await fetch(url.toString(), {
+            method: "GET",
+            credentials: "include",
+        });
+        // Expect a Page object
+        const data = await handleApiResponse(response, true);
+        // Provide a default structure if null/undefined is returned on empty success
+        return (
+            data ?? {
+                content: [],
+                totalPages: 0,
+                totalElements: 0,
+                number: 0,
+                size: size,
+            }
+        );
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while fetching notifications.",
+              );
+    }
+};
+
+export const getUnreadNotificationCount = async (): Promise<{
+    unreadCount: number;
+}> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/notifications/count-unread`,
+            {
+                method: "GET",
+                credentials: "include",
+            },
+        );
+        // Expect { "unreadCount": number }
+        const data = await handleApiResponse(response, true);
+        return data ?? { unreadCount: 0 }; // Default if null/undefined
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while fetching unread notification count.",
+              );
+    }
+};
+
+export const markNotificationsRead = async (
+    notificationIds: number[],
+): Promise<void> => {
+    try {
+        if (!notificationIds || notificationIds.length === 0) {
+            return; // Nothing to mark
+        }
+        const response = await fetch(`${API_BASE_URL}/notifications/read`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(notificationIds),
+        });
+        await handleApiResponse(response, false); // Expect no content or text
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while marking notifications as read.",
+              );
+    }
+};
+
+export const markAllNotificationsRead = async (): Promise<void> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+            method: "PATCH",
+            credentials: "include",
+        });
+        await handleApiResponse(response, false); // Expect no content or text
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while marking all notifications as read.",
+              );
+    }
+};
+
+export const deleteNotifications = async (
+    notificationIds: number[],
+): Promise<void> => {
+    try {
+        if (!notificationIds || notificationIds.length === 0) {
+            return; // Nothing to delete
+        }
+        const response = await fetch(`${API_BASE_URL}/notifications`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(notificationIds),
+        });
+        await handleApiResponse(response, false); // Expect no content (204) or text
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while deleting notifications.",
               );
     }
 };
