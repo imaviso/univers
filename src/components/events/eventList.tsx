@@ -50,7 +50,6 @@ function EventCard({
     venueMap: Map<number, string>;
     onNavigate: (eventId: number | undefined) => void;
 }) {
-    // ... card implementation ...
     let dateDisplayString = "Date not available";
 
     if (
