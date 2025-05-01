@@ -75,6 +75,8 @@ export const Route = createFileRoute("/app/venues/dashboard")({
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
     const role = context.authState?.role;
+    const userId = context.authState;
+    const userData = context.authState;
     const queryClient = context.queryClient;
     const navigate = useNavigate();
     // State variables
@@ -172,15 +174,29 @@ export function VenueManagement() {
         imageFile: File | null,
     ) => {
         if (editingVenue) {
-            // Call update mutation
+            // Update existing venue
             updateVenueMutation.mutate({
                 venueId: editingVenue.id,
                 venueData,
                 imageFile,
             });
         } else {
-            // Call create mutation
-            createVenueMutation.mutate({ venueData, imageFile });
+            // Create new venue
+            let finalVenueData = { ...venueData };
+
+            // If the user is a VENUE_OWNER, automatically set their ID
+            if (role === "VENUE_OWNER" && userId) {
+                finalVenueData = {
+                    ...finalVenueData,
+                    venueOwnerId: Number(userId), // Ensure userId is a number
+                };
+            }
+            // If SUPER_ADMIN, the venueOwnerId from the form is used (or undefined if none selected)
+
+            createVenueMutation.mutate({
+                venueData: finalVenueData,
+                imageFile,
+            });
         }
     };
 
@@ -251,7 +267,7 @@ export function VenueManagement() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        {role === "SUPER_ADMIN" ? (
+                        {role === "SUPER_ADMIN" || role === "VENUE_OWNER" ? (
                             <Button
                                 onClick={() => {
                                     setEditingVenue(null); // Clear editing state
@@ -703,7 +719,7 @@ export function VenueManagement() {
             />
 
             {/* Add/Edit Dialog (SUPER_ADMIN only) */}
-            {role === "SUPER_ADMIN" && (
+            {(role === "SUPER_ADMIN" || role === "VENUE_OWNER") && (
                 <>
                     <VenueFormDialog
                         isOpen={isAddVenueOpen}
@@ -717,7 +733,8 @@ export function VenueManagement() {
                             createVenueMutation.isPending ||
                             updateVenueMutation.isPending
                         }
-                        venueOwners={venueOwners} // Pass owners list
+                        venueOwners={role === "SUPER_ADMIN" ? venueOwners : []}
+                        currentUserRole={role}
                     />
                     <DeleteConfirmDialog
                         isOpen={isDeleteDialogOpen}

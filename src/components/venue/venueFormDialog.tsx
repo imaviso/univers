@@ -56,11 +56,11 @@ const defaultValues: VenueInput = {
 interface VenueFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    // Update onSubmit to accept VenueOutput and optional File
     onSubmit: (venueData: VenueInput, imageFile: File | null) => void;
     venue?: Venue | null;
     isLoading?: boolean;
     venueOwners: UserType[];
+    currentUserRole?: string;
 }
 
 export function VenueFormDialog({
@@ -70,6 +70,7 @@ export function VenueFormDialog({
     venue,
     isLoading,
     venueOwners,
+    currentUserRole,
 }: VenueFormDialogProps) {
     // State for the image file
     const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
@@ -183,42 +184,47 @@ export function VenueFormDialog({
                             )}
                         />
 
-                        {/* Venue Owner Select */}
-                        <FormField
-                            control={form.control}
-                            name="venueOwnerId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Venue Owner</FormLabel>
-                                    <Select
-                                        onValueChange={(value) =>
-                                            field.onChange(Number(value))
-                                        } // Ensure value is number
-                                        value={field.value?.toString()}
-                                        disabled={isLoading}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select the owner" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {venueOwners.map((owner) => (
-                                                <SelectItem
-                                                    key={owner.id}
-                                                    value={owner.id.toString()}
-                                                >
-                                                    {owner.firstName}{" "}
-                                                    {owner.lastName} (
-                                                    {owner.email})
+                        {currentUserRole === "SUPER_ADMIN" && ( // Conditionally render this field
+                            <FormField
+                                control={form.control}
+                                name="venueOwnerId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Venue Owner</FormLabel>
+                                        <Select
+                                            onValueChange={(value) =>
+                                                field.onChange(Number(value))
+                                            }
+                                            value={field.value?.toString()}
+                                            disabled={isLoading}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select the owner" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {/* Add an option for 'No Owner' or similar if applicable */}
+                                                <SelectItem value="">
+                                                    -- No Owner --
                                                 </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                                                {venueOwners.map((owner) => (
+                                                    <SelectItem
+                                                        key={owner.id}
+                                                        value={owner.id.toString()}
+                                                    >
+                                                        {owner.firstName}{" "}
+                                                        {owner.lastName} (
+                                                        {owner.email})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
 
                         <FormField
                             control={form.control}
