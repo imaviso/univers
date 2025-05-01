@@ -11,106 +11,96 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogDescription, // Import DialogDescription
     DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@radix-ui/react-select";
-import { format } from "date-fns";
-import { AlertCircle, Calendar, Clock, MapPin } from "lucide-react";
-import { useState } from "react";
-
-// Mock reservation data
-const mockReservations = [
-    {
-        id: "1",
-        eventName: "Annual Conference",
-        venueName: "Main Auditorium",
-        startDate: new Date(2025, 3, 15),
-        endDate: new Date(2025, 3, 15),
-        startTime: "09:00",
-        endTime: "17:00",
-        status: "approved",
-        equipment: [
-            { id: "msdo-camera", name: "Camera", owner: "MSDO" },
-            { id: "msdo-speaker", name: "Speaker", owner: "MSDO" },
-            { id: "opc-chairs", name: "Chairs", owner: "OPC" },
-        ],
-    },
-    {
-        id: "2",
-        eventName: "Team Building Workshop",
-        venueName: "Conference Room A",
-        startDate: new Date(2025, 3, 20),
-        endDate: new Date(2025, 3, 20),
-        startTime: "13:00",
-        endTime: "16:00",
-        status: "pending",
-        equipment: [
-            { id: "msdo-microphone", name: "Microphone", owner: "MSDO" },
-            { id: "opc-table", name: "Folding Table", owner: "OPC" },
-        ],
-    },
-    {
-        id: "3",
-        eventName: "Product Launch",
-        venueName: "Outdoor Pavilion",
-        startDate: new Date(2025, 4, 5),
-        endDate: new Date(2025, 4, 5),
-        startTime: "10:00",
-        endTime: "14:00",
-        status: "rejected",
-        equipment: [
-            { id: "msdo-speaker", name: "Speaker", owner: "MSDO" },
-            { id: "msdo-microphone", name: "Microphone", owner: "MSDO" },
-            { id: "opc-tent", name: "Event Tent", owner: "OPC" },
-        ],
-        rejectionReason:
-            "Equipment not available for the requested time period.",
-    },
-];
+import {
+    ownEquipmentReservationsQueryOptions,
+    useCancelEquipmentReservationMutation,
+} from "@/lib/query";
+import type { EquipmentReservationDTO } from "@/lib/types";
+import { formatDateTime, getStatusBadgeClass } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircle, Calendar, Clock, MapPin, Package } from "lucide-react"; // Added Package icon
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export default function UserReservations() {
-    const [activeTab, setActiveTab] = useState("all");
-    const [selectedReservation, setSelectedReservation] = useState<
-        (typeof mockReservations)[0] | null
-    >(null);
+    const [activeTab, setActiveTab] = useState("all"); // Can be 'all', 'pending', 'approved', 'rejected', 'canceled'
+    const [selectedReservation, setSelectedReservation] =
+        useState<EquipmentReservationDTO | null>(null);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
-    const filteredReservations =
-        activeTab === "all"
-            ? mockReservations
-            : mockReservations.filter((res) => res.status === activeTab);
+    // Fetch user's own reservations
+    const {
+        data: reservations = [],
+        isLoading,
+        error,
+    } = useQuery(ownEquipmentReservationsQueryOptions);
+
+    // Cancel mutation
+    const cancelMutation = useCancelEquipmentReservationMutation();
+
+    // Filter reservations based on the active tab
+    const filteredReservations = useMemo(() => {
+        if (activeTab === "all") {
+            return reservations;
+        }
+        return reservations.filter(
+            (res) => res.status.toLowerCase() === activeTab,
+        );
+    }, [reservations, activeTab]);
 
     const handleCancel = () => {
-        // In a real app, you would call an API to cancel the reservation
-        console.log("Cancelling reservation:", selectedReservation?.id);
-        setShowCancelDialog(false);
-        // Then refresh the reservations list
+        if (!selectedReservation) return;
+
+        cancelMutation.mutate(selectedReservation.id, {
+            onSuccess: (message) => {
+                toast.success(message || "Reservation cancelled successfully.");
+                setShowCancelDialog(false);
+                setSelectedReservation(null);
+                // Query invalidation happens automatically via the mutation hook
+            },
+            onError: (error) => {
+                toast.error(error.message || "Failed to cancel reservation.");
+                setShowCancelDialog(false);
+            },
+        });
     };
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case "approved":
-                return <Badge className="bg-green-500">Approved</Badge>;
-            case "pending":
-                return (
-                    <Badge
-                        variant="outline"
-                        className="text-yellow-500 border-yellow-500"
-                    >
-                        Pending
-                    </Badge>
-                );
-            case "rejected":
-                return <Badge variant="destructive">Rejected</Badge>;
-            default:
-                return <Badge variant="outline">Unknown</Badge>;
-        }
-    };
+    if (isLoading) {
+        return (
+            <p className="text-center text-muted-foreground">
+                Loading your reservations...
+            </p>
+        );
+    }
+
+    if (error) {
+        return (
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                    Failed to load reservations: {error.message}
+                </AlertDescription>
+            </Alert>
+        );
+    }
+
+    // Define available tabs based on potential statuses
+    const availableTabs = [
+        "all",
+        "pending",
+        "approved",
+        "rejected",
+        "canceled",
+    ];
 
     return (
         <div className="space-y-6">
@@ -120,25 +110,16 @@ export default function UserReservations() {
                 className="w-full"
             >
                 <div className="flex items-center justify-between">
-                    <TabsList className="flex w-full mb-3 h-auto -space-x-px bg-background p-0 shadow-sm shadow-black/5 rtl:space-x-reverse">
-                        <TabsTrigger
-                            value="all"
-                            className="relative overflow-hidden rounded-none border border-border py-2 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 first:rounded-s last:rounded-e data-[state=active]:bg-muted data-[state=active]:after:bg-primary"
-                        >
-                            All Reservations
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="approved"
-                            className="relative overflow-hidden rounded-none border border-border py-2 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 first:rounded-s last:rounded-e data-[state=active]:bg-muted data-[state=active]:after:bg-primary"
-                        >
-                            Approved
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="pending"
-                            className="relative overflow-hidden rounded-none border border-border py-2 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 first:rounded-s last:rounded-e data-[state=active]:bg-muted data-[state=active]:after:bg-primary"
-                        >
-                            Pending
-                        </TabsTrigger>
+                    <TabsList>
+                        {availableTabs.map((tab) => (
+                            <TabsTrigger
+                                key={tab}
+                                value={tab}
+                                className="capitalize"
+                            >
+                                {tab}
+                            </TabsTrigger>
+                        ))}
                     </TabsList>
                 </div>
                 <TabsContent value={activeTab} className="pt-4">
@@ -147,47 +128,56 @@ export default function UserReservations() {
                             {filteredReservations.map((reservation) => (
                                 <Card
                                     key={reservation.id}
-                                    className="overflow-hidden"
+                                    className="overflow-hidden flex flex-col"
                                 >
                                     <CardHeader>
                                         <div className="flex justify-between items-start">
                                             <CardTitle className="text-lg">
                                                 {reservation.eventName}
                                             </CardTitle>
-                                            {getStatusBadge(reservation.status)}
+                                            <Badge
+                                                className={getStatusBadgeClass(
+                                                    reservation.status,
+                                                )}
+                                            >
+                                                {reservation.status}
+                                            </Badge>
                                         </div>
-                                        <CardDescription className="flex items-center gap-1">
+                                        {/* Venue name isn't directly in EquipmentReservationDTO, maybe add later if needed */}
+                                        {/* <CardDescription className="flex items-center gap-1">
                                             <MapPin className="h-3.5 w-3.5" />
                                             {reservation.venueName}
-                                        </CardDescription>
+                                        </CardDescription> */}
                                     </CardHeader>
-                                    <CardContent>
-                                        <div className="space-y-2 text-sm">
-                                            <div className="flex items-center gap-1">
-                                                <Calendar className="h-3.5 w-3.5" />
-                                                <span>
-                                                    {format(
-                                                        reservation.startDate,
-                                                        "MMM d, yyyy",
-                                                    )}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                <span>
-                                                    {reservation.startTime} -{" "}
-                                                    {reservation.endTime}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <span className="font-medium">
-                                                    Equipment:
-                                                </span>{" "}
-                                                {reservation.equipment.length}{" "}
-                                                items
-                                            </div>
+                                    <CardContent className="flex-grow space-y-2 text-sm">
+                                        <div className="flex items-center gap-1">
+                                            <Package className="h-3.5 w-3.5 flex-shrink-0" />
+                                            <span>
+                                                {reservation.equipmentName}{" "}
+                                                (Qty: {reservation.quantity})
+                                            </span>
                                         </div>
-                                        <div className="mt-4 grid grid-cols-2 gap-2">
+                                        <div className="flex items-center gap-1">
+                                            <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+                                            <span>
+                                                {formatDateTime(
+                                                    reservation.startTime,
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                                            <span>
+                                                {formatDateTime(
+                                                    reservation.endTime,
+                                                )}
+                                            </span>
+                                        </div>
+                                    </CardContent>
+                                    <CardContent className="pt-4">
+                                        {" "}
+                                        {/* Separate content for buttons */}
+                                        <div className="grid grid-cols-2 gap-2">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -201,8 +191,11 @@ export default function UserReservations() {
                                             >
                                                 View Details
                                             </Button>
-                                            {reservation.status !==
-                                                "rejected" && (
+                                            {/* Allow cancellation if PENDING or APPROVED */}
+                                            {(reservation.status ===
+                                                "PENDING" ||
+                                                reservation.status ===
+                                                    "APPROVED") && (
                                                 <Button
                                                     variant="destructive"
                                                     size="sm"
@@ -215,6 +208,11 @@ export default function UserReservations() {
                                                             true,
                                                         );
                                                     }}
+                                                    disabled={
+                                                        cancelMutation.isPending &&
+                                                        cancelMutation.variables ===
+                                                            reservation.id
+                                                    }
                                                 >
                                                     Cancel
                                                 </Button>
@@ -231,7 +229,7 @@ export default function UserReservations() {
                             <AlertDescription>
                                 You don't have any{" "}
                                 {activeTab !== "all" ? activeTab : ""} equipment
-                                reservations yet.
+                                reservations.
                             </AlertDescription>
                         </Alert>
                     )}
@@ -248,100 +246,161 @@ export default function UserReservations() {
                         <DialogTitle>Reservation Details</DialogTitle>
                     </DialogHeader>
                     {selectedReservation && (
-                        <div className="space-y-4">
-                            <div>
-                                <h4 className="font-medium">
-                                    Event Information
-                                </h4>
-                                <p>Event: {selectedReservation.eventName}</p>
-                            </div>
-
-                            <div>
-                                <h4 className="font-medium">
-                                    Venue Information
-                                </h4>
-                                <p>Venue: {selectedReservation.venueName}</p>
-                                <p>
-                                    Date:{" "}
-                                    {format(
-                                        selectedReservation.startDate,
-                                        "PPP",
-                                    )}
-                                </p>
-                                <p>
-                                    Time: {selectedReservation.startTime} to{" "}
-                                    {selectedReservation.endTime}
-                                </p>
-                            </div>
-
-                            <div>
-                                <h4 className="font-medium">Status</h4>
-                                <div className="flex items-center gap-2 mt-1">
-                                    {getStatusBadge(selectedReservation.status)}
-                                    {selectedReservation.status ===
-                                        "rejected" && (
-                                        <span className="text-sm text-red-500">
-                                            {
-                                                selectedReservation.rejectionReason
-                                            }
-                                        </span>
-                                    )}
+                        <ScrollArea className="max-h-[70vh]">
+                            <div className="space-y-4 p-1 pr-4">
+                                {" "}
+                                {/* Add padding for scrollbar */}
+                                <div>
+                                    <h4 className="font-medium text-muted-foreground">
+                                        Event
+                                    </h4>
+                                    <p>{selectedReservation.eventName}</p>
                                 </div>
-                            </div>
-
-                            <div>
-                                <h4 className="font-medium">
-                                    Reserved Equipment
-                                </h4>
-                                <ScrollArea className="h-[150px] w-full rounded-md border p-4 mt-2">
-                                    <div className="space-y-4">
-                                        <div>
-                                            <h5 className="text-sm font-medium mb-2">
-                                                MSDO Equipment
-                                            </h5>
-                                            <ul className="list-disc pl-5 space-y-1">
-                                                {selectedReservation.equipment
-                                                    .filter(
-                                                        (item) =>
-                                                            item.owner ===
-                                                            "MSDO",
-                                                    )
-                                                    .map((item) => (
-                                                        <li
-                                                            key={item.id}
-                                                            className="text-sm"
-                                                        >
-                                                            {item.name}
-                                                        </li>
-                                                    ))}
-                                            </ul>
-                                        </div>
-
-                                        <div>
-                                            <h5 className="text-sm font-medium mb-2">
-                                                OPC Equipment
-                                            </h5>
-                                            <ul className="list-disc pl-5 space-y-1">
-                                                {selectedReservation.equipment
-                                                    .filter(
-                                                        (item) =>
-                                                            item.owner ===
-                                                            "OPC",
-                                                    )
-                                                    .map((item) => (
-                                                        <li
-                                                            key={item.id}
-                                                            className="text-sm"
-                                                        >
-                                                            {item.name}
-                                                        </li>
-                                                    ))}
-                                            </ul>
-                                        </div>
+                                <div>
+                                    <h4 className="font-medium text-muted-foreground">
+                                        Equipment
+                                    </h4>
+                                    <p>
+                                        {selectedReservation.equipmentName}{" "}
+                                        (Qty: {selectedReservation.quantity})
+                                    </p>
+                                </div>
+                                <div>
+                                    <h4 className="font-medium text-muted-foreground">
+                                        Department
+                                    </h4>
+                                    <p>{selectedReservation.departmentName}</p>
+                                </div>
+                                <div>
+                                    <h4 className="font-medium text-muted-foreground">
+                                        Start Time
+                                    </h4>
+                                    <p>
+                                        {formatDateTime(
+                                            selectedReservation.startTime,
+                                        )}
+                                    </p>
+                                </div>
+                                <div>
+                                    <h4 className="font-medium text-muted-foreground">
+                                        End Time
+                                    </h4>
+                                    <p>
+                                        {formatDateTime(
+                                            selectedReservation.endTime,
+                                        )}
+                                    </p>
+                                </div>
+                                <div>
+                                    <h4 className="font-medium text-muted-foreground">
+                                        Status
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <Badge
+                                            className={getStatusBadgeClass(
+                                                selectedReservation.status,
+                                            )}
+                                        >
+                                            {selectedReservation.status}
+                                        </Badge>
+                                        {/* Display rejection remarks if available */}
+                                        {selectedReservation.status ===
+                                            "REJECTED" &&
+                                            selectedReservation.approvals?.find(
+                                                (a) => a.status === "REJECTED",
+                                            )?.remarks && (
+                                                <span className="text-sm text-red-500">
+                                                    Reason:{" "}
+                                                    {
+                                                        selectedReservation.approvals.find(
+                                                            (a) =>
+                                                                a.status ===
+                                                                "REJECTED",
+                                                        )?.remarks
+                                                    }
+                                                </span>
+                                            )}
                                     </div>
-                                </ScrollArea>
+                                </div>
+                                {selectedReservation.reservationLetterUrl && (
+                                    <div>
+                                        <h4 className="font-medium text-muted-foreground">
+                                            Reservation Letter
+                                        </h4>
+                                        <Button
+                                            variant="link"
+                                            asChild
+                                            className="p-0 h-auto"
+                                        >
+                                            <a
+                                                href={
+                                                    selectedReservation.reservationLetterUrl
+                                                }
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1"
+                                            >
+                                                View Letter
+                                            </a>
+                                        </Button>
+                                    </div>
+                                )}
+                                {selectedReservation.approvals &&
+                                    selectedReservation.approvals.length >
+                                        0 && (
+                                        <div>
+                                            <h4 className="font-medium text-muted-foreground">
+                                                Approval History
+                                            </h4>
+                                            <ul className="list-disc pl-5 space-y-1 mt-1 text-sm">
+                                                {selectedReservation.approvals.map(
+                                                    (approval) => (
+                                                        <li key={approval.id}>
+                                                            {approval.status} by{" "}
+                                                            {approval.signedBy}{" "}
+                                                            ({approval.userRole}
+                                                            ) on{" "}
+                                                            {formatDateTime(
+                                                                approval.dateSigned,
+                                                            )}
+                                                            {approval.remarks && (
+                                                                <span className="block text-xs text-muted-foreground">
+                                                                    Remarks:{" "}
+                                                                    {
+                                                                        approval.remarks
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </li>
+                                                    ),
+                                                )}
+                                            </ul>
+                                        </div>
+                                    )}
+                                <div>
+                                    <h4 className="font-medium text-muted-foreground">
+                                        Submitted On
+                                    </h4>
+                                    <p>
+                                        {formatDateTime(
+                                            selectedReservation.createdAt,
+                                        )}
+                                    </p>
+                                </div>
+                                {selectedReservation.updatedAt && (
+                                    <div>
+                                        <h4 className="font-medium text-muted-foreground">
+                                            Last Updated
+                                        </h4>
+                                        <p>
+                                            {formatDateTime(
+                                                selectedReservation.updatedAt,
+                                            )}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                        </div>
+                        </ScrollArea>
                     )}
                     <DialogFooter>
                         <Button onClick={() => setShowDetailsDialog(false)}>
@@ -356,25 +415,36 @@ export default function UserReservations() {
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>Cancel Reservation</DialogTitle>
+                        <DialogDescription>
+                            {" "}
+                            {/* Use DialogDescription */}
+                            Are you sure you want to cancel the reservation for
+                            "{selectedReservation?.equipmentName}" for the event
+                            "{selectedReservation?.eventName}"?
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
-                        <p>
-                            Are you sure you want to cancel this equipment
-                            reservation for "{selectedReservation?.eventName}"?
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                            This action cannot be undone.
+                        <p className="text-sm text-muted-foreground">
+                            This action cannot be undone. The equipment owner
+                            may be notified.
                         </p>
                     </div>
                     <DialogFooter>
                         <Button
                             variant="outline"
                             onClick={() => setShowCancelDialog(false)}
+                            disabled={cancelMutation.isPending}
                         >
                             No, Keep Reservation
                         </Button>
-                        <Button variant="destructive" onClick={handleCancel}>
-                            Yes, Cancel Reservation
+                        <Button
+                            variant="destructive"
+                            onClick={handleCancel}
+                            disabled={cancelMutation.isPending}
+                        >
+                            {cancelMutation.isPending
+                                ? "Cancelling..."
+                                : "Yes, Cancel Reservation"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

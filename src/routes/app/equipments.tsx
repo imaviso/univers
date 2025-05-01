@@ -38,12 +38,18 @@ import { allNavigation } from "@/lib/navigation";
 import {
     equipmentsQueryOptions,
     eventsQueryOptions,
+    getOwnEventsQueryOptions,
+    useCreateEquipmentReservationMutation,
     useCurrentUser,
     usersQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
-import type { EquipmentDTOInput } from "@/lib/schema";
+import type {
+    EquipmentDTOInput,
+    EquipmentReservationFormInput,
+} from "@/lib/schema";
 import { type Equipment, STATUS_EQUIPMENT, type UserType } from "@/lib/types";
+import { getEquipmentNameById } from "@/lib/utils";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
@@ -54,6 +60,7 @@ import {
 import type {
     ColumnDef,
     Row,
+    RowSelectionState,
     Table as TanstackTable,
 } from "@tanstack/react-table"; // Import Table as TanstackTable
 import {
@@ -127,7 +134,7 @@ export const Route = createFileRoute("/app/equipments")({
             equipmentsQueryOptions(context.authState),
         );
         context.queryClient.ensureQueryData(venuesQueryOptions);
-        context.queryClient.ensureQueryData(eventsQueryOptions);
+        context.queryClient.ensureQueryData(getOwnEventsQueryOptions);
     },
 });
 
@@ -135,11 +142,10 @@ function EquipmentInventory() {
     const { queryClient } = useRouteContext({
         from: "/app/equipments",
     });
-    const { data: currentUser } = useCurrentUser(); // Get current user from context
-    const role = currentUser?.role ?? "USER"; // Default role if needed
+    const { data: currentUser } = useCurrentUser();
+    const role = currentUser?.role ?? "USER";
     const navigate = useNavigate();
 
-    // State for dialogs and selections
     const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
     const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(
         null,
@@ -148,7 +154,7 @@ function EquipmentInventory() {
         null,
     );
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [selectedItems, setSelectedItems] = useState<number[]>([]);
+    const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
     const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
         role === "SUPER_ADMIN" || role === "EQUIPMENT_OWNER" ? "table" : "grid",
     );
@@ -161,7 +167,7 @@ function EquipmentInventory() {
     );
 
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
-    const { data: events = [] } = useSuspenseQuery(eventsQueryOptions);
+    const { data: events = [] } = useSuspenseQuery(getOwnEventsQueryOptions);
 
     // Fetch all users ONLY if the current user is SUPER_ADMIN (for owner selection)
     const { data: allUsers = [] } = useQuery({
@@ -238,11 +244,80 @@ function EquipmentInventory() {
     // const bulkDeleteMutation = useMutation({ ... });
 
     // --- Event Handlers ---
-    const handleReserveEquipment = (data: Record<string, unknown>) => {
-        // Use Record<string, unknown> instead of any
-        console.log("Reservation data:", data);
-        // TODO: Implement reservation logic/mutation
-        setIsReservationDialogOpen(false);
+    const createEquipmentReservationMutation =
+        useCreateEquipmentReservationMutation();
+
+    const handleReserveEquipment = async (
+        formData: EquipmentReservationFormInput,
+    ) => {
+        console.log("Reservation form submitted:", formData);
+        setIsReservationDialogOpen(false); // Close dialog immediately
+
+        const {
+            eventId,
+            startDateTime,
+            endDateTime,
+            selectedEquipment,
+            reservationLetterFile,
+        } = formData;
+
+        // Prepare common data
+        const commonReservationData = {
+            eventId: Number(eventId),
+            startTime: startDateTime?.toISOString(), // Convert Date to ISO string
+            endTime: endDateTime?.toISOString(), // Convert Date to ISO string
+            // departmentId will be set by backend based on user
+        };
+
+        const letterFile = reservationLetterFile?.[0] ?? null; // Get the single file or null
+
+        let successCount = 0;
+        let errorCount = 0;
+        const totalRequests = selectedEquipment.length;
+
+        // Loop through selected equipment and create individual reservations
+        for (const item of selectedEquipment) {
+            const reservationData = {
+                ...commonReservationData,
+                equipmentId: Number(item.equipmentId),
+                quantity: item.quantity,
+            };
+
+            try {
+                await createEquipmentReservationMutation.mutateAsync({
+                    reservationData,
+                    reservationLetterFile: letterFile, // Pass the same letter file for all
+                });
+                successCount++;
+            } catch (error) {
+                errorCount++;
+                console.error(
+                    `Failed to reserve equipment ID ${item.equipmentId}:`,
+                    error,
+                );
+                // Show individual error toast
+                toast.error(
+                    `Failed to reserve item ${getEquipmentNameById(equipment, Number(item.equipmentId)) || `ID ${item.equipmentId}`}: ${(error as Error).message}`,
+                );
+            }
+        }
+
+        // Show summary toast
+        if (successCount > 0 && errorCount === 0) {
+            toast.success(
+                `Successfully submitted ${successCount} equipment reservation request(s).`,
+            );
+        } else if (successCount > 0 && errorCount > 0) {
+            toast.warning(
+                `Submitted ${successCount} reservation request(s) successfully, but ${errorCount} failed.`,
+            );
+        } else if (successCount === 0 && errorCount > 0) {
+            toast.error(
+                `Failed to submit ${errorCount} equipment reservation request(s).`,
+            );
+        }
+        // Optionally reset form state here if not handled by dialog close
+        // form.reset(); // If form instance was available here
     };
 
     const handleEditEquipment = useCallback(
@@ -257,16 +332,19 @@ function EquipmentInventory() {
         if (!currentUser) return; // Should not happen if page loaded
 
         if (equipmentToDelete) {
-            // Pass equipmentId and current userId
+            // Single delete
             deleteMutation.mutate({
                 equipmentId: equipmentToDelete,
                 userId: Number(currentUser.id),
             });
         }
-        // Bulk delete removed
-        // else if (selectedItems.length > 0) {
-        //     bulkDeleteMutation.mutate({ equipmentIds: selectedItems, userId: Number(currentUser.id) });
+        // Bulk delete logic removed as backend doesn't support it
+        // else if (Object.keys(rowSelection).length > 0) {
+        //     // Handle bulk delete based on rowSelection keys if needed in future
+        //     // const idsToDelete = Object.keys(rowSelection).map(Number);
+        //     // bulkDeleteMutation.mutate({ equipmentIds: idsToDelete, userId: Number(currentUser.id) });
         // }
+        setRowSelection({}); // Clear selection after attempting delete
     };
 
     // Updated submit handler from dialog
@@ -310,12 +388,27 @@ function EquipmentInventory() {
 
     // Calculate stats (memoized)
     const stats = useMemo(() => {
+        // Add a safeguard: Check if equipment is actually an array before reducing
+        if (!Array.isArray(equipment)) {
+            // Return default stats if equipment isn't ready
+            return {
+                total: 0,
+                available: 0,
+                maintenance: 0,
+                pending: 0,
+                defect: 0,
+                needReplacement: 0,
+            };
+        }
+
+        // Now it's safe to call reduce
         const counts = equipment.reduce(
             (acc, item) => {
                 acc.total++;
                 switch (item.status) {
                     case "APPROVED": // Assuming APPROVED means available
                     case "NEW":
+                        // Ensure 'availability' property exists and is checked correctly
                         if (item.availability) acc.available++;
                         break;
                     case "PENDING":
@@ -346,7 +439,7 @@ function EquipmentInventory() {
             },
         );
         return counts;
-    }, [equipment]);
+    }, [equipment]); // De
 
     // Status badge styling
     const getStatusBadge = useCallback((status: Equipment["status"]) => {
@@ -397,9 +490,7 @@ function EquipmentInventory() {
                 ? [
                       {
                           id: "select",
-                          header: (
-                              { table }: { table: TanstackTable<Equipment> }, // Use imported Table type
-                          ) => (
+                          header: ({ table }) => (
                               <Checkbox
                                   checked={
                                       table.getIsAllPageRowsSelected() ||
@@ -412,7 +503,7 @@ function EquipmentInventory() {
                                   aria-label="Select all"
                               />
                           ),
-                          cell: ({ row }: { row: Row<Equipment> }) => (
+                          cell: ({ row }) => (
                               <Checkbox
                                   checked={row.getIsSelected()}
                                   onCheckedChange={(value) =>
@@ -514,7 +605,7 @@ function EquipmentInventory() {
                 ? [
                       {
                           id: "actions",
-                          cell: ({ row }: { row: Row<Equipment> }) => {
+                          cell: ({ row }) => {
                               const item = row.original;
                               // Check if the current user can manage this specific item
                               const canManage =
@@ -592,6 +683,8 @@ function EquipmentInventory() {
         addMutation.isPending ||
         editMutation.isPending ||
         deleteMutation.isPending; // Removed bulkDeleteMutation
+
+    const selectedRowCount = Object.keys(rowSelection).length;
 
     return (
         <div className="bg-background">
@@ -711,11 +804,22 @@ function EquipmentInventory() {
                                 Delete Selected ({selectedItems.length})
                             </Button>
                         ) : ( */}
-                        <span className="text-sm text-muted-foreground">
-                            {filteredEquipment.length} item
-                            {filteredEquipment.length !== 1 ? "s" : ""}
-                        </span>
-                        {/* )} */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                                {selectedRowCount > 0
+                                    ? `${selectedRowCount} selected | `
+                                    : ""}
+                                {/* Add check for Array.isArray */}
+                                {Array.isArray(filteredEquipment)
+                                    ? filteredEquipment.length
+                                    : 0}{" "}
+                                item
+                                {Array.isArray(filteredEquipment) &&
+                                filteredEquipment.length !== 1
+                                    ? "s"
+                                    : ""}
+                            </span>
+                        </div>
                     </div>
 
                     {/* View Mode Tabs & Filters */}
@@ -779,42 +883,12 @@ function EquipmentInventory() {
                                 data={filteredEquipment}
                                 searchColumn="name"
                                 searchPlaceholder="Search equipment..."
-                                // Pass selection state directly
-                                rowSelection={selectedItems.reduce(
-                                    (acc, id) => {
-                                        acc[id] = true; // Convert array of IDs to RowSelectionState format
-                                        return acc;
-                                    },
-                                    {} as Record<number, boolean>,
-                                )}
-                                // Pass the state updater function
-                                onRowSelectionChange={(updater) => {
-                                    // updater is OnChangeFn<RowSelectionState>
-                                    // It gives the new state or a function to compute it
-                                    const currentSelection =
-                                        selectedItems.reduce(
-                                            (acc, id) => {
-                                                acc[id] = true;
-                                                return acc;
-                                            },
-                                            {} as Record<number, boolean>,
-                                        );
-
-                                    const newSelectionState =
-                                        typeof updater === "function"
-                                            ? updater(currentSelection)
-                                            : updater;
-
-                                    // Convert back to array of IDs for our state
-                                    const selectedIds = Object.entries(
-                                        newSelectionState,
-                                    )
-                                        .filter(([, isSelected]) => isSelected)
-                                        .map(([id]) => Number(id));
-                                    setSelectedItems(selectedIds);
-                                }}
-                                // No need for state prop anymore
-                                // No need for enableRowSelection prop anymore (handled internally by DataTable)
+                                // Pass the state object directly
+                                rowSelection={rowSelection}
+                                // Pass the state setter directly
+                                onRowSelectionChange={setRowSelection}
+                                // Enable row selection (managed by DataTable)
+                                enableRowSelection
                             />
                         )}
 
@@ -1037,9 +1111,9 @@ function EquipmentInventory() {
                         onClose={() => setIsReservationDialogOpen(false)}
                         onSubmit={handleReserveEquipment}
                         events={events}
-                        venues={venues}
-                        equipment={equipment}
-                        // isLoading={reservationMutation.isPending}
+                        equipment={equipment.filter((e) => e.availability)}
+                        // Use the correct mutation's loading state
+                        isLoading={createEquipmentReservationMutation.isPending}
                     />
                 )}
             </div>

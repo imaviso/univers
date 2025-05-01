@@ -84,15 +84,7 @@ export const allNavigation = [
         name: "Venue Approval",
         href: "/app/venue-approval/approval",
         icon: BookCheck,
-        roles: [
-            "VENUE_OWNER",
-            "VPAA",
-            "VP_ADMIN",
-            "MSDO",
-            "OPC",
-            "SSD",
-            "FAO",
-        ],
+        roles: ["VENUE_OWNER", "VPAA", "VP_ADMIN", "MSDO", "OPC", "SSD", "FAO"],
     },
     {
         name: "Users",

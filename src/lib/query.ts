@@ -1,11 +1,17 @@
 import {
+    approveEquipmentReservation,
     approveReservation,
+    cancelEquipmentReservation,
     cancelReservation,
+    createEquipmentReservation,
     createVenueReservation,
+    deleteEquipmentReservation,
     deleteNotifications,
     deleteReservation,
     getAllApprovalsOfEvent,
     getAllDepartments,
+    getAllEquipmentOwnerReservations,
+    getAllEquipmentReservations,
     getAllEquipmentsAdmin,
     getAllEquipmentsByOwner,
     getAllEvents,
@@ -13,19 +19,24 @@ import {
     getAllUsers,
     getAllVenueOwnerReservations,
     getAllVenues,
+    getApprovalsForEquipmentReservation,
     getApprovalsForReservation,
     getApprovedEvents,
+    getEquipmentReservationById,
     getEventById,
     getNotifications,
+    getOwnEquipmentReservations,
     getOwnEvents,
     getOwnReservations,
     getPendingDeptHeadEvents,
+    getPendingEquipmentOwnerReservations,
     getPendingVenueOwnerEvents,
     getPendingVenueOwnerReservations,
     getReservationById,
     getUnreadNotificationCount,
     markAllNotificationsRead,
     markNotificationsRead,
+    rejectEquipmentReservation,
     rejectReservation,
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
@@ -38,6 +49,8 @@ import {
 import { type AnyRoute, useRouteContext } from "@tanstack/react-router"; // Added AnyRoute import
 import type {
     Event as AppEvent,
+    EquipmentApprovalDTO,
+    EquipmentReservationDTO,
     UserRole,
     UserType,
     VenueApprovalDTO,
@@ -456,6 +469,195 @@ export const useDeleteReservationMutation = () => {
         onError: (error) => {
             console.error("Error deleting reservation:", error);
             // Show error toast/message
+        },
+    });
+};
+
+export const equipmentReservationKeys = {
+    all: ["equipmentReservations"] as const,
+    lists: () => [...equipmentReservationKeys.all, "list"] as const,
+    list: (filters: string) =>
+        [...equipmentReservationKeys.lists(), { filters }] as const,
+    details: () => [...equipmentReservationKeys.all, "detail"] as const,
+    detail: (id: number | string) =>
+        [...equipmentReservationKeys.details(), id] as const,
+    approvals: (id: number | string) =>
+        [...equipmentReservationKeys.detail(id), "approvals"] as const,
+    pending: () => [...equipmentReservationKeys.all, "pending"] as const,
+    pendingEquipmentOwner: () =>
+        [...equipmentReservationKeys.pending(), "equipmentOwner"] as const,
+    allEquipmentOwner: () =>
+        [...equipmentReservationKeys.all, "equipmentOwner"] as const,
+    own: () => [...equipmentReservationKeys.all, "own"] as const,
+};
+
+// --- Equipment Reservation Query Options ---
+
+export const allEquipmentReservationsQueryOptions = queryOptions<
+    EquipmentReservationDTO[]
+>({
+    queryKey: equipmentReservationKeys.lists(),
+    queryFn: getAllEquipmentReservations,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+});
+
+export const ownEquipmentReservationsQueryOptions = queryOptions<
+    EquipmentReservationDTO[]
+>({
+    queryKey: equipmentReservationKeys.own(),
+    queryFn: getOwnEquipmentReservations,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+});
+
+export const equipmentReservationByIdQueryOptions = (
+    reservationId: number | string,
+) =>
+    queryOptions<EquipmentReservationDTO>({
+        queryKey: equipmentReservationKeys.detail(reservationId),
+        queryFn: () => getEquipmentReservationById(reservationId),
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const equipmentReservationApprovalsQueryOptions = (
+    reservationId: number | string,
+) =>
+    queryOptions<EquipmentApprovalDTO[]>({
+        queryKey: equipmentReservationKeys.approvals(reservationId),
+        queryFn: () => getApprovalsForEquipmentReservation(reservationId),
+        staleTime: 1000 * 60 * 2, // 2 minutes
+    });
+
+export const pendingEquipmentOwnerReservationsQueryOptions = queryOptions<
+    EquipmentReservationDTO[]
+>({
+    queryKey: equipmentReservationKeys.pendingEquipmentOwner(),
+    queryFn: getPendingEquipmentOwnerReservations,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+});
+
+export const allEquipmentOwnerReservationsQueryOptions = queryOptions<
+    EquipmentReservationDTO[]
+>({
+    queryKey: equipmentReservationKeys.allEquipmentOwner(),
+    queryFn: getAllEquipmentOwnerReservations,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+});
+
+// --- Equipment Reservation Mutations ---
+
+export const useCreateEquipmentReservationMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: createEquipmentReservation,
+        onSuccess: (newReservation) => {
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.own(),
+            });
+            queryClient.setQueryData(
+                equipmentReservationKeys.detail(newReservation.id),
+                newReservation,
+            );
+        },
+    });
+};
+
+export const useApproveEquipmentReservationMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: approveEquipmentReservation,
+        onSuccess: (message, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.detail(
+                    variables.reservationId,
+                ),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.approvals(
+                    variables.reservationId,
+                ),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.pending(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.own(),
+            });
+        },
+    });
+};
+
+export const useRejectEquipmentReservationMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: rejectEquipmentReservation,
+        onSuccess: (message, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.detail(
+                    variables.reservationId,
+                ),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.approvals(
+                    variables.reservationId,
+                ),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.pending(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.own(),
+            });
+        },
+    });
+};
+
+export const useCancelEquipmentReservationMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: cancelEquipmentReservation,
+        onSuccess: (message, reservationId) => {
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.detail(reservationId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.pending(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.own(),
+            });
+        },
+    });
+};
+
+export const useDeleteEquipmentReservationMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: deleteEquipmentReservation,
+        onSuccess: (message, reservationId) => {
+            queryClient.removeQueries({
+                queryKey: equipmentReservationKeys.detail(reservationId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.pending(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.own(),
+            });
         },
     });
 };

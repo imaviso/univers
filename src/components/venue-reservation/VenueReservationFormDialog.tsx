@@ -405,9 +405,7 @@ export function VenueReservationFormDialog({
                             name="reservationLetterFile" // Input type is File[]
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>
-                                        Approved Letter (Optional)
-                                    </FormLabel>
+                                    <FormLabel>Approved Letter</FormLabel>
                                     <FormControl>
                                         <FileUpload
                                             value={field.value} // Expects File[]

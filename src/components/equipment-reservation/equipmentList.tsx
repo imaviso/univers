@@ -1,111 +1,182 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge"; // Keep Badge import
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { Equipment } from "@/lib/types";
-import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
+import { Package } from "lucide-react";
+// Removed: import Image from "next/image";
+
 interface EquipmentListProps {
     equipment: Equipment[];
-    selectedEquipment: string[];
-    onEquipmentChange: (equipmentIds: string[]) => void;
+    // Renamed prop to 'value' and updated type
+    value: { equipmentId: string; quantity: number }[];
+    // Updated onChange prop type
+    onChange: (newValue: { equipmentId: string; quantity: number }[]) => void;
 }
 
 export default function EquipmentList({
     equipment,
-    selectedEquipment,
-    onEquipmentChange,
+    value = [], // Default to empty array
+    onChange,
 }: EquipmentListProps) {
-    const handleEquipmentToggle = (
-        equipmentId: number, // Keep receiving number from item.id
-        isAvailable: boolean,
+    const handleCheckboxChange = (
+        checked: boolean | string,
+        equipmentId: number,
     ) => {
-        if (!isAvailable) return;
+        const currentSelection = [...value];
+        const equipmentIdStr = equipmentId.toString();
+        const existingIndex = currentSelection.findIndex(
+            (item) => item.equipmentId === equipmentIdStr,
+        );
 
-        const equipmentIdString = String(equipmentId); // Convert to string for comparison/storage
+        if (checked && existingIndex === -1) {
+            // Add item with default quantity 1 if checked and not present
+            currentSelection.push({ equipmentId: equipmentIdStr, quantity: 1 });
+        } else if (!checked && existingIndex !== -1) {
+            // Remove item if unchecked and present
+            currentSelection.splice(existingIndex, 1);
+        }
+        onChange(currentSelection); // Call onChange with the updated array of objects
+    };
 
-        if (selectedEquipment.includes(equipmentIdString)) {
-            onEquipmentChange(
-                selectedEquipment.filter((id) => id !== equipmentIdString),
-            );
-        } else {
-            onEquipmentChange([...selectedEquipment, equipmentIdString]);
+    const handleQuantityChange = (newQuantity: number, equipmentId: number) => {
+        const currentSelection = [...value];
+        const equipmentIdStr = equipmentId.toString();
+        const existingIndex = currentSelection.findIndex(
+            (item) => item.equipmentId === equipmentIdStr,
+        );
+        const equipmentItem = equipment.find((item) => item.id === equipmentId);
+        const maxQuantity = equipmentItem?.quantity ?? 1; // Get max available quantity
+
+        // Ensure quantity is within valid range (1 to max available)
+        const validQuantity = Math.max(1, Math.min(newQuantity, maxQuantity));
+
+        if (existingIndex !== -1) {
+            // Update quantity if item is already selected
+            currentSelection[existingIndex].quantity = validQuantity;
+            onChange(currentSelection); // Call onChange with the updated array of objects
         }
     };
 
-    const getAvailabilityBadge = (available: boolean) => {
-        return available ? (
-            <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">
-                Available
-            </Badge>
-        ) : (
-            <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-                Unavailable
-            </Badge>
-        );
-    };
-
     return (
-        <div className="w-full space-y-4">
-            {/* ... (empty state logic remains the same) ... */}
-            {equipment.length === 0 ? (
-                <div className="flex items-center justify-center h-[300px] border rounded-md">
-                    <span className="text-sm text-muted-foreground">
-                        No equipment available
-                    </span>
-                </div>
-            ) : (
-                <ScrollArea className="h-[300px] border rounded-md p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {equipment.map((item) => (
-                            <Card
-                                key={item.id}
-                                className={`overflow-hidden ${!item.availability ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:border-primary"}`}
-                                // Use the Card's onClick as the primary toggle mechanism
-                                onClick={() =>
-                                    handleEquipmentToggle(
-                                        item.id,
-                                        item.availability,
-                                    )
-                                }
-                            >
-                                <CardContent className="p-3">
-                                    <div className="flex items-start gap-3">
-                                        <Checkbox
-                                            // Checked state reflects the selection
-                                            checked={selectedEquipment.includes(
-                                                String(item.id),
-                                            )}
-                                            disabled={!item.availability}
-                                            className="mt-1"
-                                            // Remove the onCheckedChange handler
-                                            // Remove onClick propagation stop, Card handles it
-                                            // The checkbox is now purely visual based on 'checked'
-                                            aria-hidden="true" // Hide from accessibility tree as Card handles interaction
-                                            tabIndex={-1} // Remove from tab order
-                                        />
-                                        <div className="space-y-1 flex-1">
-                                            <div className="flex justify-between">
-                                                <div className="font-medium">
-                                                    {item.name}
-                                                </div>
-                                                {getAvailabilityBadge(
-                                                    item.availability,
-                                                )}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                Quantity: {item.quantity}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                Brand: {item.brand}
-                                            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto p-1">
+            {equipment.map((item) => {
+                const isSelected = value.some(
+                    (selected) => selected.equipmentId === item.id.toString(),
+                );
+                const selectedItem = value.find(
+                    (selected) => selected.equipmentId === item.id.toString(),
+                );
+                const currentQuantity = selectedItem?.quantity ?? 1;
+
+                return (
+                    <Card
+                        key={item.id}
+                        className={cn(
+                            "overflow-hidden transition-all duration-150",
+                            isSelected
+                                ? "ring-2 ring-primary"
+                                : "hover:shadow-md",
+                            !item.availability
+                                ? "opacity-60 cursor-not-allowed"
+                                : "",
+                        )}
+                    >
+                        <CardContent className="p-3 space-y-2">
+                            <div className="flex items-start gap-3">
+                                <Checkbox
+                                    id={`equip-${item.id}`}
+                                    checked={isSelected}
+                                    onCheckedChange={(checked) =>
+                                        handleCheckboxChange(!!checked, item.id)
+                                    }
+                                    className="mt-1"
+                                    disabled={!item.availability}
+                                />
+                                <div className="flex-grow space-y-1">
+                                    <Label
+                                        htmlFor={`equip-${item.id}`}
+                                        className={cn(
+                                            "font-medium",
+                                            item.availability
+                                                ? "cursor-pointer"
+                                                : "cursor-not-allowed",
+                                        )}
+                                    >
+                                        {item.name}
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Brand: {item.brand ?? "N/A"} | Available
+                                        Qty: {item.quantity}
+                                    </p>
+                                    {isSelected && item.availability && (
+                                        <div className="flex items-center gap-2 pt-1">
+                                            <Label
+                                                htmlFor={`qty-${item.id}`}
+                                                className="text-sm"
+                                            >
+                                                Quantity:
+                                            </Label>
+                                            <Input
+                                                id={`qty-${item.id}`}
+                                                type="number"
+                                                min="1"
+                                                max={item.quantity}
+                                                value={currentQuantity}
+                                                onChange={(e) =>
+                                                    handleQuantityChange(
+                                                        Number.parseInt(
+                                                            e.target.value,
+                                                            10,
+                                                        ) || 1,
+                                                        item.id,
+                                                    )
+                                                }
+                                                className="h-8 w-20"
+                                                onClick={(e) =>
+                                                    e.stopPropagation()
+                                                }
+                                            />
                                         </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </ScrollArea>
+                                    )}
+                                </div>
+                                {/* Use standard img tag */}
+                                <div className="relative h-12 w-12 flex-shrink-0 bg-muted rounded overflow-hidden flex items-center justify-center">
+                                    {item.imagePath ? (
+                                        <img // Changed from next/image Image
+                                            src={item.imagePath}
+                                            alt={item.name}
+                                            className="h-full w-full object-cover" // Added basic styling
+                                        />
+                                    ) : (
+                                        <Package className="h-6 w-6 text-muted-foreground" />
+                                    )}
+                                </div>
+                            </div>
+                            <div className="pt-1">
+                                {item.availability ? (
+                                    <Badge
+                                        variant="outline"
+                                        className="border-green-500 text-green-600"
+                                    >
+                                        Available
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="destructive">
+                                        Unavailable
+                                    </Badge>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                );
+            })}
+            {equipment.length === 0 && (
+                <p className="col-span-full text-center text-muted-foreground py-4">
+                    No available equipment found.
+                </p>
             )}
         </div>
     );

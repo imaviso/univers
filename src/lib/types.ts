@@ -303,8 +303,8 @@ export type VenueApprovalDTO = {
     signedBy: string;
     userRole: string;
     remarks: string | null;
-    status: string; 
-    dateSigned: string | null; 
+    status: string;
+    dateSigned: string | null;
 };
 
 export type VenueReservationDTO = {
@@ -316,25 +316,82 @@ export type VenueReservationDTO = {
     venueId: number;
     venueName: string;
     startTime: string;
-    endTime: string; 
-    status: string; 
+    endTime: string;
+    status: string;
     reservationLetterUrl: string | null;
-    approvals: VenueApprovalDTO[] | null; 
-    createdAt: string; 
+    approvals: VenueApprovalDTO[] | null;
+    createdAt: string;
     updatedAt: string | null;
 };
 
 // Input type for creating a reservation
 export type CreateVenueReservationInput = {
-    reservationData: Omit<VenueReservationDTO, 'id' | 'requestingUser' | 'venueName' | 'departmentName' | 'approvals' | 'createdAt' | 'updatedAt' | 'reservationLetterUrl' | 'status'> & {
+    reservationData: Omit<
+        VenueReservationDTO,
+        | "id"
+        | "requestingUser"
+        | "venueName"
+        | "departmentName"
+        | "approvals"
+        | "createdAt"
+        | "updatedAt"
+        | "reservationLetterUrl"
+        | "status"
+    > & {
         // Add specific fields needed for creation if different from DTO
         // Example: maybe only venueId, startTime, endTime are needed initially
     };
     reservationLetterFile?: File | null;
 };
 
-// Input type for approving/rejecting
 export type ReservationActionInput = {
     reservationId: number;
-    remarks?: string; // Optional for approve, required for reject
+    remarks?: string;
+};
+
+export type EquipmentApprovalDTO = {
+    id: number;
+    equipmentReservationId: number;
+    userId: number;
+    signedBy: string;
+    userRole: string;
+    remarks: string | null;
+    status: string;
+    dateSigned: string | null;
+};
+
+export type EquipmentReservationDTO = {
+    id: number;
+    eventId: number;
+    eventName: string;
+    requestingUser: UserDTO;
+    departmentId: number;
+    departmentName: string;
+    equipmentId: number;
+    equipmentName: string;
+    quantity: number;
+    startTime: string;
+    endTime: string;
+    status: string;
+    reservationLetterUrl: string | null;
+    approvals: EquipmentApprovalDTO[] | null;
+    createdAt: string;
+    updatedAt: string | null;
+};
+
+export type CreateEquipmentReservationInput = {
+    reservationData: {
+        eventId: number;
+        equipmentId: number;
+        quantity: number;
+        departmentId?: number;
+        startTime?: string;
+        endTime?: string;
+    };
+    reservationLetterFile?: File | null;
+};
+
+export type EquipmentActionInput = {
+    reservationId: number;
+    remarks?: string;
 };
