@@ -1,6 +1,7 @@
 import {
     Avatar,
     AvatarFallback /*, AvatarImage*/,
+    AvatarImage,
 } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -599,15 +600,6 @@ export function EventDetailsPage() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <h3 className="text-sm font-medium text-muted-foreground">
-                                                    Event ID
-                                                </h3>
-                                                <p className="text-sm font-medium">
-                                                    {event.id}{" "}
-                                                    {/* Display real ID */}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <h3 className="text-sm font-medium text-muted-foreground">
                                                     Status
                                                 </h3>
                                                 <Badge
@@ -732,7 +724,14 @@ export function EventDetailsPage() {
                                             </h3>
                                             <div className="flex items-center gap-3 mt-2">
                                                 <Avatar className="h-10 w-10">
-                                                    {/* <AvatarImage src={organizerAvatar} /> */}
+                                                    <AvatarImage
+                                                        src={
+                                                            event.organizer
+                                                                ?.profileImagePath ??
+                                                            ""
+                                                        }
+                                                        alt={organizerName}
+                                                    />
                                                     <AvatarFallback>
                                                         {getInitials(
                                                             organizerName,

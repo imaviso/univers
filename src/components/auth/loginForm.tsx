@@ -18,10 +18,15 @@ import { Eye, EyeOff, LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { is } from "valibot";
+import { Drawer, DrawerContent } from "../ui/drawer";
+import { OtpVerificationDrawer } from "./otp-drawer";
+import { InputOTPForm } from "./otp-form";
 
 export default function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
     const context = useRouteContext({ from: "/(auth)/login" });
     const queryClient = context.queryClient;
 
@@ -43,129 +48,152 @@ export default function LoginForm() {
             });
             navigate({ to: "/app/calendar", replace: true });
         } catch (error) {
-            const errorMessage =
-                error instanceof Error
-                    ? error.message
-                    : "An unexpected error occurred";
-            toast.error(errorMessage);
+            let errorMessage = "An unexpected error occurred";
+            let shouldOpenVerifyDialog = false;
+
+            if (error instanceof Error) {
+                errorMessage = error.message;
+                if (
+                    errorMessage ===
+                    "Email not verified. Please verify your email before logging in."
+                ) {
+                    shouldOpenVerifyDialog = true;
+                    localStorage.setItem("userEmail", values.email);
+                    toast.info("Please verify your email address to continue.");
+                }
+            }
+
+            if (shouldOpenVerifyDialog) {
+                setIsVerifyDialogOpen(true);
+            } else {
+                toast.error(errorMessage);
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <Card className="w-full max-w-md mx-auto shadow-lg">
-            <CardContent>
-                <Form {...form}>
-                    <form
-                        onSubmit={form.handleSubmit(onSubmit)}
-                        className="space-y-6"
-                    >
-                        <div className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Enter your Email"
-                                                {...field}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Password</FormLabel>
-                                        <FormControl>
-                                            <div className="relative">
+        <>
+            <Card className="w-full max-w-md mx-auto shadow-lg">
+                <CardContent>
+                    <Form {...form}>
+                        <form
+                            onSubmit={form.handleSubmit(onSubmit)}
+                            className="space-y-6"
+                        >
+                            <div className="space-y-4">
+                                <FormField
+                                    control={form.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Email</FormLabel>
+                                            <FormControl>
                                                 <Input
-                                                    type={
-                                                        showPassword
-                                                            ? "text"
-                                                            : "password"
-                                                    }
-                                                    placeholder="Enter your password"
+                                                    placeholder="Enter your Email"
                                                     {...field}
                                                 />
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                                    onClick={() =>
-                                                        setShowPassword(
-                                                            !showPassword,
-                                                        )
-                                                    }
-                                                >
-                                                    {showPassword ? (
-                                                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                                                    ) : (
-                                                        <Eye className="h-4 w-4 text-muted-foreground" />
-                                                    )}
-                                                    <span className="sr-only">
-                                                        {showPassword
-                                                            ? "Hide password"
-                                                            : "Show password"}
-                                                    </span>
-                                                </Button>
-                                            </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                        <Button
-                            type="submit"
-                            className="w-full"
-                            disabled={isLoading}
+                                <FormField
+                                    control={form.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Password</FormLabel>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Input
+                                                        type={
+                                                            showPassword
+                                                                ? "text"
+                                                                : "password"
+                                                        }
+                                                        placeholder="Enter your password"
+                                                        {...field}
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                                        onClick={() =>
+                                                            setShowPassword(
+                                                                !showPassword,
+                                                            )
+                                                        }
+                                                    >
+                                                        {showPassword ? (
+                                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                        ) : (
+                                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                                        )}
+                                                        <span className="sr-only">
+                                                            {showPassword
+                                                                ? "Hide password"
+                                                                : "Show password"}
+                                                        </span>
+                                                    </Button>
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <Button
+                                type="submit"
+                                className="w-full"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <LoaderCircleIcon
+                                            className="-ms-1 animate-spin"
+                                            size={16}
+                                            aria-hidden="true"
+                                        />
+                                        Logging in...
+                                    </>
+                                ) : (
+                                    "Login"
+                                )}
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
+                <CardFooter className="flex flex-col space-y-4 border-t">
+                    <div className="text-sm text-muted-foreground text-center">
+                        <Link
+                            to="/forgot-password"
+                            className="text-primary underline-offset-4 hover:underline"
                         >
-                            {isLoading ? (
-                                <>
-                                    <LoaderCircleIcon
-                                        className="-ms-1 animate-spin"
-                                        size={16}
-                                        aria-hidden="true"
-                                    />
-                                    Logging in...
-                                </>
-                            ) : (
-                                "Login"
-                            )}
-                        </Button>
-                    </form>
-                </Form>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4 border-t">
-                <div className="text-sm text-muted-foreground text-center">
-                    <Link
-                        to="/forgot-password"
-                        className="text-primary underline-offset-4 hover:underline"
-                    >
-                        Forgot your password?
-                    </Link>
-                </div>
-                <div className="text-sm text-muted-foreground text-center">
-                    Don't have an account?{" "}
-                    <Link
-                        to="/register"
-                        className="text-primary underline-offset-4 hover:underline"
-                    >
-                        Register
-                    </Link>
-                </div>
-            </CardFooter>
-        </Card>
+                            Forgot your password?
+                        </Link>
+                    </div>
+                    <div className="text-sm text-muted-foreground text-center">
+                        Don't have an account?{" "}
+                        <Link
+                            to="/register"
+                            className="text-primary underline-offset-4 hover:underline"
+                        >
+                            Register
+                        </Link>
+                    </div>
+                </CardFooter>
+            </Card>
+            {isVerifyDialogOpen && (
+                <OtpVerificationDrawer
+                    isOpen={isVerifyDialogOpen}
+                    onOpenChange={setIsVerifyDialogOpen}
+                />
+            )}
+        </>
     );
 }

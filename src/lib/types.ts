@@ -255,7 +255,7 @@ export type Event = {
     id: number;
     eventName: string;
     eventType: string;
-    organizer: UserDTO;
+    organizer: UserType;
     approvedLetterPath: string | null;
     eventVenueId: number;
     startTime: string;

@@ -1,13 +1,34 @@
-import type * as React from "react";
+import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "@/lib/utils";
 
+type DrawerProps = React.ComponentProps<typeof DrawerPrimitive.Root> & {
+    showOverlay?: boolean;
+};
+
+// Accept showOverlay prop and pass it down via context or directly if possible
+// Vaul doesn't use React Context directly for this, so we'll pass it to DrawerContent
 function Drawer({
+    showOverlay = true, // Default to true
     ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-    return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
+}: DrawerProps) {
+    // We need a way to pass showOverlay to DrawerContent.
+    // Since DrawerContent is rendered within DrawerPortal, direct prop passing isn't straightforward.
+    // A common pattern is to use React.Context.
+    return (
+        <DrawerPrimitive.Root data-slot="drawer" {...props}>
+            {/* Pass showOverlay via context */}
+            <DrawerContext.Provider value={{ showOverlay }}>
+                {props.children}
+            </DrawerContext.Provider>
+        </DrawerPrimitive.Root>
+    );
 }
+
+const DrawerContext = React.createContext<{ showOverlay: boolean }>({
+    showOverlay: true,
+});
 
 function DrawerTrigger({
     ...props
@@ -43,14 +64,14 @@ function DrawerOverlay({
     );
 }
 
-function DrawerContent({
-    className,
-    children,
-    ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+type DrawerContentProps = React.ComponentProps<typeof DrawerPrimitive.Content>;
+
+function DrawerContent({ className, children, ...props }: DrawerContentProps) {
+    const { showOverlay } = React.useContext(DrawerContext);
+
     return (
         <DrawerPortal data-slot="drawer-portal">
-            <DrawerOverlay />
+            {showOverlay && <DrawerOverlay />}
             <DrawerPrimitive.Content
                 data-slot="drawer-content"
                 className={cn(

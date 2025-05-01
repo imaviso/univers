@@ -19,7 +19,7 @@ import { formatDateRange, getInitials } from "@/lib/utils";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
-import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 const getStatusColor = (status: string | undefined) => {
     switch (
@@ -120,6 +120,10 @@ function EventCard({
             <CardFooter className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
+                        <AvatarImage
+                            src={event.organizer?.profileImagePath ?? ""}
+                            alt={organizerName}
+                        />
                         <AvatarFallback>
                             {getInitials(organizerName)}
                         </AvatarFallback>
