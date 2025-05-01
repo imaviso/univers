@@ -32,7 +32,7 @@ import { Route as AppDepartmentsRouteImport } from './routes/app/departments/rou
 import { Route as AppVenuesDashboardImport } from './routes/app/venues/dashboard'
 import { Route as AppVenuesVenueIdImport } from './routes/app/venues/$venueId'
 import { Route as AppVenueApprovalApprovalImport } from './routes/app/venue-approval/approval'
-import { Route as AppVenueApprovalReservationIdImport } fro./routes/app/venue-approval/$reservationIdtionId'
+import { Route as AppVenueApprovalReservationIdImport } from './routes/app/venue-approval/$reservationId'
 import { Route as AppUserManagementUsersImport } from './routes/app/user-management/users'
 import { Route as AppSettingsNotificationsImport } from './routes/app/settings/notifications'
 import { Route as AppSettingsAccountImport } from './routes/app/settings/account'
