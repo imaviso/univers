@@ -65,7 +65,9 @@ import type {
 import {
     formatDateRange,
     formatDateTime,
+    formatRole,
     getApproverStatusBadge,
+    getBadgeVariant,
     getInitials,
     getStatusColor,
 } from "@/lib/utils"; // Import helpers
@@ -78,7 +80,7 @@ import {
     useRouter,
 } from "@tanstack/react-router";
 import { set } from "date-fns";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/events/$eventId")({
@@ -127,23 +129,48 @@ export function EventDetailsPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const venueMap = new Map(venues.map((venue) => [venue.id, venue.name]));
+    const venueMap1 = useMemo(() => {
+        const map = new Map<number, Venue>();
+        for (const venue of venues ?? []) {
+            map.set(venue.id, venue); // Store the whole venue object
+        }
+        return map;
+    }, [venues]);
+    const eventVenue = venueMap1.get(event.eventVenueId);
+    console.log(eventVenue);
 
-    const hasUserApproved = approvals.some(
-        (appr) =>
-            // Compare based on user ID if available and reliable
-            (currentUser?.id && appr.userId === Number(currentUser.id)) ||
-            // Fallback to comparing names if ID isn't available/reliable in approval DTO
-            (!currentUser?.id &&
-                appr.signedBy ===
-                    `${currentUser?.firstName} ${currentUser?.lastName}`),
-    );
+    const hasUserApproved = useMemo(() => {
+        if (!currentUser) return false; // No user, cannot have approved
+
+        return approvals.some((appr: EventApprovalDTO) => {
+            // 1. Check by userId if both currentUser.id and appr.userId exist
+            if (currentUser.id && appr.userId != null) {
+                // Check for null/undefined
+                return Number(appr.userId) === Number(currentUser.id);
+            }
+            // 2. Fallback: Check by signedBy name if appr.userId is missing
+            //    Ensure currentUser has names to compare against.
+            if (currentUser.firstName && currentUser.lastName) {
+                // Construct the name exactly as it appears in signedBy
+                // Adjust this if the format in signedBy is different (e.g., "LastName, FirstName")
+                const currentUserName = `${currentUser.firstName} ${currentUser.lastName}`;
+                return appr.signedBy === currentUserName;
+            }
+            // If neither check is possible, this approval doesn't match the current user
+            return false;
+        });
+    }, [approvals, currentUser]); // Recalculate when approvals or currentUser changes
 
     const isOrganizer = currentUser?.id === event.organizer.id;
     const isSuperAdmin = role === "SUPER_ADMIN";
 
     const canUserApprove =
         currentUser &&
-        [
+        !hasUserApproved && // User must not have approved already
+        event.status === "PENDING" && // Event must be pending
+        // EITHER: User has a general approver role OR is the specific venue owner
+        ([
+            // General approver roles (excluding VENUE_OWNER for this part)
             "SUPER_ADMIN",
             "OPC",
             "MSDO",
@@ -153,9 +180,10 @@ export function EventDetailsPage() {
             "VPAA",
             "SSD",
             "FAO",
-        ].includes(currentUser.role) &&
-        !hasUserApproved &&
-        event.status === "PENDING";
+        ].includes(currentUser.role) ||
+            // OR: User is the VENUE_OWNER for *this* venue
+            (currentUser.role === "VENUE_OWNER" &&
+                eventVenue?.venueOwner?.id === Number(currentUser.id)));
 
     const canCancelEvent =
         event.status !== "CANCELED" && event.status !== "COMPLETED";
@@ -652,13 +680,11 @@ export function EventDetailsPage() {
                                             <div className="flex items-center gap-2 mt-1">
                                                 <MapPin className="h-4 w-4 text-muted-foreground" />
                                                 <span className="text-sm">
-                                                    {/* Look up venue name */}
-                                                    {venueMap.get(
-                                                        event.eventVenueId,
-                                                    ) ?? "Unknown Venue"}
+                                                    {/* Display venue name from the full object */}
+                                                    {eventVenue?.name ??
+                                                        "Unknown Venue"}
                                                 </span>
                                             </div>
-                                            {/* Removed hardcoded address */}
                                         </div>
 
                                         {/* Approved Letter - Updated */}
@@ -803,6 +829,7 @@ export function EventDetailsPage() {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>Approver</TableHead>
+                                                <TableHead>Role</TableHead>
                                                 <TableHead>
                                                     Department
                                                 </TableHead>
@@ -818,6 +845,17 @@ export function EventDetailsPage() {
                                                 <TableRow key={approval.id}>
                                                     <TableCell>
                                                         {approval.signedBy}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge
+                                                            className={getBadgeVariant(
+                                                                approval.userRole,
+                                                            )}
+                                                        >
+                                                            {formatRole(
+                                                                approval.userRole,
+                                                            )}
+                                                        </Badge>
                                                     </TableCell>
                                                     <TableCell>
                                                         {approval.department}

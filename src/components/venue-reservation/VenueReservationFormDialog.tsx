@@ -1,9 +1,8 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -17,7 +16,6 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
     Select,
     SelectContent,
@@ -25,19 +23,22 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import {
-    type VenueReservationFormDialogInput,
-    venueReservationFormDialogSchema,
+    type CreateVenueReservationFormInput,
+    type CreateVenueReservationFormOutput,
+    CreateVenueReservationFormSchema,
 } from "@/lib/schema";
-import type { Venue as VenueType } from "@/lib/types";
+import type {
+    Event as AppEvent,
+    Department,
+    Venue as VenueType,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { format, startOfDay } from "date-fns";
-import { CalendarIcon, CloudUpload, MapPin, Users, X } from "lucide-react";
-import { useState } from "react";
+import { parseISO, startOfDay } from "date-fns";
+import { CloudUpload, MapPin, X } from "lucide-react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import {
     FileUpload,
     FileUploadDropzone,
@@ -53,10 +54,12 @@ import { SmartDatetimeInput } from "../ui/smart-date-picker";
 interface VenueReservationFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: VenueReservationFormDialogInput) => void;
-    venues: VenueType[];
-    departments: string[];
+    onSubmit: (data: CreateVenueReservationFormOutput) => void;
+    venues: Pick<VenueType, "id" | "name" | "location" | "imagePath">[];
+    events: Pick<AppEvent, "id" | "eventName" | "startTime" | "endTime">[];
+    departments: Pick<Department, "id" | "name">[];
     isLoading?: boolean;
+    initialVenueId?: string;
 }
 
 export function VenueReservationFormDialog({
@@ -64,780 +67,422 @@ export function VenueReservationFormDialog({
     onClose,
     onSubmit,
     venues,
+    events,
     departments,
     isLoading = false,
+    initialVenueId,
 }: VenueReservationFormDialogProps) {
-    const [step, setStep] = useState(1);
-
-    const form = useForm<VenueReservationFormDialogInput>({
-        resolver: valibotResolver(venueReservationFormDialogSchema),
+    const form = useForm<CreateVenueReservationFormInput>({
+        resolver: valibotResolver(CreateVenueReservationFormSchema),
         defaultValues: {
-            eventName: "",
-            department: "",
-            description: "",
-            startDateTime: undefined,
-            endDateTime: undefined,
-            venue: "",
-            equipment: [],
-            approvedLetter: [],
+            eventId: undefined,
+            departmentId: undefined,
+            venueId: initialVenueId ? Number(initialVenueId) : undefined,
+            startTime: undefined,
+            endTime: undefined,
+            // Default for the input (File[]) should be empty array for FileUpload component
+            reservationLetterFile: [],
         },
         mode: "onChange",
     });
 
-    const handleSubmitForm = (data: VenueReservationFormDialogInput) => {
-        onSubmit(data);
-        form.reset();
-        setStep(1);
-        onClose();
-    };
+    const watchedEventId = form.watch("eventId");
+    const selectedEvent = events.find((e) => e.id === watchedEventId);
 
-    const watchedVenueIdString = form.watch("venue");
-    const targetVenueIdNumber = Number(watchedVenueIdString); // Convert once outside the loop
-
-    // Calculate selectedVenue based on the watched value
-    const selectedVenue = venues.find((v) => {
-        // Log the comparison details specifically when step 4 is active (Optional: remove after confirming fix)
-        if (step === 4) {
-            console.log(
-                `Comparing target ID: ${targetVenueIdNumber} (type: ${typeof targetVenueIdNumber}) with venue.id: ${v.id} (type: ${typeof v.id})`,
+    // Effect to update date fields when event selection changes
+    useEffect(() => {
+        if (selectedEvent) {
+            try {
+                const startTime = parseISO(selectedEvent.startTime);
+                const endTime = parseISO(selectedEvent.endTime);
+                form.setValue("startTime", startTime, { shouldValidate: true });
+                form.setValue("endTime", endTime, { shouldValidate: true });
+            } catch (error) {
+                console.error("Error parsing event dates:", error);
+                form.setValue("startTime", undefined, { shouldValidate: true });
+                form.setValue("endTime", undefined, { shouldValidate: true });
+            }
+        } else {
+            // Only clear dates if they were previously set by an event
+            const currentStartTime = form.getValues("startTime");
+            const currentEndTime = form.getValues("endTime");
+            const wasSetByEvent = events.some(
+                (event) =>
+                    currentStartTime &&
+                    parseISO(event.startTime).getTime() ===
+                        currentStartTime.getTime() &&
+                    currentEndTime &&
+                    parseISO(event.endTime).getTime() ===
+                        currentEndTime.getTime(),
             );
-        }
-        // Perform the comparison using loose equality (==) to handle type difference
-        // eslint-disable-next-line eqeqeq
-        // biome-ignore lint/suspicious/noDoubleEquals: <explanation>
-        return v.id == targetVenueIdNumber;
-    });
 
-    if (step === 4) {
-        console.log("--- Step 4 Summary Render ---");
-        console.log("Watched Venue ID (string):", watchedVenueIdString);
+            if (wasSetByEvent) {
+                form.setValue("startTime", undefined, { shouldValidate: true });
+                form.setValue("endTime", undefined, { shouldValidate: true });
+            }
+        }
+    }, [selectedEvent, form.setValue, form.getValues, events]);
+
+    const handleSubmitForm = (data: CreateVenueReservationFormOutput) => {
+        // Log the data *after* schema validation/transformation
+        // This 'data' should have reservationLetterFile as File | undefined
         console.log(
-            "Converted Target Venue ID (number):",
-            targetVenueIdNumber, // Use the variable
+            "[Dialog] Submitting reservation with validated data:",
+            data,
         );
-        console.log("Venues Array:", venues); // Check if venues array is populated
-        console.log("Calculated selectedVenue:", selectedVenue); // Check if find was successful
-        console.log("-----------------------------");
-    }
-
-    const handleNext = async () => {
-        console.log("handleNext called, current step:", step);
-        let fieldsToValidate: (keyof VenueReservationFormDialogInput)[] = [];
-        let isValid = false;
-
-        if (step === 1) {
-            // Validate fields required by schema for Step 1
-            fieldsToValidate = [
-                "eventName",
-                "department",
-                // 'description' is optional
-            ];
-            isValid = await form.trigger(fieldsToValidate);
-            if (isValid) {
-                setStep(2);
-            }
-        } else if (step === 2) {
-            // Validate fields required by schema for Step 2
-            fieldsToValidate = ["venue"];
-            isValid = await form.trigger(fieldsToValidate);
-            if (isValid) {
-                setStep(3);
-            }
-        } else if (step === 3) {
-            // Validate fields required by schema for Step 3
-            fieldsToValidate = [
-                "startDateTime",
-                "endDateTime",
-                "equipment",
-                "approvedLetter",
-            ];
-            isValid = await form.trigger(fieldsToValidate);
-            if (isValid) {
-                setStep(4); // Proceed to Step 4 (Summary)
-            }
-        }
-    };
-
-    const handleBack = () => {
-        setStep(step - 1);
+        onSubmit(data);
+        // Consider moving reset/close to parent component after successful API call
+        // form.reset();
+        // onClose();
     };
 
     const handleDialogClose = () => {
         form.reset();
-        setStep(1);
         onClose();
     };
 
-    const isStep1ButtonDisabled = () => {
-        const errors = form.formState.errors;
-        return !!(errors.eventName || errors.department);
-    };
+    const watchedVenueId = form.watch("venueId");
+    const selectedVenue = venues.find((v) => v.id === watchedVenueId);
 
-    const isStep2ButtonDisabled = () => {
-        const errors = form.formState.errors;
-        return !!errors.venue;
-    };
-
-    const isStep3ButtonDisabled = () => {
-        const errors = form.formState.errors;
-        return !!(
-            errors.startDateTime ||
-            errors.endDateTime ||
-            errors.equipment ||
-            errors.approvedLetter
-        );
-    };
+    const isDateTimeReadOnly = !!selectedEvent;
 
     return (
         <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Reserve a Venue</DialogTitle>
+                    <DialogDescription>
+                        Select the event, department, venue, and specify the
+                        date and time for your reservation.
+                    </DialogDescription>
                 </DialogHeader>
-
-                {/* Progress indicator */}
-                <div className="w-full mt-4">
-                    <div className="flex justify-between mb-2 text-sm">
-                        <div
-                            className={cn(
-                                "transition-colors duration-200",
-                                step === 1
-                                    ? "text-primary font-semibold"
-                                    : step > 1
-                                      ? "text-muted-foreground"
-                                      : "text-muted",
-                            )}
-                        >
-                            Event Details
-                        </div>
-                        <div
-                            className={cn(
-                                "transition-colors duration-200",
-                                step === 2
-                                    ? "text-primary font-semibold"
-                                    : step > 2
-                                      ? "text-muted-foreground"
-                                      : "text-muted",
-                            )}
-                        >
-                            Venue Selection
-                        </div>
-                        <div
-                            className={cn(
-                                "transition-colors duration-200",
-                                step === 3
-                                    ? "text-primary font-semibold"
-                                    : step > 3
-                                      ? "text-muted-foreground"
-                                      : "text-muted",
-                            )}
-                        >
-                            Time & Equipment
-                        </div>
-                        <div
-                            className={cn(
-                                "transition-colors duration-200",
-                                step === 4
-                                    ? "text-primary font-semibold"
-                                    : "text-muted",
-                            )}
-                        >
-                            Reservation Summary
-                        </div>
-                    </div>
-                    <div className="w-full bg-muted/50 h-2 rounded-full overflow-hidden">
-                        <div
-                            className="bg-primary h-full rounded-full transition-all duration-300 ease-in-out"
-                            style={{
-                                width: `${Math.max(0, step - 1) * 33.33}%`,
-                            }}
-                        />
-                    </div>
-                </div>
 
                 <Form {...form}>
                     <form
-                        // onSubmit={form.handleSubmit(handleSubmitForm)}
-                        className="space-y-4"
+                        onSubmit={form.handleSubmit(handleSubmitForm)}
+                        className="space-y-5 py-4"
                     >
-                        {step === 1 && (
-                            <div className="space-y-4">
-                                <FormField
-                                    control={form.control}
-                                    name="eventName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Event Name</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter event name"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="department"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Department</FormLabel>
-                                            <Select
-                                                onValueChange={field.onChange}
-                                                defaultValue={field.value}
-                                            >
-                                                <FormControl>
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Select department" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {departments.map((dept) => (
-                                                        <SelectItem
-                                                            key={dept}
-                                                            value={dept}
-                                                        >
-                                                            {dept}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem className="md:col-span-2">
-                                            <FormLabel>
-                                                Event Description
-                                            </FormLabel>
-                                            <FormControl>
-                                                <Textarea
-                                                    placeholder="Describe your event"
-                                                    className="resize-none"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        )}
-
-                        {step === 2 && (
-                            <div className="space-y-6">
-                                <FormField
-                                    control={form.control}
-                                    name="venue"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-lg font-medium mb-4 block">
-                                                Available Venues
-                                            </FormLabel>
-                                            <FormControl>
-                                                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                                                    {venues.length > 0 ? (
-                                                        venues.map((venue) => (
-                                                            <button // Change div to button
-                                                                type="button" // Add type="button"
-                                                                key={venue.id}
-                                                                className={cn(
-                                                                    "border rounded-lg p-3 cursor-pointer transition-all text-left w-full", // Add text-left and w-full
-                                                                    // Reset button default styles
-                                                                    "bg-transparent hover:bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                                                    field.value ===
-                                                                        String(
-                                                                            venue.id,
-                                                                        )
-                                                                        ? "border-primary bg-primary/5"
-                                                                        : "hover:border-primary/50",
-                                                                )}
-                                                                onClick={() => {
-                                                                    field.onChange(
-                                                                        String(
-                                                                            venue.id,
-                                                                        ),
-                                                                    );
-                                                                }}
-                                                                // Keep onKeyDown for consistency, though Enter/Space are handled by button
-                                                                onKeyDown={(
-                                                                    e,
-                                                                ) => {
-                                                                    if (
-                                                                        e.key ===
-                                                                            "Enter" ||
-                                                                        e.key ===
-                                                                            " "
-                                                                    ) {
-                                                                        // e.preventDefault(); // No longer needed
-                                                                        field.onChange(
-                                                                            String(
-                                                                                venue.id,
-                                                                            ),
-                                                                        );
-                                                                    }
-                                                                }}
-                                                                // No tabIndex or role needed
-                                                            >
-                                                                {/* Venue details */}
-                                                                <div className="flex items-start gap-3">
-                                                                    <div className="w-20 h-14 rounded overflow-hidden bg-muted">
-                                                                        <img
-                                                                            src={
-                                                                                venue.imagePath ||
-                                                                                "/placeholder.svg"
-                                                                            }
-                                                                            alt={
-                                                                                venue.name
-                                                                            }
-                                                                            className="w-full h-full object-cover"
-                                                                        />
-                                                                    </div>
-                                                                    <div className="flex-1">
-                                                                        <h4 className="font-medium">
-                                                                            {
-                                                                                venue.name
-                                                                            }
-                                                                        </h4>
-                                                                        <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                                                            <MapPin className="h-3.5 w-3.5 mr-1" />
-                                                                            <span>
-                                                                                {
-                                                                                    venue.location
-                                                                                }
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </button> // Change closing tag
-                                                        ))
-                                                    ) : (
-                                                        <div className="text-center py-8 text-muted-foreground">
-                                                            No venues available.
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </FormControl>
-                                            <FormMessage />{" "}
-                                            {/* Show error if venue not selected */}
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        )}
-
-                        {/* Step 3 Content */}
-                        {step === 3 && selectedVenue && (
-                            <div className="space-y-6">
-                                {/* Date/Time Pickers */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="startDateTime"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    Start Date & Time
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <SmartDatetimeInput
-                                                        value={field.value}
-                                                        onValueChange={
-                                                            field.onChange
-                                                        }
-                                                        disabled={(date) =>
-                                                            date <
-                                                            startOfDay(
-                                                                new Date(),
-                                                            )
-                                                        }
-                                                        placeholder="Select start date and time"
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="endDateTime"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>
-                                                    End Date & Time
-                                                </FormLabel>
-                                                <FormControl>
-                                                    <SmartDatetimeInput
-                                                        value={field.value}
-                                                        onValueChange={
-                                                            field.onChange
-                                                        }
-                                                        disabled={(date) =>
-                                                            date <
-                                                            startOfDay(
-                                                                new Date(),
-                                                            )
-                                                        }
-                                                        placeholder="Select end date and time"
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                {/* Equipment Selection */}
-                                <FormField
-                                    control={form.control}
-                                    name="equipment"
-                                    render={() => (
-                                        <FormItem>
-                                            <FormLabel>
-                                                Equipment Needed (Select at
-                                                least one)
-                                            </FormLabel>
-                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2">
-                                                {[
-                                                    "Projector",
-                                                    "Microphone",
-                                                    "Laptop",
-                                                    "Sound System",
-                                                    "Whiteboard",
-                                                    // Add more equipment options if needed
-                                                ].map((item) => (
-                                                    <FormField
-                                                        key={item}
-                                                        control={form.control}
-                                                        name="equipment"
-                                                        render={({ field }) => {
-                                                            return (
-                                                                <FormItem
-                                                                    key={item}
-                                                                    className="flex flex-row items-center space-x-3 space-y-0"
-                                                                >
-                                                                    <FormControl>
-                                                                        <Checkbox
-                                                                            checked={field.value?.includes(
-                                                                                item,
-                                                                            )}
-                                                                            onCheckedChange={(
-                                                                                checked,
-                                                                            ) => {
-                                                                                return checked
-                                                                                    ? field.onChange(
-                                                                                          [
-                                                                                              ...field.value,
-                                                                                              item,
-                                                                                          ],
-                                                                                      )
-                                                                                    : field.onChange(
-                                                                                          field.value?.filter(
-                                                                                              (
-                                                                                                  value,
-                                                                                              ) =>
-                                                                                                  value !==
-                                                                                                  item,
-                                                                                          ),
-                                                                                      );
-                                                                            }}
-                                                                        />
-                                                                    </FormControl>
-                                                                    <FormLabel className="font-normal text-sm">
-                                                                        {item}
-                                                                    </FormLabel>
-                                                                </FormItem>
-                                                            );
-                                                        }}
-                                                    />
-                                                ))}
-                                            </div>
-                                            <FormMessage />{" "}
-                                            {/* Shows minLength error */}
-                                        </FormItem>
-                                    )}
-                                />
-
-                                {/* Approved Letter Upload */}
-                                <FormField
-                                    control={form.control}
-                                    name="approvedLetter"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>
-                                                Approved Letter (Upload at least
-                                                one)
-                                            </FormLabel>
-                                            <FormControl>
-                                                <FileUpload
-                                                    value={field.value}
-                                                    onValueChange={
-                                                        field.onChange
-                                                    }
-                                                    // Match schema: JPG/PNG, max 10MB
-                                                    accept="image/jpeg, image/png"
-                                                    maxFiles={1} // Schema implies 1 file based on array(file()) structure
-                                                    maxSize={10 * 1024 * 1024} // 10MB
-                                                    onFileReject={(
-                                                        file: File, // Correct parameter: single file
-                                                        message: string, // Correct parameter: rejection message
-                                                    ) => {
-                                                        console.log(
-                                                            "File rejected:",
-                                                            file.name,
-                                                            message,
-                                                        );
-                                                        form.setError(
-                                                            "approvedLetter",
-                                                            {
-                                                                message: `File "${file.name}" rejected: ${message}`, // Use the provided message
-                                                            },
-                                                        );
-                                                    }}
-                                                    multiple={false} // Ensure only one file selection
+                        {/* Event Selection */}
+                        <FormField
+                            control={form.control}
+                            name="eventId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Event</FormLabel>
+                                    <Select
+                                        onValueChange={(value) => {
+                                            console.log(
+                                                "[Dialog] Event Select changed:",
+                                                value,
+                                            ); // Log raw value
+                                            // Ensure conversion handles empty string correctly
+                                            const numValue = value
+                                                ? Number(value)
+                                                : undefined;
+                                            console.log(
+                                                "[Dialog] Event ID to set:",
+                                                numValue,
+                                            ); // Log value being set
+                                            field.onChange(numValue); // Set to number or undefined
+                                        }}
+                                        value={
+                                            field.value
+                                                ? String(field.value)
+                                                : ""
+                                        }
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select an event" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {events.map((event) => (
+                                                <SelectItem
+                                                    key={event.id}
+                                                    value={String(event.id)}
                                                 >
-                                                    <FileUploadDropzone className="flex-row border-dotted">
-                                                        <CloudUpload className="size-4" />
-                                                        Drag and drop or
-                                                        <FileUploadTrigger
+                                                    {event.eventName}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormDescription>
+                                        Selecting an event will automatically
+                                        set the start/end times.
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Department Selection */}
+                        <FormField
+                            control={form.control}
+                            name="departmentId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Department</FormLabel>
+                                    <Select
+                                        onValueChange={(value) => {
+                                            console.log(
+                                                "[Dialog] Department Select changed:",
+                                                value,
+                                            ); // Log raw value
+                                            // Ensure conversion handles empty string correctly
+                                            const numValue = value
+                                                ? Number(value)
+                                                : undefined;
+                                            console.log(
+                                                "[Dialog] Department ID to set:",
+                                                numValue,
+                                            ); // Log value being set
+                                            field.onChange(numValue); // Set to number or undefined
+                                        }}
+                                        value={
+                                            field.value
+                                                ? String(field.value)
+                                                : ""
+                                        }
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select a department" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {departments.map((dept) => (
+                                                <SelectItem
+                                                    key={dept.id}
+                                                    value={String(dept.id)}
+                                                >
+                                                    {dept.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Venue Selection */}
+                        <FormField
+                            control={form.control}
+                            name="venueId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Venue</FormLabel>
+                                    <Select
+                                        onValueChange={(value) => {
+                                            const numValue = value
+                                                ? Number(value)
+                                                : undefined;
+                                            field.onChange(numValue);
+                                        }}
+                                        value={
+                                            field.value
+                                                ? String(field.value)
+                                                : ""
+                                        }
+                                        disabled={!!initialVenueId}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select a venue" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {venues.map((venue) => (
+                                                <SelectItem
+                                                    key={venue.id}
+                                                    value={String(venue.id)}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <img
+                                                            src={
+                                                                venue.imagePath ||
+                                                                "/placeholder.svg"
+                                                            }
+                                                            alt={venue.name}
+                                                            className="h-5 w-7 rounded-sm object-cover"
+                                                        />
+                                                        <span>
+                                                            {venue.name}
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedVenue && (
+                                        <FormDescription className="flex items-center text-xs pt-1">
+                                            <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                                            {selectedVenue.location}
+                                        </FormDescription>
+                                    )}
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Date/Time Pickers */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="startTime"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Start Date & Time</FormLabel>
+                                        <FormControl>
+                                            <SmartDatetimeInput
+                                                value={field.value}
+                                                onValueChange={field.onChange}
+                                                disabled={(date) =>
+                                                    date <
+                                                    startOfDay(new Date())
+                                                }
+                                                readOnly={isDateTimeReadOnly}
+                                                placeholder={
+                                                    isDateTimeReadOnly
+                                                        ? ""
+                                                        : "Select start date and time"
+                                                }
+                                                className={cn(
+                                                    isDateTimeReadOnly &&
+                                                        "cursor-not-allowed bg-muted/50",
+                                                )}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="endTime"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>End Date & Time</FormLabel>
+                                        <FormControl>
+                                            <SmartDatetimeInput
+                                                value={field.value}
+                                                onValueChange={field.onChange}
+                                                disabled={(date) =>
+                                                    date <
+                                                        startOfDay(
+                                                            new Date(),
+                                                        ) ||
+                                                    (form.getValues(
+                                                        "startTime",
+                                                    ) &&
+                                                        date <
+                                                            form.getValues(
+                                                                "startTime",
+                                                            ))
+                                                }
+                                                readOnly={isDateTimeReadOnly}
+                                                placeholder={
+                                                    isDateTimeReadOnly
+                                                        ? ""
+                                                        : "Select end date and time"
+                                                }
+                                                className={cn(
+                                                    isDateTimeReadOnly &&
+                                                        "cursor-not-allowed bg-muted/50",
+                                                )}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        {/* Reservation Letter Upload */}
+                        <FormField
+                            control={form.control}
+                            name="reservationLetterFile" // Input type is File[]
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Approved Letter (Optional)
+                                    </FormLabel>
+                                    <FormControl>
+                                        <FileUpload
+                                            value={field.value} // Expects File[]
+                                            onValueChange={field.onChange} // Provides File[]
+                                            maxFiles={1}
+                                            maxSize={5 * 1024 * 1024} // 5MB
+                                            accept="application/pdf, image/*"
+                                            className="relative rounded-lg border border-input bg-background"
+                                        >
+                                            <FileUploadDropzone className="border-dashed p-4">
+                                                <CloudUpload className="mb-2 h-8 w-8 text-muted-foreground" />
+                                                <p className="mb-1 text-sm text-muted-foreground">
+                                                    <span className="font-semibold">
+                                                        Click or drag file
+                                                    </span>{" "}
+                                                    to upload
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    PDF or Image (max 5MB)
+                                                </p>
+                                            </FileUploadDropzone>
+                                            <FileUploadList className="p-3">
+                                                {/* field.value is File[] here */}
+                                                {field.value?.map((file) => (
+                                                    <FileUploadItem
+                                                        key={file.name}
+                                                        value={file}
+                                                        className="p-2"
+                                                    >
+                                                        <FileUploadItemPreview />
+                                                        <FileUploadItemMetadata />
+                                                        <FileUploadItemDelete
                                                             asChild
                                                         >
                                                             <Button
-                                                                variant="link"
-                                                                size="sm"
-                                                                className="p-0"
+                                                                type="button"
+                                                                size="icon"
+                                                                variant="ghost"
+                                                                className="size-7"
+                                                                // onClick needs to remove the file from the array
+                                                                onClick={() =>
+                                                                    field.onChange(
+                                                                        [],
+                                                                    )
+                                                                } // Clear the array
                                                             >
-                                                                choose file
+                                                                <X className="size-4" />
                                                             </Button>
-                                                        </FileUploadTrigger>
-                                                        to upload
-                                                    </FileUploadDropzone>
-                                                    <FileUploadList>
-                                                        {field.value?.map(
-                                                            (file, index) => (
-                                                                <FileUploadItem
-                                                                    key={
-                                                                        file.name
-                                                                    }
-                                                                    value={file}
-                                                                >
-                                                                    <FileUploadItemPreview />
-                                                                    <FileUploadItemMetadata />
-                                                                    <FileUploadItemDelete
-                                                                        asChild
-                                                                    >
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="size-7"
-                                                                        >
-                                                                            <X className="size-4" />
-                                                                            <span className="sr-only">
-                                                                                Delete
-                                                                            </span>
-                                                                        </Button>
-                                                                    </FileUploadItemDelete>
-                                                                </FileUploadItem>
-                                                            ),
-                                                        )}
-                                                    </FileUploadList>
-                                                </FileUpload>
-                                            </FormControl>
-                                            <FormDescription>
-                                                Upload one approved letter
-                                                (JPG/PNG, max 10MB).
-                                            </FormDescription>
-                                            <FormMessage />{" "}
-                                            {/* Shows file errors */}
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        )}
-                        {/* Step 4: Reservation Summary */}
-                        {step === 4 && (
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-medium">
-                                    Reservation Summary
-                                </h3>
-                                <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-                                    {/* Venue Details */}
-                                    <div className="pb-2 border-b">
-                                        <h5 className="font-medium text-sm mb-1">
-                                            Venue
-                                        </h5>
-                                        <p className="text-sm font-semibold">
-                                            {selectedVenue?.name}
-                                        </p>
-                                        <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                            <MapPin className="h-3.5 w-3.5 mr-1 flex-shrink-0" />
-                                            <span>
-                                                {selectedVenue?.location}
-                                            </span>
-                                        </div>
-                                    </div>
+                                                        </FileUploadItemDelete>
+                                                    </FileUploadItem>
+                                                ))}
+                                            </FileUploadList>
+                                        </FileUpload>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                                    {/* Event Details */}
-                                    <div className="pt-2 pb-2 border-b">
-                                        <h5 className="font-medium text-sm mb-1">
-                                            Event Details
-                                        </h5>
-
-                                        <p className="text-sm text-muted-foreground">
-                                            Department:{" "}
-                                            {form.watch("department")}
-                                        </p>
-                                        {form.watch("description") && (
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                Description:{" "}
-                                                {form.watch("description")}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Time & Date */}
-                                    <div className="pt-2 pb-2 border-b">
-                                        <h5 className="font-medium text-sm mb-1">
-                                            Schedule
-                                        </h5>
-                                        <div className="flex items-center text-sm">
-                                            <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground flex-shrink-0" />
-                                            <span>
-                                                {(() => {
-                                                    const startDate =
-                                                        form.watch(
-                                                            "startDateTime",
-                                                        );
-                                                    const endDate =
-                                                        form.watch(
-                                                            "endDateTime",
-                                                        );
-                                                    if (!startDate || !endDate)
-                                                        return "N/A";
-                                                    return `${format(startDate, "MMM d, yyyy h:mm a")} - ${format(endDate, "MMM d, yyyy h:mm a")}`;
-                                                })()}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Equipment */}
-                                    {form.watch("equipment").length > 0 && (
-                                        <div className="pt-2 pb-2 border-b">
-                                            <h5 className="font-medium text-sm mb-1">
-                                                Selected Equipment
-                                            </h5>
-                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                {form
-                                                    .watch("equipment")
-                                                    .map((item) => (
-                                                        <Badge
-                                                            key={item}
-                                                            variant="secondary"
-                                                            className="text-xs"
-                                                        >
-                                                            {item}
-                                                        </Badge>
-                                                    ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Approved Letter */}
-                                    {form.watch("approvedLetter")?.length >
-                                        0 && (
-                                        <div className="pt-2">
-                                            <h5 className="font-medium text-sm mb-1">
-                                                Approved Letter
-                                            </h5>
-                                            <ul className="list-disc list-inside text-sm text-muted-foreground">
-                                                {form
-                                                    .watch("approvedLetter")
-                                                    ?.map((file, index) => (
-                                                        <li
-                                                            key={file.name}
-                                                            className="break-words"
-                                                        >
-                                                            {file.name}
-                                                        </li>
-                                                    ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Footer Buttons */}
                         <DialogFooter>
-                            <div className="flex w-full justify-between items-center">
-                                {/* Cancel Button */}
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleDialogClose}
-                                >
-                                    Cancel
-                                </Button>
-
-                                <div className="flex gap-2">
-                                    {/* Back Button */}
-                                    {step > 1 && (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={handleBack}
-                                        >
-                                            Back
-                                        </Button>
-                                    )}
-
-                                    {/* Next Button - Show only before Step 4 */}
-                                    {step < 4 && (
-                                        <Button
-                                            type="button"
-                                            onClick={handleNext}
-                                            // Disable based on schema errors for the current step's fields
-                                            disabled={
-                                                (step === 1 &&
-                                                    isStep1ButtonDisabled()) ||
-                                                (step === 2 &&
-                                                    isStep2ButtonDisabled()) ||
-                                                (step === 3 &&
-                                                    isStep3ButtonDisabled())
-                                            }
-                                        >
-                                            Next
-                                        </Button>
-                                    )}
-
-                                    {/* Submit Button - Show only on Step 4 */}
-                                    {step === 4 && (
-                                        <Button
-                                            // Trigger final validation and submission
-                                            onClick={form.handleSubmit(
-                                                handleSubmitForm,
-                                            )}
-                                            // Disable if overall form is invalid (based on schema) or loading
-                                            disabled={
-                                                !form.formState.isValid ||
-                                                isLoading
-                                            }
-                                        >
-                                            {isLoading
-                                                ? "Submitting..."
-                                                : "Submit Reservation"}
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleDialogClose}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={!form.formState.isValid || isLoading}
+                            >
+                                {isLoading
+                                    ? "Submitting..."
+                                    : "Submit Reservation"}
+                            </Button>
                         </DialogFooter>
                     </form>
                 </Form>

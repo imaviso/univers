@@ -56,11 +56,11 @@ const defaultValues: VenueInput = {
 interface VenueFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    // Update onSubmit to accept VenueOutput and optional File
     onSubmit: (venueData: VenueInput, imageFile: File | null) => void;
     venue?: Venue | null;
     isLoading?: boolean;
     venueOwners: UserType[];
+    currentUserRole?: string;
 }
 
 export function VenueFormDialog({
@@ -70,6 +70,7 @@ export function VenueFormDialog({
     venue,
     isLoading,
     venueOwners,
+    currentUserRole,
 }: VenueFormDialogProps) {
     // State for the image file
     const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
@@ -122,9 +123,14 @@ export function VenueFormDialog({
         form.setValue("image", files, { shouldValidate: true });
     };
 
-    // Simplified submit handler - validation happens via form.handleSubmit
     const processSubmit = (data: VenueInput) => {
-        onSubmit(data, imageFiles[0] ?? null);
+        // Ensure venueOwnerId is correctly set to undefined if 'none' was selected
+        const finalData = {
+            ...data,
+            venueOwnerId:
+                data.venueOwnerId === 0 ? undefined : data.venueOwnerId, // Assuming 0 represents 'none' after onChange conversion
+        };
+        onSubmit(finalData, imageFiles[0] ?? null);
     };
 
     // Use imageFiles state for FileUpload component value
@@ -183,42 +189,49 @@ export function VenueFormDialog({
                             )}
                         />
 
-                        {/* Venue Owner Select */}
-                        <FormField
-                            control={form.control}
-                            name="venueOwnerId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Venue Owner</FormLabel>
-                                    <Select
-                                        onValueChange={(value) =>
-                                            field.onChange(Number(value))
-                                        } // Ensure value is number
-                                        value={field.value?.toString()}
-                                        disabled={isLoading}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select the owner" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {venueOwners.map((owner) => (
-                                                <SelectItem
-                                                    key={owner.id}
-                                                    value={owner.id.toString()}
-                                                >
-                                                    {owner.firstName}{" "}
-                                                    {owner.lastName} (
-                                                    {owner.email})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        {currentUserRole === "SUPER_ADMIN" && (
+                            <FormField
+                                control={form.control}
+                                name="venueOwnerId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Venue Owner</FormLabel>
+                                        <Select
+                                            // Handle 'none' value during change
+                                            onValueChange={(value) => {
+                                                if (value === "none") {
+                                                    field.onChange(undefined); // Set form value to undefined for 'none'
+                                                } else {
+                                                    field.onChange(
+                                                        Number(value),
+                                                    ); // Parse number for actual IDs
+                                                }
+                                            }}
+                                            disabled={isLoading}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select the owner" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {venueOwners.map((owner) => (
+                                                    <SelectItem
+                                                        key={owner.id}
+                                                        value={owner.id.toString()}
+                                                    >
+                                                        {owner.firstName}{" "}
+                                                        {owner.lastName} (
+                                                        {owner.email})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
 
                         <FormField
                             control={form.control}

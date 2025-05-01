@@ -1,19 +1,32 @@
 import {
+    approveReservation,
+    cancelReservation,
+    createVenueReservation,
     deleteNotifications,
+    deleteReservation,
     getAllApprovalsOfEvent,
     getAllDepartments,
     getAllEquipmentsAdmin,
     getAllEquipmentsByOwner,
     getAllEvents,
+    getAllReservations,
     getAllUsers,
+    getAllVenueOwnerReservations,
     getAllVenues,
+    getApprovalsForReservation,
     getApprovedEvents,
     getEventById,
     getNotifications,
     getOwnEvents,
+    getOwnReservations,
+    getPendingDeptHeadEvents,
+    getPendingVenueOwnerEvents,
+    getPendingVenueOwnerReservations,
+    getReservationById,
     getUnreadNotificationCount,
     markAllNotificationsRead,
     markNotificationsRead,
+    rejectReservation,
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -23,7 +36,13 @@ import {
     useQueryClient,
 } from "@tanstack/react-query";
 import { type AnyRoute, useRouteContext } from "@tanstack/react-router"; // Added AnyRoute import
-import type { UserRole, UserType } from "./types"; // Import UserRole
+import type {
+    Event as AppEvent,
+    UserRole,
+    UserType,
+    VenueApprovalDTO,
+    VenueReservationDTO,
+} from "./types"; // Import UserRole and Event (aliased)
 
 export const userQueryOptions = {
     queryKey: ["currentUser"],
@@ -107,6 +126,21 @@ export const getApprovedEventsQuery = {
     },
     staleTime: 1000 * 60 * 5,
 };
+
+export const pendingVenueOwnerEventsQueryOptions = queryOptions<AppEvent[]>({
+    // Use aliased AppEvent type
+    queryKey: ["pendingEvents", "venueOwner"],
+    queryFn: getPendingVenueOwnerEvents,
+    staleTime: 1000 * 60 * 2, // 2 minutes stale time
+});
+
+// Query options for pending events for Department Head
+export const pendingDeptHeadEventsQueryOptions = queryOptions<AppEvent[]>({
+    // Use aliased AppEvent type
+    queryKey: ["pendingEvents", "deptHead"],
+    queryFn: getPendingDeptHeadEvents,
+    staleTime: 1000 * 60 * 2, // 2 minutes stale time
+});
 
 export const eventQueryOptions = (eventId: string) =>
     queryOptions({
@@ -234,5 +268,194 @@ export const useDeleteNotificationsMutation = () => {
             });
         },
         // Optional: Add onMutate for optimistic updates
+    });
+};
+
+export const venueReservationKeys = {
+    all: ["venueReservations"] as const,
+    lists: () => [...venueReservationKeys.all, "list"] as const,
+    list: (filters: string) =>
+        [...venueReservationKeys.lists(), { filters }] as const,
+    details: () => [...venueReservationKeys.all, "detail"] as const,
+    detail: (id: number | string) =>
+        [...venueReservationKeys.details(), id] as const,
+    approvals: (id: number | string) =>
+        [...venueReservationKeys.detail(id), "approvals"] as const,
+    pending: () => [...venueReservationKeys.all, "pending"] as const,
+    pendingVenueOwner: () =>
+        [...venueReservationKeys.pending(), "venueOwner"] as const,
+    allVenueOwnerReservations: () =>
+        [...venueReservationKeys.all, "venueOwner"] as const,
+    own: () => [...venueReservationKeys.all, "own"] as const,
+};
+
+export const allReservationsQueryOptions = queryOptions<VenueReservationDTO[]>({
+    queryKey: venueReservationKeys.lists(),
+    queryFn: getAllReservations,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+});
+
+export const ownReservationsQueryOptions = queryOptions<VenueReservationDTO[]>({
+    queryKey: venueReservationKeys.own(),
+    queryFn: getOwnReservations,
+    staleTime: 1000 * 60 * 2, // 2 minutes stale time
+});
+
+export const reservationByIdQueryOptions = (reservationId: number | string) =>
+    queryOptions<VenueReservationDTO>({
+        queryKey: venueReservationKeys.detail(reservationId),
+        queryFn: () => getReservationById(reservationId),
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const reservationApprovalsQueryOptions = (
+    reservationId: number | string,
+) =>
+    queryOptions<VenueApprovalDTO[]>({
+        queryKey: venueReservationKeys.approvals(reservationId),
+        queryFn: () => getApprovalsForReservation(reservationId),
+        staleTime: 1000 * 60 * 2, // 2 minutes
+    });
+
+export const pendingVenueOwnerReservationsQueryOptions = queryOptions<
+    VenueReservationDTO[]
+>({
+    queryKey: venueReservationKeys.pendingVenueOwner(),
+    queryFn: getPendingVenueOwnerReservations,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+});
+
+export const allVenueOwnerReservationsQueryOptions = queryOptions<
+    VenueReservationDTO[]
+>({
+    queryKey: venueReservationKeys.allVenueOwnerReservations(),
+    queryFn: getAllVenueOwnerReservations,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+});
+
+export const useCreateReservationMutation = () => {
+    const context = useRouteContext({ from: "/app" }); // Adjust route context if needed
+    const queryClient = context.queryClient;
+    return useMutation({
+        mutationFn: createVenueReservation,
+        onSuccess: (newReservation) => {
+            // Invalidate lists or add to cache optimistically
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.lists(),
+            });
+            // Optionally, set the data for the new reservation's detail query
+            queryClient.setQueryData(
+                venueReservationKeys.detail(newReservation.id),
+                newReservation,
+            );
+            queryClient.invalidateQueries({
+                queryKey: ownReservationsQueryOptions.queryKey,
+            });
+            // Navigate or show success message
+        },
+        onError: (error) => {
+            console.error("Error creating reservation:", error);
+            // Show error toast/message
+        },
+    });
+};
+
+export const useApproveReservationMutation = () => {
+    const context = useRouteContext({ from: "/app" }); // Adjust route context
+    const queryClient = context.queryClient;
+    return useMutation({
+        mutationFn: approveReservation,
+        onSuccess: (message, variables) => {
+            // Invalidate the specific reservation and potentially lists
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.detail(variables.reservationId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.pending(),
+            }); // Invalidate pending lists
+            // Show success message
+        },
+        onError: (error) => {
+            console.error("Error approving reservation:", error);
+            // Show error toast/message
+        },
+    });
+};
+
+export const useRejectReservationMutation = () => {
+    const context = useRouteContext({ from: "/app" }); // Adjust route context
+    const queryClient = context.queryClient;
+    return useMutation({
+        mutationFn: rejectReservation,
+        onSuccess: (message, variables) => {
+            // Invalidate the specific reservation and potentially lists
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.detail(variables.reservationId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.pending(),
+            }); // Invalidate pending lists
+            // Show success message
+        },
+        onError: (error) => {
+            console.error("Error rejecting reservation:", error);
+            // Show error toast/message
+        },
+    });
+};
+
+export const useCancelReservationMutation = () => {
+    const context = useRouteContext({ from: "/app" }); // Adjust route context
+    const queryClient = context.queryClient;
+    return useMutation({
+        mutationFn: cancelReservation,
+        onSuccess: (message, reservationId) => {
+            // Invalidate the specific reservation and potentially lists
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.detail(reservationId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.pending(),
+            });
+            // Show success message
+        },
+        onError: (error) => {
+            console.error("Error cancelling reservation:", error);
+            // Show error toast/message
+        },
+    });
+};
+
+export const useDeleteReservationMutation = () => {
+    const context = useRouteContext({ from: "/app" }); // Adjust route context
+    const queryClient = context.queryClient;
+    return useMutation({
+        mutationFn: deleteReservation,
+        onSuccess: (message, reservationId) => {
+            // Remove the specific reservation from cache and invalidate lists
+            queryClient.removeQueries({
+                queryKey: venueReservationKeys.detail(reservationId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: venueReservationKeys.pending(),
+            });
+            // Navigate away or show success message
+        },
+        onError: (error) => {
+            console.error("Error deleting reservation:", error);
+            // Show error toast/message
+        },
     });
 };
