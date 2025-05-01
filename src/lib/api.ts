@@ -9,10 +9,14 @@ import type {
     VenueInput,
 } from "./schema";
 import type {
+    CreateEquipmentReservationInput,
     CreateVenueReservationInput,
     DepartmentDTO,
     DepartmentType,
     Equipment,
+    EquipmentActionInput,
+    EquipmentApprovalDTO,
+    EquipmentReservationDTO,
     Event,
     EventApprovalDTO,
     EventDTOBackendResponse,
@@ -791,7 +795,8 @@ export const getAllEquipmentsAdmin = async (): Promise<Equipment[]> => {
             method: "GET",
             credentials: "include",
         });
-        return await handleApiResponse(response, true);
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -811,7 +816,8 @@ export const getAllEquipmentsByOwner = async (
             method: "GET",
             credentials: "include",
         });
-        return await handleApiResponse(response, true);
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1482,6 +1488,284 @@ export const getAllVenueOwnerReservations = async (): Promise<
             ? error
             : new Error(
                   "An unexpected error occurred fetching all venue owner reservations.",
+              );
+    }
+};
+
+const EQUIPMENT_RESERVATIONS_BASE_URL = `${API_BASE_URL}/equipment-reservations`;
+
+// POST /equipment-reservations
+export const createEquipmentReservation = async ({
+    reservationData,
+    reservationLetterFile,
+}: CreateEquipmentReservationInput): Promise<EquipmentReservationDTO> => {
+    const formData = new FormData();
+    formData.append(
+        "reservation",
+        new Blob([JSON.stringify(reservationData)], {
+            type: "application/json",
+        }),
+    );
+    if (reservationLetterFile) {
+        formData.append(
+            "reservationLetter",
+            reservationLetterFile,
+            reservationLetterFile.name,
+        );
+    }
+
+    try {
+        const response = await fetch(EQUIPMENT_RESERVATIONS_BASE_URL, {
+            method: "POST",
+            credentials: "include",
+            body: formData,
+        });
+        return await handleApiResponse(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred creating equipment reservation.",
+              );
+    }
+};
+
+// GET /equipment-reservations/me
+export const getOwnEquipmentReservations = async (): Promise<
+    EquipmentReservationDTO[]
+> => {
+    try {
+        const response = await fetch(`${EQUIPMENT_RESERVATIONS_BASE_URL}/me`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred fetching your equipment reservations.",
+              );
+    }
+};
+
+// GET /equipment-reservations (Admin only)
+export const getAllEquipmentReservations = async (): Promise<
+    EquipmentReservationDTO[]
+> => {
+    try {
+        const response = await fetch(EQUIPMENT_RESERVATIONS_BASE_URL, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred fetching all equipment reservations.",
+              );
+    }
+};
+
+// GET /equipment-reservations/{reservationId}
+export const getEquipmentReservationById = async (
+    reservationId: number | string,
+): Promise<EquipmentReservationDTO> => {
+    try {
+        const response = await fetch(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        return await handleApiResponse(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred fetching equipment reservation ${reservationId}.`,
+              );
+    }
+};
+
+// PATCH /equipment-reservations/{reservationId}/approve
+export const approveEquipmentReservation = async ({
+    reservationId,
+    remarks,
+}: EquipmentActionInput): Promise<string> => {
+    try {
+        const payload = { remarks: remarks || "" };
+        const response = await fetch(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/approve`,
+            {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(payload),
+            },
+        );
+        // Expects text response
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred approving equipment reservation ${reservationId}.`,
+              );
+    }
+};
+
+// PATCH /equipment-reservations/{reservationId}/reject
+export const rejectEquipmentReservation = async ({
+    reservationId,
+    remarks,
+}: EquipmentActionInput): Promise<string> => {
+    if (!remarks || remarks.trim() === "") {
+        throw new Error("Rejection remarks are required.");
+    }
+    try {
+        const payload = { remarks };
+        const response = await fetch(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/reject`,
+            {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(payload),
+            },
+        );
+        // Expects text response
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred rejecting equipment reservation ${reservationId}.`,
+              );
+    }
+};
+
+// PATCH /equipment-reservations/{reservationId}/cancel
+export const cancelEquipmentReservation = async (
+    reservationId: number | string,
+): Promise<string> => {
+    try {
+        const response = await fetch(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/cancel`,
+            {
+                method: "PATCH",
+                credentials: "include",
+            },
+        );
+        // Expects text response
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred cancelling equipment reservation ${reservationId}.`,
+              );
+    }
+};
+
+// DELETE /equipment-reservations/{reservationId}
+export const deleteEquipmentReservation = async (
+    reservationId: number | string,
+): Promise<string> => {
+    try {
+        const response = await fetch(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}`,
+            {
+                method: "DELETE",
+                credentials: "include",
+            },
+        );
+        // Expects text response
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred deleting equipment reservation ${reservationId}.`,
+              );
+    }
+};
+
+// GET /equipment-reservations/{reservationId}/approvals
+export const getApprovalsForEquipmentReservation = async (
+    reservationId: number | string,
+): Promise<EquipmentApprovalDTO[]> => {
+    try {
+        const response = await fetch(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/approvals`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred fetching approvals for equipment reservation ${reservationId}.`,
+              );
+    }
+};
+
+// GET /equipment-reservations/pending/equipment-owner
+export const getPendingEquipmentOwnerReservations = async (): Promise<
+    EquipmentReservationDTO[]
+> => {
+    try {
+        const response = await fetch(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/pending/equipment-owner`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred fetching pending equipment owner reservations.",
+              );
+    }
+};
+
+// GET /equipment-reservations/all/equipment-owner
+export const getAllEquipmentOwnerReservations = async (): Promise<
+    EquipmentReservationDTO[]
+> => {
+    try {
+        const response = await fetch(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/all/equipment-owner`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred fetching all equipment owner reservations.",
               );
     }
 };

@@ -805,7 +805,7 @@ export function VenueManagement() {
                                                         size="sm"
                                                         onClick={() =>
                                                             navigate({
-                                                                to: `/app/reservations/${res.id}`,
+                                                                to: `/app/venue-approval/${res.id}`,
                                                             })
                                                         }
                                                     >

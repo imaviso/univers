@@ -411,29 +411,38 @@ export type VenueReservationFormDialogInput = v.InferInput<
 export const equipmentReservationFormSchema = v.pipe(
     v.object({
         eventId: v.pipe(v.string(), v.nonEmpty("Please select an event.")),
-        venueId: v.pipe(v.string(), v.nonEmpty("Please select a venue.")),
         startDateTime: v.date("Start date/time is required"),
         endDateTime: v.date("End date/time is required"),
         purpose: v.optional(v.string()),
-        selectedEquipment: v.pipe(
-            v.array(v.string()),
-            v.minLength(1, "Please select at least one equipment."),
+        selectedEquipment: v.array(
+            v.object({
+                // Each item in the array is an object
+                equipmentId: v.pipe(v.string(), v.nonEmpty()), // With a non-empty string ID
+                quantity: v.pipe(v.number()), // And a positive integer quantity
+            }),
+            // Array-level validation: must have at least one item
         ),
-        approvedLetter: v.pipe(
+        reservationLetterFile: v.pipe(
             v.array(
                 v.pipe(
-                    v.file("Please select an image file."),
+                    v.instance(File, "Each item must be a file."),
                     v.mimeType(
-                        ["image/jpeg", "image/png"],
-                        "Please select a JPEG or PNG file.",
+                        [
+                            "application/pdf",
+                            "image/jpeg",
+                            "image/png",
+                            "image/webp",
+                        ],
+                        "Invalid file type. Please select a PDF or image.",
                     ),
-                    v.maxSize(
-                        1024 * 1024 * 10,
-                        "Please select a file smaller than 10 MB.",
-                    ),
+                    v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."), // Validation 2 for the element
                 ),
+                "Approved letter must be a list of files.", // Message for the array schema itself
             ),
-            v.minLength(1, "Approved letter is required."),
+            // Validations/transformations on the array as a whole
+            v.check((arr) => arr.length > 0, "Approved letter is required."),
+            v.check((arr) => arr.length <= 1, "Only one file allowed."),
+            v.transform((arr) => arr[0]), // Transform File[] to single File
         ),
     }),
     v.forward(
