@@ -101,6 +101,7 @@ function ReservationDetails() {
     const { reservationId } = Route.useParams(); // Get ID from params
     const router = useRouter();
     const navigate = useNavigate();
+    const onBack = () => router.history.back();
 
     // Fetch data using useSuspenseQueries - guaranteed by loader
     const [{ data: reservation }, { data: approvals }] = useSuspenseQueries({
@@ -218,12 +219,9 @@ function ReservationDetails() {
             <div className="flex flex-col flex-1 overflow-hidden">
                 <header className="flex items-center justify-between border-b px-6 py-4 sticky top-0 bg-background z-10">
                     <div className="flex items-center gap-4">
-                        <Link
-                            from={Route.fullPath}
-                            to="/app/venue-approval/approval" // Link back to the list
-                        >
+                        <Button variant="link" onClick={onBack}>
                             <ArrowLeft className="h-4 w-4" />
-                        </Link>
+                        </Button>
                         <h1 className="text-xl font-semibold h-8">
                             Reservation Details
                         </h1>
