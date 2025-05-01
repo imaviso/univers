@@ -125,8 +125,6 @@ export function UserDataTable() {
         }));
     }, [initialUsers, departmentMap]);
 
-    console.log("usersWithDeptNames", usersWithDeptNames);
-
     // --- Mutations ---
     const updateUserMutation = useMutation({
         mutationFn: ({

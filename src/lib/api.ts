@@ -261,9 +261,11 @@ export const updateUser = async ({
             userDtoPayload.phoneNumber = userData.phoneNumber;
         if (userData.telephoneNumber !== undefined)
             userDtoPayload.telephoneNumber = userData.telephoneNumber;
-        if (userData.role !== undefined)
-            if (userData.departmentId !== undefined)
-                userDtoPayload.departmentId = Number(userData.departmentId);
+        if (userData.role !== undefined) {
+            userDtoPayload.role = userData.role as UserRole;
+        }
+        if (userData.departmentId !== undefined)
+            userDtoPayload.departmentId = Number(userData.departmentId);
 
         for (const key of Object.keys(userDtoPayload)) {
             const k = key as keyof typeof userDtoPayload;
