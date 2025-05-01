@@ -145,3 +145,32 @@ export const getApproverStatusBadge = (status: string | undefined) => {
             return <Badge variant="outline">{status || "Unknown"}</Badge>;
     }
 };
+
+export function formatRole(role: string | null | undefined): string {
+    if (!role) return "N/A";
+    return role
+        .split("_") // Split by underscore
+        .map(
+            (word) =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+        ) // Capitalize each word
+        .join(" "); // Join with space
+}
+export const getBadgeVariant = (role: string): string => {
+    switch (role) {
+        case "SUPER_ADMIN":
+            return "bg-red-100 text-red-800";
+        case "VP_ADMIN":
+            return "bg-purple-100 text-purple-800";
+        case "ORGANIZER":
+            return "bg-blue-100 text-blue-800";
+        case "DEPT_HEAD":
+            return "bg-yellow-100 text-yellow-800";
+        case "VENUE_OWNER":
+            return "bg-indigo-100 text-indigo-800";
+        case "EQUIPMENT_OWNER":
+            return "bg-teal-100 text-teal-800";
+        default:
+            return "bg-gray-100 text-gray-800";
+    }
+};

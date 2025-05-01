@@ -573,3 +573,130 @@ export const departmentSchema = v.object({
 });
 
 export type DepartmentInput = v.InferInput<typeof departmentSchema>;
+
+const UserDTOSchema = v.object({
+    id: v.number(),
+    email: v.string([v.email()]),
+    firstName: v.string(),
+    lastName: v.string(),
+    // Add other relevant fields from UserDTO if necessary
+});
+
+// Status for Venue Approvals
+const VenueApprovalStatusSchema = v.picklist(
+    ["APPROVED", "REJECTED"],
+    "Invalid approval status.",
+);
+
+// Schema for VenueApprovalDTO (as received from backend)
+const VenueApprovalDTOSchema = v.object({
+    id: v.number(),
+    venueReservationId: v.number(),
+    userId: v.number(),
+    signedBy: v.string(),
+    userRole: v.string(), // Consider v.picklist(UserRole values) if strict validation needed
+    remarks: v.optional(v.string(), ""),
+    status: VenueApprovalStatusSchema,
+    dateSigned: v.optional(v.pipe(v.string(), v.isoDateTime()), ""),
+});
+
+// Status for Venue Reservations
+const VenueReservationStatusSchema = v.picklist(
+    ["PENDING", "APPROVED", "REJECTED", "CANCELLED"],
+    "Invalid reservation status.",
+);
+
+// Schema for VenueReservationDTO (as received from backend)
+// const VenueReservationDTOSchema = v.object({
+//     id: v.number(),
+//     eventId: v.optional(v.number(), null),
+//     requestingUser: UserDTOSchema,
+//     departmentId: v.optional(v.number(), null),
+//     departmentName: v.optional(v.string(), null),
+//     venueId: v.number(),
+//     venueName: v.string(),
+//     startTime: v.pipe(v.string(), v.isoDateTime("Invalid start date/time format.")),
+//     endTime: v.pipe(v.string(), v.isoDateTime("Invalid end date/time format.")),
+//     status: VenueReservationStatusSchema,
+//     reservationLetterUrl: v.optional(v.pipe(v.string(), v.url()), null),
+//     approvals: v.optional(v.array(VenueApprovalDTOSchema), null),
+//     createdAt: v.pipe(v.string(), v.isoDateTime()),
+//     updatedAt: v.optional(v.pipe(v.string(), v.isoDateTime()), null),
+// });
+
+// Schema for the Reservation Letter File upload
+const ReservationLetterFileSchema = v.pipe(
+    v.instance(File, "Reservation letter file is required."),
+    v.mimeType(
+        ["application/pdf", "image/jpeg", "image/png", "image/webp"],
+        "Invalid file type. Please select a PDF, JPG, PNG, or WEBP file.",
+    ),
+    v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."), // 5MB limit
+);
+
+// Schema for the Frontend Form to Create a Venue Reservation
+// Adapt fields based on your actual form inputs
+export const CreateVenueReservationFormSchema = v.pipe(
+    v.object({
+        eventId: v.number("Event ID is required."),
+        departmentId: v.number("Department ID is required."),
+        venueId: v.pipe(
+            v.number("Venue selection is required."),
+            v.integer(),
+            v.minValue(1, "Please select a valid venue."),
+        ),
+        startTime: v.date("Start date/time is required."),
+        endTime: v.date("End date/time is required."),
+        reservationLetterFile: v.pipe(
+            v.array(
+                v.pipe(
+                    v.instance(File, "Each item must be a file."),
+                    v.mimeType(
+                        [
+                            "application/pdf",
+                            "image/jpeg",
+                            "image/png",
+                            "image/webp",
+                        ],
+                        "Invalid file type. Please select a PDF or image.",
+                    ),
+                    v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."), // Validation 2 for the element
+                ),
+                "Approved letter must be a list of files.", // Message for the array schema itself
+            ),
+            // Validations/transformations on the array as a whole
+            v.check((arr) => arr.length > 0, "Approved letter is required."),
+            v.check((arr) => arr.length <= 1, "Only one file allowed."),
+            v.transform((arr) => arr[0]), // Transform File[] to single File
+        ),
+
+        // Add other fields collected in the form (e.g., eventName if creating ad-hoc)
+        // eventName: v.optional(v.string([v.minLength(2, "Event name too short")])),
+    }),
+    // Validate that end time is after start time
+    v.forward(
+        v.check(
+            (input) => isBefore(input.startTime, input.endTime),
+            "End date/time cannot be before start date/time.",
+        ),
+        ["endTime"], // Apply error to endTime field
+    ),
+);
+
+export type CreateVenueReservationFormInput = v.InferInput<
+    typeof CreateVenueReservationFormSchema
+>;
+export type CreateVenueReservationFormOutput = v.InferOutput<
+    typeof CreateVenueReservationFormSchema
+>;
+
+// Schema for the JSON payload sent when approving/rejecting
+export const ReservationActionPayloadSchema = v.object({
+    // Remarks are optional in the schema itself.
+    // The requirement for rejection should be handled in the API call logic or mutation.
+    remarks: v.optional(v.string()),
+});
+
+export type ReservationActionPayloadInput = v.InferInput<
+    typeof ReservationActionPayloadSchema
+>;

@@ -26,10 +26,18 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+    allVenueOwnerReservationsQueryOptions,
+    pendingVenueOwnerReservationsQueryOptions, // Use reservation query
+    venuesQueryOptions, // Keep for venue filter dropdown
+} from "@/lib/query";
+import type { Venue, VenueReservationDTO } from "@/lib/types"; // Import VenueReservationDTO
+import { formatDateTime, getStatusBadgeClass } from "@/lib/utils"; // Import utils
+import { useSuspenseQuery } from "@tanstack/react-query";
+import {
     Link,
-    Outlet,
     createFileRoute,
     useNavigate,
+    useRouteContext,
 } from "@tanstack/react-router";
 import { format } from "date-fns";
 import {
@@ -40,558 +48,168 @@ import {
     MoreHorizontal,
     Search,
 } from "lucide-react";
-import { useState } from "react";
-import { fromTheme } from "tailwind-merge";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/app/venue-approval/approval")({
     component: VenueReservationApproval,
+    loader: ({ context: { queryClient } }) => {
+        // Ensure both queries are fetched before rendering
+        return Promise.all([
+            queryClient.ensureQueryData(
+                pendingVenueOwnerReservationsQueryOptions,
+            ), // Fetch reservations
+            queryClient.ensureQueryData(venuesQueryOptions), // Fetch venues for filter
+        ]);
+    },
 });
 
-// Sample reservation data
-export const initialReservations = [
-    {
-        id: 1,
-        eventName: "Computer Science Department Meeting",
-        venue: "Main Conference Hall",
-        venueId: 1,
-        department: "Computer Science",
-        contactNumber: "(555) 123-4567",
-        userName: "Dr. Alan Turing",
-        userIdNumber: "EMP-1001",
-        eventDate: "2024-05-15",
-        startTime: "09:00",
-        endTime: "12:00",
-        status: "pending",
-        createdAt: "2024-05-01T10:30:00Z",
-        approvalLetter: "/placeholder.svg?height=800&width=600",
-        remarks: {
-            OPC: "No conflicts with other events",
-            MSDO: "Equipment requirements noted",
-            "Venue Owner": "Venue available on requested date",
-            "VP Admin": "",
-            VPAA: "",
-            FAO: "",
-            SSD: "Security arrangements confirmed",
-        },
-        approvers: [
-            {
-                name: "Jane Smith",
-                idNumber: "EMP-2001",
-                department: "Office of Planning and Coordination",
-                role: "OPC Director",
-                dateSigned: "2024-05-02T14:20:00Z",
-                status: "approved",
-            },
-            {
-                name: "Michael Johnson",
-                idNumber: "EMP-2002",
-                department: "Media Services Department",
-                role: "MSDO Head",
-                dateSigned: "2024-05-03T09:15:00Z",
-                status: "approved",
-            },
-            {
-                name: "Sarah Williams",
-                idNumber: "EMP-2003",
-                department: "Facilities Management",
-                role: "Venue Owner",
-                dateSigned: "2024-05-03T11:30:00Z",
-                status: "approved",
-            },
-            {
-                name: "Dr. Robert Chen",
-                idNumber: "EMP-2004",
-                department: "Administration",
-                role: "VP Admin",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Dr. Elizabeth Taylor",
-                idNumber: "EMP-2005",
-                department: "Academic Affairs",
-                role: "VPAA",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Thomas Garcia",
-                idNumber: "EMP-2006",
-                department: "Finance and Accounting",
-                role: "FAO Director",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Maria Rodriguez",
-                idNumber: "EMP-2007",
-                department: "Security Services",
-                role: "SSD Head",
-                dateSigned: "2024-05-04T16:45:00Z",
-                status: "approved",
-            },
-        ],
-    },
-    {
-        id: 2,
-        eventName: "Annual Faculty Research Symposium",
-        venue: "Auditorium",
-        venueId: 5,
-        department: "Research and Development",
-        contactNumber: "(555) 987-6543",
-        userName: "Prof. Marie Curie",
-        userIdNumber: "FAC-1002",
-        eventDate: "2024-05-20",
-        startTime: "13:00",
-        endTime: "17:00",
-        status: "approved",
-        createdAt: "2024-04-25T08:45:00Z",
-        approvalLetter: "/placeholder.svg?height=800&width=600",
-        remarks: {
-            OPC: "Priority event, all resources allocated",
-            MSDO: "Full AV support confirmed",
-            "Venue Owner": "Venue reserved and prepared",
-            "VP Admin": "Approved with commendation",
-            VPAA: "Academic merit recognized",
-            FAO: "Budget allocation approved",
-            SSD: "Enhanced security measures in place",
-        },
-        approvers: [
-            {
-                name: "Jane Smith",
-                idNumber: "EMP-2001",
-                department: "Office of Planning and Coordination",
-                role: "OPC Director",
-                dateSigned: "2024-04-26T10:20:00Z",
-                status: "approved",
-            },
-            {
-                name: "Michael Johnson",
-                idNumber: "EMP-2002",
-                department: "Media Services Department",
-                role: "MSDO Head",
-                dateSigned: "2024-04-26T14:15:00Z",
-                status: "approved",
-            },
-            {
-                name: "Sarah Williams",
-                idNumber: "EMP-2003",
-                department: "Facilities Management",
-                role: "Venue Owner",
-                dateSigned: "2024-04-27T09:30:00Z",
-                status: "approved",
-            },
-            {
-                name: "Dr. Robert Chen",
-                idNumber: "EMP-2004",
-                department: "Administration",
-                role: "VP Admin",
-                dateSigned: "2024-04-28T11:45:00Z",
-                status: "approved",
-            },
-            {
-                name: "Dr. Elizabeth Taylor",
-                idNumber: "EMP-2005",
-                department: "Academic Affairs",
-                role: "VPAA",
-                dateSigned: "2024-04-29T13:20:00Z",
-                status: "approved",
-            },
-            {
-                name: "Thomas Garcia",
-                idNumber: "EMP-2006",
-                department: "Finance and Accounting",
-                role: "FAO Director",
-                dateSigned: "2024-04-30T15:10:00Z",
-                status: "approved",
-            },
-            {
-                name: "Maria Rodriguez",
-                idNumber: "EMP-2007",
-                department: "Security Services",
-                role: "SSD Head",
-                dateSigned: "2024-05-01T09:45:00Z",
-                status: "approved",
-            },
-        ],
-    },
-    {
-        id: 3,
-        eventName: "Student Council Elections Debate",
-        venue: "Workshop Room A",
-        venueId: 2,
-        department: "Student Affairs",
-        contactNumber: "(555) 234-5678",
-        userName: "James Maxwell",
-        userIdNumber: "STU-1003",
-        eventDate: "2024-05-18",
-        startTime: "14:00",
-        endTime: "16:30",
-        status: "pending",
-        createdAt: "2024-05-03T13:15:00Z",
-        approvalLetter: "/placeholder.svg?height=800&width=600",
-        remarks: {
-            OPC: "Scheduled as requested",
-            MSDO: "Microphone and recording setup confirmed",
-            "Venue Owner": "Room layout will be arranged as requested",
-            "VP Admin": "",
-            VPAA: "",
-            FAO: "",
-            SSD: "Standard security protocols in place",
-        },
-        approvers: [
-            {
-                name: "Jane Smith",
-                idNumber: "EMP-2001",
-                department: "Office of Planning and Coordination",
-                role: "OPC Director",
-                dateSigned: "2024-05-04T09:20:00Z",
-                status: "approved",
-            },
-            {
-                name: "Michael Johnson",
-                idNumber: "EMP-2002",
-                department: "Media Services Department",
-                role: "MSDO Head",
-                dateSigned: "2024-05-04T14:15:00Z",
-                status: "approved",
-            },
-            {
-                name: "Sarah Williams",
-                idNumber: "EMP-2003",
-                department: "Facilities Management",
-                role: "Venue Owner",
-                dateSigned: "2024-05-05T10:30:00Z",
-                status: "approved",
-            },
-            {
-                name: "Dr. Robert Chen",
-                idNumber: "EMP-2004",
-                department: "Administration",
-                role: "VP Admin",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Dr. Elizabeth Taylor",
-                idNumber: "EMP-2005",
-                department: "Academic Affairs",
-                role: "VPAA",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Thomas Garcia",
-                idNumber: "EMP-2006",
-                department: "Finance and Accounting",
-                role: "FAO Director",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Maria Rodriguez",
-                idNumber: "EMP-2007",
-                department: "Security Services",
-                role: "SSD Head",
-                dateSigned: "2024-05-05T16:45:00Z",
-                status: "approved",
-            },
-        ],
-    },
-    {
-        id: 4,
-        eventName: "Engineering Department Workshop",
-        venue: "Training Center",
-        venueId: 7,
-        department: "Engineering",
-        contactNumber: "(555) 345-6789",
-        userName: "Dr. Nikola Tesla",
-        userIdNumber: "FAC-1004",
-        eventDate: "2024-05-25",
-        startTime: "10:00",
-        endTime: "15:00",
-        status: "disapproved",
-        createdAt: "2024-05-02T11:30:00Z",
-        approvalLetter: "/placeholder.svg?height=800&width=600",
-        remarks: {
-            OPC: "Scheduling conflict with maintenance",
-            MSDO: "Equipment not available on requested date",
-            "Venue Owner": "Venue under renovation during requested period",
-            "VP Admin": "Cannot approve due to facility constraints",
-            VPAA: "",
-            FAO: "",
-            SSD: "",
-        },
-        disapprovalNote:
-            "We regret to inform you that your venue reservation request cannot be accommodated due to scheduled renovations in the Training Center during the requested date. Please consider rescheduling for after June 10th when renovations will be complete, or selecting an alternative venue.",
-        approvers: [
-            {
-                name: "Jane Smith",
-                idNumber: "EMP-2001",
-                department: "Office of Planning and Coordination",
-                role: "OPC Director",
-                dateSigned: "2024-05-03T14:20:00Z",
-                status: "disapproved",
-            },
-            {
-                name: "Michael Johnson",
-                idNumber: "EMP-2002",
-                department: "Media Services Department",
-                role: "MSDO Head",
-                dateSigned: "2024-05-03T16:15:00Z",
-                status: "disapproved",
-            },
-            {
-                name: "Sarah Williams",
-                idNumber: "EMP-2003",
-                department: "Facilities Management",
-                role: "Venue Owner",
-                dateSigned: "2024-05-04T09:30:00Z",
-                status: "disapproved",
-            },
-            {
-                name: "Dr. Robert Chen",
-                idNumber: "EMP-2004",
-                department: "Administration",
-                role: "VP Admin",
-                dateSigned: "2024-05-05T11:45:00Z",
-                status: "disapproved",
-            },
-            {
-                name: "Dr. Elizabeth Taylor",
-                idNumber: "EMP-2005",
-                department: "Academic Affairs",
-                role: "VPAA",
-                dateSigned: null,
-                status: "not_required",
-            },
-            {
-                name: "Thomas Garcia",
-                idNumber: "EMP-2006",
-                department: "Finance and Accounting",
-                role: "FAO Director",
-                dateSigned: null,
-                status: "not_required",
-            },
-            {
-                name: "Maria Rodriguez",
-                idNumber: "EMP-2007",
-                department: "Security Services",
-                role: "SSD Head",
-                dateSigned: null,
-                status: "not_required",
-            },
-        ],
-    },
-    {
-        id: 5,
-        eventName: "Psychology Department Seminar",
-        venue: "Executive Boardroom",
-        venueId: 3,
-        department: "Psychology",
-        contactNumber: "(555) 456-7890",
-        userName: "Dr. Sigmund Freud",
-        userIdNumber: "FAC-1005",
-        eventDate: "2024-06-02",
-        startTime: "13:30",
-        endTime: "16:00",
-        status: "pending",
-        createdAt: "2024-05-05T09:45:00Z",
-        approvalLetter: "/placeholder.svg?height=800&width=600",
-        remarks: {
-            OPC: "Scheduled as requested",
-            MSDO: "Video conferencing setup confirmed",
-            "Venue Owner": "",
-            "VP Admin": "",
-            VPAA: "",
-            FAO: "",
-            SSD: "",
-        },
-        approvers: [
-            {
-                name: "Jane Smith",
-                idNumber: "EMP-2001",
-                department: "Office of Planning and Coordination",
-                role: "OPC Director",
-                dateSigned: "2024-05-06T10:20:00Z",
-                status: "approved",
-            },
-            {
-                name: "Michael Johnson",
-                idNumber: "EMP-2002",
-                department: "Media Services Department",
-                role: "MSDO Head",
-                dateSigned: "2024-05-06T14:15:00Z",
-                status: "approved",
-            },
-            {
-                name: "Sarah Williams",
-                idNumber: "EMP-2003",
-                department: "Facilities Management",
-                role: "Venue Owner",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Dr. Robert Chen",
-                idNumber: "EMP-2004",
-                department: "Administration",
-                role: "VP Admin",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Dr. Elizabeth Taylor",
-                idNumber: "EMP-2005",
-                department: "Academic Affairs",
-                role: "VPAA",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Thomas Garcia",
-                idNumber: "EMP-2006",
-                department: "Finance and Accounting",
-                role: "FAO Director",
-                dateSigned: null,
-                status: "pending",
-            },
-            {
-                name: "Maria Rodriguez",
-                idNumber: "EMP-2007",
-                department: "Security Services",
-                role: "SSD Head",
-                dateSigned: null,
-                status: "pending",
-            },
-        ],
-    },
-];
-
-// Available venues (for reference)
-const venues = [
-    { id: 1, name: "Main Conference Hall" },
-    { id: 2, name: "Workshop Room A" },
-    { id: 3, name: "Executive Boardroom" },
-    { id: 4, name: "Outdoor Pavilion" },
-    { id: 5, name: "Auditorium" },
-    { id: 6, name: "Gallery Space" },
-    { id: 7, name: "Training Center" },
-    { id: 8, name: "Rooftop Terrace" },
-];
-
-type ViewMode = "all" | "pending" | "approved" | "disapproved";
+type ViewMode = "all" | "pending" | "approved" | "rejected"; // Adjusted view modes
 
 export function VenueReservationApproval() {
     const navigate = useNavigate();
-    const [reservations, setReservations] = useState(initialReservations);
+    const context = useRouteContext({ from: "/app/venue-approval" }); // Get context
+    const role = context.authState?.role; // Get user role
+
+    // Fetch data using useSuspenseQuery - data is guaranteed by loader
+    const { data: fetchedReservations } = useSuspenseQuery(
+        allVenueOwnerReservationsQueryOptions,
+    );
+    const { data: venues } = useSuspenseQuery(venuesQueryOptions); // For filter
+
+    // Create a map for quick venue lookup by ID (still useful for filter)
+    const venueMap = useMemo(() => {
+        const map = new Map<number, Venue>();
+        for (const venue of venues ?? []) {
+            map.set(venue.id, venue);
+        }
+        return map;
+    }, [venues]);
+
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
-    const [venueFilter, setVenueFilter] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<ViewMode>("all");
+    const [venueFilter, setVenueFilter] = useState<string | null>(null); // Stores venue ID as string
+    const [viewMode, setViewMode] = useState<ViewMode>("pending"); // Default to pending
 
     // Filter reservations based on search query, status, and venue filters
-    const filteredReservations = reservations.filter((reservation) => {
-        const matchesSearch =
-            reservation.eventName
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-            reservation.userName
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-            reservation.department
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-            reservation.venue.toLowerCase().includes(searchQuery.toLowerCase());
+    const filteredReservations = useMemo(() => {
+        return (fetchedReservations ?? []).filter(
+            (reservation: VenueReservationDTO) => {
+                // Use fields from VenueReservationDTO
+                const matchesSearch =
+                    reservation.venueName // Search venue name directly
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                    reservation.requestingUser?.firstName
+                        ?.toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                    reservation.requestingUser?.lastName
+                        ?.toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                    reservation.departmentName // Search department name
+                        ?.toLowerCase()
+                        .includes(searchQuery.toLowerCase());
 
-        const matchesStatus = statusFilter
-            ? reservation.status === statusFilter
-            : true;
-        const matchesVenue = venueFilter
-            ? reservation.venueId.toString() === venueFilter
-            : true;
-        const matchesViewMode =
-            viewMode === "all"
-                ? true
-                : viewMode === "pending"
-                  ? reservation.status === "pending"
-                  : viewMode === "approved"
-                    ? reservation.status === "approved"
-                    : viewMode === "disapproved"
-                      ? reservation.status === "disapproved"
-                      : true;
+                const matchesStatus = statusFilter
+                    ? reservation.status.toLowerCase() ===
+                      statusFilter.toLowerCase()
+                    : true;
 
-        return (
-            matchesSearch && matchesStatus && matchesVenue && matchesViewMode
+                // Filter by venueId
+                const matchesVenue = venueFilter
+                    ? reservation.venueId.toString() === venueFilter
+                    : true;
+
+                const matchesViewMode =
+                    viewMode === "all"
+                        ? true
+                        : viewMode === "pending"
+                          ? reservation.status.toLowerCase() === "pending"
+                          : viewMode === "approved"
+                            ? reservation.status.toLowerCase() === "approved"
+                            : viewMode === "rejected" // Changed from disapproved
+                              ? reservation.status.toLowerCase() ===
+                                    "rejected" ||
+                                reservation.status.toLowerCase() === "cancelled"
+                              : true;
+
+                return (
+                    matchesSearch &&
+                    matchesStatus &&
+                    matchesVenue &&
+                    matchesViewMode
+                );
+            },
         );
-    });
+    }, [
+        fetchedReservations,
+        searchQuery,
+        statusFilter,
+        venueFilter,
+        viewMode,
+        // venueMap dependency removed as venueName is direct
+    ]);
 
-    // Reservation statistics
-    const stats = {
-        total: reservations.length,
-        pending: reservations.filter((r) => r.status === "pending").length,
-        approved: reservations.filter((r) => r.status === "approved").length,
-        disapproved: reservations.filter((r) => r.status === "disapproved")
-            .length,
-    };
+    // Reservation statistics based on fetched data
+    const stats = useMemo(() => {
+        const allReservations = fetchedReservations ?? [];
+        return {
+            total: allReservations.length,
+            pending: allReservations.filter(
+                (r) => r.status.toLowerCase() === "pending",
+            ).length,
+            approved: allReservations.filter(
+                (r) => r.status.toLowerCase() === "approved",
+            ).length,
+            rejected: allReservations.filter(
+                // Changed from disapproved
+                (r) =>
+                    r.status.toLowerCase() === "rejected" ||
+                    r.status.toLowerCase() === "cancelled",
+            ).length,
+        };
+    }, [fetchedReservations]);
 
     // Handle reservation operations
     const handleViewDetails = (reservationId: number) => {
-        // Navigate to the reservation details page
+        // Navigate to the specific reservation detail page
         navigate({ to: `/app/venue-approval/${reservationId}` });
     };
 
-    const handleNavigateToVenue = (venueId: number) => {
-        // Navigate to the venue details page
+    const handleNavigateToVenue = (venueId: number | undefined) => {
+        if (venueId === undefined) return;
         navigate({ from: Route.fullPath, to: `/app/venues/${venueId}` });
     };
 
-    // Status badge styling
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case "pending":
-                return (
-                    <Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
-                        Pending
-                    </Badge>
-                );
-            case "approved":
-                return (
-                    <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">
-                        Approved
-                    </Badge>
-                );
-            case "disapproved":
-                return (
-                    <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-                        Disapproved
-                    </Badge>
-                );
-            default:
-                return <Badge variant="outline">{status}</Badge>;
+    // Format date and time from ISO strings (using utils)
+    const formatDate = (dateString: string | undefined | null) => {
+        if (!dateString) return "N/A";
+        try {
+            return format(new Date(dateString), "MMM d, yyyy");
+        } catch (e) {
+            console.error("Error formatting date:", dateString, e);
+            return "Invalid Date";
         }
     };
 
-    // Format date and time
-    const formatDate = (dateString: string) => {
-        return format(new Date(dateString), "MMM d, yyyy");
-    };
-
-    const formatTime = (timeString: string) => {
-        const [hours, minutes] = timeString.split(":");
-        const date = new Date();
-        date.setHours(Number.parseInt(hours, 10));
-        date.setMinutes(Number.parseInt(minutes, 10));
-        return format(date, "h:mm a");
+    const formatTime = (dateString: string | undefined | null) => {
+        if (!dateString) return "N/A";
+        try {
+            return format(new Date(dateString), "h:mm a");
+        } catch (e) {
+            console.error("Error formatting time:", dateString, e);
+            return "Invalid Time";
+        }
     };
 
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
+                {/* Header */}
                 <header className="flex items-center justify-between border-b px-6 py-3.5">
                     <h1 className="text-xl font-semibold">
                         Venue Reservation Approval
                     </h1>
+                    {/* Search Input */}
                     <div className="flex items-center gap-2">
                         <div className="relative">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -608,6 +226,7 @@ export function VenueReservationApproval() {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-4 gap-4 p-6 pb-0">
+                    {/* Total */}
                     <Card
                         className="hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => setViewMode("all")}
@@ -623,6 +242,7 @@ export function VenueReservationApproval() {
                             </div>
                         </CardContent>
                     </Card>
+                    {/* Pending */}
                     <Card
                         className="hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => setViewMode("pending")}
@@ -638,6 +258,7 @@ export function VenueReservationApproval() {
                             </div>
                         </CardContent>
                     </Card>
+                    {/* Approved */}
                     <Card
                         className="hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => setViewMode("approved")}
@@ -653,24 +274,28 @@ export function VenueReservationApproval() {
                             </div>
                         </CardContent>
                     </Card>
+                    {/* Rejected/Cancelled */}
                     <Card
                         className="hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => setViewMode("disapproved")}
+                        onClick={() => setViewMode("rejected")} // Changed from disapproved
                     >
                         <CardHeader>
                             <CardTitle className="text-sm font-medium">
-                                Disapproved
+                                Rejected/Cancelled
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-red-500">
-                                {stats.disapproved}
+                                {stats.rejected}{" "}
+                                {/* Changed from disapproved */}
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
+                {/* Filters and Actions Bar */}
                 <div className="flex items-center justify-between border-b px-6 py-2">
+                    {/* View Mode Tabs */}
                     <div className="flex items-center gap-2">
                         <Tabs
                             value={viewMode}
@@ -686,24 +311,31 @@ export function VenueReservationApproval() {
                                 <TabsTrigger value="approved">
                                     Approved
                                 </TabsTrigger>
-                                <TabsTrigger value="disapproved">
-                                    Disapproved
+                                <TabsTrigger value="rejected">
+                                    {" "}
+                                    {/* Changed from disapproved */}
+                                    Rejected/Cancelled
                                 </TabsTrigger>
                             </TabsList>
                         </Tabs>
                     </div>
 
+                    {/* Other Filters/Actions */}
                     <div className="flex items-center gap-2">
+                        {/* Venue Filter */}
                         <Select
                             value={venueFilter || "all"}
-                            onValueChange={(value) => setVenueFilter(value)}
+                            onValueChange={(value) =>
+                                setVenueFilter(value === "all" ? null : value)
+                            }
                         >
                             <SelectTrigger className="w-[180px]">
                                 <SelectValue placeholder="Filter by venue" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Venues</SelectItem>
-                                {venues.map((venue) => (
+                                {/* Populate venues from fetched data */}
+                                {(venues ?? []).map((venue) => (
                                     <SelectItem
                                         key={venue.id}
                                         value={venue.id.toString()}
@@ -714,11 +346,13 @@ export function VenueReservationApproval() {
                             </SelectContent>
                         </Select>
 
+                        {/* More Filters Button (Placeholder) */}
                         <Button variant="outline" size="sm" className="gap-1">
                             <Filter className="h-4 w-4" />
                             More Filters
                         </Button>
 
+                        {/* Export Button (Placeholder) */}
                         <Button variant="outline" size="sm" className="gap-1">
                             <Download className="h-4 w-4" />
                             Export
@@ -726,17 +360,17 @@ export function VenueReservationApproval() {
                     </div>
                 </div>
 
+                {/* Table */}
                 <div className="flex-1 overflow-auto p-6">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Event Name</TableHead>
+                                {/* Updated Table Headers */}
                                 <TableHead>Venue</TableHead>
+                                <TableHead>Department</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Time</TableHead>
-                                <TableHead>Department</TableHead>
                                 <TableHead>Requester</TableHead>
-                                <TableHead>ID Number</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Submitted</TableHead>
                                 <TableHead className="w-[100px]">
@@ -745,100 +379,110 @@ export function VenueReservationApproval() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredReservations.map((reservation) => (
-                                <TableRow key={reservation.id}>
-                                    <TableCell className="font-medium">
-                                        <Button
-                                            variant="link"
-                                            className="p-0 h-auto text-left justify-start font-medium"
-                                            onClick={() =>
-                                                handleViewDetails(
-                                                    reservation.id,
-                                                )
-                                            }
-                                        >
-                                            {reservation.eventName}
-                                        </Button>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Button
-                                            variant="link"
-                                            className="p-0 h-auto"
-                                            onClick={() =>
-                                                handleNavigateToVenue(
-                                                    reservation.venueId,
-                                                )
-                                            }
-                                        >
-                                            {reservation.venue}
-                                        </Button>
-                                    </TableCell>
-                                    <TableCell>
-                                        {formatDate(reservation.eventDate)}
-                                    </TableCell>
-                                    <TableCell>
-                                        {formatTime(reservation.startTime)} -{" "}
-                                        {formatTime(reservation.endTime)}
-                                    </TableCell>
-                                    <TableCell>
-                                        {reservation.department}
-                                    </TableCell>
-                                    <TableCell>
-                                        {reservation.userName}
-                                    </TableCell>
-                                    <TableCell>
-                                        {reservation.userIdNumber}
-                                    </TableCell>
-                                    <TableCell>
-                                        {getStatusBadge(reservation.status)}
-                                    </TableCell>
-                                    <TableCell>
-                                        {formatDate(reservation.createdAt)}
-                                    </TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
+                            {filteredReservations.map(
+                                (reservation: VenueReservationDTO) => {
+                                    return (
+                                        <TableRow key={reservation.id}>
+                                            {/* Updated Table Cells */}
+                                            <TableCell>
                                                 <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                >
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>
-                                                    Actions
-                                                </DropdownMenuLabel>
-                                                <DropdownMenuItem
-                                                    onClick={() =>
-                                                        handleViewDetails(
-                                                            reservation.id,
-                                                        )
-                                                    }
-                                                >
-                                                    <Eye className="mr-2 h-4 w-4" />
-                                                    View Details
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
+                                                    variant="link"
+                                                    className="p-0 h-auto"
                                                     onClick={() =>
                                                         handleNavigateToVenue(
                                                             reservation.venueId,
                                                         )
                                                     }
                                                 >
-                                                    <Calendar className="mr-2 h-4 w-4" />
-                                                    View Venue
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                                                    {reservation.venueName}
+                                                </Button>
+                                            </TableCell>
+                                            <TableCell>
+                                                {reservation.departmentName ??
+                                                    "N/A"}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDate(
+                                                    reservation.startTime,
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatTime(
+                                                    reservation.startTime,
+                                                )}{" "}
+                                                -{" "}
+                                                {formatTime(
+                                                    reservation.endTime,
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                {reservation.requestingUser
+                                                    ?.firstName ?? ""}{" "}
+                                                {reservation.requestingUser
+                                                    ?.lastName ?? "N/A"}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge
+                                                    className={getStatusBadgeClass(
+                                                        reservation.status,
+                                                    )}
+                                                >
+                                                    {reservation.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDate(
+                                                    reservation.createdAt,
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                        >
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>
+                                                            Actions
+                                                        </DropdownMenuLabel>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleViewDetails(
+                                                                    reservation.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Eye className="mr-2 h-4 w-4" />
+                                                            View Details
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleNavigateToVenue(
+                                                                    reservation.venueId,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Calendar className="mr-2 h-4 w-4" />
+                                                            View Venue
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                },
+                            )}
                             {filteredReservations.length === 0 && (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={10}
+                                        colSpan={8} // Adjusted colspan
                                         className="text-center py-8 text-muted-foreground"
                                     >
                                         No reservations found. Try adjusting

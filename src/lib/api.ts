@@ -9,6 +9,7 @@ import type {
     VenueInput,
 } from "./schema";
 import type {
+    CreateVenueReservationInput,
     DepartmentDTO,
     DepartmentType,
     Equipment,
@@ -16,10 +17,13 @@ import type {
     EventApprovalDTO,
     EventDTOBackendResponse,
     EventDTOPayload,
+    ReservationActionInput,
     UserDTO,
     UserRole,
     UserType,
     Venue,
+    VenueApprovalDTO,
+    VenueReservationDTO,
 } from "./types";
 
 // ... other imports ...
@@ -380,7 +384,7 @@ export const getAllEvents = async () => {
     }
 };
 
-export const getEventById = async (eventId: string) => {
+export const getEventById = async (eventId: string): Promise<Event> => {
     try {
         const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
             method: "GET",
@@ -583,6 +587,48 @@ export const getApprovedEvents = async (): Promise<Event[]> => {
             ? error
             : new Error(
                   "An unexpected error occurred during fetching own events.",
+              );
+    }
+};
+
+export const getPendingVenueOwnerEvents = async (): Promise<Event[]> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/events/pending/venue-owner`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while fetching pending events for venue owner.",
+              );
+    }
+};
+
+export const getPendingDeptHeadEvents = async (): Promise<Event[]> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/events/pending/department-head`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while fetching pending events for department head.",
               );
     }
 };
@@ -1173,6 +1219,269 @@ export const deleteNotifications = async (
             ? error
             : new Error(
                   "An unexpected error occurred while deleting notifications.",
+              );
+    }
+};
+
+const VENUE_RESERVATIONS_BASE_URL = `${API_BASE_URL}/venue-reservations`;
+
+export const createVenueReservation = async ({
+    reservationData,
+    reservationLetterFile,
+}: CreateVenueReservationInput): Promise<VenueReservationDTO> => {
+    const formData = new FormData();
+    formData.append(
+        "reservation",
+        new Blob([JSON.stringify(reservationData)], {
+            type: "application/json",
+        }),
+    );
+    if (reservationLetterFile) {
+        formData.append("reservationLetter", reservationLetterFile);
+    }
+
+    try {
+        const response = await fetch(VENUE_RESERVATIONS_BASE_URL, {
+            method: "POST",
+            credentials: "include",
+            body: formData,
+            // Content-Type is set automatically by browser for FormData
+        });
+        return await handleApiResponse(response);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred creating the reservation.",
+              );
+    }
+};
+
+export const getAllReservations = async (): Promise<VenueReservationDTO[]> => {
+    try {
+        const response = await fetch(VENUE_RESERVATIONS_BASE_URL, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        const data = await handleApiResponse(response, true); // Allow empty array
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred fetching all reservations.",
+              );
+    }
+};
+
+export const getOwnReservations = async (): Promise<VenueReservationDTO[]> => {
+    try {
+        const response = await fetch(`${VENUE_RESERVATIONS_BASE_URL}/me`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred fetching your reservations.",
+              );
+    }
+};
+
+export const getReservationById = async (
+    reservationId: number | string,
+): Promise<VenueReservationDTO> => {
+    try {
+        const response = await fetch(
+            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        return await handleApiResponse(response);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred fetching reservation ${reservationId}.`,
+              );
+    }
+};
+
+// PATCH /venue-reservations/{reservationId}/approve
+export const approveReservation = async ({
+    reservationId,
+    remarks,
+}: ReservationActionInput): Promise<string> => {
+    try {
+        const response = await fetch(
+            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}/approve`,
+            {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ remarks: remarks ?? "" }),
+            },
+        );
+        // Expecting text response
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred approving reservation ${reservationId}.`,
+              );
+    }
+};
+
+// PATCH /venue-reservations/{reservationId}/reject
+export const rejectReservation = async ({
+    reservationId,
+    remarks,
+}: ReservationActionInput): Promise<string> => {
+    if (!remarks || remarks.trim() === "") {
+        throw new Error("Rejection remarks are required.");
+    }
+    try {
+        const response = await fetch(
+            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}/reject`,
+            {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ remarks }),
+            },
+        );
+        // Expecting text response
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred rejecting reservation ${reservationId}.`,
+              );
+    }
+};
+
+// PATCH /venue-reservations/{reservationId}/cancel
+export const cancelReservation = async (
+    reservationId: number | string,
+): Promise<string> => {
+    try {
+        const response = await fetch(
+            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}/cancel`,
+            {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        // Expecting text response
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred cancelling reservation ${reservationId}.`,
+              );
+    }
+};
+
+export const deleteReservation = async (
+    reservationId: number | string,
+): Promise<string> => {
+    try {
+        const response = await fetch(
+            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}`,
+            {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        // Expecting text response
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred deleting reservation ${reservationId}.`,
+              );
+    }
+};
+
+export const getApprovalsForReservation = async (
+    reservationId: number | string,
+): Promise<VenueApprovalDTO[]> => {
+    try {
+        const response = await fetch(
+            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}/approvals`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true); // Allow empty array
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred fetching approvals for reservation ${reservationId}.`,
+              );
+    }
+};
+
+export const getPendingVenueOwnerReservations = async (): Promise<
+    VenueReservationDTO[]
+> => {
+    try {
+        const response = await fetch(
+            `${VENUE_RESERVATIONS_BASE_URL}/pending/venue-owner`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true); // Allow empty array
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred fetching pending venue owner reservations.",
+              );
+    }
+};
+
+export const getAllVenueOwnerReservations = async (): Promise<
+    VenueReservationDTO[]
+> => {
+    try {
+        const response = await fetch(
+            `${VENUE_RESERVATIONS_BASE_URL}/all/venue-owner`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true); // Allow empty array
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred fetching all venue owner reservations.",
               );
     }
 };

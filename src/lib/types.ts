@@ -256,7 +256,8 @@ export type Event = {
     eventName: string;
     eventType: string;
     organizer: UserType;
-    approvedLetterPath: string | null;
+    approvedLetterUrl: string | null;
+    imageUrl: string | null;
     eventVenueId: number;
     startTime: string;
     endTime: string;
@@ -266,6 +267,8 @@ export type Event = {
 export type EventApprovalDTO = {
     id: number;
     eventId: number;
+    userId: number;
+    userRole: string;
     department: string;
     signedBy: string;
     remarks: string | null;
@@ -291,4 +294,47 @@ export type DepartmentType = {
     deptHeadId: number | null;
     createdAt: string;
     updatedAt: string;
+};
+
+export type VenueApprovalDTO = {
+    id: number;
+    venueReservationId: number;
+    userId: number;
+    signedBy: string;
+    userRole: string;
+    remarks: string | null;
+    status: string; 
+    dateSigned: string | null; 
+};
+
+export type VenueReservationDTO = {
+    id: number;
+    eventId: number | null;
+    requestingUser: UserDTO;
+    departmentId: number | null;
+    departmentName: string | null;
+    venueId: number;
+    venueName: string;
+    startTime: string;
+    endTime: string; 
+    status: string; 
+    reservationLetterUrl: string | null;
+    approvals: VenueApprovalDTO[] | null; 
+    createdAt: string; 
+    updatedAt: string | null;
+};
+
+// Input type for creating a reservation
+export type CreateVenueReservationInput = {
+    reservationData: Omit<VenueReservationDTO, 'id' | 'requestingUser' | 'venueName' | 'departmentName' | 'approvals' | 'createdAt' | 'updatedAt' | 'reservationLetterUrl' | 'status'> & {
+        // Add specific fields needed for creation if different from DTO
+        // Example: maybe only venueId, startTime, endTime are needed initially
+    };
+    reservationLetterFile?: File | null;
+};
+
+// Input type for approving/rejecting
+export type ReservationActionInput = {
+    reservationId: number;
+    remarks?: string; // Optional for approve, required for reject
 };

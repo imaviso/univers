@@ -123,9 +123,14 @@ export function VenueFormDialog({
         form.setValue("image", files, { shouldValidate: true });
     };
 
-    // Simplified submit handler - validation happens via form.handleSubmit
     const processSubmit = (data: VenueInput) => {
-        onSubmit(data, imageFiles[0] ?? null);
+        // Ensure venueOwnerId is correctly set to undefined if 'none' was selected
+        const finalData = {
+            ...data,
+            venueOwnerId:
+                data.venueOwnerId === 0 ? undefined : data.venueOwnerId, // Assuming 0 represents 'none' after onChange conversion
+        };
+        onSubmit(finalData, imageFiles[0] ?? null);
     };
 
     // Use imageFiles state for FileUpload component value
@@ -184,7 +189,7 @@ export function VenueFormDialog({
                             )}
                         />
 
-                        {currentUserRole === "SUPER_ADMIN" && ( // Conditionally render this field
+                        {currentUserRole === "SUPER_ADMIN" && (
                             <FormField
                                 control={form.control}
                                 name="venueOwnerId"
@@ -192,10 +197,16 @@ export function VenueFormDialog({
                                     <FormItem>
                                         <FormLabel>Venue Owner</FormLabel>
                                         <Select
-                                            onValueChange={(value) =>
-                                                field.onChange(Number(value))
-                                            }
-                                            value={field.value?.toString()}
+                                            // Handle 'none' value during change
+                                            onValueChange={(value) => {
+                                                if (value === "none") {
+                                                    field.onChange(undefined); // Set form value to undefined for 'none'
+                                                } else {
+                                                    field.onChange(
+                                                        Number(value),
+                                                    ); // Parse number for actual IDs
+                                                }
+                                            }}
                                             disabled={isLoading}
                                         >
                                             <FormControl>
@@ -204,10 +215,6 @@ export function VenueFormDialog({
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {/* Add an option for 'No Owner' or similar if applicable */}
-                                                <SelectItem value="">
-                                                    -- No Owner --
-                                                </SelectItem>
                                                 {venueOwners.map((owner) => (
                                                     <SelectItem
                                                         key={owner.id}

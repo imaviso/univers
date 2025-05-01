@@ -63,7 +63,7 @@ export const allNavigation = [
         name: "Venue Approval",
         href: "/app/venue-approval/approval",
         icon: BookCheck,
-        roles: ["SUPER_ADMIN", "VENUE_OWNER", "VPAA", "VP_ADMIN"],
+        roles: ["VENUE_OWNER"],
     },
     {
         name: "Users",
@@ -88,7 +88,7 @@ export const allNavigation = [
         name: "Equipment Approval",
         href: "/app/equipment-approval/approval",
         icon: PackageCheck,
-        roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER", "VP_ADMIN"],
+        roles: ["EQUIPMENT_OWNER"],
     },
     {
         name: "Departments",

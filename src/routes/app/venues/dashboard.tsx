@@ -39,16 +39,27 @@ import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmD
 import { VenueReservationFormDialog } from "@/components/venue-reservation/VenueReservationFormDialog";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
 import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
-import { usersQueryOptions, venuesQueryOptions } from "@/lib/query";
-import type { VenueInput } from "@/lib/schema";
+import {
+    departmentsQueryOptions,
+    getOwnEventsQueryOptions,
+    ownReservationsQueryOptions,
+    useCreateReservationMutation,
+    usersQueryOptions,
+    venuesQueryOptions,
+} from "@/lib/query";
+import type {
+    CreateVenueReservationFormOutput,
+    VenueInput,
+} from "@/lib/schema";
 import { DEPARTMENTS, type UserType, type Venue } from "@/lib/types";
+import { getStatusBadgeClass } from "@/lib/utils";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
     useNavigate,
     useRouteContext,
 } from "@tanstack/react-router";
-import { format } from "date-fns";
+import { format, formatISO } from "date-fns";
 import {
     Building,
     Calendar,
@@ -68,20 +79,23 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/venues/dashboard")({
     component: VenueManagement,
-    loader: ({ context: { queryClient } }) =>
-        queryClient.ensureQueryData(venuesQueryOptions),
+    loader: ({ context: { queryClient } }) => {
+        queryClient.ensureQueryData(venuesQueryOptions);
+        queryClient.ensureQueryData(getOwnEventsQueryOptions);
+        queryClient.ensureQueryData(departmentsQueryOptions);
+        queryClient.ensureQueryData(ownReservationsQueryOptions);
+    },
 });
 
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
     const role = context.authState?.role;
-    const userId = context.authState;
-    const userData = context.authState;
+    const currentUser = context.authState; // Get full user object
     const queryClient = context.queryClient;
     const navigate = useNavigate();
     // State variables
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedItems, setSelectedItems] = useState<number[]>([]);
+    // const [selectedItems, setSelectedItems] = useState<number[]>([]); // Bulk actions removed
     const [isAddVenueOpen, setIsAddVenueOpen] = useState(false);
     const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -91,27 +105,34 @@ export function VenueManagement() {
     );
     const [isReservationDialogOpen, setIsReservationDialogOpen] =
         useState(false);
+    const [reservingVenueId, setReservingVenueId] = useState<
+        string | undefined
+    >(undefined); // Store ID for pre-selection
 
     // --- Queries ---
-    // Fetch venues using suspense query (data guaranteed by loader)
+    const { data: departments = [] } = useSuspenseQuery(
+        departmentsQueryOptions,
+    );
+    const { data: events = [] } = useSuspenseQuery(getOwnEventsQueryOptions);
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
-
-    // Fetch users (data potentially guaranteed by loader for SUPER_ADMIN)
     const { data: users = [] } = useQuery({
         ...usersQueryOptions,
         enabled: role === "SUPER_ADMIN",
     });
+    const { data: ownReservations = [], isLoading: isLoadingOwnReservations } =
+        useQuery({
+            ...ownReservationsQueryOptions,
+            enabled: viewMode === "reservations",
+        });
 
-    // Derive venueOwners list
     const venueOwners =
         role === "SUPER_ADMIN"
             ? users.filter((user: UserType) => user.role === "VENUE_OWNER")
             : [];
-    // --- End Queries ---
 
     // --- Mutations ---
     const createVenueMutation = useMutation({
-        mutationFn: createVenue, // Use the updated API function
+        mutationFn: createVenue,
         onSuccess: (newVenue) => {
             toast.success(`Venue "${newVenue.name}" created successfully.`);
             queryClient.invalidateQueries({
@@ -125,13 +146,12 @@ export function VenueManagement() {
     });
 
     const updateVenueMutation = useMutation({
-        mutationFn: updateVenue, // Use the updated API function
+        mutationFn: updateVenue,
         onSuccess: (updatedVenue) => {
             toast.success(`Venue "${updatedVenue.name}" updated successfully.`);
             queryClient.invalidateQueries({
                 queryKey: venuesQueryOptions.queryKey,
             });
-            // Optionally invalidate specific venue query if exists: queryClient.invalidateQueries({ queryKey: ['venue', updatedVenue.id] });
             setIsAddVenueOpen(false);
             setEditingVenue(null);
         },
@@ -141,16 +161,15 @@ export function VenueManagement() {
     });
 
     const deleteVenueMutation = useMutation({
-        mutationFn: deleteVenue, // Use the updated API function
+        mutationFn: deleteVenue,
         onSuccess: (message, venueId) => {
-            // Success returns message string
-            toast.success(message || "Venue deleted successfully."); // Use backend message or default
+            toast.success(message || "Venue deleted successfully.");
             queryClient.invalidateQueries({
                 queryKey: venuesQueryOptions.queryKey,
             });
             setIsDeleteDialogOpen(false);
             setVenueToDelete(null);
-            setSelectedItems((prev) => prev.filter((id) => id !== venueId)); // Remove from selection
+            // setSelectedItems((prev) => prev.filter((id) => id !== venueId)); // Bulk actions removed
         },
         onError: (error) => {
             toast.error(`Failed to delete venue: ${error.message}`);
@@ -159,14 +178,51 @@ export function VenueManagement() {
         },
     });
 
-    // Bulk delete mutation removed as backend endpoint is not confirmed
+    // Venue Reservation Mutation
+    const createReservationMutation = useCreateReservationMutation();
 
     // --- Event Handlers ---
-    const handleReservationSubmit = (data: Record<string, unknown>) => {
-        console.log("Reservation data:", data);
-        // TODO: Implement reservation mutation
-        setIsReservationDialogOpen(false);
-        toast.info("Venue reservation submitted (placeholder).");
+    const handleReservationSubmit = (
+        formData: CreateVenueReservationFormOutput,
+    ) => {
+        if (!currentUser) {
+            toast.error("You must be logged in to make a reservation.");
+            return;
+        }
+
+        console.log("Form Data Received:", formData);
+
+        // Transform data for the API
+        const apiPayload = {
+            reservationData: {
+                venueId: formData.venueId,
+                // Convert Date objects to ISO strings
+                startTime: format(formData.startTime, "yyyy-MM-dd'T'HH:mm:ss"),
+                endTime: format(formData.endTime, "yyyy-MM-dd'T'HH:mm:ss"),
+                // departmentId and eventId are not collected in this simplified form
+                // They might need to be added back if required by the backend logic
+                departmentId: formData.departmentId,
+                eventId: formData.eventId,
+            },
+            reservationLetterFile: formData.reservationLetterFile, // Already a File | undefined
+        };
+
+        console.log("API Payload:", apiPayload);
+
+        createReservationMutation.mutate(apiPayload, {
+            onSuccess: (newReservation) => {
+                toast.success(
+                    `Reservation for "${newReservation.venueName}" submitted successfully.`,
+                );
+                setIsReservationDialogOpen(false);
+                setReservingVenueId(undefined); // Clear pre-selected venue
+                // Optionally navigate to reservation details or refresh a reservation list
+                // queryClient.invalidateQueries({ queryKey: ['myReservations'] }); // If such a query exists
+            },
+            onError: (error) => {
+                toast.error(`Failed to submit reservation: ${error.message}`);
+            },
+        });
     };
 
     const handleAddOrEditSubmit = (
@@ -174,25 +230,19 @@ export function VenueManagement() {
         imageFile: File | null,
     ) => {
         if (editingVenue) {
-            // Update existing venue
             updateVenueMutation.mutate({
                 venueId: editingVenue.id,
                 venueData,
                 imageFile,
             });
         } else {
-            // Create new venue
             let finalVenueData = { ...venueData };
-
-            // If the user is a VENUE_OWNER, automatically set their ID
-            if (role === "VENUE_OWNER" && userId) {
+            if (role === "VENUE_OWNER" && currentUser?.id) {
                 finalVenueData = {
                     ...finalVenueData,
-                    venueOwnerId: Number(userId), // Ensure userId is a number
+                    venueOwnerId: Number(currentUser.id),
                 };
             }
-            // If SUPER_ADMIN, the venueOwnerId from the form is used (or undefined if none selected)
-
             createVenueMutation.mutate({
                 venueData: finalVenueData,
                 imageFile,
@@ -204,11 +254,10 @@ export function VenueManagement() {
         if (venueToDelete) {
             deleteVenueMutation.mutate(venueToDelete);
         }
-        // Bulk delete logic removed
     };
 
-    // Helper to format date strings
     const formatDateTime = (dateString: string | null | undefined): string => {
+        // ... (keep existing formatDateTime)
         if (!dateString) return "—";
         try {
             return format(new Date(dateString), "MMM d, yyyy h:mm a");
@@ -222,34 +271,39 @@ export function VenueManagement() {
         navigate({ to: `/app/venues/${venueId}` });
     };
 
-    // Filter venues based on search query
+    // Filter venues
     const filteredVenues = venues.filter(
+        // ... (keep existing filter logic)
         (venue) =>
             venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             venue.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
             venue.venueOwner?.firstName
                 ?.toLowerCase()
-                .includes(searchQuery.toLowerCase()) || // Search owner name
+                .includes(searchQuery.toLowerCase()) ||
             venue.venueOwner?.lastName
                 ?.toLowerCase()
                 .includes(searchQuery.toLowerCase()) ||
             venue.venueOwner?.email
                 ?.toLowerCase()
-                .includes(searchQuery.toLowerCase()), // Search owner email
+                .includes(searchQuery.toLowerCase()),
     );
 
     // Stats
     const stats = {
         total: venues.length,
-        // Add more stats if needed (e.g., available, under maintenance - requires status field)
     };
 
     // --- Render Logic ---
     const isMutating =
         createVenueMutation.isPending ||
         updateVenueMutation.isPending ||
-        deleteVenueMutation.isPending;
+        deleteVenueMutation.isPending ||
+        createReservationMutation.isPending; // Include reservation mutation
 
+    const openReservationDialog = (venueId?: number) => {
+        setReservingVenueId(venueId ? String(venueId) : undefined);
+        setIsReservationDialogOpen(true);
+    };
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
@@ -693,11 +747,82 @@ export function VenueManagement() {
                         </div>
                     )}
 
-                    {/* Reservations View */}
                     {viewMode === "reservations" && (
-                        <div className="text-center text-muted-foreground py-8 border rounded-md">
-                            My Venue Reservations (Placeholder)
-                            {/* TODO: Add UserReservations component for venues */}
+                        <div>
+                            <h2 className="text-lg font-semibold mb-4">
+                                My Venue Reservations
+                            </h2>
+                            {isLoadingOwnReservations ? (
+                                <p className="text-muted-foreground">
+                                    Loading reservations...
+                                </p>
+                            ) : ownReservations.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Venue</TableHead>
+                                            <TableHead>Event</TableHead>
+                                            <TableHead>Start Time</TableHead>
+                                            <TableHead>End Time</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {ownReservations.map((res) => (
+                                            <TableRow key={res.id}>
+                                                <TableCell>
+                                                    {res.venueName ?? "N/A"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {res.eventName ?? "N/A"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {formatDateTime(
+                                                        res.startTime,
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {formatDateTime(
+                                                        res.endTime,
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <TableCell>
+                                                        <Badge
+                                                            className={getStatusBadgeClass(
+                                                                res.status,
+                                                            )}
+                                                        >
+                                                            {res.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {/* Add actions like View Details, Cancel */}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            navigate({
+                                                                to: `/app/reservations/${res.id}`,
+                                                            })
+                                                        }
+                                                    >
+                                                        View
+                                                    </Button>
+                                                    {/* Add Cancel button if applicable */}
+                                                    {/* {res.status === 'PENDING' && <CancelReservationButton reservationId={res.id} />} */}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <div className="text-center text-muted-foreground py-8 border rounded-md bg-muted/20">
+                                    You have no venue reservations.
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -707,17 +832,28 @@ export function VenueManagement() {
             {/* Reservation Dialog (for non-admins) */}
             <VenueReservationFormDialog
                 isOpen={isReservationDialogOpen}
-                onClose={() => setIsReservationDialogOpen(false)}
-                onSubmit={handleReservationSubmit}
+                onClose={() => {
+                    setIsReservationDialogOpen(false);
+                    setReservingVenueId(undefined); // Clear pre-selected venue on close
+                }}
+                onSubmit={handleReservationSubmit} // Use the updated handler
                 venues={venues.map((v) => ({
-                    id: v.id.toString(),
+                    // Pass only necessary fields
+                    id: v.id,
                     name: v.name,
-                    image: v.imagePath,
-                }))} // Pass needed data
-                departments={DEPARTMENTS.map((d) => d.label)} // Pass departments
-                isLoading={false} // Pass loading state from reservation mutation if implemented
+                    location: v.location,
+                    imagePath: v.imagePath,
+                }))}
+                events={events.map((e) => ({
+                    id: e.id,
+                    eventName: e.eventName,
+                    startTime: e.startTime,
+                    endTime: e.endTime,
+                }))}
+                departments={departments}
+                isLoading={createReservationMutation.isPending} // Pass loading state
+                initialVenueId={reservingVenueId} // Pass the ID for pre-selection
             />
-
             {/* Add/Edit Dialog (SUPER_ADMIN only) */}
             {(role === "SUPER_ADMIN" || role === "VENUE_OWNER") && (
                 <>
