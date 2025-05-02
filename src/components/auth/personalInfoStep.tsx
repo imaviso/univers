@@ -17,9 +17,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { registrationFormAtom } from "@/lib/atoms";
+import { departmentsQueryOptions } from "@/lib/query";
 import { type PersonalInfoInput, personalInfoSchema } from "@/lib/schema";
-import { DEPARTMENTS } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useForm } from "react-hook-form";
 interface PersonalInfoStepProps {
@@ -28,6 +29,8 @@ interface PersonalInfoStepProps {
 
 export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
     const [formData, setFormData] = useAtom(registrationFormAtom);
+
+    const { data: DEPARTMENTS = [] } = useQuery(departmentsQueryOptions);
 
     const form = useForm<PersonalInfoInput>({
         resolver: valibotResolver(personalInfoSchema),
@@ -128,10 +131,10 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                                     <SelectContent>
                                         {DEPARTMENTS.map((dept) => (
                                             <SelectItem
-                                                key={dept.value}
-                                                value={dept.value.toString()}
+                                                key={dept.id}
+                                                value={dept.id.toString()}
                                             >
-                                                {dept.label}
+                                                {dept.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

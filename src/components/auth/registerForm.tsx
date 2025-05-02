@@ -76,10 +76,9 @@ export default function RegistrationForm() {
                 formData.phoneNumber,
                 formData.password,
             );
-            console.log(formData);
             localStorage.setItem("userEmail", formData.email);
-            navigate({ from: "/register", to: "/verify-email" });
             toast.success("Registration successful! Please check your email.");
+            navigate({ from: "/register", to: "/verify-email" });
             setFormData(initialRegistrationFormState);
             setCurrentStep(0);
         } catch (error) {
