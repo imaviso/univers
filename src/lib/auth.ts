@@ -59,7 +59,7 @@ export const userSignUp = async (
                 idNumber: idNumber,
                 firstName: firstName,
                 lastName: lastName,
-                department: department,
+                departmentId: department,
                 email: email,
                 telephoneNumber: telephoneNumber,
                 phoneNumber: phoneNumber,
