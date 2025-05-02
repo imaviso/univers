@@ -372,7 +372,7 @@ export const getAllVenues = async (): Promise<Venue[]> => {
     }
 };
 
-export const getAllEvents = async () => {
+export const getAllEvents = async (): Promise<Event[]> => {
     try {
         const response = await fetch(`${API_BASE_URL}/events`, {
             method: "GET",

@@ -1,8 +1,10 @@
+import ErrorPage from "@/components/ErrorPage";
+// import { EventModal } from "@/components/events/eventModal"; // Assuming this is for creation, keep commented if not used yet
+import PendingPage from "@/components/PendingPage";
 import { CreateEventButton } from "@/components/events/createEventButton";
 import { EventDetailsModal } from "@/components/events/eventDetailsModal";
-import { EventModal } from "@/components/events/eventModal";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card"; // Added CardContent
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -13,7 +15,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
+import { eventsQueryOptions, venuesQueryOptions } from "@/lib/query";
+import type { Event } from "@/lib/types"; // Use the shared Event type
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query"; // Import useQuery
 import {
     createFileRoute,
     redirect,
@@ -22,17 +27,198 @@ import {
 import {
     addDays,
     addMonths,
+    differenceInMinutes,
+    eachDayOfInterval, // Use for multi-day events
+    endOfDay, // Use for date comparisons
     format,
     getDay,
     getDaysInMonth,
     isSameDay,
     isSameMonth,
+    isValid, // Check if date parsing is valid
+    max as maxDate,
+    min as minDate,
+    parseISO, // Parse ISO strings from backend
+    startOfDay, // Use for date comparisons
     startOfMonth,
     startOfWeek,
     subMonths,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react"; // Import useMemo
+
+interface EventWithLayout extends Event {
+    layout: {
+        top: string;
+        height: string;
+        left: string;
+        width: string;
+        minHeight: string;
+    };
+}
+
+const calculateDayLayout = (events: Event[]): EventWithLayout[] => {
+    if (!events || events.length === 0) return [];
+
+    const totalMinutesInView = (20 - 8) * 60; // 8 AM to 8 PM = 12 hours * 60 min
+
+    // 1. Parse dates, calculate initial vertical layout, and sort
+    const parsedEvents = events
+        .map((event, index) => {
+            const start = parseISO(event.startTime);
+            const end = parseISO(event.endTime);
+            if (!isValid(start) || !isValid(end)) return null;
+
+            // Clamp times to the viewable range (8 AM to 8 PM) for layout calculation
+            const viewStartHour = 8;
+            const viewEndHour = 20;
+            const dayStart = new Date(start);
+            dayStart.setHours(viewStartHour, 0, 0, 0);
+            const dayEnd = new Date(start);
+            dayEnd.setHours(viewEndHour, 0, 0, 0);
+
+            // FIX: Pass dates as an array to maxDate and minDate
+            const clampedStart = maxDate([start, dayStart]);
+            const clampedEnd = minDate([end, dayEnd]);
+
+            // Ensure clamped dates are valid before proceeding
+            if (!isValid(clampedStart) || !isValid(clampedEnd)) return null;
+
+            const minutesFromViewStart = differenceInMinutes(
+                clampedStart,
+                dayStart,
+            );
+            // Ensure duration calculation uses valid dates and handles edge cases
+            const durationMinutes = Math.max(
+                15, // Minimum duration
+                differenceInMinutes(clampedEnd, clampedStart) > 0
+                    ? differenceInMinutes(clampedEnd, clampedStart)
+                    : 0, // Avoid negative duration if end is before start after clamping
+            );
+
+            const topPercent =
+                (minutesFromViewStart / totalMinutesInView) * 100;
+            const heightPercent = (durationMinutes / totalMinutesInView) * 100;
+
+            return {
+                ...event,
+                id: event.id ?? `temp-${index}`, // Ensure unique key if id is missing
+                startDate: start, // Keep original start/end for display
+                endDate: end,
+                layout: {
+                    // Ensure percentages are non-negative and finite
+                    top: `${Math.max(0, topPercent)}%`,
+                    height: `${Math.max(0, heightPercent)}%`,
+                    minHeight: "1.5rem",
+                    left: "0%",
+                    width: "100%",
+                },
+                columnIndex: -1,
+                numColumns: 1,
+            };
+        })
+        .filter((event): event is NonNullable<typeof event> => event !== null); // Filter out nulls and assert non-null type
+
+    if (parsedEvents.length === 0) return [];
+
+    // 2. Calculate columns for overlaps (Greedy approach)
+    // Define the type for columns explicitly, using the non-null event type
+    type ParsedEventNonNull = NonNullable<(typeof parsedEvents)[number]>;
+    const columns: { events: ParsedEventNonNull[] }[] = [];
+
+    for (const event of parsedEvents) {
+        let placed = false;
+        // Find the first column where this event doesn't overlap with the last event placed
+        for (let i = 0; i < columns.length; i++) {
+            const lastEventInColumn =
+                columns[i].events[columns[i].events.length - 1];
+            // Check if lastEventInColumn exists before accessing its properties
+            if (
+                lastEventInColumn &&
+                event.startDate >= lastEventInColumn.endDate
+            ) {
+                event.columnIndex = i;
+                columns[i].events.push(event);
+                placed = true;
+                break;
+            }
+        }
+        // If not placed, start a new column
+        if (!placed) {
+            event.columnIndex = columns.length;
+            columns.push({ events: [event] });
+        }
+    }
+
+    const totalColumns = columns.length;
+
+    // 3. Refine layout based on columns (apply width/left)
+    // Calculate the number of columns needed for each event based on actual overlaps.
+    for (const event of parsedEvents) {
+        // Use for...of loop
+        // Find events that *actually* overlap with this one
+        const overlappingEvents = parsedEvents.filter(
+            (otherEvent) =>
+                // No need for null checks here as parsedEvents is filtered
+                event.id !== otherEvent.id &&
+                event.startDate < otherEvent.endDate &&
+                event.endDate > otherEvent.startDate,
+        );
+
+        // Determine the number of columns required for this event's overlapping group
+        // using a greedy approach on the group.
+        const group = [event, ...overlappingEvents];
+        const tempColumns: Date[] = []; // Tracks the end time of the last event in each temporary column
+
+        // Sort the group - no null checks needed for a and b
+        group.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+        // Process events in the sorted group using for...of
+        for (const ev of group) {
+            // Use for...of loop
+            let placed = false;
+            // Try to place the event in an existing temporary column
+            for (let i = 0; i < tempColumns.length; i++) {
+                if (ev.startDate >= tempColumns[i]) {
+                    // Found a column where it fits without overlapping the last event
+                    tempColumns[i] = ev.endDate; // Update the end time for this column
+                    ev.columnIndex = i; // Assign column index relative to the group
+                    placed = true;
+                    break;
+                }
+            }
+            // If it couldn't be placed in an existing column, create a new one
+            if (!placed) {
+                ev.columnIndex = tempColumns.length; // Assign new column index
+                tempColumns.push(ev.endDate); // Add end time to the new column tracker
+            }
+        }
+        // The number of columns needed for this event is the total number of temporary columns created for its group
+        event.numColumns = tempColumns.length;
+    }
+
+    // 4. Calculate final left and width
+    const horizontalPadding = 0.5; // Percentage padding between events (e.g., 0.5% on each side = 1% total gap)
+
+    const finalLayoutEvents = parsedEvents.map((event) => {
+        // No null checks needed for event here
+        const numCols = event.numColumns || 1; // Use calculated overlap columns
+        const colWidth = 100 / numCols;
+        const effectiveWidth = colWidth - 2 * horizontalPadding; // Width minus padding on both sides
+        const effectiveLeft = event.columnIndex * colWidth + horizontalPadding; // Left offset plus padding
+
+        return {
+            ...event,
+            layout: {
+                ...event.layout,
+                width: `${effectiveWidth}%`,
+                left: `${effectiveLeft}%`,
+            },
+        };
+    });
+
+    return finalLayoutEvents;
+};
 
 export const Route = createFileRoute("/app/calendar")({
     component: Calendar,
@@ -66,149 +252,28 @@ export const Route = createFileRoute("/app/calendar")({
             });
         }
     },
+    loader: async ({ context }) => {
+        // Ensure data is fetched or being fetched before component renders
+        context.queryClient.ensureQueryData(eventsQueryOptions);
+        // context.queryClient.ensureQueryData(venuesQueryOptions);
+    },
+    errorComponent: () => <ErrorPage />,
+    pendingComponent: () => <PendingPage />,
 });
-import type { Event } from "@/lib/types"; // Import the shared Event type
 
-// Define Local Event Type for sample data
-interface LocalEventType {
-    id: number;
-    title: string;
-    date: string;
-    endDate?: string;
-    location: string;
-    status: "planning" | "confirmed" | "completed";
-    color: string;
-    workspace: string;
-}
-
-// Sample events data using LocalEventType
-const events: LocalEventType[] = [
-    {
-        id: 1,
-        title: "Annual Tech Conference",
-        date: "2025-03-15",
-        endDate: "2025-03-17",
-        location: "San Francisco, CA",
-        status: "planning",
-        color: "blue",
-        workspace: "conferences",
-    },
-    {
-        id: 2,
-        title: "Product Launch: Version 2.0",
-        date: "2025-03-05",
-        location: "Virtual Event",
-        status: "confirmed",
-        color: "green",
-        workspace: "product-launches",
-    },
-    {
-        id: 3,
-        title: "Quarterly Team Building",
-        date: "2025-03-22",
-        location: "Central Park, NY",
-        status: "completed",
-        color: "purple",
-        workspace: "team-building",
-    },
-    {
-        id: 4,
-        title: "Marketing Strategy Workshop",
-        date: "2025-03-03",
-        location: "Chicago, IL",
-        status: "planning",
-        color: "blue",
-        workspace: "marketing-events",
-    },
-    {
-        id: 5,
-        title: "Customer Appreciation Day",
-        date: "2025-03-15",
-        location: "Boston, MA",
-        status: "planning",
-        color: "orange",
-        workspace: "marketing-events",
-    },
-    {
-        id: 6,
-        title: "Board Meeting",
-        date: "2025-03-10",
-        location: "New York, NY",
-        status: "confirmed",
-        color: "green",
-        workspace: "conferences",
-    },
-    {
-        id: 7,
-        title: "Sales Team Training",
-        date: "2025-03-08",
-        location: "Atlanta, GA",
-        status: "planning",
-        color: "blue",
-        workspace: "team-building",
-    },
-    {
-        id: 8,
-        title: "Website Redesign Kickoff",
-        date: "2025-03-12",
-        location: "Remote",
-        status: "confirmed",
-        color: "green",
-        workspace: "marketing-events",
-    },
+// Define possible event statuses based on backend/types (adjust if needed)
+const eventStatuses = [
+    { id: "PENDING", name: "Pending", color: "bg-yellow-500" },
+    { id: "APPROVED", name: "Approved", color: "bg-green-500" },
+    { id: "REJECTED", name: "Rejected", color: "bg-red-500" },
+    { id: "CANCELLED", name: "Cancelled", color: "bg-gray-500" },
+    // Add other relevant statuses if applicable
 ];
-
-// Workspace data
-const workspaces = [
-    { id: "marketing-events", name: "Marketing Events", color: "bg-blue-500" },
-    { id: "product-launches", name: "Product Launches", color: "bg-green-500" },
-    { id: "team-building", name: "Team Building", color: "bg-purple-500" },
-    { id: "conferences", name: "Conferences", color: "bg-orange-500" },
-];
-
-// Status filters
-const statusFilters = [
-    { id: "planning", name: "Planning", color: "bg-blue-500" },
-    { id: "confirmed", name: "Confirmed", color: "bg-green-500" },
-    { id: "completed", name: "Completed", color: "bg-purple-500" },
-];
-
-// Helper function to get events for a specific date
-const getEventsForDate = (
-    date: string,
-    filters: { workspaces: string[]; statuses: string[] },
-) => {
-    return events.filter((event) => {
-        // Apply workspace and status filters
-        const workspaceMatch =
-            filters.workspaces.length === 0 ||
-            filters.workspaces.includes(event.workspace);
-        const statusMatch =
-            filters.statuses.length === 0 ||
-            filters.statuses.includes(event.status);
-
-        if (!workspaceMatch || !statusMatch) return false;
-
-        // Handle multi-day events
-        if (event.endDate) {
-            return date >= event.date && date <= event.endDate;
-        }
-        return event.date === date;
-    });
-};
 
 // Helper function to get color for event status
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case "planning":
-            return "bg-blue-500";
-        case "confirmed":
-            return "bg-green-500";
-        case "completed":
-            return "bg-purple-500";
-        default:
-            return "bg-gray-500";
-    }
+const getStatusColor = (status: string | undefined | null): string => {
+    const statusInfo = eventStatuses.find((s) => s.id === status);
+    return statusInfo?.color ?? "bg-gray-400"; // Default color
 };
 
 // Generate week days
@@ -216,28 +281,60 @@ const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function Calendar() {
     const context = useRouteContext({ from: "/app/calendar" });
-    const role = context.authState?.role;
+    const queryClient = context.queryClient;
+    const role = context.authState?.role; // Get user role if needed for logic
+
+    // Fetch events using useQuery
+    const { data: events = [], isLoading: isLoadingEvents } =
+        useQuery(eventsQueryOptions);
+
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null); // Use shared Event type
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     type CalendarViewType = "month" | "week" | "day";
     const [calendarView, setCalendarView] = useState<CalendarViewType>("month");
     const [filters, setFilters] = useState({
-        workspaces: [] as string[],
+        // Removed workspaces filter
         statuses: [] as string[],
     });
     const [createEventDate, setCreateEventDate] = useState<Date | null>(null);
 
-    // Handle workspace filter toggle
-    const toggleWorkspaceFilter = (workspaceId: string) => {
-        setFilters((prev) => {
-            const workspaces = prev.workspaces.includes(workspaceId)
-                ? prev.workspaces.filter((id) => id !== workspaceId)
-                : [...prev.workspaces, workspaceId];
-            return { ...prev, workspaces };
-        });
-    };
+    // Memoized function to get events for a specific date, applying filters
+    const getEventsForDate = useMemo(() => {
+        return (calendarDay: Date): Event[] => {
+            if (!events || events.length === 0) return [];
+
+            const startOfCalendarDay = startOfDay(calendarDay);
+            const endOfCalendarDay = endOfDay(calendarDay);
+
+            return events.filter((event) => {
+                // Apply status filters
+                const statusMatch =
+                    filters.statuses.length === 0 ||
+                    filters.statuses.includes(event.status);
+                if (!statusMatch) return false;
+
+                // Parse event start and end times
+                const eventStart = parseISO(event.startTime);
+                const eventEnd = parseISO(event.endTime);
+
+                if (!isValid(eventStart) || !isValid(eventEnd)) {
+                    console.warn(
+                        `Invalid date format for event ID ${event.id}`,
+                    );
+                    return false; // Skip events with invalid dates
+                }
+
+                // Check if the calendar day falls within the event's date range (inclusive)
+                // This handles single and multi-day events
+                return (
+                    startOfCalendarDay <= eventEnd &&
+                    endOfCalendarDay >= eventStart
+                );
+            });
+        };
+    }, [events, filters.statuses]);
 
     // Handle status filter toggle
     const toggleStatusFilter = (statusId: string) => {
@@ -271,242 +368,126 @@ export function Calendar() {
         }
     };
 
-    // Open event details - Transform LocalEventType to Event
-    const handleEventClick = (localEvent: LocalEventType) => {
-        // Transform localEvent (EventType) to the shared Event type
-        const transformedEvent: Event = {
-            id: localEvent.id,
-            eventName: localEvent.title,
-            eventType: "Sample Type", // Placeholder
-            organizer: {
-                // Placeholder - requires actual user data
-                id: 0,
-                email: "organizer@example.com",
-                firstName: "Sample",
-                lastName: "Organizer",
-                id_number: null,
-                phone_number: null,
-                telephoneNumber: null,
-                roles: "ORGANIZER",
-                departmentId: null,
-                emailVerified: true,
-                active: true,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            },
-            approvedLetterPath: null, // Placeholder
-            eventVenueId: 0, // Placeholder - requires actual venue data
-            startTime: new Date(localEvent.date).toISOString(), // Convert to ISO string
-            endTime: localEvent.endDate
-                ? new Date(localEvent.endDate).toISOString()
-                : new Date(localEvent.date).toISOString(), // Use start date if no end date
-            status: localEvent.status.toUpperCase(), // Match Event status format (e.g., PLANNING)
-        };
-        setSelectedEvent(transformedEvent);
+    // Open event details - No transformation needed
+    const handleEventClick = (event: Event) => {
+        setSelectedEvent(event);
         setIsDetailsModalOpen(true);
     };
 
     // Create event from calendar cell
     const handleCellClick = (date: Date) => {
+        // Check permissions before opening create modal if needed
+        // if (role === 'ORGANIZER' || role === 'SUPER_ADMIN') {
         setCreateEventDate(date);
         setIsCreateModalOpen(true);
+        // } else {
+        // Show message or do nothing if user can't create events
+        // }
     };
 
     // Generate days for month view
     const generateMonthDays = () => {
-        const daysInMonth = getDaysInMonth(currentDate);
-        const firstDayOfMonth = getDay(startOfMonth(currentDate));
+        const monthStart = startOfMonth(currentDate);
+        const monthEnd = endOfDay(addDays(addMonths(monthStart, 1), -1)); // End of the last day of the month
+        const displayStart = startOfWeek(monthStart);
+        const displayEnd = endOfDay(startOfWeek(addDays(monthEnd, 7))); // Ensure we cover the last week fully
 
-        // Generate days array for the calendar
-        const days = Array.from({ length: daysInMonth }, (_, i) => {
-            const day = i + 1;
-            const date = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            return {
-                day,
-                date,
-                events: getEventsForDate(date, filters),
-            };
-        });
-
-        return { days, firstDayOfMonth };
-    };
-
-    // Generate days for week view
-    const generateWeekDays = () => {
-        const startDate = startOfWeek(currentDate);
-
-        // Generate 7 days starting from the start of the week
-        const days = Array.from({ length: 7 }, (_, i) => {
-            const date = addDays(startDate, i);
+        const days = eachDayOfInterval({
+            start: displayStart,
+            end: displayEnd,
+        }).map((date) => {
             const dateString = format(date, "yyyy-MM-dd");
             return {
-                day: date.getDate(),
-                date: dateString,
-                fullDate: date,
-                events: getEventsForDate(dateString, filters),
+                date,
+                dateString,
+                dayOfMonth: date.getDate(),
                 isCurrentMonth: isSameMonth(date, currentDate),
+                isToday: isSameDay(date, new Date()),
+                events: getEventsForDate(date),
             };
         });
 
         return days;
     };
 
+    // Generate days for week view
+    const generateWeekDays = () => {
+        const weekStart = startOfWeek(currentDate);
+        const weekEnd = endOfDay(addDays(weekStart, 6));
+
+        const days = eachDayOfInterval({ start: weekStart, end: weekEnd }).map(
+            (date) => {
+                const dateString = format(date, "yyyy-MM-dd");
+                return {
+                    date,
+                    dateString,
+                    dayOfMonth: date.getDate(),
+                    isCurrentMonth: isSameMonth(date, currentDate), // Still useful for styling
+                    isToday: isSameDay(date, new Date()),
+                    events: getEventsForDate(date),
+                };
+            },
+        );
+        return days;
+    };
+
     // Generate hours for day view
     const generateDayHours = () => {
-        // Generate hours from 8 AM to 8 PM
         const hours = Array.from({ length: 13 }, (_, i) => {
-            const hour = i + 8;
+            const hour = i + 8; // 8 AM to 8 PM
             return {
                 hour: hour > 12 ? hour - 12 : hour,
                 ampm: hour >= 12 ? "PM" : "AM",
-                label: `${hour > 12 ? hour - 12 : hour} ${hour >= 12 ? "PM" : "AM"}`,
+                label: `${hour > 12 ? hour - 12 : hour === 0 ? 12 : hour} ${hour >= 12 ? "PM" : "AM"}`,
             };
         });
 
-        const dateString = format(currentDate, "yyyy-MM-dd");
-        const dayEvents = getEventsForDate(dateString, filters);
+        const dayEvents = getEventsForDate(currentDate);
 
         return { hours, dayEvents };
     };
 
-    // Render month view
     const renderMonthView = () => {
-        const { days, firstDayOfMonth } = generateMonthDays();
+        const monthDays = generateMonthDays();
 
         return (
             <div className="space-y-2">
-                <div className="grid grid-cols-7 gap-1 text-center text-sm font-medium">
-                    {weekDays.map((day) => (
-                        <div key={day} className="py-2">
-                            {day}
-                        </div>
-                    ))}
-                </div>
                 <div className="grid grid-cols-7 gap-1">
-                    {/* Empty cells for days before the first day of the month */}
-                    {Array.from({ length: firstDayOfMonth }).map((_, index) => (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: Static layout elements
-                        <div key={`empty-${index}`} className="h-32 p-1" />
-                    ))}
-
-                    {/* Calendar days */}
-                    {days.map((day) => (
+                    {monthDays.map((day) => (
                         <Card
-                            key={day.date}
-                            className="h-32 overflow-hidden hover:shadow-sm transition-shadow relative"
-                            onClick={() => handleCellClick(new Date(day.date))}
+                            key={day.dateString}
+                            className={cn(
+                                "h-32 overflow-hidden hover:shadow-sm transition-shadow relative",
+                                !day.isCurrentMonth && "bg-muted/30",
+                                day.isToday && "border-primary",
+                            )}
+                            onClick={() => handleCellClick(day.date)}
                         >
-                            <div className="p-1 h-full">
-                                <div className="text-xs font-medium p-1">
-                                    {day.day}
-                                </div>
-                                <div className="space-y-1 overflow-auto max-h-[calc(100%-24px)]">
-                                    {day.events.map(
-                                        (
-                                            localEvent, // Use localEvent variable name
-                                        ) => (
-                                            <button
-                                                key={localEvent.id}
-                                                type="button" // Explicitly set type for button
-                                                className={cn(
-                                                    `${getStatusColor(localEvent.status)} text-white text-xs p-1 rounded truncate cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
-                                                    "w-full text-left block h-auto", // Reset button styles
-                                                )}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEventClick(
-                                                        localEvent,
-                                                    ); // Pass localEvent
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (
-                                                        e.key === "Enter" ||
-                                                        e.key === " "
-                                                    ) {
-                                                        e.stopPropagation();
-                                                        handleEventClick(
-                                                            localEvent,
-                                                        ); // Pass localEvent
-                                                    }
-                                                }}
-                                            >
-                                                {localEvent.title}
-                                            </button>
-                                        ),
+                            <CardContent className="p-1 h-full flex flex-col">
+                                {" "}
+                                {/* Added flex flex-col */}
+                                <div
+                                    className={cn(
+                                        "text-xs font-medium p-1 flex-shrink-0",
+                                        !day.isCurrentMonth &&
+                                            "text-muted-foreground",
                                     )}
+                                >
+                                    {day.dayOfMonth}
                                 </div>
-                                {day.events.length === 0 && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleCellClick(new Date(day.date));
-                                        }}
-                                    >
-                                        <Plus className="h-3 w-3">
-                                            <title>Add Event</title>
-                                        </Plus>
-                                    </Button>
-                                )}
-                            </div>
-                        </Card>
-                    ))}
-                </div>
-            </div>
-        );
-    };
-
-    // Render week view
-    const renderWeekView = () => {
-        const weekDays = generateWeekDays();
-
-        return (
-            <div className="space-y-2">
-                <div className="grid grid-cols-7 gap-1">
-                    {weekDays.map((day, index) => (
-                        <div
-                            key={day.date}
-                            className={cn(
-                                "text-center p-2 font-medium text-sm rounded-md",
-                                !day.isCurrentMonth && "text-muted-foreground",
-                                isSameDay(day.fullDate, new Date()) &&
-                                    "bg-primary/10 text-primary",
-                            )}
-                        >
-                            <div>{weekDays[index].fullDate.getDate()}</div>
-                            <div className="text-xs">
-                                {format(weekDays[index].fullDate, "EEE")}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1 h-[calc(100vh-240px)]">
-                    {weekDays.map((day) => (
-                        <Card
-                            key={day.date}
-                            className={cn(
-                                "overflow-auto p-2 hover:shadow-sm transition-shadow",
-                                !day.isCurrentMonth && "bg-muted/50",
-                            )}
-                            onClick={() => handleCellClick(day.fullDate)}
-                        >
-                            <div className="space-y-1">
-                                {day.events.map(
-                                    (
-                                        localEvent, // Use localEvent variable name
-                                    ) => (
+                                <div className="space-y-0.5 overflow-y-auto flex-grow min-h-0 px-0.5 pb-0.5">
+                                    {day.events.map((event) => (
                                         <button
-                                            key={localEvent.id}
-                                            type="button" // Explicitly set type for button
+                                            key={event.id}
+                                            type="button"
+                                            // Reduced padding, adjusted line height implicitly via text size
                                             className={cn(
-                                                `${getStatusColor(localEvent.status)} text-white text-xs p-2 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
-                                                "w-full text-left block h-auto", // Reset button styles
+                                                `${getStatusColor(event.status)} text-white text-[11px] px-1 py-0.5 rounded block w-full text-left focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1`, // Adjusted focus ring
+                                                // Removed truncate, rely on wrapping or overflow scroll
                                             )}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleEventClick(localEvent); // Pass localEvent
+                                                handleEventClick(event);
                                             }}
                                             onKeyDown={(e) => {
                                                 if (
@@ -514,21 +495,102 @@ export function Calendar() {
                                                     e.key === " "
                                                 ) {
                                                     e.stopPropagation();
-                                                    handleEventClick(
-                                                        localEvent,
-                                                    ); // Pass localEvent
+                                                    handleEventClick(event);
                                                 }
                                             }}
+                                            title={event.eventName}
                                         >
-                                            <div className="font-medium">
-                                                {localEvent.title}
-                                            </div>
-                                            <div className="text-[10px] opacity-90">
-                                                {localEvent.location}
-                                            </div>
+                                            {/* Display event name, allow wrapping */}
+                                            {event.eventName}
                                         </button>
-                                    ),
-                                )}
+                                    ))}
+                                </div>
+                                {/* REMOVED Plus Button */}
+                                {/* <Button ... > ... </Button> */}
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+    // Render week view
+    const renderWeekView = () => {
+        const weekDaysData = generateWeekDays();
+
+        return (
+            <div className="space-y-2">
+                <div className="grid grid-cols-7 gap-1">
+                    {weekDaysData.map((day) => (
+                        <div
+                            key={day.dateString}
+                            className={cn(
+                                "text-center p-2 font-medium text-sm rounded-md",
+                                !day.isCurrentMonth && "text-muted-foreground",
+                                day.isToday && "bg-primary/10 text-primary",
+                            )}
+                        >
+                            <div>{day.dayOfMonth}</div>
+                            <div className="text-xs">
+                                {format(day.date, "EEE")}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1 h-[calc(100vh-240px)]">
+                    {" "}
+                    {/* Adjust height as needed */}
+                    {weekDaysData.map((day) => (
+                        <Card
+                            key={day.dateString}
+                            className={cn(
+                                "overflow-auto p-2 hover:shadow-sm transition-shadow",
+                                !day.isCurrentMonth && "bg-muted/50",
+                                day.isToday && "border-primary/50",
+                            )}
+                            onClick={() => handleCellClick(day.date)}
+                        >
+                            <div className="space-y-1">
+                                {day.events.map((event) => (
+                                    <button
+                                        key={event.id}
+                                        type="button"
+                                        className={cn(
+                                            `${getStatusColor(event.status)} text-white text-xs p-2 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
+                                            "w-full text-left block h-auto",
+                                        )}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEventClick(event);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (
+                                                e.key === "Enter" ||
+                                                e.key === " "
+                                            ) {
+                                                e.stopPropagation();
+                                                handleEventClick(event);
+                                            }
+                                        }}
+                                        title={event.eventName}
+                                    >
+                                        <div className="font-medium">
+                                            {event.eventName}
+                                        </div>
+                                        {/* Optionally display time or other info */}
+                                        <div className="text-[10px] opacity-90">
+                                            {format(
+                                                parseISO(event.startTime),
+                                                "h:mm a",
+                                            )}{" "}
+                                            -{" "}
+                                            {format(
+                                                parseISO(event.endTime),
+                                                "h:mm a",
+                                            )}
+                                        </div>
+                                    </button>
+                                ))}
                             </div>
                         </Card>
                     ))}
@@ -539,7 +601,53 @@ export function Calendar() {
 
     // Render day view
     const renderDayView = () => {
-        const { hours, dayEvents } = generateDayHours();
+        const { hours } = generateDayHours();
+        // Get raw events for the day
+        const dayEventsRaw = getEventsForDate(currentDate);
+        // Calculate layout including horizontal positions
+        const dayEventsWithLayout = calculateDayLayout(dayEventsRaw);
+
+        // Function to calculate event position and height (basic example)
+        const getEventStyle = (event: Event) => {
+            const start = parseISO(event.startTime);
+            const end = parseISO(event.endTime);
+            if (!isValid(start) || !isValid(end)) return {};
+
+            const startHour = start.getHours();
+            const startMinute = start.getMinutes();
+            const endHour = end.getHours();
+            const endMinute = end.getMinutes();
+
+            // Calculate percentage based on 8 AM to 8 PM (12 hours total)
+            const totalMinutesInView = 12 * 60;
+            const minutesFrom8AMStart = Math.max(
+                0,
+                (startHour - 8) * 60 + startMinute,
+            );
+            const minutesFrom8AMEnd = Math.min(
+                totalMinutesInView,
+                (endHour - 8) * 60 + endMinute,
+            );
+
+            const topPercent = (minutesFrom8AMStart / totalMinutesInView) * 100;
+            // Increased minimum height slightly (e.g., from 1% to ~4-5% which is roughly 30mins / 12hrs)
+            const minHeightPercent = (30 / totalMinutesInView) * 100;
+            const calculatedHeightPercent =
+                ((minutesFrom8AMEnd - minutesFrom8AMStart) /
+                    totalMinutesInView) *
+                100;
+            const heightPercent = Math.max(
+                minHeightPercent,
+                calculatedHeightPercent,
+            );
+
+            return {
+                top: `${topPercent}%`,
+                height: `${heightPercent}%`,
+                // Add minHeight in case calculated height is very small
+                minHeight: "1.5rem", // Approx height for 2 lines of small text
+            };
+        };
 
         return (
             <div className="space-y-4">
@@ -548,65 +656,73 @@ export function Calendar() {
                         {format(currentDate, "EEEE, MMMM d, yyyy")}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        {dayEvents.length}{" "}
-                        {dayEvents.length === 1 ? "event" : "events"}
+                        {dayEventsWithLayout.length}{" "}
+                        {dayEventsWithLayout.length === 1 ? "event" : "events"}
                     </p>
                 </div>
 
-                <div className="grid grid-cols-[80px_1fr] gap-2 h-[calc(100vh-240px)]">
-                    <div className="space-y-8 pt-8">
-                        {hours.map((hour) => (
+                <div className="grid grid-cols-[60px_1fr] gap-2 h-[calc(100vh-240px)]">
+                    {" "}
+                    {/* Adjusted width */}
+                    {/* Hour Labels */}
+                    <div className="space-y-0 border-r pr-2">
+                        {" "}
+                        {/* Adjust spacing/padding */}
+                        {hours.map((hour, index) => (
                             <div
                                 key={hour.label}
-                                className="text-xs text-muted-foreground text-right pr-2"
+                                className="h-[calc(100%/13)] text-xs text-muted-foreground text-right relative -top-2" // Adjust vertical alignment
                             >
                                 {hour.label}
                             </div>
                         ))}
                     </div>
-
-                    <Card className="relative overflow-hidden p-2">
+                    {/* Event Area */}
+                    <Card className="relative overflow-hidden p-0">
+                        {" "}
+                        {/* Remove padding */}
+                        {/* Hour Lines */}
                         {hours.map((hour, index) => (
                             <div
-                                key={hour.label}
-                                className="absolute w-full border-t border-border"
+                                key={`line-${hour.label}`} // Use unique hour label as key
+                                className="absolute w-full border-t border-border/50" // Lighter border
                                 style={{
                                     top: `${(index / hours.length) * 100}%`,
+                                    left: 0, // Ensure it starts from the edge
                                 }}
                             />
                         ))}
-
-                        {dayEvents.map((localEvent) => {
-                            // Use localEvent variable name
-                            // For demo purposes, position events randomly within the day view
-                            // In a real app, you would calculate position based on event start/end times
-                            const top = Math.floor(Math.random() * 70) + 5;
-                            const height = Math.floor(Math.random() * 10) + 5;
-
-                            return (
+                        {/* Events */}
+                        <div className="relative h-full w-full">
+                            {dayEventsWithLayout.map((event) => (
                                 <button
-                                    type="button" // Add type="button" for semantic correctness
-                                    key={localEvent.id}
-                                    className={`${getStatusColor(localEvent.status)} text-white text-xs p-2 rounded absolute left-2 right-2 cursor-pointer text-left block w-full`} // Added text-left, block, w-full for button styling
-                                    style={{
-                                        top: `${top}%`,
-                                        height: `${height}%`,
-                                    }}
-                                    onClick={() => handleEventClick(localEvent)} // Pass localEvent
-                                    // onKeyDown is implicitly handled by button element
+                                    type="button"
+                                    key={event.id} // Use the potentially generated unique key
+                                    className={cn(
+                                        `${getStatusColor(event.status)} text-white text-xs p-1 absolute cursor-pointer text-left block overflow-hidden rounded`, // Added rounded
+                                        "focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1",
+                                    )}
+                                    // Apply the calculated layout style object
+                                    style={event.layout}
+                                    onClick={() => handleEventClick(event)}
+                                    title={`${event.eventName} (${format(event.startDate, "h:mm a")} - ${format(event.endDate, "h:mm a")})`}
                                 >
-                                    <div className="font-medium">
-                                        {localEvent.title}
-                                    </div>
-                                    <div className="text-[10px] opacity-90">
-                                        {localEvent.location}
+                                    {/* Inner div for text content */}
+                                    <div className="h-full overflow-hidden">
+                                        <div className="font-medium text-[11px] leading-tight whitespace-normal">
+                                            {event.eventName}
+                                        </div>
+                                        <div className="text-[9px] opacity-90 leading-tight whitespace-normal">
+                                            {format(event.startDate, "h:mm a")}{" "}
+                                            - {format(event.endDate, "h:mm a")}
+                                        </div>
                                     </div>
                                 </button>
-                            );
-                        })}
+                            ))}
+                        </div>
                     </Card>
                 </div>
-            </div> // Fix incorrect closing tag
+            </div>
         );
     };
 
@@ -614,6 +730,7 @@ export function Calendar() {
         <>
             <div className="flex flex-col flex-1 overflow-hidden">
                 <header className="flex items-center justify-between border-b px-6 py-3.5">
+                    {/* Header content remains largely the same */}
                     <div className="flex items-center gap-4">
                         <h1 className="text-xl font-semibold">Calendar</h1>
                         <div className="flex items-center gap-2">
@@ -621,10 +738,16 @@ export function Calendar() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={handlePrev}
+                                aria-label="Previous period"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
-                            <span className="text-sm font-medium">
+                            <span
+                                className="text-sm font-medium w-40 text-center"
+                                aria-live="polite"
+                            >
+                                {" "}
+                                {/* Added width and live region */}
                                 {calendarView === "day"
                                     ? format(currentDate, "MMMM d, yyyy")
                                     : calendarView === "week"
@@ -635,6 +758,7 @@ export function Calendar() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={handleNext}
+                                aria-label="Next period"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -648,12 +772,11 @@ export function Calendar() {
                         </Button>
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* View Switcher */}
                         <Tabs
                             value={calendarView}
                             onValueChange={(value) =>
-                                setCalendarView(
-                                    value as "month" | "week" | "day",
-                                )
+                                setCalendarView(value as CalendarViewType)
                             }
                             className="mr-2"
                         >
@@ -664,6 +787,7 @@ export function Calendar() {
                             </TabsList>
                         </Tabs>
 
+                        {/* Filter Popover */}
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
@@ -673,55 +797,22 @@ export function Calendar() {
                                 >
                                     <Filter className="h-4 w-4" />
                                     Filter
+                                    {filters.statuses.length > 0 && ( // Indicate active filters
+                                        <span className="ml-1 h-2 w-2 rounded-full bg-primary" />
+                                    )}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-64" align="end">
                                 <div className="space-y-4">
-                                    <div>
-                                        <h3 className="font-medium mb-2">
-                                            Workspaces
-                                        </h3>
-                                        <div className="space-y-2">
-                                            {workspaces.map((workspace) => (
-                                                <div
-                                                    key={workspace.id}
-                                                    className="flex items-center space-x-2"
-                                                >
-                                                    <Checkbox
-                                                        id={`workspace-${workspace.id}`}
-                                                        checked={filters.workspaces.includes(
-                                                            workspace.id,
-                                                        )}
-                                                        onCheckedChange={() =>
-                                                            toggleWorkspaceFilter(
-                                                                workspace.id,
-                                                            )
-                                                        }
-                                                    />
-                                                    <div className="flex items-center gap-2">
-                                                        <div
-                                                            className={`h-3 w-3 rounded-full ${workspace.color}`}
-                                                        />
-                                                        <Label
-                                                            htmlFor={`workspace-${workspace.id}`}
-                                                            className="text-sm font-normal"
-                                                        >
-                                                            {workspace.name}
-                                                        </Label>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    {/* Removed Workspaces Filter */}
 
-                                    <Separator />
-
+                                    {/* Status Filter */}
                                     <div>
-                                        <h3 className="font-medium mb-2">
+                                        <h3 className="font-medium mb-2 text-sm">
                                             Status
                                         </h3>
                                         <div className="space-y-2">
-                                            {statusFilters.map((status) => (
+                                            {eventStatuses.map((status) => (
                                                 <div
                                                     key={status.id}
                                                     className="flex items-center space-x-2"
@@ -753,32 +844,47 @@ export function Calendar() {
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-between">
+                                    {/* Filter Actions */}
+                                    <div className="flex justify-between pt-2">
                                         <Button
-                                            variant="outline"
+                                            variant="ghost" // Changed to ghost
                                             size="sm"
                                             onClick={() =>
-                                                setFilters({
-                                                    workspaces: [],
-                                                    statuses: [],
-                                                })
-                                            }
+                                                setFilters({ statuses: [] })
+                                            } // Reset only statuses
                                         >
                                             Reset
                                         </Button>
-                                        <Button size="sm">Apply Filters</Button>
+                                        {/* Apply button might not be needed if filters apply instantly */}
+                                        {/* <Button size="sm">Apply Filters</Button> */}
                                     </div>
                                 </div>
                             </PopoverContent>
                         </Popover>
+
+                        {/* Create Event Button (Optional, based on role) */}
+                        {/* {(role === "ORGANIZER" || role === "SUPER_ADMIN") && (
+                            <CreateEventButton />
+                        )} */}
                     </div>
                 </header>
-                <main className="flex-1 overflow-auto p-6">
-                    {calendarView === "month" && renderMonthView()}
-                    {calendarView === "week" && renderWeekView()}
-                    {calendarView === "day" && renderDayView()}
+                <main className="flex-1 overflow-auto p-4 md:p-6">
+                    {" "}
+                    {/* Adjusted padding */}
+                    {isLoadingEvents ? (
+                        <PendingPage /> // Show pending state while events load initially
+                    ) : (
+                        <>
+                            {calendarView === "month" && renderMonthView()}
+                            {calendarView === "week" && renderWeekView()}
+                            {calendarView === "day" && renderDayView()}
+                        </>
+                    )}
                 </main>
             </div>
+
+            {/* Modals */}
+            {/* Add EventModal back if creation logic is implemented */}
             {/* <EventModal
                 isOpen={isCreateModalOpen}
                 onClose={() => {
@@ -787,10 +893,13 @@ export function Calendar() {
                 }}
                 initialDate={createEventDate}
             /> */}
-            {selectedEvent && ( // Conditionally render only when selectedEvent is not null
+            {selectedEvent && (
                 <EventDetailsModal
                     isOpen={isDetailsModalOpen}
-                    onClose={() => setIsDetailsModalOpen(false)}
+                    onClose={() => {
+                        setSelectedEvent(null); // Clear selected event on close
+                        setIsDetailsModalOpen(false);
+                    }}
                     event={selectedEvent}
                 />
             )}

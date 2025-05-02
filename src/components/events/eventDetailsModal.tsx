@@ -8,12 +8,11 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import type { Event } from "@/lib/types";
+import type { Event } from "@/lib/types"; // Use the correct Event type
+import { Link } from "@tanstack/react-router"; // Import Link for navigation
 import { format, isSameDay } from "date-fns";
-import { Clock, Edit, MapPin, Trash, Users, X } from "lucide-react";
-import { useState } from "react";
+import { Clock, ExternalLink, MapPin, Users, X } from "lucide-react"; // Removed Edit, Trash. Added ExternalLink
+// Removed useState as Team/Comments tabs are removed
 
 interface EventDetailsModalProps {
     isOpen: boolean;
@@ -21,99 +20,84 @@ interface EventDetailsModalProps {
     event: Event;
 }
 
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case "planning":
-            return "bg-blue-500/10 text-blue-500";
-        case "confirmed":
-            return "bg-green-500/10 text-green-500";
-        case "completed":
-            return "bg-purple-500/10 text-purple-500";
+// Helper function to get status color and label (adjust based on actual statuses)
+const getStatusInfo = (
+    status: string | null | undefined,
+): { color: string; label: string } => {
+    const upperStatus = status?.toUpperCase();
+    switch (upperStatus) {
+        case "PENDING":
+            return {
+                color: "bg-yellow-500/10 text-yellow-600",
+                label: "Pending",
+            };
+        case "APPROVED":
+            return {
+                color: "bg-green-500/10 text-green-600",
+                label: "Approved",
+            };
+        case "REJECTED":
+            return { color: "bg-red-500/10 text-red-600", label: "Rejected" };
+        case "CANCELLED": // Ensure spelling matches backend/types
+            return {
+                color: "bg-gray-500/10 text-gray-600",
+                label: "Cancelled",
+            };
+        // Add other statuses as needed
         default:
-            return "bg-gray-500/10 text-gray-500";
+            return {
+                color: "bg-gray-400/10 text-gray-500",
+                label: status || "Unknown",
+            };
     }
 };
-
-// Sample team members
-const teamMembers = [
-    {
-        name: "Alex Johnson",
-        role: "Event Lead",
-        avatar: "/placeholder.svg?height=32&width=32",
-    },
-    {
-        name: "Maria Garcia",
-        role: "Marketing",
-        avatar: "/placeholder.svg?height=32&width=32",
-    },
-    {
-        name: "Sam Lee",
-        role: "Logistics",
-        avatar: "/placeholder.svg?height=32&width=32",
-    },
-];
-
-// Sample comments
-const sampleComments = [
-    {
-        id: 1,
-        author: "Alex Johnson",
-        avatar: "/placeholder.svg?height=32&width=32",
-        content:
-            "I've confirmed the venue booking. We're all set for the dates.",
-        timestamp: "2 days ago",
-    },
-    {
-        id: 2,
-        author: "Maria Garcia",
-        avatar: "/placeholder.svg?height=32&width=32",
-        content:
-            "Registration page is live now. I'll start the email campaign next week.",
-        timestamp: "1 day ago",
-    },
-];
 
 export function EventDetailsModal({
     isOpen,
     onClose,
     event,
 }: EventDetailsModalProps) {
-    const [activeTab, setActiveTab] = useState("details");
-    const [commentText, setCommentText] = useState("");
-    const [comments, setComments] = useState(sampleComments);
+    // Removed state for tabs, comments, etc.
 
     if (!event) return null;
 
-    const handleAddComment = () => {
-        if (commentText.trim()) {
-            const newComment = {
-                id: comments.length + 1,
-                author: "Jane Doe",
-                avatar: "/placeholder.svg?height=32&width=32",
-                content: commentText,
-                timestamp: "Just now",
-            };
-            setComments([...comments, newComment]);
-            setCommentText("");
-        }
-    };
+    const statusInfo = getStatusInfo(event.status);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[650px]">
+            <DialogContent className="sm:max-w-[550px]">
+                {" "}
+                {/* Adjusted width */}
                 <DialogHeader>
-                    <DialogTitle className="text-xl">
+                    <DialogTitle className="text-xl flex items-center gap-4">
                         {event.eventName}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            asChild
+                        >
+                            <Link
+                                to="/app/events/$eventId"
+                                params={{ eventId: String(event.id) }}
+                            >
+                                <ExternalLink className="h-4 w-4" />
+                            </Link>
+                        </Button>
                     </DialogTitle>
                 </DialogHeader>
-
-                <div className="flex justify-between items-center">
-                    <Badge className={`${getStatusColor(event.status)}`}>
-                        {event.status.charAt(0).toUpperCase() +
-                            event.status.slice(1)}
+                <div className="flex justify-between items-start gap-4">
+                    {" "}
+                    {/* Use items-start */}
+                    <Badge className={statusInfo.color}>
+                        {statusInfo.label}
                     </Badge>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="gap-1">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        {" "}
+                        {/* Stack buttons on small screens */}
+                        {/* Button to navigate to the full event details page */}
+                        {/* TODO: Implement Edit/Delete functionality */}
+                        {/* <Button variant="outline" size="sm" className="gap-1">
                             <Edit className="h-4 w-4" />
                             Edit
                         </Button>
@@ -124,163 +108,54 @@ export function EventDetailsModal({
                         >
                             <Trash className="h-4 w-4" />
                             Delete
-                        </Button>
+                        </Button> */}
                     </div>
                 </div>
-
-                <Tabs
-                    defaultValue="details"
-                    value={activeTab}
-                    onValueChange={setActiveTab}
-                >
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="details">Details</TabsTrigger>
-                        <TabsTrigger value="team">Team</TabsTrigger>
-                        <TabsTrigger value="comments">Comments</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="details" className="space-y-4 pt-4">
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-sm">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span>
-                                    {format(new Date(event.startTime), "PPP")}
-                                    {isSameDay(
-                                        new Date(event.startTime),
-                                        new Date(event.endTime),
-                                    )
-                                        ? ` ${format(new Date(event.startTime), "p")} - ${format(new Date(event.endTime), "p")}`
-                                        : ` to ${format(new Date(event.endTime), "PPP")}`}
-                                </span>
-                            </div>
-                            {/* TODO: Add location display - requires venue details */}
-                            {/* <div className="flex items-center gap-2 text-sm">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <span>{event.location}</span>
-                            </div> */}
-                            <div className="flex items-center gap-2 text-sm">
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                                <span>Expected attendees: 120</span>
-                            </div>
+                {/* Simplified Details Section */}
+                <div className="space-y-4 pt-4">
+                    <div className="space-y-3">
+                        {/* Event Time */}
+                        <div className="flex items-center gap-2 text-sm">
+                            <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span>
+                                {format(new Date(event.startTime), "PPP")}
+                                {isSameDay(
+                                    new Date(event.startTime),
+                                    new Date(event.endTime),
+                                )
+                                    ? // Same day: Show time range
+                                      ` ${format(new Date(event.startTime), "p")} - ${format(new Date(event.endTime), "p")}`
+                                    : // Different days: Show end date
+                                      ` to ${format(new Date(event.endTime), "PPP")}`}
+                            </span>
                         </div>
 
-                        <Separator />
+                        {/* Organizer Info */}
+                        <div className="flex items-center gap-2 text-sm">
+                            <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span>
+                                Organizer: {event.organizer.firstName}{" "}
+                                {event.organizer.lastName}
+                            </span>
+                        </div>
 
-                        {/* TODO: Add description display if available in Event type */}
-                        {/* <div>
-                            <h3 className="font-medium mb-2">Description</h3>
-                            <p className="text-sm text-muted-foreground">
-                                {event.description ||
-                                    "Join us for this exciting event! More details will be provided closer to the date."}
-                            </p>
+                        {/* TODO: Display Venue Location (Requires fetching Venue data) */}
+                        {/* <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span>Venue: {venue?.name ?? 'Loading...'} ({venue?.location ?? '...'})</span>
                         </div> */}
 
-                        <Separator />
-
-                        {/* TODO: Add facility display - requires venue details */}
-                        {/* <div>
-                            <h3 className="font-medium mb-2">Facility</h3>
-                            <p className="text-sm text-muted-foreground">
-                                {event.facility || "Main Conference Hall"}
-                            </p>
-                        </div> */}
-                    </TabsContent>
-
-                    <TabsContent value="team" className="space-y-4 pt-4">
-                        <div>
-                            <h3 className="font-medium mb-3">Event Team</h3>
-                            <div className="space-y-3">
-                                {teamMembers.map((member, index) => (
-                                    <div
-                                        key={member.name}
-                                        className="flex items-center gap-3"
-                                    >
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={member.avatar} />
-                                            <AvatarFallback>
-                                                {member.name.charAt(0)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="text-sm font-medium">
-                                                {member.name}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {member.role}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                        {/* Event Type */}
+                        <div className="flex items-center gap-2 text-sm">
+                            {/* You might want a specific icon for event type */}
+                            <span className="ml-6">
+                                {" "}
+                                {/* Indent to align with others */}
+                                Type: {event.eventType || "N/A"}
+                            </span>
                         </div>
-
-                        <Separator />
-
-                        <div className="flex justify-center">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1"
-                            >
-                                <Users className="h-4 w-4" />
-                                Manage Team
-                            </Button>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="comments" className="space-y-4 pt-4">
-                        <div className="space-y-4">
-                            {comments.map((comment) => (
-                                <div key={comment.id} className="flex gap-3">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={comment.avatar} />
-                                        <AvatarFallback>
-                                            {comment.author.charAt(0)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-sm font-medium">
-                                                {comment.author}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">
-                                                {comment.timestamp}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm">
-                                            {comment.content}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-
-                            <Separator />
-
-                            <div className="flex gap-3">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                                    <AvatarFallback>JD</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 space-y-2">
-                                    <Textarea
-                                        placeholder="Add a comment..."
-                                        className="min-h-[80px]"
-                                        value={commentText}
-                                        onChange={(e) =>
-                                            setCommentText(e.target.value)
-                                        }
-                                    />
-                                    <Button
-                                        onClick={handleAddComment}
-                                        disabled={!commentText.trim()}
-                                    >
-                                        Comment
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </TabsContent>
-                </Tabs>
+                    </div>
+                </div>
             </DialogContent>
         </Dialog>
     );
