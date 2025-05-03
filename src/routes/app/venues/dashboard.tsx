@@ -41,7 +41,7 @@ import { VenueFormDialog } from "@/components/venue/venueFormDialog";
 import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
 import {
     departmentsQueryOptions,
-    getOwnEventsQueryOptions,
+    ownEventsQueryOptions,
     ownReservationsQueryOptions,
     useCreateReservationMutation,
     usersQueryOptions,
@@ -81,7 +81,7 @@ export const Route = createFileRoute("/app/venues/dashboard")({
     component: VenueManagement,
     loader: ({ context: { queryClient } }) => {
         queryClient.ensureQueryData(venuesQueryOptions);
-        queryClient.ensureQueryData(getOwnEventsQueryOptions);
+        queryClient.ensureQueryData(ownEventsQueryOptions);
         queryClient.ensureQueryData(departmentsQueryOptions);
         queryClient.ensureQueryData(ownReservationsQueryOptions);
     },
@@ -113,7 +113,7 @@ export function VenueManagement() {
     const { data: departments = [] } = useSuspenseQuery(
         departmentsQueryOptions,
     );
-    const { data: events = [] } = useSuspenseQuery(getOwnEventsQueryOptions);
+    const { data: events = [] } = useSuspenseQuery(ownEventsQueryOptions);
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: users = [] } = useQuery({
         ...usersQueryOptions,

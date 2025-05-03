@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
-    eventsQueryOptions,
-    getApprovedEventsQuery,
-    getOwnEventsQueryOptions,
+    allEventsQueryOptions,
+    approvedEventsQueryOptions,
+    ownEventsQueryOptions,
     useCurrentUser,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
@@ -152,12 +152,12 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
     const navigate = useNavigate();
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: currentUser } = useCurrentUser();
-    const { data: ownEvents = [] } = useSuspenseQuery(getOwnEventsQueryOptions);
+    const { data: ownEvents = [] } = useSuspenseQuery(ownEventsQueryOptions);
     const { data: approvedEvents = [] } = useSuspenseQuery(
-        getApprovedEventsQuery,
+        approvedEventsQueryOptions,
     );
     const { data: allEvents = [] } = useQuery({
-        ...eventsQueryOptions,
+        ...allEventsQueryOptions,
         enabled: currentUser?.role === "SUPER_ADMIN",
     });
 

@@ -37,7 +37,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { updateEvent } from "@/lib/api";
-import { eventQueryOptions, eventsQueryOptions } from "@/lib/query";
+import { allEventsQueryOptions, eventByIdQueryOptions } from "@/lib/query";
 import {
     type EditEventInput,
     type EditEventOutput,
@@ -138,10 +138,10 @@ export function EditEventModal({
             toast.success("Event updated successfully.");
             // Invalidate relevant queries
             queryClient.refetchQueries({
-                queryKey: eventQueryOptions(String(event.id)).queryKey,
+                queryKey: eventByIdQueryOptions(String(event.id)).queryKey,
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryOptions.queryKey,
+                queryKey: allEventsQueryOptions.queryKey,
             });
             onClose(); // Close modal on success
         },

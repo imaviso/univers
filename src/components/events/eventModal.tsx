@@ -38,9 +38,8 @@ import {
 } from "@/components/ui/select";
 import { createEvent } from "@/lib/api";
 import {
-    eventsQueryOptions,
-    getApprovedEventsQuery,
-    getOwnEventsQueryOptions,
+    eventsQueryKeys,
+    ownEventsQueryOptions,
     useCurrentUser,
 } from "@/lib/query"; // Import eventsQueryOptions
 import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
@@ -99,22 +98,18 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
         }) => createEvent(eventDTO, approvedLetter),
 
         onMutate: async ({ eventDTO, approvedLetter }) => {
-            const ownEventsKey = getOwnEventsQueryOptions.queryKey;
+            const ownEventsKey = eventsQueryKeys.own();
 
             await queryClient.cancelQueries({ queryKey: ownEventsKey });
 
             const previousOwnEvents =
                 queryClient.getQueryData<EventOutput[]>(ownEventsKey);
 
-            // Create an optimistic event object (approximating EventOutput)
-            // Note: This won't have the real ID or backend-generated fields yet.
-            //       The structure should match what getOwnEvents returns.
             const optimisticEvent: EventOutput & {
                 id: number;
                 status: string;
             } = {
-                // Add temporary id and status
-                id: Date.now(), // Temporary ID for the optimistic update
+                id: Date.now(),
                 eventName: eventDTO.eventName,
                 eventType: eventDTO.eventType,
                 eventVenueId: eventDTO.eventVenueId,
@@ -139,20 +134,29 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
             );
             if (context?.previousOwnEvents) {
                 queryClient.setQueryData(
-                    getOwnEventsQueryOptions.queryKey,
+                    eventsQueryKeys.own(),
                     context.previousOwnEvents,
                 );
             }
         },
 
         onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
             queryClient.invalidateQueries({
-                queryKey: getOwnEventsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.approved(),
             });
             queryClient.invalidateQueries({
-                queryKey: getApprovedEventsQuery.queryKey,
+                queryKey: eventsQueryKeys.lists(),
             });
-            // queryClient.invalidateQueries({ queryKey: eventsQueryOptions.queryKey });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pending(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingDeptHead(),
+            });
         },
 
         onSuccess: (createdEvent) => {

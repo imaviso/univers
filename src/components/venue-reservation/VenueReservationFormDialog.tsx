@@ -30,7 +30,7 @@ import {
 } from "@/lib/schema";
 import type {
     Event as AppEvent,
-    Department,
+    DepartmentType,
     Venue as VenueType,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -57,7 +57,7 @@ interface VenueReservationFormDialogProps {
     onSubmit: (data: CreateVenueReservationFormOutput) => void;
     venues: Pick<VenueType, "id" | "name" | "location" | "imagePath">[];
     events: Pick<AppEvent, "id" | "eventName" | "startTime" | "endTime">[];
-    departments: Pick<Department, "id" | "name">[];
+    departments: Pick<DepartmentType, "id" | "name">[];
     isLoading?: boolean;
     initialVenueId?: string;
 }

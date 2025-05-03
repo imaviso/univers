@@ -15,7 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
-import { eventsQueryOptions, venuesQueryOptions } from "@/lib/query";
+import { allEventsQueryOptions, venuesQueryOptions } from "@/lib/query";
 import type { Event } from "@/lib/types"; // Use the shared Event type
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query"; // Import useQuery
@@ -254,7 +254,7 @@ export const Route = createFileRoute("/app/calendar")({
     },
     loader: async ({ context }) => {
         // Ensure data is fetched or being fetched before component renders
-        context.queryClient.ensureQueryData(eventsQueryOptions);
+        context.queryClient.ensureQueryData(allEventsQueryOptions);
         // context.queryClient.ensureQueryData(venuesQueryOptions);
     },
     errorComponent: () => <ErrorPage />,
@@ -279,14 +279,15 @@ const getStatusColor = (status: string | undefined | null): string => {
 // Generate week days
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export function Calendar() {
+function Calendar() {
     const context = useRouteContext({ from: "/app/calendar" });
     const queryClient = context.queryClient;
     const role = context.authState?.role; // Get user role if needed for logic
 
     // Fetch events using useQuery
-    const { data: events = [], isLoading: isLoadingEvents } =
-        useQuery(eventsQueryOptions);
+    const { data: events = [], isLoading: isLoadingEvents } = useQuery(
+        allEventsQueryOptions,
+    );
 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
