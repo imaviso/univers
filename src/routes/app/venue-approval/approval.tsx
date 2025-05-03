@@ -53,13 +53,8 @@ import { useMemo, useState } from "react";
 export const Route = createFileRoute("/app/venue-approval/approval")({
     component: VenueReservationApproval,
     loader: ({ context: { queryClient } }) => {
-        // Ensure both queries are fetched before rendering
-        return Promise.all([
-            queryClient.ensureQueryData(
-                pendingVenueOwnerReservationsQueryOptions,
-            ), // Fetch reservations
-            queryClient.ensureQueryData(venuesQueryOptions), // Fetch venues for filter
-        ]);
+        queryClient.ensureQueryData(allVenueOwnerReservationsQueryOptions);
+        queryClient.ensureQueryData(venuesQueryOptions);
     },
 });
 
@@ -67,7 +62,7 @@ type ViewMode = "all" | "pending" | "approved" | "rejected"; // Adjusted view mo
 
 export function VenueReservationApproval() {
     const navigate = useNavigate();
-    const context = useRouteContext({ from: "/app/venue-approval" }); // Get context
+    const context = useRouteContext({ from: "/app/venue-approval/approval" });
     const role = context.authState?.role; // Get user role
 
     // Fetch data using useSuspenseQuery - data is guaranteed by loader
