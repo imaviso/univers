@@ -37,8 +37,7 @@ import { API_BASE_URL } from "@/lib/auth";
 import { allNavigation } from "@/lib/navigation";
 import {
     equipmentsQueryOptions,
-    eventsQueryOptions,
-    getOwnEventsQueryOptions,
+    ownEventsQueryOptions,
     useCreateEquipmentReservationMutation,
     useCurrentUser,
     usersQueryOptions,
@@ -134,7 +133,7 @@ export const Route = createFileRoute("/app/equipments")({
             equipmentsQueryOptions(context.authState),
         );
         context.queryClient.ensureQueryData(venuesQueryOptions);
-        context.queryClient.ensureQueryData(getOwnEventsQueryOptions);
+        context.queryClient.ensureQueryData(ownEventsQueryOptions);
     },
 });
 
@@ -167,7 +166,7 @@ function EquipmentInventory() {
     );
 
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
-    const { data: events = [] } = useSuspenseQuery(getOwnEventsQueryOptions);
+    const { data: events = [] } = useSuspenseQuery(ownEventsQueryOptions);
 
     // Fetch all users ONLY if the current user is SUPER_ADMIN (for owner selection)
     const { data: allUsers = [] } = useQuery({

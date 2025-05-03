@@ -21,7 +21,7 @@ export const Route = createFileRoute("/app/venue-approval")({
         }
 
         const navigationItem = allNavigation.find(
-            (item) => item.href === "/app/venue-approval",
+            (item) => item.href === "/app/venue-approval/approval",
         );
 
         const allowedRoles: string[] = navigationItem

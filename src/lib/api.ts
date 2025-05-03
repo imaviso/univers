@@ -252,6 +252,7 @@ export const updateUser = async ({
             lastName: string;
             idNumber: string;
             email: string;
+            password?: string;
             phoneNumber?: string;
             telephoneNumber: string;
             role: UserRole;
@@ -265,6 +266,8 @@ export const updateUser = async ({
         if (userData.idNumber !== undefined)
             userDtoPayload.idNumber = userData.idNumber;
         if (userData.email !== undefined) userDtoPayload.email = userData.email;
+        if (userData.password !== undefined)
+            userDtoPayload.password = userData.password;
         if (userData.phoneNumber !== undefined)
             userDtoPayload.phoneNumber = userData.phoneNumber;
         if (userData.telephoneNumber !== undefined)

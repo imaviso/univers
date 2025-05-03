@@ -6,9 +6,9 @@ export type UserType = {
     firstName: string;
     lastName: string;
     email: string;
-    role: UserRole; // Use the specific UserRole union type
+    role: UserRole;
     password: string | undefined;
-    departmentId: string | null;
+    departmentId: string;
     telephoneNumber: string;
     phoneNumber: string;
     emailVerified: boolean;

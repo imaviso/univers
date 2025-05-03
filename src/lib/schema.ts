@@ -239,7 +239,7 @@ export const userFormSchema = v.pipe(
         idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),
         firstName: v.pipe(v.string(), v.nonEmpty("First name is required")),
         lastName: v.pipe(v.string(), v.nonEmpty("Last name is required")),
-        department: v.string("Department selection is required."),
+        departmentId: v.string("Department selection is required."),
         email: v.pipe(
             v.string(),
             v.nonEmpty("Email is required"),
@@ -306,23 +306,63 @@ export const userFormSchema = v.pipe(
 
 export type UserFormInput = v.InferInput<typeof userFormSchema>;
 
-export const editUserFormSchema = v.object({
-    idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),
-    firstName: v.pipe(v.string(), v.nonEmpty("First name is required")),
-    lastName: v.pipe(v.string(), v.nonEmpty("Last name is required")),
-    email: v.pipe(
-        v.string(),
-        v.nonEmpty("Email is required"),
-        v.email("Invalid email format"),
+export const editUserFormSchema = v.pipe(
+    v.object({
+        idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),
+        firstName: v.pipe(v.string(), v.nonEmpty("First name is required")),
+        lastName: v.pipe(v.string(), v.nonEmpty("Last name is required")),
+        email: v.pipe(
+            v.string(),
+            v.nonEmpty("Email is required"),
+            v.email("Invalid email format"),
+        ),
+        password: v.optional(
+            v.pipe(
+                v.string(),
+                v.check(
+                    (s) => s.length === 0 || s.length >= 8,
+                    "Password must be at least 8 characters",
+                ),
+                v.check(
+                    (s) => s.length === 0 || /[A-Z]/.test(s),
+                    "Password must contain at least one uppercase letter",
+                ),
+                v.check(
+                    (s) => s.length === 0 || /[a-z]/.test(s),
+                    "Password must contain at least one lowercase letter",
+                ),
+                v.check(
+                    (s) => s.length === 0 || /[0-9]/.test(s),
+                    "Password must contain at least one number",
+                ),
+            ),
+            "",
+        ),
+        confirmPassword: v.optional(v.string(), ""),
+        role: v.pipe(v.string(), v.nonEmpty("Role is required")),
+        departmentId: v.string("Department selection is required."),
+        telephoneNumber: v.pipe(
+            v.string(),
+            v.nonEmpty("Telephone number is required"),
+        ),
+        phoneNumber: v.optional(v.string(), ""),
+    }),
+    v.forward(
+        v.check((input) => {
+            // If password is provided (not empty string), confirmPassword must match
+            if (input.password && input.password.length > 0) {
+                return input.password === input.confirmPassword;
+            }
+            // If password is empty or undefined, confirmPassword must also be empty or undefined
+            // Note: We defaulted optional fields to "", so check against ""
+            if (input.password === "" && input.confirmPassword !== "") {
+                return false; // Password empty, but confirm not
+            }
+            return true;
+        }, "Passwords do not match. Both fields must be filled or both must be empty."),
+        ["confirmPassword"],
     ),
-    role: v.pipe(v.string(), v.nonEmpty("Role is required")),
-    departmentId: v.string("Department selection is required."),
-    telephoneNumber: v.pipe(
-        v.string(),
-        v.nonEmpty("Telephone number is required"),
-    ),
-    phoneNumber: v.optional(v.string(), ""),
-});
+);
 
 export type EditUserFormInput = v.InferInput<typeof editUserFormSchema>;
 export type EditUserFormOutput = v.InferOutput<typeof editUserFormSchema>;

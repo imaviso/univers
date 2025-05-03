@@ -49,11 +49,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { approveEvent, cancelEvent, updateEvent } from "@/lib/api";
 import {
+    allEventsQueryOptions,
+    approvedEventsQueryOptions,
     eventApprovalsQueryOptions,
-    eventQueryOptions,
-    eventsQueryOptions,
-    getApprovedEventsQuery,
-    getOwnEventsQueryOptions,
+    eventByIdQueryOptions,
+    eventsQueryKeys,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
 import type {
@@ -89,7 +89,9 @@ export const Route = createFileRoute("/app/events/$eventId")({
         if (Number.isNaN(eventIdNum)) {
             throw notFound(); // Invalid event ID format
         }
-        const event = await queryClient.fetchQuery(eventQueryOptions(eventId));
+        const event = await queryClient.fetchQuery(
+            eventByIdQueryOptions(eventId),
+        );
 
         if (!event || Object.keys(event).length === 0) {
             throw notFound();
@@ -198,22 +200,30 @@ export function EventDetailsPage() {
         onSuccess: (message) => {
             toast.success(message || "Event approved successfully.");
             queryClient.invalidateQueries({
-                queryKey: eventApprovalsQueryOptions(eventIdNum).queryKey,
+                queryKey: eventsQueryKeys.approvals(eventIdNum),
             });
-            queryClient.refetchQueries({
-                queryKey: eventApprovalsQueryOptions(eventIdNum).queryKey,
+            // Invalidate the detail query for this event
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.detail(eventIdNum),
+            });
+            // Invalidate general event lists (all, approved, pending, own)
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.lists(), // General list
             });
             queryClient.invalidateQueries({
-                queryKey: eventQueryOptions(eventIdNum).queryKey,
-            });
-            queryClient.refetchQueries({
-                queryKey: eventQueryOptions(eventIdNum).queryKey,
+                queryKey: eventsQueryKeys.approved(), // Approved list
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.pending(), // General pending list
             });
             queryClient.invalidateQueries({
-                queryKey: getApprovedEventsQuery.queryKey,
+                queryKey: eventsQueryKeys.pendingVenueOwner(), // Specific pending list
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingDeptHead(), // Specific pending list
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.own(), // Own events list
             });
             setIsApprovalDialogOpen(false);
             setApprovalRemarks("");
@@ -229,16 +239,26 @@ export function EventDetailsPage() {
             toast.success(message || "Event canceled successfully.");
             // Invalidate event details and list
             queryClient.invalidateQueries({
-                queryKey: eventQueryOptions(eventIdNum).queryKey,
+                queryKey: eventsQueryKeys.detail(eventIdNum),
+            });
+            // Invalidate relevant lists
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.lists(),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.approved(),
             });
             queryClient.invalidateQueries({
-                queryKey: getApprovedEventsQuery.queryKey,
+                queryKey: eventsQueryKeys.own(),
             });
             queryClient.invalidateQueries({
-                queryKey: getOwnEventsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.pending(), // Also invalidate pending lists
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingDeptHead(),
             });
             setIsCancelDialogOpen(false);
             onBack();
@@ -257,17 +277,18 @@ export function EventDetailsPage() {
             eventData: Partial<EventDTOPayload>;
             approvedLetter?: File | null;
         }) => {
-            const { eventId, eventData, approvedLetter } = variables;
-            const eventDetailsKey = eventQueryOptions(
-                eventId.toString(),
-            ).queryKey;
-            const approvedEventsKey = getApprovedEventsQuery.queryKey;
-            const ownEventsKey = getOwnEventsQueryOptions.queryKey; // Assuming organizer might see this list
+            const { eventId } = variables;
+            // Use the key factory for snapshotting
+            const eventDetailsKey = eventsQueryKeys.detail(eventId);
+            const approvedEventsKey = eventsQueryKeys.approved();
+            const ownEventsKey = eventsQueryKeys.own();
+            const allEventsKey = eventsQueryKeys.lists(); // Key for the general list
 
             // Cancel outgoing refetches
             await queryClient.cancelQueries({ queryKey: eventDetailsKey });
             await queryClient.cancelQueries({ queryKey: approvedEventsKey });
             await queryClient.cancelQueries({ queryKey: ownEventsKey });
+            await queryClient.cancelQueries({ queryKey: allEventsKey }); // Cancel general list too
 
             // Snapshot previous values
             const previousEventDetails =
@@ -275,22 +296,29 @@ export function EventDetailsPage() {
             const previousApprovedEvents =
                 queryClient.getQueryData<Event[]>(approvedEventsKey);
             const previousOwnEvents =
-                queryClient.getQueryData<Event[]>(ownEventsKey); // Snapshot own events too
+                queryClient.getQueryData<Event[]>(ownEventsKey);
+            const previousAllEvents =
+                queryClient.getQueryData<Event[]>(allEventsKey); // Snapshot general list
 
             // Optimistically update the event details
             if (previousEventDetails) {
                 const optimisticEventDetails: Event = {
                     ...previousEventDetails,
                     eventName:
-                        eventData.eventName ?? previousEventDetails.eventName,
+                        variables.eventData.eventName ??
+                        previousEventDetails.eventName,
                     eventType:
-                        eventData.eventType ?? previousEventDetails.eventType,
+                        variables.eventData.eventType ??
+                        previousEventDetails.eventType,
                     eventVenueId:
-                        eventData.eventVenueId ??
+                        variables.eventData.eventVenueId ??
                         previousEventDetails.eventVenueId,
                     startTime:
-                        eventData.startTime ?? previousEventDetails.startTime, // Keep as string for now
-                    endTime: eventData.endTime ?? previousEventDetails.endTime, // Keep as string for now
+                        variables.eventData.startTime ??
+                        previousEventDetails.startTime, // Keep as string for now
+                    endTime:
+                        variables.eventData.endTime ??
+                        previousEventDetails.endTime, // Keep as string for now
                     // Note: approvedLetterUrl cannot be optimistically updated easily without backend response
                     // status might change based on edits, but we'll keep it for now unless logic dictates otherwise
                 };
@@ -308,83 +336,102 @@ export function EventDetailsPage() {
                     ev.id === eventId
                         ? {
                               ...ev,
-                              eventName: eventData.eventName ?? ev.eventName,
-                              eventType: eventData.eventType ?? ev.eventType,
+                              eventName:
+                                  variables.eventData.eventName ?? ev.eventName,
+                              eventType:
+                                  variables.eventData.eventType ?? ev.eventType,
                               eventVenueId:
-                                  eventData.eventVenueId ?? ev.eventVenueId,
-                              startTime: eventData.startTime ?? ev.startTime,
-                              endTime: eventData.endTime ?? ev.endTime,
+                                  variables.eventData.eventVenueId ??
+                                  ev.eventVenueId,
+                              startTime:
+                                  variables.eventData.startTime ?? ev.startTime,
+                              endTime:
+                                  variables.eventData.endTime ?? ev.endTime,
                               // status might change?
                           }
                         : ev,
                 );
             };
 
-            queryClient.setQueryData(approvedEventsKey, updateList);
-            queryClient.setQueryData(ownEventsKey, updateList); // Update own events list optimistically
+            queryClient.setQueryData(
+                approvedEventsKey,
+                updateList(previousApprovedEvents),
+            );
+            queryClient.setQueryData(
+                ownEventsKey,
+                updateList(previousOwnEvents),
+            );
+            queryClient.setQueryData(
+                allEventsKey,
+                updateList(previousAllEvents),
+            );
 
             // Return context with snapshots
             return {
                 previousEventDetails,
                 previousApprovedEvents,
-                previousOwnEvents, // Include own events snapshot
+                previousOwnEvents,
+                previousAllEvents,
             };
         },
 
         onError: (error, variables, context) => {
             toast.error(`Update failed: ${error.message}`);
-            // Rollback on error
+            // Rollback on error using the key factory
             if (context?.previousEventDetails) {
                 queryClient.setQueryData(
-                    eventQueryOptions(variables.eventId.toString()).queryKey,
+                    eventsQueryKeys.detail(variables.eventId),
                     context.previousEventDetails,
                 );
             }
             if (context?.previousApprovedEvents) {
                 queryClient.setQueryData(
-                    getApprovedEventsQuery.queryKey,
+                    eventsQueryKeys.approved(),
                     context.previousApprovedEvents,
                 );
             }
             if (context?.previousOwnEvents) {
-                // Rollback own events
                 queryClient.setQueryData(
-                    getOwnEventsQueryOptions.queryKey,
+                    eventsQueryKeys.own(),
                     context.previousOwnEvents,
                 );
             }
+            if (context?.previousAllEvents) {
+                // Rollback general list
+                queryClient.setQueryData(
+                    eventsQueryKeys.lists(),
+                    context.previousAllEvents,
+                );
+            }
         },
-
         onSettled: (data, error, variables) => {
-            // Always refetch after error or success to ensure consistency
+            // Always invalidate after error or success using the key factory
             queryClient.invalidateQueries({
-                queryKey: eventQueryOptions(variables.eventId.toString())
-                    .queryKey,
+                queryKey: eventsQueryKeys.detail(variables.eventId),
             });
             queryClient.invalidateQueries({
-                queryKey: getApprovedEventsQuery.queryKey,
+                queryKey: eventsQueryKeys.lists(),
             });
             queryClient.invalidateQueries({
-                // Invalidate own events too
-                queryKey: getOwnEventsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.approved(),
+            });
+            queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pending(),
             });
             queryClient.invalidateQueries({
-                // Invalidate own events too
-                queryKey: eventsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
             });
             queryClient.invalidateQueries({
-                // Also invalidate approvals in case status changed
-                queryKey: eventApprovalsQueryOptions(variables.eventId)
-                    .queryKey,
+                queryKey: eventsQueryKeys.pendingDeptHead(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.approvals(variables.eventId),
             });
         },
-
         onSuccess: (message) => {
-            // API returns string message on success
             toast.success(message || "Event updated successfully.");
-            setIsEditModalOpen(false); // Close the edit modal on success
-            // Navigation or other UI updates can happen here if needed
-            // Invalidation is handled in onSettled
+            setIsEditModalOpen(false);
         },
     });
 
@@ -395,18 +442,25 @@ export function EventDetailsPage() {
             toast.success(message || "Event deleted successfully."); // Changed message for clarity
             // Invalidate relevant lists
             queryClient.invalidateQueries({
-                queryKey: getApprovedEventsQuery.queryKey,
+                queryKey: eventsQueryKeys.lists(),
             });
             queryClient.invalidateQueries({
-                queryKey: getOwnEventsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.approved(),
+            });
+            queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pending(),
             });
             queryClient.invalidateQueries({
-                // Invalidate own events too
-                queryKey: eventsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
             });
-            // Remove the specific event query from cache if it exists
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingDeptHead(),
+            });
+
+            // Remove the specific event query from cache
             queryClient.removeQueries({
-                queryKey: eventQueryOptions(eventIdNum.toString()).queryKey,
+                queryKey: eventsQueryKeys.detail(eventIdNum),
             });
 
             setIsDeleteDialogOpen(false); // Close the dialog

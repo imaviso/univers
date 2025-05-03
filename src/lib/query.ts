@@ -51,6 +51,7 @@ import type {
     Event as AppEvent,
     EquipmentApprovalDTO,
     EquipmentReservationDTO,
+    EventApprovalDTO,
     UserRole,
     UserType,
     VenueApprovalDTO,
@@ -114,58 +115,73 @@ export const usersQueryOptions = {
     },
 };
 
-export const eventsQueryOptions = {
-    queryKey: ["events"],
-    queryFn: async () => {
-        const events = await getAllEvents();
-        return events;
-    },
+export const eventsQueryKeys = {
+    all: ["events"] as const,
+    lists: () => [...eventsQueryKeys.all, "list"] as const,
+    list: (filters: string) =>
+        [...eventsQueryKeys.lists(), { filters }] as const, // Example filter structure
+    details: () => [...eventsQueryKeys.all, "detail"] as const,
+    detail: (id: number | string) =>
+        [...eventsQueryKeys.details(), id] as const,
+    approvals: (id: number | string) =>
+        [...eventsQueryKeys.detail(id), "approvals"] as const,
+    pending: () => [...eventsQueryKeys.all, "pending"] as const,
+    pendingVenueOwner: () =>
+        [...eventsQueryKeys.pending(), "venueOwner"] as const,
+    pendingDeptHead: () => [...eventsQueryKeys.pending(), "deptHead"] as const,
+    own: () => [...eventsQueryKeys.all, "own"] as const,
+    approved: () => [...eventsQueryKeys.all, "approved"] as const,
 };
 
-export const getOwnEventsQueryOptions = {
-    queryKey: ["ownEvents"],
-    queryFn: async () => {
-        const ownEvents = await getOwnEvents();
-        return ownEvents;
-    },
+export const allEventsQueryOptions = queryOptions<AppEvent[]>({
+    queryKey: eventsQueryKeys.lists(),
+    queryFn: getAllEvents,
     staleTime: 1000 * 60 * 5,
-};
+});
 
-export const getApprovedEventsQuery = {
-    queryKey: ["approvedEvents"],
-    queryFn: async () => {
-        const approvedEvents = await getApprovedEvents();
-        return approvedEvents;
-    },
+// Replaces old getOwnEventsQueryOptions export
+export const ownEventsQueryOptions = queryOptions<AppEvent[]>({
+    queryKey: eventsQueryKeys.own(),
+    queryFn: getOwnEvents,
     staleTime: 1000 * 60 * 5,
-};
+});
 
+// Replaces old getApprovedEventsQuery export
+export const approvedEventsQueryOptions = queryOptions<AppEvent[]>({
+    queryKey: eventsQueryKeys.approved(),
+    queryFn: getApprovedEvents,
+    staleTime: 1000 * 60 * 5,
+});
+
+// Updated pendingVenueOwnerEventsQueryOptions
 export const pendingVenueOwnerEventsQueryOptions = queryOptions<AppEvent[]>({
-    // Use aliased AppEvent type
-    queryKey: ["pendingEvents", "venueOwner"],
+    queryKey: eventsQueryKeys.pendingVenueOwner(),
     queryFn: getPendingVenueOwnerEvents,
-    staleTime: 1000 * 60 * 2, // 2 minutes stale time
+    staleTime: 1000 * 60 * 2,
 });
 
-// Query options for pending events for Department Head
+// Updated pendingDeptHeadEventsQueryOptions
 export const pendingDeptHeadEventsQueryOptions = queryOptions<AppEvent[]>({
-    // Use aliased AppEvent type
-    queryKey: ["pendingEvents", "deptHead"],
+    queryKey: eventsQueryKeys.pendingDeptHead(),
     queryFn: getPendingDeptHeadEvents,
-    staleTime: 1000 * 60 * 2, // 2 minutes stale time
+    staleTime: 1000 * 60 * 2,
 });
 
-export const eventQueryOptions = (eventId: string) =>
-    queryOptions({
-        queryKey: ["events", eventId],
-        queryFn: () => getEventById(eventId),
+// Updated eventQueryOptions (now eventByIdQueryOptions for clarity)
+export const eventByIdQueryOptions = (eventId: number | string) =>
+    queryOptions<AppEvent>({
+        // Specify return type
+        queryKey: eventsQueryKeys.detail(eventId), // Use the new key structure
+        queryFn: () => getEventById(String(eventId)), // Ensure ID is string if needed by API
         staleTime: 1000 * 60 * 5,
     });
 
-export const eventApprovalsQueryOptions = (eventId: number) =>
-    queryOptions({
-        queryKey: ["eventApprovals", eventId],
-        queryFn: () => getAllApprovalsOfEvent(eventId),
+// Updated eventApprovalsQueryOptions
+export const eventApprovalsQueryOptions = (eventId: number | string) =>
+    queryOptions<EventApprovalDTO[]>({
+        // Specify return type
+        queryKey: eventsQueryKeys.approvals(eventId), // Use the new key structure
+        queryFn: () => getAllApprovalsOfEvent(Number(eventId)), // Ensure ID is number if needed by API
         staleTime: 1000 * 60 * 2, // 2 minutes stale time
     });
 

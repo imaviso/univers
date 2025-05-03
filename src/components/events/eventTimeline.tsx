@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
-    eventsQueryOptions,
-    getApprovedEventsQuery, // Import query for approved events
+    allEventsQueryOptions,
+    approvedEventsQueryOptions,
     useCurrentUser, // Import hook to get current user
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
@@ -63,12 +63,12 @@ export function EventTimeline() {
 
     // Fetch approved events (for non-admins)
     const { data: approvedEvents = [] } = useSuspenseQuery(
-        getApprovedEventsQuery,
+        approvedEventsQueryOptions,
     );
 
     // Fetch all events (only enabled for SUPER_ADMIN)
     const { data: allEvents = [] } = useQuery({
-        ...eventsQueryOptions,
+        ...allEventsQueryOptions,
         enabled: currentUser?.role === "SUPER_ADMIN",
     });
 

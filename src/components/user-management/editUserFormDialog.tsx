@@ -24,7 +24,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 // Import the specific type needed for the onSubmit prop
-import type { UpdateUserInputFE } from "@/lib/api";
 import {
     type EditUserFormInput,
     type EditUserFormOutput,
@@ -62,6 +61,7 @@ export function EditUserFormDialog({
             idNumber: "",
             firstName: "",
             lastName: "",
+            password: "",
             email: "",
             role: "",
             departmentId: "",
@@ -71,6 +71,9 @@ export function EditUserFormDialog({
         mode: "onChange",
     });
 
+    const { dirtyFields, isValid, isDirty } = form.formState;
+    const numberOfChanges = Object.keys(dirtyFields).length;
+
     const handleFormSubmit = (values: EditUserFormInput) => {
         // Destructure only the fields needed for UpdateUserInputFE
         const {
@@ -79,10 +82,11 @@ export function EditUserFormDialog({
             lastName,
             role,
             email,
+            password,
+            confirmPassword,
             departmentId,
             telephoneNumber,
             phoneNumber,
-            // Exclude password, confirmPassword, active, emailVerified
         } = values;
 
         // Construct the payload matching UpdateUserInputFE
@@ -92,6 +96,8 @@ export function EditUserFormDialog({
             lastName,
             role: role as UserRole,
             email,
+            password: password,
+            confirmPassword,
             departmentId,
             telephoneNumber,
             phoneNumber: phoneNumber ?? "",
@@ -107,7 +113,9 @@ export function EditUserFormDialog({
                     idNumber: user.idNumber || "",
                     firstName: user.firstName || "",
                     lastName: user.lastName || "",
-                    email: user.email || "", // Keep for display
+                    email: user.email || "",
+                    password: "",
+                    confirmPassword: "",
                     role: user.role || "",
                     departmentId: user.departmentId
                         ? String(user.departmentId)
@@ -122,6 +130,8 @@ export function EditUserFormDialog({
                     firstName: "",
                     lastName: "",
                     email: "",
+                    password: "",
+                    confirmPassword: "",
                     role: "",
                     departmentId: "",
                     telephoneNumber: "",
@@ -129,7 +139,11 @@ export function EditUserFormDialog({
                 });
             }
         }
-    }, [user, isOpen, form]);
+    }, [user, isOpen, form.reset]);
+
+    const isSaveDisabled = user
+        ? numberOfChanges < 1 || !isValid || isLoading
+        : !isDirty || !isValid || isLoading;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -249,6 +263,44 @@ export function EditUserFormDialog({
                             )}
                         />
 
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter password"
+                                                type="password"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="confirmPassword"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Confirm Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Confirm password"
+                                                type="password"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
                         {/* ... Phone Number and Telephone Number fields ... */}
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
@@ -345,12 +397,7 @@ export function EditUserFormDialog({
                         </Button>
                         <Button
                             type="button"
-                            // Consider if isValid check needs adjustment if schema includes non-submitted fields
-                            disabled={
-                                !form.formState.isDirty ||
-                                !form.formState.isValid ||
-                                isLoading
-                            }
+                            disabled={isSaveDisabled}
                             onClick={form.handleSubmit(handleFormSubmit)}
                         >
                             {user ? "Save Changes" : "Create User"}

@@ -90,6 +90,7 @@ import { toast } from "sonner";
 import { ActivateConfirmDialog } from "./activateConfirmDialog";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 import { EditUserFormDialog } from "./editUserFormDialog";
+import { UserFormDialog } from "./userFormDialog";
 
 export function UserDataTable() {
     const context = useRouteContext({ from: "/app/user-management" });
@@ -534,6 +535,30 @@ export function UserDataTable() {
                 }) as ColumnMeta<UserType, unknown>,
             },
             // ... Phone Number column ...
+            {
+                accessorKey: "telephoneNumber",
+                header: ({ column }) => (
+                    <Button
+                        variant="ghost"
+                        onClick={() =>
+                            column.toggleSorting(column.getIsSorted() === "asc")
+                        }
+                    >
+                        Telephone
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
+                cell: ({ row }) => {
+                    const telephoneNumber = row.original.telephoneNumber;
+                    return <div>{telephoneNumber || "-"}</div>;
+                },
+                filterFn: filterFn("text"),
+                meta: defineMeta((row: UserType) => row.telephoneNumber, {
+                    displayName: "Telephone Number",
+                    type: "text",
+                    icon: PhoneIcon,
+                }) as ColumnMeta<UserType, unknown>,
+            },
             {
                 accessorKey: "phoneNumber",
                 header: ({ column }) => (

@@ -24,7 +24,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { type UserFormInput, userFormSchema } from "@/lib/schema";
+import type { DepartmentType } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Switch } from "../ui/switch";
 
@@ -34,7 +36,7 @@ interface UserFormDialogProps {
     isLoading?: boolean;
     onSubmit: (userData: Omit<UserFormInput, "confirmPassword">) => void;
     roles: { value: string; label: string }[];
-    departments: { value: string; label: string }[];
+    departments: DepartmentType[];
     // active?: boolean;
 }
 
@@ -56,7 +58,7 @@ export function UserFormDialog({
             password: "",
             confirmPassword: "",
             role: "",
-            department: "",
+            departmentId: "",
             telephoneNumber: "",
             phoneNumber: "",
             active: true,
@@ -70,8 +72,19 @@ export function UserFormDialog({
         onSubmit(dataToSubmit);
     };
 
+    const handleClose = () => {
+        form.reset();
+        onClose();
+    };
+
+    useEffect(() => {
+        if (!isOpen) {
+            form.reset();
+        }
+    }, [isOpen, form.reset]);
+
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle>Add New User</DialogTitle>
@@ -271,7 +284,7 @@ export function UserFormDialog({
 
                             <FormField
                                 control={form.control}
-                                name="department"
+                                name="departmentId"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Department</FormLabel>
@@ -288,14 +301,10 @@ export function UserFormDialog({
                                                 {departments.map(
                                                     (department) => (
                                                         <SelectItem
-                                                            key={
-                                                                department.value
-                                                            }
-                                                            value={
-                                                                department.value
-                                                            }
+                                                            key={department.id}
+                                                            value={department.id.toString()}
                                                         >
-                                                            {department.label}
+                                                            {department.name}
                                                         </SelectItem>
                                                     ),
                                                 )}
@@ -332,7 +341,7 @@ export function UserFormDialog({
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={onClose}
+                            onClick={handleClose}
                         >
                             Cancel
                         </Button>

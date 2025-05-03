@@ -5,16 +5,18 @@ import {
     webSocketStatusAtom,
 } from "@/lib//notifications"; // Adjust path if needed
 import {
-    getApprovedEventsQuery,
-    getOwnEventsQueryOptions,
+    equipmentReservationKeys,
+    eventsQueryKeys,
     notificationsQueryKeys,
     useCurrentUser,
+    venueReservationKeys,
 } from "@/lib/query";
 // Remove SockJS import
 // import SockJS from "sockjs-client";
 import { Client, type IMessage } from "@stomp/stompjs"; // Import STOMP Client
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
+import { en } from "chrono-node";
 import { useSetAtom } from "jotai";
 // filepath: /home/yunyun/Dev/univers/src/hooks/use-websocket-notifications.ts
 import { useCallback, useEffect, useRef } from "react";
@@ -52,64 +54,176 @@ export function useWebSocketNotifications() {
             },
             reconnectDelay: RECONNECT_DELAY,
             onConnect: (frame) => {
-                console.log("STOMP Connected:", frame);
                 setStatus("connected");
 
                 const userDestination = "/user/queue/notifications";
                 client.subscribe(userDestination, (message: IMessage) => {
-                    console.log(
-                        `Received message on ${userDestination}:`,
-                        message.body,
-                    );
                     try {
-                        // Parse the DTO from backend
                         const receivedPayload: NotificationDTO = JSON.parse(
                             message.body,
                         );
+                        const messageText =
+                            receivedPayload.message.toLowerCase();
+                        const entityType =
+                            receivedPayload.relatedEntityType?.toUpperCase();
+                        const entityId = receivedPayload.relatedEntityId; // Use entityId if available
 
-                        // --- Invalidate React Query Data ---
-                        console.log(
-                            "Invalidating notification queries due to WS message...",
-                        );
+                        console.log("Received notification:", receivedPayload); // Helpful for debugging
+                        console.log(entityType, entityId);
+
+                        // --- Always Invalidate General Notifications ---
                         queryClient.invalidateQueries({
                             queryKey: notificationsQueryKeys.lists(),
                         });
                         queryClient.invalidateQueries({
                             queryKey: notificationsQueryKeys.count(),
                         });
-                        queryClient.invalidateQueries({
-                            queryKey: getOwnEventsQueryOptions.queryKey,
-                        });
-                        queryClient.invalidateQueries({
-                            queryKey: getApprovedEventsQuery.queryKey,
-                        });
 
-                        // --- End Invalidation ---
+                        // --- Conditional Invalidation based on Payload ---
+                        if (entityType === "EVENT") {
+                            console.log(
+                                "Invalidating EVENT related queries...",
+                            );
+                            // Invalidate general event lists, own events, approved events
+                            queryClient.invalidateQueries({
+                                queryKey: eventsQueryKeys.all, // Use the factory
+                            });
+                            queryClient.invalidateQueries({
+                                queryKey: eventsQueryKeys.own(), // Use the factory
+                            });
+                            queryClient.invalidateQueries({
+                                queryKey: eventsQueryKeys.approved(), // Use the factory
+                            });
 
-                        // Show a toast notification (using data from DTO)
-                        // Map backend type/message to title/description/type for toast
+                            // More specific invalidation if needed (e.g., for pending lists)
+                            if (messageText.includes("approval")) {
+                                queryClient.invalidateQueries({
+                                    queryKey:
+                                        eventsQueryKeys.pendingVenueOwner(),
+                                });
+                                queryClient.invalidateQueries({
+                                    queryKey: eventsQueryKeys.pendingDeptHead(),
+                                });
+                            }
+                            if (entityId) {
+                                queryClient.invalidateQueries({
+                                    queryKey: eventsQueryKeys.detail(entityId),
+                                });
+                                queryClient.invalidateQueries({
+                                    queryKey:
+                                        eventsQueryKeys.approvals(entityId),
+                                });
+                            }
+                        } else if (entityType === "VENUE_RESERVATION") {
+                            console.log(
+                                "Invalidating VENUE_RESERVATION related queries...",
+                            );
+                            // Invalidate general list and own list
+                            queryClient.invalidateQueries({
+                                queryKey: venueReservationKeys.lists(),
+                            });
+                            queryClient.invalidateQueries({
+                                queryKey: venueReservationKeys.own(),
+                            });
+
+                            // Example: Invalidate pending venue reservations if message mentions approval
+                            if (messageText.includes("approval")) {
+                                queryClient.invalidateQueries({
+                                    queryKey:
+                                        venueReservationKeys.pendingVenueOwner(),
+                                });
+                                // Also invalidate the general pending key if it exists/is used
+                                queryClient.invalidateQueries({
+                                    queryKey: venueReservationKeys.pending(),
+                                });
+                            }
+                            if (entityId) {
+                                queryClient.invalidateQueries({
+                                    queryKey:
+                                        venueReservationKeys.detail(entityId),
+                                });
+                                queryClient.invalidateQueries({
+                                    queryKey:
+                                        venueReservationKeys.approvals(
+                                            entityId,
+                                        ),
+                                });
+                            }
+                        } else if (entityType === "EQUIPMENT_RESERVATION") {
+                            console.log(
+                                "Invalidating EQUIPMENT_RESERVATION related queries...",
+                            );
+                            // Invalidate general list and own list
+                            queryClient.invalidateQueries({
+                                queryKey: equipmentReservationKeys.lists(),
+                            });
+                            queryClient.invalidateQueries({
+                                queryKey: equipmentReservationKeys.own(),
+                            });
+
+                            if (messageText.includes("approval")) {
+                                queryClient.invalidateQueries({
+                                    queryKey:
+                                        equipmentReservationKeys.pendingEquipmentOwner(),
+                                });
+                                // Also invalidate the general pending key if it exists/is used
+                                queryClient.invalidateQueries({
+                                    queryKey:
+                                        equipmentReservationKeys.pending(),
+                                });
+                            }
+                            if (entityId) {
+                                queryClient.invalidateQueries({
+                                    queryKey:
+                                        equipmentReservationKeys.detail(
+                                            entityId,
+                                        ),
+                                });
+                                queryClient.invalidateQueries({
+                                    queryKey:
+                                        equipmentReservationKeys.approvals(
+                                            entityId,
+                                        ),
+                                });
+                            }
+                        }
+                        // Add more 'else if' blocks for other entity types (USER, etc.)
+
+                        // --- End Conditional Invalidation ---
+
                         const toastTitle =
-                            receivedPayload.relatedEntityType || "Notification"; // Example title
+                            receivedPayload.relatedEntityType || "Notification";
                         const toastDescription = receivedPayload.message;
-                        // You might want more sophisticated type mapping based on relatedEntityType
-                        const toastType = receivedPayload.message
-                            .toLowerCase()
-                            .includes("error")
-                            ? "error"
-                            : receivedPayload.message
-                                    .toLowerCase()
-                                    .includes("success") ||
-                                receivedPayload.message
-                                    .toLowerCase()
-                                    .includes("approved")
-                              ? "success"
-                              : "default";
 
-                        toast(toastTitle, {
-                            description: toastDescription,
-                            // You might need to adjust toast options based on its type
-                            // e.g., using different icons or colors via `toast[toastType](...)` if sonner supports it easily
-                        });
+                        // Use specific toast functions based on message content
+                        if (
+                            messageText.includes("error") ||
+                            messageText.includes("fail")
+                        ) {
+                            toast.error(toastTitle, {
+                                description: toastDescription,
+                            });
+                        } else if (
+                            messageText.includes("success") ||
+                            messageText.includes("approved") ||
+                            messageText.includes("completed")
+                        ) {
+                            toast.success(toastTitle, {
+                                description: toastDescription,
+                            });
+                        } else if (
+                            messageText.includes("warning") ||
+                            messageText.includes("pending")
+                        ) {
+                            toast.warning(toastTitle, {
+                                description: toastDescription,
+                            }); // Or use toast.info or default
+                        } else {
+                            toast.info(toastTitle, {
+                                description: toastDescription,
+                            }); // Default to info or basic toast
+                            // Or just: toast(toastTitle, { description: toastDescription });
+                        }
                     } catch (e) {
                         console.error(
                             "!!! ERROR IN WS MESSAGE CALLBACK !!!",

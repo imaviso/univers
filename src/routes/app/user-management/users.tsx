@@ -2,11 +2,15 @@ import { Button } from "@/components/ui/button";
 import { UserFormDialog } from "@/components/user-management/userFormDialog";
 import { UserDataTable } from "@/components/user-management/userManagementTable";
 import { createUser } from "@/lib/api";
-import { usersQueryOptions } from "@/lib/query";
+import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import type { UserFormInput } from "@/lib/schema";
-import { DEPARTMENTS, ROLES } from "@/lib/types";
+import { ROLES } from "@/lib/types";
 import type { UserType } from "@/lib/types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+    useMutation,
+    useQueryClient,
+    useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { UserPlus } from "lucide-react";
 import { useState } from "react";
@@ -19,13 +23,15 @@ export const Route = createFileRoute("/app/user-management/users")({
 // Define the input type for the mutation, matching the API function
 type CreateUserInputFE = Omit<
     UserType,
-    "id" | "emailVerified" | "createdAt" | "updatedAt" | "department"
-> & { departmentId: number | null };
+    "id" | "emailVerified" | "createdAt" | "updatedAt"
+>;
 
 function UsersComponent() {
     const context = useRouteContext({ from: "/app/user-management" });
     const queryClient = context.queryClient;
     const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+
+    const { data: departments } = useSuspenseQuery(departmentsQueryOptions);
 
     const createUserMutation = useMutation({
         mutationFn: createUser, // Use the updated API function
@@ -36,37 +42,32 @@ function UsersComponent() {
                 queryKey: usersQueryOptions.queryKey,
             });
 
-            // Snapshot the previous value
             const previousUsers = queryClient.getQueryData<UserType[]>(
                 usersQueryOptions.queryKey,
             );
 
-            // Optimistically update to the new value
-            // Find department label for optimistic update
-            const deptLabel =
-                DEPARTMENTS.find((d) => d.value === newUserData.departmentId)
-                    ?.label || "Unknown Dept";
+            const deptLabel = departments.find(
+                (d) => d.id.toString() === newUserData.departmentId,
+            )?.name;
             queryClient.setQueryData<UserType[]>(
                 usersQueryOptions.queryKey,
                 (old = []) => [
                     ...old,
                     {
                         ...newUserData,
-                        id: Math.random().toString(36).substring(2), // Temporary client-side ID
+                        id: Math.random().toString(36).substring(2),
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
-                        emailVerified: false, // Default assumption
-                        active: newUserData.active ?? true, // Default assumption
-                        department: deptLabel, // Add department string for display
-                        password: "****", // Don't store actual password optimistically
+                        emailVerified: false,
+                        active: newUserData.active ?? true,
+                        departmentId: deptLabel,
+                        password: "****",
                     } as UserType,
                 ],
             );
 
-            // Return a context object with the snapshotted value
             return { previousUsers };
         },
-        // If the mutation fails, use the context returned from onMutate to roll back
         onError: (err, newUser, context) => {
             if (context?.previousUsers) {
                 queryClient.setQueryData(
@@ -79,11 +80,9 @@ function UsersComponent() {
             toast.error(errorMessage);
         },
         onSuccess: (data) => {
-            // Backend returns string message
             toast.success(data || "User created successfully"); // Display backend message
             setIsAddUserOpen(false); // Close dialog on success
         },
-        // Always refetch after error or success:
         onSettled: () => {
             queryClient.invalidateQueries({
                 queryKey: usersQueryOptions.queryKey,
@@ -91,29 +90,19 @@ function UsersComponent() {
         },
     });
 
-    // Adjust handleAddUser to match the expected input type CreateUserInputFE
     const handleAddUser = (
-        userData: Omit<UserFormInput, "confirmPassword">, // Use UserFormInput from schema
+        userData: Omit<UserFormInput, "confirmPassword">,
     ) => {
-        // Map UserFormInput to CreateUserInputFE
-        const departmentId = userData.department
-            ? Number.parseInt(userData.department, 10)
-            : null;
-        if (userData.department && Number.isNaN(departmentId!)) {
-            toast.error("Invalid Department ID selected.");
-            return;
-        }
-
         const apiPayload: CreateUserInputFE = {
             idNumber: userData.idNumber,
             firstName: userData.firstName,
             lastName: userData.lastName,
             email: userData.email,
-            password: userData.password, // Password is required for create
-            role: userData.role,
-            departmentId: departmentId,
+            password: userData.password,
+            role: userData.role as UserType["role"],
+            departmentId: userData.departmentId,
             telephoneNumber: userData.telephoneNumber,
-            phoneNumber: userData.phoneNumber || "", // Ensure empty string if optional
+            phoneNumber: userData.phoneNumber || "",
             active: userData.active,
         };
         createUserMutation.mutate(apiPayload);
@@ -147,10 +136,7 @@ function UsersComponent() {
                     }}
                     onSubmit={handleAddUser}
                     roles={ROLES}
-                    departments={DEPARTMENTS.map((d) => ({
-                        value: String(d.value),
-                        label: d.label,
-                    }))}
+                    departments={departments}
                 />
                 <div className="flex-1 overflow-auto p-6">
                     <UserDataTable />
