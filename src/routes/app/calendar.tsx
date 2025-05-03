@@ -15,9 +15,10 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
-import { allEventsQueryOptions, venuesQueryOptions } from "@/lib/query";
+import { approvedEventsQueryOptions, venuesQueryOptions } from "@/lib/query";
 import type { Event } from "@/lib/types"; // Use the shared Event type
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { useQuery } from "@tanstack/react-query"; // Import useQuery
 import {
     createFileRoute,
@@ -47,7 +48,45 @@ import {
 import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
 import { useMemo, useState } from "react"; // Import useMemo
 
-interface EventWithLayout extends Event {
+const eventColorClasses = [
+    "bg-blue-500",
+    "bg-indigo-500",
+    "bg-purple-500",
+    "bg-pink-500",
+    "bg-teal-500",
+    "bg-cyan-500",
+    "bg-orange-500",
+    "bg-lime-500",
+];
+
+const simpleHash = (str: string): number => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash |= 0;
+    }
+    return Math.abs(hash);
+};
+
+// Get a deterministic color based on event ID
+const getRandomColorForEvent = (
+    eventId: string | number | undefined,
+): string => {
+    if (eventId === undefined) {
+        return eventColorClasses[0];
+    }
+    const idString = String(eventId);
+    const hash = simpleHash(idString);
+    const index = hash % eventColorClasses.length;
+    return eventColorClasses[index];
+};
+
+interface EventWithDisplayColor extends Event {
+    displayColor: string;
+}
+
+interface EventWithLayout extends EventWithDisplayColor {
     layout: {
         top: string;
         height: string;
@@ -55,6 +94,10 @@ interface EventWithLayout extends Event {
         width: string;
         minHeight: string;
     };
+    startDate: Date;
+    endDate: Date;
+    columnIndex: number;
+    numColumns: number;
 }
 
 const calculateDayLayout = (events: Event[]): EventWithLayout[] => {
@@ -100,11 +143,14 @@ const calculateDayLayout = (events: Event[]): EventWithLayout[] => {
                 (minutesFromViewStart / totalMinutesInView) * 100;
             const heightPercent = (durationMinutes / totalMinutesInView) * 100;
 
+            const displayColor = getRandomColorForEvent(event.id);
+
             return {
                 ...event,
                 id: event.id ?? `temp-${index}`, // Ensure unique key if id is missing
                 startDate: start, // Keep original start/end for display
                 endDate: end,
+                displayColor,
                 layout: {
                     // Ensure percentages are non-negative and finite
                     top: `${Math.max(0, topPercent)}%`,
@@ -119,11 +165,10 @@ const calculateDayLayout = (events: Event[]): EventWithLayout[] => {
         })
         .filter((event): event is NonNullable<typeof event> => event !== null); // Filter out nulls and assert non-null type
 
+    type ParsedEventNonNull = NonNullable<(typeof parsedEvents)[number]>;
+
     if (parsedEvents.length === 0) return [];
 
-    // 2. Calculate columns for overlaps (Greedy approach)
-    // Define the type for columns explicitly, using the non-null event type
-    type ParsedEventNonNull = NonNullable<(typeof parsedEvents)[number]>;
     const columns: { events: ParsedEventNonNull[] }[] = [];
 
     for (const event of parsedEvents) {
@@ -254,7 +299,7 @@ export const Route = createFileRoute("/app/calendar")({
     },
     loader: async ({ context }) => {
         // Ensure data is fetched or being fetched before component renders
-        context.queryClient.ensureQueryData(allEventsQueryOptions);
+        context.queryClient.ensureQueryData(approvedEventsQueryOptions);
         // context.queryClient.ensureQueryData(venuesQueryOptions);
     },
     errorComponent: () => <ErrorPage />,
@@ -270,13 +315,11 @@ const eventStatuses = [
     // Add other relevant statuses if applicable
 ];
 
-// Helper function to get color for event status
 const getStatusColor = (status: string | undefined | null): string => {
     const statusInfo = eventStatuses.find((s) => s.id === status);
     return statusInfo?.color ?? "bg-gray-400"; // Default color
 };
 
-// Generate week days
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function Calendar() {
@@ -286,7 +329,7 @@ function Calendar() {
 
     // Fetch events using useQuery
     const { data: events = [], isLoading: isLoadingEvents } = useQuery(
-        allEventsQueryOptions,
+        approvedEventsQueryOptions,
     );
 
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -303,37 +346,46 @@ function Calendar() {
 
     // Memoized function to get events for a specific date, applying filters
     const getEventsForDate = useMemo(() => {
-        return (calendarDay: Date): Event[] => {
+        // --- Return type updated ---
+        return (calendarDay: Date): EventWithDisplayColor[] => {
             if (!events || events.length === 0) return [];
 
             const startOfCalendarDay = startOfDay(calendarDay);
             const endOfCalendarDay = endOfDay(calendarDay);
 
-            return events.filter((event) => {
-                // Apply status filters
-                const statusMatch =
-                    filters.statuses.length === 0 ||
-                    filters.statuses.includes(event.status);
-                if (!statusMatch) return false;
+            return (
+                events
+                    .filter((event) => {
+                        // Apply status filters
+                        const statusMatch =
+                            filters.statuses.length === 0 ||
+                            filters.statuses.includes(event.status);
+                        if (!statusMatch) return false;
 
-                // Parse event start and end times
-                const eventStart = parseISO(event.startTime);
-                const eventEnd = parseISO(event.endTime);
+                        // Parse event start and end times
+                        const eventStart = parseISO(event.startTime);
+                        const eventEnd = parseISO(event.endTime);
 
-                if (!isValid(eventStart) || !isValid(eventEnd)) {
-                    console.warn(
-                        `Invalid date format for event ID ${event.id}`,
-                    );
-                    return false; // Skip events with invalid dates
-                }
+                        if (!isValid(eventStart) || !isValid(eventEnd)) {
+                            console.warn(
+                                `Invalid date format for event ID ${event.id}`,
+                            );
+                            return false; // Skip events with invalid dates
+                        }
 
-                // Check if the calendar day falls within the event's date range (inclusive)
-                // This handles single and multi-day events
-                return (
-                    startOfCalendarDay <= eventEnd &&
-                    endOfCalendarDay >= eventStart
-                );
-            });
+                        // Check if the calendar day falls within the event's date range (inclusive)
+                        // This handles single and multi-day events
+                        return (
+                            startOfCalendarDay <= eventEnd &&
+                            endOfCalendarDay >= eventStart
+                        );
+                    })
+                    // --- Add displayColor to each filtered event ---
+                    .map((event) => ({
+                        ...event,
+                        displayColor: getRandomColorForEvent(event.id),
+                    }))
+            );
         };
     }, [events, filters.statuses]);
 
@@ -370,7 +422,7 @@ function Calendar() {
     };
 
     // Open event details - No transformation needed
-    const handleEventClick = (event: Event) => {
+    const handleEventClick = (event: EventWithDisplayColor) => {
         setSelectedEvent(event);
         setIsDetailsModalOpen(true);
     };
@@ -465,8 +517,6 @@ function Calendar() {
                             onClick={() => handleCellClick(day.date)}
                         >
                             <CardContent className="p-1 h-full flex flex-col">
-                                {" "}
-                                {/* Added flex flex-col */}
                                 <div
                                     className={cn(
                                         "text-xs font-medium p-1 flex-shrink-0",
@@ -476,15 +526,16 @@ function Calendar() {
                                 >
                                     {day.dayOfMonth}
                                 </div>
-                                <div className="space-y-0.5 overflow-y-auto flex-grow min-h-0 px-0.5 pb-0.5">
+                                <div className="space-y-0.5 overflow-y-auto flex-grow min-h-0 px-0.5 pb-0.5 no-scrollbar">
                                     {day.events.map((event) => (
                                         <button
                                             key={event.id}
                                             type="button"
                                             // Reduced padding, adjusted line height implicitly via text size
                                             className={cn(
-                                                `${getStatusColor(event.status)} text-white text-[11px] px-1 py-0.5 rounded block w-full text-left focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1`, // Adjusted focus ring
-                                                // Removed truncate, rely on wrapping or overflow scroll
+                                                // Use the assigned random color
+                                                event.displayColor,
+                                                "text-white text-[11px] px-1 py-0.5 rounded block w-full text-left focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 mb-0.5", // Adjusted focus ring, added margin bottom
                                             )}
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -501,13 +552,13 @@ function Calendar() {
                                             }}
                                             title={event.eventName}
                                         >
-                                            {/* Display event name, allow wrapping */}
-                                            {event.eventName}
+                                            {/* Truncate text if it's too long */}
+                                            <span className="truncate block">
+                                                {event.eventName}
+                                            </span>
                                         </button>
                                     ))}
                                 </div>
-                                {/* REMOVED Plus Button */}
-                                {/* <Button ... > ... </Button> */}
                             </CardContent>
                         </Card>
                     ))}
@@ -551,14 +602,14 @@ function Calendar() {
                             )}
                             onClick={() => handleCellClick(day.date)}
                         >
-                            <div className="space-y-1">
+                            <div className="space-y-1 no-scrollbar">
                                 {day.events.map((event) => (
                                     <button
                                         key={event.id}
                                         type="button"
                                         className={cn(
-                                            `${getStatusColor(event.status)} text-white text-xs p-2 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2`,
-                                            "w-full text-left block h-auto",
+                                            event.displayColor,
+                                            "text-white text-[11px] px-1 py-0.5 rounded block w-full text-left focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1", // Adjusted focus ring
                                         )}
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -603,52 +654,8 @@ function Calendar() {
     // Render day view
     const renderDayView = () => {
         const { hours } = generateDayHours();
-        // Get raw events for the day
         const dayEventsRaw = getEventsForDate(currentDate);
-        // Calculate layout including horizontal positions
         const dayEventsWithLayout = calculateDayLayout(dayEventsRaw);
-
-        // Function to calculate event position and height (basic example)
-        const getEventStyle = (event: Event) => {
-            const start = parseISO(event.startTime);
-            const end = parseISO(event.endTime);
-            if (!isValid(start) || !isValid(end)) return {};
-
-            const startHour = start.getHours();
-            const startMinute = start.getMinutes();
-            const endHour = end.getHours();
-            const endMinute = end.getMinutes();
-
-            // Calculate percentage based on 8 AM to 8 PM (12 hours total)
-            const totalMinutesInView = 12 * 60;
-            const minutesFrom8AMStart = Math.max(
-                0,
-                (startHour - 8) * 60 + startMinute,
-            );
-            const minutesFrom8AMEnd = Math.min(
-                totalMinutesInView,
-                (endHour - 8) * 60 + endMinute,
-            );
-
-            const topPercent = (minutesFrom8AMStart / totalMinutesInView) * 100;
-            // Increased minimum height slightly (e.g., from 1% to ~4-5% which is roughly 30mins / 12hrs)
-            const minHeightPercent = (30 / totalMinutesInView) * 100;
-            const calculatedHeightPercent =
-                ((minutesFrom8AMEnd - minutesFrom8AMStart) /
-                    totalMinutesInView) *
-                100;
-            const heightPercent = Math.max(
-                minHeightPercent,
-                calculatedHeightPercent,
-            );
-
-            return {
-                top: `${topPercent}%`,
-                height: `${heightPercent}%`,
-                // Add minHeight in case calculated height is very small
-                minHeight: "1.5rem", // Approx height for 2 lines of small text
-            };
-        };
 
         return (
             <div className="space-y-4">
@@ -700,7 +707,9 @@ function Calendar() {
                                     type="button"
                                     key={event.id} // Use the potentially generated unique key
                                     className={cn(
-                                        `${getStatusColor(event.status)} text-white text-xs p-1 absolute cursor-pointer text-left block overflow-hidden rounded`, // Added rounded
+                                        // Use the assigned random color
+                                        event.displayColor,
+                                        "text-white text-xs p-1 absolute cursor-pointer text-left block overflow-hidden rounded", // Added rounded
                                         "focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1",
                                     )}
                                     // Apply the calculated layout style object
@@ -788,85 +797,61 @@ function Calendar() {
                             </TabsList>
                         </Tabs>
 
-                        {/* Filter Popover */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1"
-                                >
-                                    <Filter className="h-4 w-4" />
-                                    Filter
-                                    {filters.statuses.length > 0 && ( // Indicate active filters
-                                        <span className="ml-1 h-2 w-2 rounded-full bg-primary" />
-                                    )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64" align="end">
-                                <div className="space-y-4">
-                                    {/* Removed Workspaces Filter */}
+                        {/* <Popover>
+							<PopoverTrigger asChild>
+								<Button variant="outline" size="sm" className="gap-1">
+									<Filter className="h-4 w-4" />
+									Filter
+									{filters.statuses.length > 0 && ( // Indicate active filters
+										<span className="ml-1 h-2 w-2 rounded-full bg-primary" />
+									)}
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent className="w-64" align="end">
+								<div className="space-y-4">
+									<div>
+										<h3 className="font-medium mb-2 text-sm">Status</h3>
+										<div className="space-y-2">
+											{eventStatuses.map((status) => (
+												<div
+													key={status.id}
+													className="flex items-center space-x-2"
+												>
+													<Checkbox
+														id={`status-${status.id}`}
+														checked={filters.statuses.includes(status.id)}
+														onCheckedChange={() =>
+															toggleStatusFilter(status.id)
+														}
+													/>
+													<div className="flex items-center gap-2">
+														<div
+															className={`h-3 w-3 rounded-full ${status.color}`}
+														/>
+														<Label
+															htmlFor={`status-${status.id}`}
+															className="text-sm font-normal"
+														>
+															{status.name}
+														</Label>
+													</div>
+												</div>
+											))}
+										</div>
+									</div>
 
-                                    {/* Status Filter */}
-                                    <div>
-                                        <h3 className="font-medium mb-2 text-sm">
-                                            Status
-                                        </h3>
-                                        <div className="space-y-2">
-                                            {eventStatuses.map((status) => (
-                                                <div
-                                                    key={status.id}
-                                                    className="flex items-center space-x-2"
-                                                >
-                                                    <Checkbox
-                                                        id={`status-${status.id}`}
-                                                        checked={filters.statuses.includes(
-                                                            status.id,
-                                                        )}
-                                                        onCheckedChange={() =>
-                                                            toggleStatusFilter(
-                                                                status.id,
-                                                            )
-                                                        }
-                                                    />
-                                                    <div className="flex items-center gap-2">
-                                                        <div
-                                                            className={`h-3 w-3 rounded-full ${status.color}`}
-                                                        />
-                                                        <Label
-                                                            htmlFor={`status-${status.id}`}
-                                                            className="text-sm font-normal"
-                                                        >
-                                                            {status.name}
-                                                        </Label>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Filter Actions */}
-                                    <div className="flex justify-between pt-2">
-                                        <Button
-                                            variant="ghost" // Changed to ghost
-                                            size="sm"
-                                            onClick={() =>
-                                                setFilters({ statuses: [] })
-                                            } // Reset only statuses
-                                        >
-                                            Reset
-                                        </Button>
-                                        {/* Apply button might not be needed if filters apply instantly */}
-                                        {/* <Button size="sm">Apply Filters</Button> */}
-                                    </div>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-
-                        {/* Create Event Button (Optional, based on role) */}
-                        {/* {(role === "ORGANIZER" || role === "SUPER_ADMIN") && (
-                            <CreateEventButton />
-                        )} */}
+									<div className="flex justify-between pt-2">
+										<Button
+											variant="ghost" 
+											size="sm"
+											onClick={() => setFilters({ statuses: [] })} 
+										>
+											Reset
+										</Button>
+									</div>
+								</div>
+							</PopoverContent>
+						</Popover> */}
                     </div>
                 </header>
                 <main className="flex-1 overflow-auto p-4 md:p-6">
