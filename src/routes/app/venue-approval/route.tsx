@@ -1,3 +1,5 @@
+import ErrorPage from "@/components/ErrorPage";
+import PendingPage from "@/components/PendingPage";
 import { allNavigation } from "@/lib/navigation";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
@@ -10,6 +12,7 @@ export const Route = createFileRoute("/app/venue-approval")({
                 search: {
                     redirect: location.href,
                 },
+                replace: true,
             });
         }
 
@@ -36,6 +39,8 @@ export const Route = createFileRoute("/app/venue-approval")({
             });
         }
     },
+    errorComponent: () => <ErrorPage />,
+    pendingComponent: () => <PendingPage />,
 });
 
 function RouteComponent() {

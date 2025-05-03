@@ -62,7 +62,7 @@ export function EditUserFormDialog({
             firstName: "",
             lastName: "",
             password: "",
-            confirmPassword: "",   // keep the field controlled from the start
+            confirmPassword: "",
             email: "",
             role: "",
             departmentId: "",
