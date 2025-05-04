@@ -23,17 +23,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
     ArrowLeft,
+    CalendarPlus,
     CheckCircle2,
     Clock,
     Edit,
     MapPin,
     MoreHorizontal,
-    Paperclip, // Added for approved letter
-    Tag, // Added for event type
+    Paperclip,
+    Tag,
     Trash2,
     XCircle,
 } from "lucide-react";
 
+import { EquipmentReservationFormDialog } from "@/components/equipment-reservation/equipmentReservationForm";
 import { CancelConfirmDialog } from "@/components/events/cancelEventDialog";
 import { EditEventModal } from "@/components/events/editEventModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -49,14 +51,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { approveEvent, cancelEvent, updateEvent } from "@/lib/api";
 import {
-    allEventsQueryOptions,
-    approvedEventsQueryOptions,
+    equipmentReservationKeys,
+    equipmentReservationsByEventIdQueryOptions,
+    equipmentsQueryOptions,
     eventApprovalsQueryOptions,
     eventByIdQueryOptions,
     eventsQueryKeys,
+    useCreateEquipmentReservationMutation,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
+import type { EquipmentReservationFormInput } from "@/lib/schema";
 import type {
+    Equipment,
     Event,
     EventApprovalDTO,
     EventDTOPayload,
@@ -70,12 +76,12 @@ import {
     getBadgeVariant,
     getInitials,
     getStatusColor,
-} from "@/lib/utils"; // Import helpers
+} from "@/lib/utils";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query"; // Import suspense query hook
 import {
-    // Link, // Removed if not used
     createFileRoute,
-    notFound, // Import notFound
+    notFound,
+    useLoaderData,
     useRouteContext,
     useRouter,
 } from "@tanstack/react-router";
@@ -84,34 +90,33 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/events/$eventId")({
-    loader: async ({ params: { eventId }, context: { queryClient } }) => {
+    loader: async ({
+        params: { eventId },
+        context: { authState, queryClient },
+    }) => {
         const eventIdNum = Number.parseInt(eventId, 10);
         if (Number.isNaN(eventIdNum)) {
-            throw notFound(); // Invalid event ID format
+            throw notFound();
         }
-        const event = await queryClient.fetchQuery(
+        const event = await queryClient.ensureQueryData(
             eventByIdQueryOptions(eventId),
         );
 
         if (!event || Object.keys(event).length === 0) {
             throw notFound();
         }
-
-        const venues = await queryClient.ensureQueryData(venuesQueryOptions);
-        const approvals = await queryClient.ensureQueryData(
+        await queryClient.ensureQueryData(
             eventApprovalsQueryOptions(eventIdNum),
         );
-
-        return { event, venues, approvals };
+        await queryClient.ensureQueryData(venuesQueryOptions);
+        await queryClient.ensureQueryData(equipmentsQueryOptions(authState));
+        await queryClient.ensureQueryData(
+            equipmentReservationsByEventIdQueryOptions(eventIdNum),
+        );
+        return eventId;
     },
     component: EventDetailsPage,
 });
-
-interface EventDetailsLoaderData {
-    event: Event;
-    venues: Venue[];
-    approvals: EventApprovalDTO[];
-}
 
 export function EventDetailsPage() {
     const context = useRouteContext({ from: "/app/events" });
@@ -121,28 +126,40 @@ export function EventDetailsPage() {
     const queryClient = context.queryClient;
     const onBack = () => router.history.back();
 
-    const { event, venues, approvals } = Route.useLoaderData();
-    const eventIdNum = event.id;
+    const eventId = Route.useLoaderData();
+    const eventIdNum = Number.parseInt(eventId, 10);
+    const { data: approvals } = useSuspenseQuery(
+        eventApprovalsQueryOptions(eventId),
+    );
+    const { data: event } = useSuspenseQuery(eventByIdQueryOptions(eventId));
+    const { data: venues } = useSuspenseQuery(venuesQueryOptions);
+    const { data: availableEquipments } = useSuspenseQuery(
+        equipmentsQueryOptions(currentUser),
+    );
+    const { data: reservedEquipments } = useSuspenseQuery(
+        equipmentReservationsByEventIdQueryOptions(event.id),
+    );
 
     const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
     const [approvalRemarks, setApprovalRemarks] = useState("");
     const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isReserveEquipmentDialogOpen, setIsReserveEquipmentDialogOpen] =
+        useState(false);
 
     const venueMap = new Map(venues.map((venue) => [venue.id, venue.name]));
     const venueMap1 = useMemo(() => {
         const map = new Map<number, Venue>();
         for (const venue of venues ?? []) {
-            map.set(venue.id, venue); // Store the whole venue object
+            map.set(venue.id, venue);
         }
         return map;
     }, [venues]);
     const eventVenue = venueMap1.get(event.eventVenueId);
-    console.log(eventVenue);
 
     const hasUserApproved = useMemo(() => {
-        if (!currentUser) return false; // No user, cannot have approved
+        if (!currentUser) return false;
 
         return approvals.some((appr: EventApprovalDTO) => {
             // 1. Check by userId if both currentUser.id and appr.userId exist
@@ -528,9 +545,90 @@ export function EventDetailsPage() {
         : "Unknown Organizer";
     // const organizerAvatar = event.organizer?.avatarUrl; // If avatar exists
 
+    const createEquipmentReservationMutation =
+        useCreateEquipmentReservationMutation();
+
+    const handleReserveEquipmentClick = () => {
+        setIsReserveEquipmentDialogOpen(true);
+    };
+
+    // Handler for submitting equipment reservation from the dialog
+    const handleReserveEquipmentSubmit = async (
+        formData: EquipmentReservationFormInput,
+    ) => {
+        console.log("Reservation form submitted:", formData);
+        setIsReserveEquipmentDialogOpen(false);
+
+        const { selectedEquipment } = formData;
+
+        // Use event's start/end time
+        const eventStartTime = event.startTime;
+        const eventEndTime = event.endTime;
+
+        // Prepare common data
+        const commonReservationData = {
+            eventId: eventIdNum,
+            startTime: eventStartTime,
+            endTime: eventEndTime,
+        };
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const item of selectedEquipment) {
+            const reservationData = {
+                ...commonReservationData,
+                equipmentId: Number(item.equipmentId),
+                quantity: item.quantity,
+            };
+
+            try {
+                await createEquipmentReservationMutation.mutateAsync({
+                    reservationData,
+                });
+                successCount++;
+            } catch (error) {
+                errorCount++;
+                console.error(
+                    `Failed to reserve equipment ID ${item.equipmentId}:`,
+                    error,
+                );
+                // Show individual error toast
+                const equipmentName =
+                    availableEquipments.find(
+                        (eq) => eq.id === Number(item.equipmentId),
+                    )?.name || `ID ${item.equipmentId}`;
+                toast.error(
+                    `Failed to reserve item ${equipmentName}: ${(error as Error).message}`,
+                );
+            }
+        }
+
+        if (successCount > 0 && errorCount === 0) {
+            toast.success(
+                `Successfully submitted ${successCount} equipment reservation request(s).`,
+            );
+            // Invalidate the query for reserved equipment for this event
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.byEvent(eventIdNum),
+            });
+        } else if (successCount > 0 && errorCount > 0) {
+            toast.warning(
+                `Submitted ${successCount} reservation request(s) successfully, but ${errorCount} failed.`,
+            );
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.byEvent(eventIdNum),
+            });
+        } else if (successCount === 0 && errorCount > 0) {
+            toast.error(
+                `Failed to submit ${errorCount} equipment reservation request(s).`,
+            );
+        }
+    };
+
     return (
         <div className="flex h-screen bg-background">
-            <div className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex flex-col flex-1">
                 <header className="flex items-center justify-between border-b px-6 py-3.5 sticky top-0 bg-background z-10">
                     {" "}
                     <div className="flex items-center gap-4">
@@ -873,6 +971,81 @@ export function EventDetailsPage() {
                                 </div>
                             </CardContent>
                         </Card>
+
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle>Reserved Equipment</CardTitle>
+                                {isOrganizer && ( // Only show button to organizer
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1"
+                                        onClick={handleReserveEquipmentClick}
+                                        disabled={
+                                            createEquipmentReservationMutation.isPending
+                                        }
+                                    >
+                                        <CalendarPlus className="h-4 w-4" />
+                                        Reserve Equipment
+                                    </Button>
+                                )}
+                            </CardHeader>
+                            <CardContent>
+                                {reservedEquipments.length > 0 ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Equipment</TableHead>
+                                                <TableHead>Quantity</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                {/* Add more columns if needed */}
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {reservedEquipments.map(
+                                                (reservation) => (
+                                                    <TableRow
+                                                        key={reservation.id}
+                                                    >
+                                                        <TableCell>
+                                                            {
+                                                                reservation.equipmentName
+                                                            }
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {
+                                                                reservation.quantity
+                                                            }
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge
+                                                                className={`${getStatusColor(reservation.status)}`}
+                                                            >
+                                                                {reservation.status
+                                                                    .charAt(0)
+                                                                    .toUpperCase() +
+                                                                    reservation.status
+                                                                        .slice(
+                                                                            1,
+                                                                        )
+                                                                        .toLowerCase()}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        {/* Add more cells if needed */}
+                                                    </TableRow>
+                                                ),
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <div className="text-center text-muted-foreground py-4">
+                                        No equipment reserved for this event
+                                        yet.
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
                         <Card>
                             <CardHeader>
                                 <CardTitle>Approval Status</CardTitle>
@@ -968,6 +1141,25 @@ export function EventDetailsPage() {
                     onClose={() => setIsEditModalOpen(false)}
                     event={event} // Pass the loaded event data
                     venues={venues} // Pass the loaded venues data
+                />
+            )}
+            {isOrganizer && (
+                <EquipmentReservationFormDialog
+                    isOpen={isReserveEquipmentDialogOpen}
+                    onClose={() => setIsReserveEquipmentDialogOpen(false)}
+                    onSubmit={handleReserveEquipmentSubmit}
+                    // Pass the current event directly, not a list
+                    // The dialog needs modification to accept a single event or just eventId
+                    // For now, passing a single-item array might work depending on dialog logic
+                    event={event} // Pass current event in an array
+                    // Filter available equipment (optional, could be done in dialog)
+                    // Use nullish coalescing operator (??) to provide an empty array fallback
+                    equipment={(availableEquipments ?? []).filter(
+                        (e) => e.availability,
+                    )}
+                    isLoading={createEquipmentReservationMutation.isPending}
+                    // Indicate that the event is pre-selected
+                    preselectedEventId={eventIdNum}
                 />
             )}
         </div>

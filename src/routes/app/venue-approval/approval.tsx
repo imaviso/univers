@@ -187,10 +187,9 @@ export function VenueReservationApproval() {
         );
     }, [fetchedReservations, statusFilter, venueFilter, viewMode]);
 
-    // ... handleViewDetails, handleNavigateToVenue ...
     const handleViewDetails = React.useCallback(
-        (reservationId: number) => {
-            navigate({ to: `/app/venue-approval/${reservationId}` });
+        (eventId: number) => {
+            navigate({ to: `/app/events/${eventId}` });
         },
         [navigate],
     );
@@ -552,7 +551,9 @@ export function VenueReservationApproval() {
                                     </DropdownMenuLabel>
                                     <DropdownMenuItem
                                         onClick={() =>
-                                            handleViewDetails(reservation.id)
+                                            handleViewDetails(
+                                                reservation.eventId,
+                                            )
                                         }
                                     >
                                         <Eye className="mr-2 h-4 w-4" />

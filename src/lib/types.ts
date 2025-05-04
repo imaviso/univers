@@ -318,7 +318,6 @@ export type VenueReservationDTO = {
     startTime: string;
     endTime: string;
     status: string;
-    reservationLetterUrl: string | null;
     approvals: VenueApprovalDTO[] | null;
     createdAt: string;
     updatedAt: string | null;
@@ -335,13 +334,11 @@ export type CreateVenueReservationInput = {
         | "approvals"
         | "createdAt"
         | "updatedAt"
-        | "reservationLetterUrl"
         | "status"
     > & {
         // Add specific fields needed for creation if different from DTO
         // Example: maybe only venueId, startTime, endTime are needed initially
     };
-    reservationLetterFile?: File | null;
 };
 
 export type ReservationActionInput = {
@@ -373,7 +370,6 @@ export type EquipmentReservationDTO = {
     startTime: string;
     endTime: string;
     status: string;
-    reservationLetterUrl: string | null;
     approvals: EquipmentApprovalDTO[] | null;
     createdAt: string;
     updatedAt: string | null;
@@ -388,7 +384,6 @@ export type CreateEquipmentReservationInput = {
         startTime?: string;
         endTime?: string;
     };
-    reservationLetterFile?: File | null;
 };
 
 export type EquipmentActionInput = {

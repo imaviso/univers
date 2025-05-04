@@ -1,7 +1,6 @@
 import ErrorPage from "@/components/ErrorPage";
 import PendingPage from "@/components/PendingPage";
 import { EquipmentFormDialog } from "@/components/equipment-inventory/equipmentFormDialog";
-import { EquipmentReservationFormDialog } from "@/components/equipment-reservation/equipmentReservationForm";
 import UserReservations from "@/components/equipment-reservation/userReservation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,36 +18,22 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { addEquipment, deleteEquipment, editEquipment } from "@/lib/api";
-import { API_BASE_URL } from "@/lib/auth";
 import { allNavigation } from "@/lib/navigation";
 import {
     equipmentsQueryOptions,
     ownEventsQueryOptions,
-    useCreateEquipmentReservationMutation,
     useCurrentUser,
     usersQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
-import type {
-    EquipmentDTOInput,
-    EquipmentReservationFormInput,
-} from "@/lib/schema";
-import { type Equipment, STATUS_EQUIPMENT, type UserType } from "@/lib/types";
-import { getEquipmentNameById } from "@/lib/utils";
+import type { EquipmentDTOInput } from "@/lib/schema";
+import type { Equipment, UserType } from "@/lib/types";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
@@ -56,15 +41,9 @@ import {
     useNavigate,
     useRouteContext,
 } from "@tanstack/react-router";
-import type {
-    ColumnDef,
-    Row,
-    RowSelectionState,
-    Table as TanstackTable,
-} from "@tanstack/react-table"; // Import Table as TanstackTable
+import type { ColumnDef, Row, RowSelectionState } from "@tanstack/react-table";
 import {
     AlertTriangle,
-    CalendarPlus,
     CheckCircle,
     Download,
     Edit,
@@ -74,26 +53,8 @@ import {
     Trash2,
     Wrench,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react"; // Added useCallback
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-
-const categories = [
-    "Audio/Visual",
-    "Computers",
-    "Furniture",
-    "Office Equipment",
-    "Other",
-];
-const locations = [
-    "Main Conference Hall",
-    "Auditorium",
-    "Workshop Room A",
-    "Workshop Room B",
-    "Equipment Storage Room A",
-    "Equipment Storage Room B",
-    "IT Department",
-];
-
 export const Route = createFileRoute("/app/equipments")({
     beforeLoad: async ({ location, context }) => {
         const navigationItem = allNavigation.find((item) => {
@@ -241,83 +202,6 @@ function EquipmentInventory() {
 
     // Bulk delete endpoint not available on backend
     // const bulkDeleteMutation = useMutation({ ... });
-
-    // --- Event Handlers ---
-    const createEquipmentReservationMutation =
-        useCreateEquipmentReservationMutation();
-
-    const handleReserveEquipment = async (
-        formData: EquipmentReservationFormInput,
-    ) => {
-        console.log("Reservation form submitted:", formData);
-        setIsReservationDialogOpen(false); // Close dialog immediately
-
-        const {
-            eventId,
-            startDateTime,
-            endDateTime,
-            selectedEquipment,
-            reservationLetterFile,
-        } = formData;
-
-        // Prepare common data
-        const commonReservationData = {
-            eventId: Number(eventId),
-            startTime: startDateTime?.toISOString(), // Convert Date to ISO string
-            endTime: endDateTime?.toISOString(), // Convert Date to ISO string
-            // departmentId will be set by backend based on user
-        };
-
-        const letterFile = reservationLetterFile?.[0] ?? null; // Get the single file or null
-
-        let successCount = 0;
-        let errorCount = 0;
-        const totalRequests = selectedEquipment.length;
-
-        // Loop through selected equipment and create individual reservations
-        for (const item of selectedEquipment) {
-            const reservationData = {
-                ...commonReservationData,
-                equipmentId: Number(item.equipmentId),
-                quantity: item.quantity,
-            };
-
-            try {
-                await createEquipmentReservationMutation.mutateAsync({
-                    reservationData,
-                    reservationLetterFile: letterFile, // Pass the same letter file for all
-                });
-                successCount++;
-            } catch (error) {
-                errorCount++;
-                console.error(
-                    `Failed to reserve equipment ID ${item.equipmentId}:`,
-                    error,
-                );
-                // Show individual error toast
-                toast.error(
-                    `Failed to reserve item ${getEquipmentNameById(equipment, Number(item.equipmentId)) || `ID ${item.equipmentId}`}: ${(error as Error).message}`,
-                );
-            }
-        }
-
-        // Show summary toast
-        if (successCount > 0 && errorCount === 0) {
-            toast.success(
-                `Successfully submitted ${successCount} equipment reservation request(s).`,
-            );
-        } else if (successCount > 0 && errorCount > 0) {
-            toast.warning(
-                `Submitted ${successCount} reservation request(s) successfully, but ${errorCount} failed.`,
-            );
-        } else if (successCount === 0 && errorCount > 0) {
-            toast.error(
-                `Failed to submit ${errorCount} equipment reservation request(s).`,
-            );
-        }
-        // Optionally reset form state here if not handled by dialog close
-        // form.reset(); // If form instance was available here
-    };
 
     const handleEditEquipment = useCallback(
         (equipmentData: Equipment) => {
@@ -690,9 +574,7 @@ function EquipmentInventory() {
             <div className="flex flex-col flex-1 overflow-hidden">
                 {/* Header */}
                 <header className="flex items-center justify-between border-b px-6 py-3.5 h-16">
-                    <h1 className="text-xl font-semibold">
-                        Equipment Inventory
-                    </h1>
+                    <h1 className="text-xl font-semibold">Equipments</h1>
                     <div className="flex items-center gap-2">
                         {(role === "SUPER_ADMIN" ||
                             role === "EQUIPMENT_OWNER") && (
@@ -709,21 +591,6 @@ function EquipmentInventory() {
                                 Add Equipment
                             </Button>
                         )}
-                        {/* Reservation Button for non-admins/owners */}
-                        {role !== "SUPER_ADMIN" &&
-                            role !== "EQUIPMENT_OWNER" && (
-                                <Button
-                                    onClick={() =>
-                                        setIsReservationDialogOpen(true)
-                                    }
-                                    size="sm"
-                                    className="gap-1"
-                                    // disabled={isMutating} // Disable if needed
-                                >
-                                    <CalendarPlus className="h-4 w-4" />
-                                    Reserve Equipment
-                                </Button>
-                            )}
                     </div>
                 </header>
 
@@ -1101,18 +968,6 @@ function EquipmentInventory() {
                                 ? "Are you sure you want to permanently delete this equipment?"
                                 : "Are you sure you want to permanently delete the selected equipment items?" // This part is now unused
                         }
-                    />
-                )}
-
-                {role !== "SUPER_ADMIN" && role !== "EQUIPMENT_OWNER" && (
-                    <EquipmentReservationFormDialog
-                        isOpen={isReservationDialogOpen}
-                        onClose={() => setIsReservationDialogOpen(false)}
-                        onSubmit={handleReserveEquipment}
-                        events={events}
-                        equipment={equipment.filter((e) => e.availability)}
-                        // Use the correct mutation's loading state
-                        isLoading={createEquipmentReservationMutation.isPending}
                     />
                 )}
             </div>

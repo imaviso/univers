@@ -8,6 +8,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { LoaderCircleIcon } from "lucide-react";
 
 interface DeleteConfirmDialogProps {
     isOpen: boolean;
@@ -41,7 +42,18 @@ export function DeleteConfirmDialog({
                         onClick={onConfirm}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                        {isLoading ? "Processing..." : "Deactivate"}
+                        {isLoading ? (
+                            <>
+                                <LoaderCircleIcon
+                                    className="-ms-1 animate-spin"
+                                    size={16}
+                                    aria-hidden="true"
+                                />
+                                Deactivate
+                            </>
+                        ) : (
+                            "Deactivate"
+                        )}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -171,8 +171,8 @@ export function EquipmentReservationApproval() {
     }, [reservations]);
 
     // --- Event Handlers ---
-    const handleViewDetails = (reservationId: number) => {
-        navigate({ to: `/app/equipment-approval/${reservationId}` });
+    const handleViewDetails = (eventId: number) => {
+        navigate({ to: `/app/events/${eventId}` });
     };
 
     // --- Render Logic ---
@@ -392,7 +392,7 @@ export function EquipmentReservationApproval() {
                                                     <DropdownMenuItem
                                                         onClick={() =>
                                                             handleViewDetails(
-                                                                res.id,
+                                                                res.eventId,
                                                             )
                                                         }
                                                     >
