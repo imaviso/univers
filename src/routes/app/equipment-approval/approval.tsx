@@ -1,21 +1,25 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     DropdownMenu,
+    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
     Table,
     TableBody,
@@ -25,16 +29,15 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { allNavigation } from "@/lib/navigation";
 import {
     allEquipmentOwnerReservationsQueryOptions,
-    allEquipmentReservationsQueryOptions,
-    ownEquipmentReservationsQueryOptions,
-    pendingEquipmentOwnerReservationsQueryOptions,
-    useCurrentUser,
+    useApproveEquipmentReservationMutation,
+    useRejectEquipmentReservationMutation,
 } from "@/lib/query";
 import type { EquipmentReservationDTO, UserRole } from "@/lib/types";
-import { formatDateTime, getStatusBadgeClass } from "@/lib/utils"; // Use utils
+import { formatDateTime, getStatusBadgeClass } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
@@ -42,14 +45,34 @@ import {
     useNavigate,
     useRouteContext,
 } from "@tanstack/react-router";
-import { Download, Eye, Filter, MoreHorizontal, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+    type ColumnDef,
+    type RowSelectionState,
+    type SortingState,
+    type VisibilityState,
+    flexRender,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getPaginationRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
+import {
+    ArrowUpDown,
+    Check,
+    ChevronDown,
+    Eye,
+    MoreHorizontal,
+    Search,
+    X,
+    XCircle,
+} from "lucide-react";
+import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/equipment-approval/approval")({
     component: EquipmentReservationApproval,
     beforeLoad: async ({ location, context }) => {
-        // ... (keep existing beforeLoad logic) ...
         const navigationItem = allNavigation.find((item) => {
             return (
                 location.pathname === item.href ||
@@ -74,119 +97,537 @@ export const Route = createFileRoute("/app/equipment-approval/approval")({
         if (!isAuthorized) {
             toast.error("You are not authorized to view this page.");
             throw redirect({
-                to: "/app", // Redirect to a safe page
+                to: "/app",
             });
         }
     },
-    // Optionally prefetch data based on role
     loader: ({ context }) => {
-        const role = context.authState?.role;
-        if (role === "EQUIPMENT_OWNER") {
-            context.queryClient.ensureQueryData(
-                pendingEquipmentOwnerReservationsQueryOptions,
-            );
-        } else if (role === "SUPER_ADMIN") {
-            context.queryClient.ensureQueryData(
-                allEquipmentReservationsQueryOptions,
-            );
-        } else {
-            // Prefetch own reservations for other roles if needed
-            // context.queryClient.ensureQueryData(ownEquipmentReservationsQueryOptions);
-        }
+        context.queryClient.ensureQueryData(
+            allEquipmentOwnerReservationsQueryOptions,
+        );
     },
 });
 
-// Define view modes based on backend endpoints/logic
-type ViewMode = "all" | "pending" | "approved" | "disapproved"; // Keep these simple status filters
+type ViewMode = "all" | "pending" | "approved" | "rejected";
+
+type SingleActionInfo = {
+    id: number | null;
+    type: "approve" | "reject" | null;
+};
 
 export function EquipmentReservationApproval() {
     const navigate = useNavigate();
-    const { authState } = useRouteContext({ from: "/app" }); // Get auth state
+    const { authState } = useRouteContext({ from: "/app" });
     const currentUserRole = authState?.role as UserRole | undefined;
+    const currentUserId = Number(authState?.id);
 
-    const [searchQuery, setSearchQuery] = useState("");
-    // const [statusFilter, setStatusFilter] = useState<string | null>(null); // Replaced by viewMode
-    // const [ownerFilter, setOwnerFilter] = useState<string | null>(null); // Backend handles owner filtering
-    const [viewMode, setViewMode] = useState<ViewMode>("pending"); // Default to pending for approvers
+    const [viewMode, setViewMode] = useState<ViewMode>("pending");
 
-    // --- Determine Query based on Role and View ---
-    const queryOptions = useMemo(() => {
-        if (currentUserRole === "EQUIPMENT_OWNER") {
-            // Equipment owners see reservations related to their equipment
-            if (viewMode === "pending") {
-                return pendingEquipmentOwnerReservationsQueryOptions;
-            }
-            // For 'all', 'approved', 'disapproved', fetch all and filter client-side for now
-            // Or backend could add status filters to the 'allEquipmentOwnerReservations' endpoint
-            return allEquipmentOwnerReservationsQueryOptions;
-        }
-        if (currentUserRole === "SUPER_ADMIN") {
-            // Super Admins see all reservations
-            return allEquipmentReservationsQueryOptions;
-        }
-        // Default: Other users see their own reservations (if this page is intended for them)
-        // If only for approvers, this case might redirect or show nothing.
-        return ownEquipmentReservationsQueryOptions;
-    }, [currentUserRole, viewMode]);
+    const [sorting, setSorting] = React.useState<SortingState>([]);
+    const [columnVisibility, setColumnVisibility] =
+        React.useState<VisibilityState>({});
+    const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
+        {},
+    );
+    const [globalFilter, setGlobalFilter] = useState("");
 
-    const { data: reservations = [], isLoading } = useQuery(queryOptions);
+    const [singleActionInfo, setSingleActionInfo] = useState<SingleActionInfo>({
+        id: null,
+        type: null,
+    });
+    const [singleActionRemarks, setSingleActionRemarks] = useState("");
+    const [isBulkApproveDialogOpen, setIsBulkApproveDialogOpen] =
+        useState(false);
+    const [bulkApproveRemarks, setBulkApproveRemarks] = useState("");
+    const [isBulkRejectDialogOpen, setIsBulkRejectDialogOpen] = useState(false);
+    const [bulkRejectionRemarks, setBulkRejectionRemarks] = useState("");
 
-    // --- Client-side Filtering (Apply search and viewMode status filter) ---
-    const filteredReservations = useMemo(() => {
+    const approveMutation = useApproveEquipmentReservationMutation();
+    const rejectMutation = useRejectEquipmentReservationMutation();
+
+    const { data: reservations = [], isLoading } = useQuery(
+        allEquipmentOwnerReservationsQueryOptions,
+    );
+
+    const preFilteredReservations = useMemo(() => {
         return reservations.filter((reservation) => {
-            const lowerSearch = searchQuery.toLowerCase();
-            const matchesSearch =
-                reservation.eventName?.toLowerCase().includes(lowerSearch) ||
-                reservation.requestingUser?.firstName
-                    ?.toLowerCase()
-                    .includes(lowerSearch) ||
-                reservation.requestingUser?.lastName
-                    ?.toLowerCase()
-                    .includes(lowerSearch) ||
-                reservation.departmentName
-                    ?.toLowerCase()
-                    .includes(lowerSearch) ||
-                reservation.equipmentName?.toLowerCase().includes(lowerSearch);
-
             const matchesViewModeStatus =
                 viewMode === "all" ||
                 reservation.status.toLowerCase() === viewMode;
-
-            return matchesSearch && matchesViewModeStatus;
+            return matchesViewModeStatus;
         });
-    }, [reservations, searchQuery, viewMode]);
+    }, [reservations, viewMode]);
 
-    // --- Reservation statistics (calculated from potentially filtered data) ---
+    const handleViewDetails = React.useCallback(
+        (eventId: number | undefined) => {
+            if (eventId === undefined) return;
+            navigate({ to: `/app/events/${eventId}` });
+        },
+        [navigate],
+    );
+
+    const openSingleApproveDialog = React.useCallback(
+        (reservationId: number) => {
+            setSingleActionInfo({ id: reservationId, type: "approve" });
+            setSingleActionRemarks("");
+        },
+        [],
+    );
+
+    const openSingleRejectDialog = React.useCallback(
+        (reservationId: number) => {
+            setSingleActionInfo({ id: reservationId, type: "reject" });
+            setSingleActionRemarks("");
+        },
+        [],
+    );
+
+    const closeSingleActionDialog = () => {
+        setSingleActionInfo({ id: null, type: null });
+        setSingleActionRemarks("");
+    };
+
+    const confirmSingleApprove = () => {
+        if (singleActionInfo.type !== "approve" || singleActionInfo.id === null)
+            return;
+
+        approveMutation.mutate(
+            {
+                reservationId: singleActionInfo.id,
+                remarks: singleActionRemarks,
+            },
+            {
+                onSuccess: (message) => {
+                    toast.success(message || "Reservation approved.");
+                    setRowSelection({});
+                    closeSingleActionDialog();
+                },
+                onError: (error) => {
+                    toast.error(error.message || "Failed to approve.");
+                },
+            },
+        );
+    };
+
+    const confirmSingleReject = () => {
+        if (singleActionInfo.type !== "reject" || singleActionInfo.id === null)
+            return;
+        if (!singleActionRemarks.trim()) {
+            toast.warning("Please provide a reason for rejection.");
+            return;
+        }
+
+        rejectMutation.mutate(
+            {
+                reservationId: singleActionInfo.id,
+                remarks: singleActionRemarks,
+            },
+            {
+                onSuccess: (message) => {
+                    toast.success(message || "Reservation rejected.");
+                    setRowSelection({});
+                    closeSingleActionDialog();
+                },
+                onError: (error) => {
+                    toast.error(error.message || "Failed to reject.");
+                },
+            },
+        );
+    };
+
+    const confirmBulkApprove = () => {
+        const selectedRows = table.getFilteredSelectedRowModel().rows;
+        const eligibleRows = selectedRows.filter((row) => {
+            const reservation = row.original;
+            const isPending = reservation.status === "PENDING";
+            const hasCurrentUserActed =
+                currentUserId != null &&
+                reservation.approvals?.some(
+                    (approval) => approval.userId === currentUserId,
+                );
+            return isPending && !hasCurrentUserActed;
+        });
+        const selectedIds = eligibleRows.map((row) => row.original.id);
+
+        if (selectedIds.length === 0) {
+            toast.info("No eligible reservations selected for approval.");
+            setIsBulkApproveDialogOpen(false);
+            setBulkApproveRemarks("");
+            return;
+        }
+
+        const promises = selectedIds.map((id) =>
+            approveMutation.mutateAsync({
+                reservationId: id,
+                remarks: bulkApproveRemarks,
+            }),
+        );
+
+        toast.promise(Promise.all(promises), {
+            loading: `Approving ${selectedIds.length} reservation(s)...`,
+            success: () => {
+                setRowSelection({});
+                setIsBulkApproveDialogOpen(false);
+                setBulkApproveRemarks("");
+                return `${selectedIds.length} reservation(s) approved.`;
+            },
+            error: (err) => {
+                return `Failed to approve some reservations: ${err instanceof Error ? err.message : "Unknown error"}`;
+            },
+        });
+    };
+
+    const confirmBulkReject = () => {
+        const selectedRows = table.getFilteredSelectedRowModel().rows;
+        const eligibleRows = selectedRows.filter((row) => {
+            const reservation = row.original;
+            const isPending = reservation.status === "PENDING";
+            const hasCurrentUserActed =
+                currentUserId != null &&
+                reservation.approvals?.some(
+                    (approval) => approval.userId === currentUserId,
+                );
+            return isPending && !hasCurrentUserActed;
+        });
+        const selectedIds = eligibleRows.map((row) => row.original.id);
+
+        if (selectedIds.length === 0) {
+            toast.info("No eligible reservations selected for rejection.");
+            setIsBulkRejectDialogOpen(false);
+            setBulkRejectionRemarks("");
+            return;
+        }
+        if (!bulkRejectionRemarks.trim()) {
+            toast.warning("Please provide a reason for rejection.");
+            return;
+        }
+
+        const promises = selectedIds.map((id) =>
+            rejectMutation.mutateAsync({
+                reservationId: id,
+                remarks: bulkRejectionRemarks,
+            }),
+        );
+
+        toast.promise(Promise.all(promises), {
+            loading: `Rejecting ${selectedIds.length} reservation(s)...`,
+            success: () => {
+                setRowSelection({});
+                setIsBulkRejectDialogOpen(false);
+                setBulkRejectionRemarks("");
+                return `${selectedIds.length} reservation(s) rejected.`;
+            },
+            error: (err) => {
+                return `Failed to reject some reservations: ${err instanceof Error ? err.message : "Unknown error"}`;
+            },
+        });
+    };
+    // --- End Dialog Confirmation Handlers ---
+
+    // --- Table Columns Definition ---
+    const columns = useMemo<ColumnDef<EquipmentReservationDTO>[]>(
+        () => [
+            {
+                id: "select",
+                header: ({ table }) => (
+                    <Checkbox
+                        checked={
+                            table.getIsAllPageRowsSelected() ||
+                            (table.getIsSomePageRowsSelected() &&
+                                "indeterminate")
+                        }
+                        onCheckedChange={(value) =>
+                            table.toggleAllPageRowsSelected(!!value)
+                        }
+                        aria-label="Select all"
+                        className="translate-y-[2px]"
+                    />
+                ),
+                cell: ({ row }) => (
+                    <Checkbox
+                        checked={row.getIsSelected()}
+                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        aria-label="Select row"
+                        className="translate-y-[2px]"
+                    />
+                ),
+                enableSorting: false,
+                enableHiding: false,
+            },
+            {
+                accessorKey: "eventName",
+                header: "Event",
+                cell: ({ row }) => (
+                    <Button
+                        variant="link"
+                        className="p-0 h-auto font-medium"
+                        onClick={() => handleViewDetails(row.original.eventId)}
+                    >
+                        {row.original.eventName ?? "N/A"}
+                    </Button>
+                ),
+            },
+            {
+                accessorKey: "equipmentName",
+                header: "Equipment",
+                cell: ({ row }) => row.original.equipmentName ?? "N/A",
+            },
+            {
+                accessorKey: "quantity",
+                header: "Qty",
+            },
+            {
+                id: "requesterName",
+                header: "Requester",
+                accessorFn: (row) =>
+                    `${row.requestingUser?.firstName ?? ""} ${row.requestingUser?.lastName ?? ""}`.trim() ||
+                    "N/A",
+            },
+            {
+                accessorKey: "departmentName",
+                header: "Department",
+                cell: ({ row }) => row.original.departmentName ?? "N/A",
+            },
+            {
+                accessorKey: "startTime",
+                header: ({ column }) => (
+                    <Button
+                        variant="ghost"
+                        onClick={() =>
+                            column.toggleSorting(column.getIsSorted() === "asc")
+                        }
+                    >
+                        Start Time
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
+                cell: ({ row }) => formatDateTime(row.original.startTime),
+            },
+            {
+                accessorKey: "endTime",
+                header: "End Time",
+                cell: ({ row }) => formatDateTime(row.original.endTime),
+            },
+            {
+                accessorKey: "status",
+                header: "Status",
+                cell: ({ row }) => (
+                    <Badge className={getStatusBadgeClass(row.original.status)}>
+                        {row.original.status}
+                    </Badge>
+                ),
+            },
+            {
+                id: "yourAction",
+                header: "Your Action",
+                cell: ({ row }) => {
+                    const reservation = row.original;
+                    const currentUserApproval =
+                        currentUserId != null
+                            ? reservation.approvals?.find(
+                                  (approval) =>
+                                      approval.userId === currentUserId,
+                              )
+                            : undefined;
+
+                    if (!currentUserApproval) {
+                        return <span className="text-muted-foreground">-</span>;
+                    }
+                    if (currentUserApproval.status === "APPROVED") {
+                        return (
+                            <div className="flex items-center justify-center text-green-600">
+                                <Check className="h-4 w-4" />
+                                <span className="sr-only">Approved by you</span>
+                            </div>
+                        );
+                    }
+                    if (currentUserApproval.status === "REJECTED") {
+                        return (
+                            <div className="flex items-center justify-center text-red-600">
+                                <XCircle className="h-4 w-4" />
+                                <span className="sr-only">Rejected by you</span>
+                            </div>
+                        );
+                    }
+                    return <span className="text-muted-foreground">-</span>;
+                },
+                enableSorting: false,
+            },
+            {
+                accessorKey: "createdAt",
+                header: ({ column }) => (
+                    <Button
+                        variant="ghost"
+                        onClick={() =>
+                            column.toggleSorting(column.getIsSorted() === "asc")
+                        }
+                    >
+                        Submitted
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
+                cell: ({ row }) => formatDateTime(row.original.createdAt),
+            },
+            {
+                id: "actions",
+                header: () => <div className="text-center">Actions</div>,
+                cell: ({ row }) => {
+                    const reservation = row.original;
+                    const isPending = reservation.status === "PENDING";
+                    const currentUserApproval =
+                        currentUserId != null
+                            ? reservation.approvals?.find(
+                                  (approval) =>
+                                      approval.userId === currentUserId,
+                              )
+                            : undefined;
+                    const hasCurrentUserActed = !!currentUserApproval;
+                    const showApprovalActions =
+                        isPending && !hasCurrentUserActed;
+
+                    return (
+                        <div className="text-center">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                    >
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>
+                                        Actions
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                        onClick={() =>
+                                            handleViewDetails(
+                                                reservation.eventId,
+                                            )
+                                        }
+                                    >
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        View Details
+                                    </DropdownMenuItem>
+                                    {/* Add link to equipment details if applicable */}
+                                    {/* <DropdownMenuItem onClick={() => handleViewEquipment(reservation.equipmentId)}>
+                                        <Package className="mr-2 h-4 w-4" />
+                                        View Equipment
+                                    </DropdownMenuItem> */}
+                                    {showApprovalActions && (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onClick={() =>
+                                                    openSingleApproveDialog(
+                                                        reservation.id,
+                                                    )
+                                                }
+                                                disabled={
+                                                    approveMutation.isPending
+                                                }
+                                            >
+                                                <Check className="mr-2 h-4 w-4 text-green-600" />
+                                                Approve
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() =>
+                                                    openSingleRejectDialog(
+                                                        reservation.id,
+                                                    )
+                                                }
+                                                disabled={
+                                                    rejectMutation.isPending
+                                                }
+                                                className="text-red-600 focus:text-red-600"
+                                            >
+                                                <X className="mr-2 h-4 w-4" />
+                                                Reject
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+                                    {/* Add Cancel/Delete actions if needed, based on role/status */}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    );
+                },
+                enableSorting: false,
+                enableHiding: false,
+            },
+        ],
+        [
+            currentUserId,
+            handleViewDetails,
+            openSingleApproveDialog,
+            openSingleRejectDialog,
+            approveMutation.isPending,
+            rejectMutation.isPending,
+        ],
+    );
+    // --- End Table Columns Definition ---
+
+    // --- Table Instance ---
+    const table = useReactTable({
+        data: preFilteredReservations,
+        columns,
+        state: {
+            sorting,
+            columnVisibility,
+            rowSelection,
+            globalFilter,
+        },
+        enableRowSelection: true,
+        onRowSelectionChange: setRowSelection,
+        onSortingChange: setSorting,
+        onColumnVisibilityChange: setColumnVisibility,
+        onGlobalFilterChange: setGlobalFilter,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        getRowId: (row) => row.id.toString(),
+    });
+
     const stats = useMemo(() => {
-        // Calculate stats based on the *source* data before client-side search filtering
-        // but potentially after role-based fetching
         const sourceData = reservations;
         return {
             total: sourceData.length,
             pending: sourceData.filter((r) => r.status === "PENDING").length,
             approved: sourceData.filter((r) => r.status === "APPROVED").length,
-            disapproved: sourceData.filter((r) => r.status === "REJECTED")
-                .length, // Use REJECTED
+            rejected: sourceData.filter(
+                (r) => r.status === "REJECTED" || r.status === "CANCELLED",
+            ).length,
         };
     }, [reservations]);
 
-    // --- Event Handlers ---
-    const handleViewDetails = (eventId: number) => {
-        navigate({ to: `/app/events/${eventId}` });
-    };
+    const numSelected = table.getFilteredSelectedRowModel().rows.length;
+    const numEligibleSelected = table
+        .getFilteredSelectedRowModel()
+        .rows.filter((row) => {
+            const reservation = row.original;
+            const isPending = reservation.status === "PENDING";
+            const hasCurrentUserActed =
+                currentUserId != null &&
+                reservation.approvals?.some(
+                    (approval) => approval.userId === currentUserId,
+                );
+            return isPending && !hasCurrentUserActed;
+        }).length;
+    // --- End Selected Row Counts ---
 
     // --- Render Logic ---
     if (!currentUserRole) {
-        // Should be handled by beforeLoad, but good practice
         return <div>Loading user...</div>;
     }
 
-    // Determine which tabs to show based on role
     const availableTabs: ViewMode[] =
         currentUserRole === "EQUIPMENT_OWNER" ||
         currentUserRole === "SUPER_ADMIN"
-            ? ["pending", "approved", "disapproved", "all"]
-            : ["all"]; // Regular users might only see 'all' of their own
+            ? ["pending", "approved", "rejected", "all"]
+            : ["all"];
 
     return (
         <div className="bg-background">
@@ -202,18 +643,47 @@ export function EquipmentReservationApproval() {
                                 type="search"
                                 placeholder="Search reservations..."
                                 className="w-64 pl-8"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                value={globalFilter}
+                                onChange={(e) =>
+                                    setGlobalFilter(e.target.value)
+                                }
                             />
                         </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="ml-auto">
+                                    Columns{" "}
+                                    <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                {table
+                                    .getAllColumns()
+                                    .filter((column) => column.getCanHide())
+                                    .map((column) => {
+                                        return (
+                                            <DropdownMenuCheckboxItem
+                                                key={column.id}
+                                                className="capitalize"
+                                                checked={column.getIsVisible()}
+                                                onCheckedChange={(value) =>
+                                                    column.toggleVisibility(
+                                                        !!value,
+                                                    )
+                                                }
+                                            >
+                                                {column.id}
+                                            </DropdownMenuCheckboxItem>
+                                        );
+                                    })}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </header>
 
-                {/* Stats Cards */}
                 {(currentUserRole === "EQUIPMENT_OWNER" ||
                     currentUserRole === "SUPER_ADMIN") && (
                     <div className="grid grid-cols-4 gap-4 p-6 pb-0">
-                        {/* Stats Cards - Adjust labels/values if needed */}
                         <Card
                             className={`hover:shadow-md transition-shadow cursor-pointer ${viewMode === "all" ? "ring-2 ring-primary" : ""}`}
                             onClick={() => setViewMode("all")}
@@ -260,24 +730,23 @@ export function EquipmentReservationApproval() {
                             </CardContent>
                         </Card>
                         <Card
-                            className={`hover:shadow-md transition-shadow cursor-pointer ${viewMode === "disapproved" ? "ring-2 ring-primary" : ""}`}
-                            onClick={() => setViewMode("disapproved")}
+                            className={`hover:shadow-md transition-shadow cursor-pointer ${viewMode === "rejected" ? "ring-2 ring-primary" : ""}`}
+                            onClick={() => setViewMode("rejected")}
                         >
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm font-medium">
-                                    Rejected
+                                    Rejected/Cancelled
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold text-red-500">
-                                    {stats.disapproved}
+                                    {stats.rejected}
                                 </div>
                             </CardContent>
                         </Card>
                     </div>
                 )}
 
-                {/* Filter/Action Bar */}
                 <div className="flex items-center justify-between border-b px-6 py-2">
                     <div className="flex items-center gap-2">
                         <Tabs
@@ -298,19 +767,48 @@ export function EquipmentReservationApproval() {
                                 ))}
                             </TabsList>
                         </Tabs>
+                        {/* Bulk Actions */}
+                        {numEligibleSelected > 0 && (
+                            <div className="flex items-center gap-2 border-l pl-2 ml-2">
+                                <span className="text-sm text-muted-foreground">
+                                    {numEligibleSelected} eligible selected
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        setIsBulkApproveDialogOpen(true)
+                                    }
+                                    disabled={approveMutation.isPending}
+                                >
+                                    <Check className="mr-1 h-4 w-4 text-green-600" />
+                                    Approve
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        setIsBulkRejectDialogOpen(true)
+                                    }
+                                    disabled={rejectMutation.isPending}
+                                >
+                                    <X className="mr-1 h-4 w-4 text-red-600" />
+                                    Reject
+                                </Button>
+                            </div>
+                        )}
+                        {numSelected > 0 &&
+                            numSelected !== numEligibleSelected && (
+                                <div className="flex items-center gap-2 border-l pl-2 ml-2">
+                                    <span className="text-sm text-muted-foreground">
+                                        {numSelected - numEligibleSelected}{" "}
+                                        selected item(s) not eligible for
+                                        action.
+                                    </span>
+                                </div>
+                            )}
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        {/* Owner filter removed - backend handles this */}
-                        {/* <Button variant="outline" size="sm" className="gap-1">
-                            <Filter className="h-4 w-4" />
-                            More Filters
-                        </Button> */}
-                        {/* <Button variant="outline" size="sm" className="gap-1">
-                            <Download className="h-4 w-4" />
-                            Export
-                        </Button> */}
-                    </div>
+                    {/* Add other filters if needed (e.g., by equipment) */}
                 </div>
 
                 {/* Table */}
@@ -320,107 +818,278 @@ export function EquipmentReservationApproval() {
                             Loading reservations...
                         </p>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Event</TableHead>
-                                    <TableHead>Equipment</TableHead>
-                                    <TableHead>Qty</TableHead>
-                                    <TableHead>Requester</TableHead>
-                                    <TableHead>Department</TableHead>
-                                    <TableHead>Start Time</TableHead>
-                                    <TableHead>End Time</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Submitted</TableHead>
-                                    <TableHead className="w-[100px]">
-                                        Actions
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredReservations.map((res) => (
-                                    <TableRow key={res.id}>
-                                        <TableCell className="font-medium">
-                                            {/* Link to event details? */}
-                                            {res.eventName ?? "N/A"}
-                                        </TableCell>
-                                        <TableCell>
-                                            {res.equipmentName ?? "N/A"}
-                                        </TableCell>
-                                        <TableCell>{res.quantity}</TableCell>
-                                        <TableCell>
-                                            {res.requestingUser?.firstName}{" "}
-                                            {res.requestingUser?.lastName ??
-                                                "N/A"}
-                                        </TableCell>
-                                        <TableCell>
-                                            {res.departmentName ?? "N/A"}
-                                        </TableCell>
-                                        <TableCell>
-                                            {formatDateTime(res.startTime)}
-                                        </TableCell>
-                                        <TableCell>
-                                            {formatDateTime(res.endTime)}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                className={getStatusBadgeClass(
-                                                    res.status,
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    {table
+                                        .getHeaderGroups()
+                                        .map((headerGroup) => (
+                                            <TableRow key={headerGroup.id}>
+                                                {headerGroup.headers.map(
+                                                    (header) => {
+                                                        return (
+                                                            <TableHead
+                                                                key={header.id}
+                                                            >
+                                                                {header.isPlaceholder
+                                                                    ? null
+                                                                    : flexRender(
+                                                                          header
+                                                                              .column
+                                                                              .columnDef
+                                                                              .header,
+                                                                          header.getContext(),
+                                                                      )}
+                                                            </TableHead>
+                                                        );
+                                                    },
                                                 )}
+                                            </TableRow>
+                                        ))}
+                                </TableHeader>
+                                <TableBody>
+                                    {table.getRowModel().rows?.length ? (
+                                        table.getRowModel().rows.map((row) => (
+                                            <TableRow
+                                                key={row.id}
+                                                data-state={
+                                                    row.getIsSelected() &&
+                                                    "selected"
+                                                }
                                             >
-                                                {res.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {formatDateTime(res.createdAt)}
-                                        </TableCell>
-                                        <TableCell>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                    >
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>
-                                                        Actions
-                                                    </DropdownMenuLabel>
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handleViewDetails(
-                                                                res.eventId,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Eye className="mr-2 h-4 w-4" />
-                                                        View Details
-                                                    </DropdownMenuItem>
-                                                    {/* Add other actions like Cancel/Delete based on role/status */}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {filteredReservations.length === 0 && (
-                                    <TableRow>
-                                        <TableCell
-                                            colSpan={10} // Adjusted colspan
-                                            className="text-center py-8 text-muted-foreground"
-                                        >
-                                            No reservations found. Try adjusting
-                                            your filters.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                                {row
+                                                    .getVisibleCells()
+                                                    .map((cell) => (
+                                                        <TableCell
+                                                            key={cell.id}
+                                                        >
+                                                            {flexRender(
+                                                                cell.column
+                                                                    .columnDef
+                                                                    .cell,
+                                                                cell.getContext(),
+                                                            )}
+                                                        </TableCell>
+                                                    ))}
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell
+                                                colSpan={columns.length}
+                                                className="h-24 text-center"
+                                            >
+                                                No results.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
+                    {/* Pagination */}
+                    <div className="flex items-center justify-between space-x-2 py-4">
+                        <div className="flex-1 text-sm text-muted-foreground">
+                            {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                            {table.getFilteredRowModel().rows.length} row(s)
+                            selected.
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => table.previousPage()}
+                                disabled={!table.getCanPreviousPage()}
+                            >
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => table.nextPage()}
+                                disabled={!table.getCanNextPage()}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            {/* --- Dialogs --- */}
+            {/* Single Action Dialog */}
+            <Dialog
+                open={singleActionInfo.type !== null}
+                onOpenChange={(isOpen) => !isOpen && closeSingleActionDialog()}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {singleActionInfo.type === "approve"
+                                ? "Approve Reservation"
+                                : "Reject Reservation"}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {singleActionInfo.type === "approve"
+                                ? "Optionally add remarks for this approval."
+                                : "Please provide a reason for rejecting this reservation."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <Textarea
+                            placeholder={
+                                singleActionInfo.type === "approve"
+                                    ? "Optional remarks..."
+                                    : "Enter reason for rejection..."
+                            }
+                            value={singleActionRemarks}
+                            onChange={(e) =>
+                                setSingleActionRemarks(e.target.value)
+                            }
+                            rows={5}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={closeSingleActionDialog}
+                            disabled={
+                                approveMutation.isPending ||
+                                rejectMutation.isPending
+                            }
+                        >
+                            Cancel
+                        </Button>
+                        {singleActionInfo.type === "approve" && (
+                            <Button
+                                onClick={confirmSingleApprove}
+                                disabled={approveMutation.isPending}
+                            >
+                                {approveMutation.isPending
+                                    ? "Approving..."
+                                    : "Approve"}
+                            </Button>
+                        )}
+                        {singleActionInfo.type === "reject" && (
+                            <Button
+                                variant="destructive"
+                                onClick={confirmSingleReject}
+                                disabled={
+                                    !singleActionRemarks.trim() ||
+                                    rejectMutation.isPending
+                                }
+                            >
+                                {rejectMutation.isPending
+                                    ? "Rejecting..."
+                                    : "Reject"}
+                            </Button>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Approve Dialog */}
+            <Dialog
+                open={isBulkApproveDialogOpen}
+                onOpenChange={setIsBulkApproveDialogOpen}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Approve Selected Reservations</DialogTitle>
+                        <DialogDescription>
+                            Optionally add remarks for approving the{" "}
+                            {numEligibleSelected} selected eligible
+                            reservation(s). This note will be recorded for all
+                            of them.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <Textarea
+                            placeholder="Optional remarks..."
+                            value={bulkApproveRemarks}
+                            onChange={(e) =>
+                                setBulkApproveRemarks(e.target.value)
+                            }
+                            rows={5}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsBulkApproveDialogOpen(false);
+                                setBulkApproveRemarks("");
+                            }}
+                            disabled={approveMutation.isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={confirmBulkApprove}
+                            disabled={
+                                approveMutation.isPending ||
+                                numEligibleSelected === 0
+                            }
+                        >
+                            {approveMutation.isPending
+                                ? "Approving..."
+                                : `Approve ${numEligibleSelected} Item(s)`}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={isBulkRejectDialogOpen}
+                onOpenChange={setIsBulkRejectDialogOpen}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Reject Selected Reservations</DialogTitle>
+                        <DialogDescription>
+                            Provide a reason for rejecting the{" "}
+                            {numEligibleSelected} selected eligible
+                            reservation(s). This note will be recorded for all
+                            of them.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <Textarea
+                            placeholder="Enter reason for rejection..."
+                            value={bulkRejectionRemarks}
+                            onChange={(e) =>
+                                setBulkRejectionRemarks(e.target.value)
+                            }
+                            rows={5}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsBulkRejectDialogOpen(false);
+                                setBulkRejectionRemarks("");
+                            }}
+                            disabled={rejectMutation.isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmBulkReject}
+                            disabled={
+                                !bulkRejectionRemarks.trim() ||
+                                rejectMutation.isPending ||
+                                numEligibleSelected === 0
+                            }
+                        >
+                            {rejectMutation.isPending
+                                ? "Rejecting..."
+                                : `Reject ${numEligibleSelected} Item(s)`}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

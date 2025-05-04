@@ -550,11 +550,14 @@ export function VenueReservationApproval() {
                                         Actions
                                     </DropdownMenuLabel>
                                     <DropdownMenuItem
-                                        onClick={() =>
-                                            handleViewDetails(
-                                                reservation.eventId,
-                                            )
-                                        }
+                                        onClick={() => {
+                                            if (reservation.eventId !== null) {
+                                                handleViewDetails(
+                                                    reservation.eventId,
+                                                );
+                                            }
+                                        }}
+                                        disabled={reservation.eventId === null}
                                     >
                                         <Eye className="mr-2 h-4 w-4" />
                                         View Details
