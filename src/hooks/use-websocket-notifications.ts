@@ -63,15 +63,11 @@ export function useWebSocketNotifications() {
                             message.body,
                         );
                         const messageText =
-                            receivedPayload.message.toLowerCase();
+                            receivedPayload.message?.toLowerCase() || "";
                         const entityType =
                             receivedPayload.relatedEntityType?.toUpperCase();
-                        const entityId = receivedPayload.relatedEntityId; // Use entityId if available
+                        const entityId = receivedPayload.relatedEntityId;
 
-                        console.log("Received notification:", receivedPayload); // Helpful for debugging
-                        console.log(entityType, entityId);
-
-                        // --- Always Invalidate General Notifications ---
                         queryClient.invalidateQueries({
                             queryKey: notificationsQueryKeys.lists(),
                         });
