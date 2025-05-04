@@ -32,6 +32,7 @@ import {
     formatDateTime,
     formatRole,
     getApproverStatusBadge,
+    getBadgeVariant,
     getStatusBadgeClass,
 } from "@/lib/utils"; // Import utils
 import { useSuspenseQueries } from "@tanstack/react-query"; // Use useSuspenseQueries
@@ -56,9 +57,6 @@ export const Route = createFileRoute("/app/venue-approval/$reservationId")({
             await Promise.all([
                 queryClient.ensureQueryData(
                     reservationByIdQueryOptions(reservationId),
-                ),
-                queryClient.ensureQueryData(
-                    reservationApprovalsQueryOptions(reservationId),
                 ),
             ]);
         } catch (error) {
@@ -98,49 +96,50 @@ export const Route = createFileRoute("/app/venue-approval/$reservationId")({
 });
 
 function ReservationDetails() {
-    const { reservationId } = Route.useParams(); // Get ID from params
+    const { reservationId } = Route.useParams();
     const router = useRouter();
     const navigate = useNavigate();
     const onBack = () => router.history.back();
 
-    // Fetch data using useSuspenseQueries - guaranteed by loader
-    const [{ data: reservation }, { data: approvals }] = useSuspenseQueries({
-        queries: [
-            reservationByIdQueryOptions(reservationId),
-            reservationApprovalsQueryOptions(reservationId),
-        ],
+    const [{ data: reservation }] = useSuspenseQueries({
+        queries: [reservationByIdQueryOptions(reservationId)],
     });
 
-    // Dialog states
     const [isApprovalLetterDialogOpen, setIsApprovalLetterDialogOpen] =
         useState(false);
-    const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false); // Renamed
-    const [rejectionRemarks, setRejectionRemarks] = useState(""); // Renamed
+    const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+    const [approvalRemarks, setApprovalRemarks] = useState("");
+    const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+    const [rejectionRemarks, setRejectionRemarks] = useState("");
 
     // Mutations
     const approveMutation = useApproveReservationMutation();
     const rejectMutation = useRejectReservationMutation();
 
-    // Handle reservation operations
-    const handleApproveReservation = () => {
+    const confirmApproveReservation = () => {
+        // Renamed and updated
         approveMutation.mutate(
-            { reservationId: reservation.id, remarks: "" },
+            { reservationId: reservation.id, remarks: approvalRemarks }, // Use approvalRemarks
             {
                 onSuccess: (message) => {
                     toast.success(
                         message || "Reservation approved successfully.",
                     );
+                    setIsApprovalDialogOpen(false); // Close dialog on success
+                    setApprovalRemarks(""); // Reset remarks
                 },
                 onError: (error) => {
                     toast.error(
                         error.message || "Failed to approve reservation.",
                     );
+                    // Optionally keep dialog open on error
                 },
             },
         );
     };
 
-    const handleRejectReservation = () => {
+    const confirmRejectReservation = () => {
+        // Renamed for consistency
         if (!rejectionRemarks.trim()) {
             toast.warning("Please provide a reason for rejection.");
             return;
@@ -160,6 +159,7 @@ function ReservationDetails() {
                     toast.error(
                         error.message || "Failed to reject reservation.",
                     );
+                    // Optionally keep dialog open on error
                 },
             },
         );
@@ -238,21 +238,13 @@ function ReservationDetails() {
                             <Button
                                 className="gap-1"
                                 size="sm"
-                                onClick={handleApproveReservation}
+                                onClick={() => setIsApprovalDialogOpen(true)}
                                 disabled={
                                     approveMutation.isPending ||
                                     rejectMutation.isPending
                                 }
                             >
-                                {approveMutation.isPending ? (
-                                    "Approving..."
-                                ) : (
-                                    <>
-                                        {" "}
-                                        <CheckCircle2 className="h-4 w-4" />{" "}
-                                        Approve{" "}
-                                    </>
-                                )}
+                                <CheckCircle2 className="h-4 w-4" /> Approve
                             </Button>
                             <Button
                                 variant="destructive"
@@ -264,14 +256,7 @@ function ReservationDetails() {
                                     rejectMutation.isPending
                                 }
                             >
-                                {rejectMutation.isPending ? (
-                                    "Rejecting..."
-                                ) : (
-                                    <>
-                                        {" "}
-                                        <X className="h-4 w-4" /> Reject{" "}
-                                    </>
-                                )}
+                                <X className="h-4 w-4" /> Reject
                             </Button>
                         </div>
                     )}
@@ -446,7 +431,7 @@ function ReservationDetails() {
                                         </h3>
                                         <div className="mt-2 p-3 rounded-md border bg-destructive/2 border-destructive/20 text-destructive text-sm">
                                             {/* Find the rejection remark from approvals */}
-                                            {approvals?.find(
+                                            {reservation.approvals?.find(
                                                 (appr) =>
                                                     appr.status === "REJECTED",
                                             )?.remarks ||
@@ -464,7 +449,8 @@ function ReservationDetails() {
                             <CardTitle>Approval Status</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {approvals && approvals.length > 0 ? (
+                            {reservation.approvals &&
+                            reservation.approvals.length > 0 ? (
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -477,14 +463,18 @@ function ReservationDetails() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {approvals.map(
+                                        {reservation.approvals.map(
                                             (approval: VenueApprovalDTO) => (
                                                 <TableRow key={approval.id}>
                                                     <TableCell>
                                                         {approval.signedBy}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Badge variant="outline">
+                                                        <Badge
+                                                            className={getBadgeVariant(
+                                                                approval.userRole,
+                                                            )}
+                                                        >
                                                             {formatRole(
                                                                 approval.userRole,
                                                             )}
@@ -497,9 +487,13 @@ function ReservationDetails() {
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
-                                                        {getApproverStatusBadge(
-                                                            approval.status,
-                                                        )}
+                                                        <Badge
+                                                            className={getStatusBadgeClass(
+                                                                approval.status,
+                                                            )}
+                                                        >
+                                                            {approval.status}
+                                                        </Badge>
                                                     </TableCell>
                                                     <TableCell>
                                                         {approval.remarks ||
@@ -528,6 +522,7 @@ function ReservationDetails() {
                 open={isApprovalLetterDialogOpen}
                 onOpenChange={setIsApprovalLetterDialogOpen}
             >
+                {/* ... dialog content ... */}
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Reservation Letter</DialogTitle>
@@ -536,7 +531,6 @@ function ReservationDetails() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex justify-center">
-                        {/* Assume URL is directly viewable or needs specific handling */}
                         {reservation.reservationLetterUrl ? (
                             <img
                                 src={reservation.reservationLetterUrl}
@@ -544,8 +538,6 @@ function ReservationDetails() {
                                 title="Reservation Letter"
                                 alt="Reservation Letter"
                             />
-                            // Or use an img tag if it's always an image
-                            // <img src={reservation.reservationLetterUrl} alt="Reservation Letter" className="max-h-[70vh] object-contain border rounded-md" />
                         ) : (
                             <p>No letter available.</p>
                         )}
@@ -570,6 +562,59 @@ function ReservationDetails() {
                                 </Button>
                             </a>
                         )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Approval Dialog */}
+            <Dialog
+                open={isApprovalDialogOpen}
+                onOpenChange={setIsApprovalDialogOpen}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Approve Reservation</DialogTitle>
+                        <DialogDescription>
+                            You can optionally add remarks for this approval.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <h3 className="text-sm font-medium">
+                                Venue: {reservation.venueName}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Date: {formatDate(reservation.startTime)} |
+                                Time: {formatTime(reservation.startTime)} -{" "}
+                                {formatTime(reservation.endTime)}
+                            </p>
+                        </div>
+                        <Textarea
+                            placeholder="Optional remarks..."
+                            value={approvalRemarks}
+                            onChange={(e) => setApprovalRemarks(e.target.value)}
+                            rows={5}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsApprovalDialogOpen(false);
+                                setApprovalRemarks(""); // Reset on cancel
+                            }}
+                            disabled={approveMutation.isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={confirmApproveReservation}
+                            disabled={approveMutation.isPending}
+                        >
+                            {approveMutation.isPending
+                                ? "Approving..."
+                                : "Confirm Approval"}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -610,14 +655,17 @@ function ReservationDetails() {
                     <DialogFooter>
                         <Button
                             variant="outline"
-                            onClick={() => setIsRejectionDialogOpen(false)}
+                            onClick={() => {
+                                setIsRejectionDialogOpen(false);
+                                setRejectionRemarks(""); // Reset on cancel
+                            }}
                             disabled={rejectMutation.isPending}
                         >
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
-                            onClick={handleRejectReservation}
+                            onClick={confirmRejectReservation} // Use confirmation handler
                             disabled={
                                 !rejectionRemarks.trim() ||
                                 rejectMutation.isPending
