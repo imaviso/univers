@@ -188,24 +188,36 @@ export function VenueReservationApproval() {
     }, [fetchedReservations, statusFilter, venueFilter, viewMode]);
 
     // ... handleViewDetails, handleNavigateToVenue ...
-    const handleViewDetails = (reservationId: number) => {
-        navigate({ to: `/app/venue-approval/${reservationId}` });
-    };
-    const handleNavigateToVenue = (venueId: number | undefined) => {
-        if (venueId === undefined) return;
-        navigate({ from: Route.fullPath, to: `/app/venues/${venueId}` });
-    };
+    const handleViewDetails = React.useCallback(
+        (reservationId: number) => {
+            navigate({ to: `/app/venue-approval/${reservationId}` });
+        },
+        [navigate],
+    );
+    const handleNavigateToVenue = React.useCallback(
+        (venueId: number | undefined) => {
+            if (venueId === undefined) return;
+            navigate({ from: Route.fullPath, to: `/app/venues/${venueId}` });
+        },
+        [navigate],
+    );
 
     // --- Single Action Dialog Triggers ---
-    const openSingleApproveDialog = (reservationId: number) => {
-        setSingleActionInfo({ id: reservationId, type: "approve" });
-        setSingleActionRemarks(""); // Reset remarks
-    };
+    const openSingleApproveDialog = React.useCallback(
+        (reservationId: number) => {
+            setSingleActionInfo({ id: reservationId, type: "approve" });
+            setSingleActionRemarks(""); // Reset remarks
+        },
+        [],
+    ); // State setters are stable
 
-    const openSingleRejectDialog = (reservationId: number) => {
-        setSingleActionInfo({ id: reservationId, type: "reject" });
-        setSingleActionRemarks(""); // Reset remarks
-    };
+    const openSingleRejectDialog = React.useCallback(
+        (reservationId: number) => {
+            setSingleActionInfo({ id: reservationId, type: "reject" });
+            setSingleActionRemarks(""); // Reset remarks
+        },
+        [],
+    ); // State setters are stable
 
     const closeSingleActionDialog = () => {
         setSingleActionInfo({ id: null, type: null });
@@ -621,10 +633,13 @@ export function VenueReservationApproval() {
             },
         ],
         [
-            navigate,
             approveMutation.isPending,
             rejectMutation.isPending,
             currentUserId,
+            handleNavigateToVenue,
+            openSingleApproveDialog,
+            handleViewDetails,
+            openSingleRejectDialog,
         ],
     );
 
