@@ -8,6 +8,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { LoaderCircleIcon } from "lucide-react";
 
 interface ActivateConfirmDialogProps {
     isOpen: boolean;
@@ -15,7 +16,7 @@ interface ActivateConfirmDialogProps {
     onConfirm: () => void;
     title: string;
     description: string;
-    isLoading?: boolean; // Add isLoading prop
+    isLoading?: boolean;
 }
 
 export function ActivateConfirmDialog({
@@ -41,7 +42,18 @@ export function ActivateConfirmDialog({
                         onClick={onConfirm}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                        {isLoading ? "Processing..." : "Activate"}
+                        {isLoading ? (
+                            <>
+                                <LoaderCircleIcon
+                                    className="-ms-1 animate-spin"
+                                    size={16}
+                                    aria-hidden="true"
+                                />
+                                Activate
+                            </>
+                        ) : (
+                            "Activate"
+                        )}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

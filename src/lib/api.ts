@@ -809,6 +809,29 @@ export const getAllEquipmentsAdmin = async (): Promise<Equipment[]> => {
     }
 };
 
+export const getEquipmentReservationsByEventId = async (
+    eventId: number | string,
+): Promise<EquipmentReservationDTO[]> => {
+    try {
+        const response = await fetch(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/event/${eventId}`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred fetching equipment reservations for event ${eventId}.`,
+              );
+    }
+};
+
 export const getAllEquipmentsByOwner = async (
     ownerUserId: number,
 ): Promise<Equipment[]> => {
@@ -1236,7 +1259,6 @@ const VENUE_RESERVATIONS_BASE_URL = `${API_BASE_URL}/venue-reservations`;
 
 export const createVenueReservation = async ({
     reservationData,
-    reservationLetterFile,
 }: CreateVenueReservationInput): Promise<VenueReservationDTO> => {
     const formData = new FormData();
     formData.append(
@@ -1245,16 +1267,12 @@ export const createVenueReservation = async ({
             type: "application/json",
         }),
     );
-    if (reservationLetterFile) {
-        formData.append("reservationLetter", reservationLetterFile);
-    }
 
     try {
         const response = await fetch(VENUE_RESERVATIONS_BASE_URL, {
             method: "POST",
             credentials: "include",
             body: formData,
-            // Content-Type is set automatically by browser for FormData
         });
         return await handleApiResponse(response);
     } catch (error) {
@@ -1497,10 +1515,8 @@ export const getAllVenueOwnerReservations = async (): Promise<
 
 const EQUIPMENT_RESERVATIONS_BASE_URL = `${API_BASE_URL}/equipment-reservations`;
 
-// POST /equipment-reservations
 export const createEquipmentReservation = async ({
     reservationData,
-    reservationLetterFile,
 }: CreateEquipmentReservationInput): Promise<EquipmentReservationDTO> => {
     const formData = new FormData();
     formData.append(
@@ -1509,13 +1525,6 @@ export const createEquipmentReservation = async ({
             type: "application/json",
         }),
     );
-    if (reservationLetterFile) {
-        formData.append(
-            "reservationLetter",
-            reservationLetterFile,
-            reservationLetterFile.name,
-        );
-    }
 
     try {
         const response = await fetch(EQUIPMENT_RESERVATIONS_BASE_URL, {

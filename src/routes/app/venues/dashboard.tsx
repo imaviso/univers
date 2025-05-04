@@ -1,31 +1,14 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
     Table,
     TableBody,
@@ -36,22 +19,17 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
-import { VenueReservationFormDialog } from "@/components/venue-reservation/VenueReservationFormDialog";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
 import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
 import {
     departmentsQueryOptions,
     ownEventsQueryOptions,
     ownReservationsQueryOptions,
-    useCreateReservationMutation,
     usersQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
-import type {
-    CreateVenueReservationFormOutput,
-    VenueInput,
-} from "@/lib/schema";
-import { DEPARTMENTS, type UserType, type Venue } from "@/lib/types";
+import type { VenueInput } from "@/lib/schema";
+import type { UserType, Venue } from "@/lib/types";
 import { getStatusBadgeClass } from "@/lib/utils";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
@@ -59,11 +37,9 @@ import {
     useNavigate,
     useRouteContext,
 } from "@tanstack/react-router";
-import { format, formatISO } from "date-fns";
+import { format } from "date-fns";
 import {
     Building,
-    Calendar,
-    Download,
     Edit,
     Eye,
     MapPin,
@@ -72,7 +48,6 @@ import {
     Search,
     Trash2,
     UserCircle,
-    Users,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -103,17 +78,7 @@ export function VenueManagement() {
     const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
         role === "SUPER_ADMIN" ? "table" : "grid",
     );
-    const [isReservationDialogOpen, setIsReservationDialogOpen] =
-        useState(false);
-    const [reservingVenueId, setReservingVenueId] = useState<
-        string | undefined
-    >(undefined); // Store ID for pre-selection
 
-    // --- Queries ---
-    const { data: departments = [] } = useSuspenseQuery(
-        departmentsQueryOptions,
-    );
-    const { data: events = [] } = useSuspenseQuery(ownEventsQueryOptions);
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: users = [] } = useQuery({
         ...usersQueryOptions,
@@ -177,53 +142,6 @@ export function VenueManagement() {
             setVenueToDelete(null);
         },
     });
-
-    // Venue Reservation Mutation
-    const createReservationMutation = useCreateReservationMutation();
-
-    // --- Event Handlers ---
-    const handleReservationSubmit = (
-        formData: CreateVenueReservationFormOutput,
-    ) => {
-        if (!currentUser) {
-            toast.error("You must be logged in to make a reservation.");
-            return;
-        }
-
-        console.log("Form Data Received:", formData);
-
-        // Transform data for the API
-        const apiPayload = {
-            reservationData: {
-                venueId: formData.venueId,
-                // Convert Date objects to ISO strings
-                startTime: format(formData.startTime, "yyyy-MM-dd'T'HH:mm:ss"),
-                endTime: format(formData.endTime, "yyyy-MM-dd'T'HH:mm:ss"),
-                // departmentId and eventId are not collected in this simplified form
-                // They might need to be added back if required by the backend logic
-                departmentId: formData.departmentId,
-                eventId: formData.eventId,
-            },
-            reservationLetterFile: formData.reservationLetterFile, // Already a File | undefined
-        };
-
-        console.log("API Payload:", apiPayload);
-
-        createReservationMutation.mutate(apiPayload, {
-            onSuccess: (newReservation) => {
-                toast.success(
-                    `Reservation for "${newReservation.venueName}" submitted successfully.`,
-                );
-                setIsReservationDialogOpen(false);
-                setReservingVenueId(undefined); // Clear pre-selected venue
-                // Optionally navigate to reservation details or refresh a reservation list
-                // queryClient.invalidateQueries({ queryKey: ['myReservations'] }); // If such a query exists
-            },
-            onError: (error) => {
-                toast.error(`Failed to submit reservation: ${error.message}`);
-            },
-        });
-    };
 
     const handleAddOrEditSubmit = (
         venueData: VenueInput,
@@ -297,13 +215,8 @@ export function VenueManagement() {
     const isMutating =
         createVenueMutation.isPending ||
         updateVenueMutation.isPending ||
-        deleteVenueMutation.isPending ||
-        createReservationMutation.isPending; // Include reservation mutation
+        deleteVenueMutation.isPending;
 
-    const openReservationDialog = (venueId?: number) => {
-        setReservingVenueId(venueId ? String(venueId) : undefined);
-        setIsReservationDialogOpen(true);
-    };
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
@@ -321,30 +234,21 @@ export function VenueManagement() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        {role === "SUPER_ADMIN" || role === "VENUE_OWNER" ? (
-                            <Button
-                                onClick={() => {
-                                    setEditingVenue(null); // Clear editing state
-                                    setIsAddVenueOpen(true);
-                                }}
-                                size="sm"
-                                className="gap-1"
-                                disabled={isMutating}
-                            >
-                                <Plus className="h-4 w-4" />
-                                Add Venue
-                            </Button>
-                        ) : (
-                            <Button
-                                size="sm"
-                                className="gap-1"
-                                onClick={() => setIsReservationDialogOpen(true)}
-                                disabled={isMutating} // Disable if any mutation is happening
-                            >
-                                <Calendar className="h-4 w-4" />
-                                Reserve Venue
-                            </Button>
-                        )}
+                        {role === "SUPER_ADMIN" ||
+                            (role === "VENUE_OWNER" && (
+                                <Button
+                                    onClick={() => {
+                                        setEditingVenue(null); // Clear editing state
+                                        setIsAddVenueOpen(true);
+                                    }}
+                                    size="sm"
+                                    className="gap-1"
+                                    disabled={isMutating}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Add Venue
+                                </Button>
+                            ))}
                     </div>
                 </header>
 
@@ -828,33 +732,6 @@ export function VenueManagement() {
                 </div>
             </div>
 
-            {/* Dialogs */}
-            {/* Reservation Dialog (for non-admins) */}
-            <VenueReservationFormDialog
-                isOpen={isReservationDialogOpen}
-                onClose={() => {
-                    setIsReservationDialogOpen(false);
-                    setReservingVenueId(undefined); // Clear pre-selected venue on close
-                }}
-                onSubmit={handleReservationSubmit} // Use the updated handler
-                venues={venues.map((v) => ({
-                    // Pass only necessary fields
-                    id: v.id,
-                    name: v.name,
-                    location: v.location,
-                    imagePath: v.imagePath,
-                }))}
-                events={events.map((e) => ({
-                    id: e.id,
-                    eventName: e.eventName,
-                    startTime: e.startTime,
-                    endTime: e.endTime,
-                }))}
-                departments={departments}
-                isLoading={createReservationMutation.isPending} // Pass loading state
-                initialVenueId={reservingVenueId} // Pass the ID for pre-selection
-            />
-            {/* Add/Edit Dialog (SUPER_ADMIN only) */}
             {(role === "SUPER_ADMIN" || role === "VENUE_OWNER") && (
                 <>
                     <VenueFormDialog

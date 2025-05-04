@@ -23,6 +23,7 @@ import {
     getApprovalsForReservation,
     getApprovedEvents,
     getEquipmentReservationById,
+    getEquipmentReservationsByEventId,
     getEventById,
     getNotifications,
     getOwnEquipmentReservations,
@@ -505,6 +506,8 @@ export const equipmentReservationKeys = {
     allEquipmentOwner: () =>
         [...equipmentReservationKeys.all, "equipmentOwner"] as const,
     own: () => [...equipmentReservationKeys.all, "own"] as const,
+    byEvent: (eventId: number | string) =>
+        [...equipmentReservationKeys.all, "event", eventId] as const, // New key for by event ID
 };
 
 // --- Equipment Reservation Query Options ---
@@ -524,6 +527,15 @@ export const ownEquipmentReservationsQueryOptions = queryOptions<
     queryFn: getOwnEquipmentReservations,
     staleTime: 1000 * 60 * 2, // 2 minutes
 });
+
+export const equipmentReservationsByEventIdQueryOptions = (
+    eventId: number | string,
+) =>
+    queryOptions<EquipmentReservationDTO[]>({
+        queryKey: equipmentReservationKeys.byEvent(eventId),
+        queryFn: () => getEquipmentReservationsByEventId(eventId),
+        staleTime: 1000 * 60 * 2,
+    });
 
 export const equipmentReservationByIdQueryOptions = (
     reservationId: number | string,
