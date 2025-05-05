@@ -10,7 +10,15 @@ export interface BackendNotificationPayload {
 
 export interface NotificationDTO {
     id: number;
+    eventId: string;
     message: {
+        equipmentId?: string;
+        equipmentName?: string;
+        equipmentReservationId?: string;
+        venueId?: string;
+        venueName?: string;
+        venueReservationId?: string;
+        requesterName?: string;
         eventName?: string;
         approver?: string;
         type?: string;
@@ -18,7 +26,7 @@ export interface NotificationDTO {
         eventId?: string;
     };
     createdAt: string;
-    read: boolean;
+    isRead: boolean;
     relatedEntityId: number | null;
     relatedEntityType: string | null;
 }
@@ -27,7 +35,7 @@ export interface Notification {
     id: number;
     message: string;
     timestamp: Date;
-    read: boolean;
+    isRead: boolean;
     relatedEntityId: number | null;
     relatedEntityType: string | null;
     title?: string;
@@ -98,3 +106,25 @@ export const clearNotificationsAtom = atom(
         set(notificationsAtom, []);
     },
 );
+
+export const generateNotificationTitle = (
+    notification: NotificationDTO,
+): string => {
+    // Access nested fields
+    if (notification.message?.eventName) {
+        return `Event: ${notification.message.eventName}`;
+    }
+    // Use nested type first
+    if (notification.message?.type) {
+        return notification.message.type
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase());
+    }
+    // Fallback to top-level relatedEntityType
+    if (notification.relatedEntityType) {
+        return notification.relatedEntityType
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase());
+    }
+    return "Notification Update";
+};

@@ -18,9 +18,19 @@ import {
     useMarkNotificationsReadMutation,
 } from "@/lib/query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router"; // Import useNavigate
 import { useAtom } from "jotai";
-import { Bell, Calendar, User } from "lucide-react"; // Import necessary icons
+import {
+    AlertTriangle, // Added
+    Bell,
+    Calendar,
+    CheckCircle2, // Added
+    Hash, // Added
+    Info, // Added
+    type LucideIcon, // Added
+    User,
+    XCircle, // Added
+} from "lucide-react"; // Import necessary icons
 
 // --- Add helper functions (or import if defined elsewhere) ---
 const generateNotificationTitle = (notification: NotificationDTO): string => {
@@ -42,9 +52,51 @@ const generateNotificationTitle = (notification: NotificationDTO): string => {
     return "Notification Update";
 };
 
+// Helper function to map notification to icon and color (same as in notifications.tsx)
+const getNotificationStyle = (
+    notification: NotificationDTO,
+): { Icon: LucideIcon; color: string } => {
+    // Check nested message object
+    const rawMessage = notification.message?.message;
+    const messageText =
+        typeof rawMessage === "string" ? rawMessage.toLowerCase() : "";
+
+    // Check nested type and fallback to relatedEntityType
+    const type =
+        notification.message?.type?.toLowerCase() ||
+        notification.relatedEntityType?.toLowerCase() ||
+        "";
+
+    if (
+        messageText.includes("error") ||
+        type.includes("error") ||
+        type.includes("reject") // Include reject for error style
+    ) {
+        return { Icon: XCircle, color: "text-red-500" };
+    }
+    if (
+        messageText.includes("success") ||
+        messageText.includes("approved") ||
+        type.includes("success") ||
+        type.includes("approved") // Include approved for success style
+    ) {
+        return { Icon: CheckCircle2, color: "text-green-500" };
+    }
+    if (
+        messageText.includes("warning") ||
+        type.includes("warning") ||
+        type.includes("request") // Include request for warning style
+    ) {
+        return { Icon: AlertTriangle, color: "text-yellow-500" };
+    }
+
+    return { Icon: Info, color: "text-blue-500" }; // Default
+};
+
 export function NotificationCenter() {
     const [connectionStatus] = useAtom(webSocketStatusAtom);
     const queryClient = useQueryClient();
+    const navigate = useNavigate(); // Get navigation function
 
     // Fetch unread count
     const { data: countData } = useQuery(unreadNotificationsCountQueryOptions);
@@ -99,13 +151,13 @@ export function NotificationCenter() {
                     )}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-60 md:w-76" align="end">
-                {" "}
-                {/* Consistent width */}
+            {/* Adjusted width to match notifications.tsx */}
+            <DropdownMenuContent className="w-80 md:w-96" align="end">
                 <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">
-                            Notifications ({connectionStatus})
+                            Notifications{" "}
+                            {/* Removed connection status from label */}
                         </p>
                         <p className="text-xs leading-none text-muted-foreground">
                             You have {unreadCount} unread messages
@@ -123,25 +175,65 @@ export function NotificationCenter() {
                         </DropdownMenuItem>
                     ) : (
                         notifications.map((notification: NotificationDTO) => {
-                            // --- Generate title using helper ---
+                            // --- Generate title and style using helpers ---
                             const title =
                                 generateNotificationTitle(notification);
+                            const { Icon, color } =
+                                getNotificationStyle(notification);
+
+                            // Determine if navigation is possible
+                            const entityType =
+                                notification.relatedEntityType?.toUpperCase();
+                            const entityId = notification.relatedEntityId;
+                            let canNavigate = false;
+                            let targetPath = "";
+
+                            if (entityId != null) {
+                                if (
+                                    entityType === "EVENT" ||
+                                    entityType === "VENUE_RESERVATION" ||
+                                    entityType ===
+                                        "VENUE_RESERVATION_REQUEST" ||
+                                    entityType === "EQUIPMENT_RESERVATION" ||
+                                    entityType === "EVENT_RESERVATION"
+                                ) {
+                                    canNavigate = true;
+                                    targetPath = `/app/events/${entityId}`;
+                                } else if (
+                                    entityType ===
+                                    "EQUIPMENT_RESERVATION_REQUEST"
+                                ) {
+                                    canNavigate = true;
+                                    // Ensure this path matches your route definition
+                                    targetPath =
+                                        "/app/equipment-approval/approval";
+                                }
+                                // Add more 'else if' for other types if needed
+                            }
+
                             return (
                                 <DropdownMenuItem
                                     key={notification.id}
-                                    onSelect={(e) => {
-                                        e.preventDefault();
+                                    // Use onClick for combined action
+                                    onClick={() => {
                                         if (!notification.read) {
                                             handleMarkRead(notification.id);
                                         }
+                                        if (canNavigate) {
+                                            navigate({ to: targetPath });
+                                        }
+                                        // If !canNavigate, clicking just marks as read
                                     }}
+                                    // Remove onSelect
                                     // --- Use items-start like the other dropdown ---
-                                    className={`cursor-pointer items-start space-x-3 ${notification.read ? "opacity-60" : ""}`}
+                                    className={`items-start space-x-3 ${notification.read ? "opacity-60" : ""} ${canNavigate ? "cursor-pointer" : "cursor-default"}`} // Adjust cursor
                                 >
-                                    {/* --- Add Icon (optional but consistent) --- */}
-                                    {/* <div className={`mt-1 p-1 rounded-full ${color} bg-opacity-10`}>
+                                    {/* --- Add Icon --- */}
+                                    <div
+                                        className={`mt-1 p-1 rounded-full ${color} bg-opacity-10`}
+                                    >
                                         <Icon className={`h-4 w-4 ${color}`} />
-                                    </div> */}
+                                    </div>
 
                                     {/* --- Use flex-1 space-y-0.5 like the other dropdown --- */}
                                     <div className="flex-1 space-y-0.5">
@@ -154,10 +246,30 @@ export function NotificationCenter() {
                                             {typeof notification.message
                                                 ?.message === "string"
                                                 ? notification.message.message
-                                                : "Invalid content format."}
+                                                : notification.message?.message
+                                                  ? JSON.stringify(
+                                                        notification.message
+                                                            .message,
+                                                    ).slice(0, 100)
+                                                  : "No message content."}
                                         </p>
-                                        {/* --- Add condensed additional fields (optional) --- */}
-                                        {/* ... similar to NotificationDropdown ... */}
+                                        {/* --- Add condensed additional fields --- */}
+                                        {/* {notification.message?.eventName && (
+											<span className="flex items-center gap-0.5">
+												<Calendar className="h-3 w-3 opacity-70" />
+												{typeof notification.message.eventName === "string"
+													? notification.message.eventName
+													: String(notification.message.eventName)}
+											</span>
+										)} */}
+                                        {/* {notification.message?.approver && (
+											<span className="flex items-center gap-0.5">
+												<User className="h-3 w-3 opacity-70" />
+												{typeof notification.message.approver === "string"
+													? notification.message.approver
+													: String(notification.message.approver)}
+											</span>
+										)} */}
                                         {/* --- Use consistent timestamp format --- */}
                                         <p className="text-xs text-muted-foreground">
                                             {new Date(
@@ -183,7 +295,7 @@ export function NotificationCenter() {
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                    onSelect={handleMarkAllRead}
+                    onSelect={handleMarkAllRead} // Keep onSelect here
                     className="cursor-pointer justify-center" // Center text
                     disabled={
                         unreadCount === 0 || markAllReadMutation.isPending

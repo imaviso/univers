@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,26 +12,25 @@ import { Input } from "@/components/ui/input";
 import {
     Pagination,
     PaginationContent,
-    PaginationEllipsis,
+    // PaginationEllipsis, // Not used currently
     PaginationItem,
-    PaginationLink,
+    // PaginationLink, // Not used currently
     PaginationNext,
     PaginationPrevious,
-} from "@/components/ui/pagination"; // Import Pagination
-import type { NotificationDTO } from "@/lib/notifications"; // Import DTO type
+} from "@/components/ui/pagination";
+import type { NotificationDTO } from "@/lib/notifications";
 import {
     notificationsQueryOptions,
     useDeleteNotificationsMutation,
     useMarkAllNotificationsReadMutation,
     useMarkNotificationsReadMutation,
-} from "@/lib/query"; // Import query hooks and options
-import { useQuery } from "@tanstack/react-query"; // Import useQuery
-// import { useAtom, useSetAtom } from "jotai";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+} from "@/lib/query";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"; // Import useNavigate
 import { format } from "date-fns";
 import {
     AlertTriangle,
-    Bell,
+    // Bell, // Not used here
     Calendar,
     Check,
     CheckCircle2,
@@ -40,18 +39,17 @@ import {
     Info,
     Loader2,
     type LucideIcon,
-    Tag, // Loading icon
+    // Tag, // Not used here
     Trash2,
     User,
     XCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react"; // Import useMemo
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/notifications")({
-    component: NotificationsPage, // Rename component
+    component: NotificationsPage,
     beforeLoad: async ({ location, context }) => {
-        // Auth check remains the same
         if (context.authState == null) {
             throw redirect({
                 to: "/login",
@@ -63,6 +61,7 @@ export const Route = createFileRoute("/app/notifications")({
     },
 });
 
+// --- Helper Functions (Consistent with Dropdown) ---
 const generateNotificationTitle = (notification: NotificationDTO): string => {
     // Access nested fields
     if (notification.message?.eventName) {
@@ -82,16 +81,55 @@ const generateNotificationTitle = (notification: NotificationDTO): string => {
     return "Notification Update";
 };
 
-// Rename component
+const getNotificationStyle = (
+    notification: NotificationDTO,
+): { Icon: LucideIcon; color: string } => {
+    // Check nested message object
+    const rawMessage = notification.message?.message;
+    const messageText =
+        typeof rawMessage === "string" ? rawMessage.toLowerCase() : "";
+
+    // Check nested type and fallback to relatedEntityType
+    const type =
+        notification.message?.type?.toLowerCase() ||
+        notification.relatedEntityType?.toLowerCase() ||
+        "";
+
+    if (
+        messageText.includes("error") ||
+        type.includes("error") ||
+        type.includes("reject") // Include reject for error style
+    ) {
+        return { Icon: XCircle, color: "text-red-500" };
+    }
+    if (
+        messageText.includes("success") ||
+        messageText.includes("approved") ||
+        type.includes("success") ||
+        type.includes("approved") // Include approved for success style
+    ) {
+        return { Icon: CheckCircle2, color: "text-green-500" };
+    }
+    if (
+        messageText.includes("warning") ||
+        type.includes("warning") ||
+        type.includes("request") // Include request for warning style
+    ) {
+        return { Icon: AlertTriangle, color: "text-yellow-500" };
+    }
+
+    return { Icon: Info, color: "text-blue-500" }; // Default
+};
+// --- End Helper Functions ---
+
 function NotificationsPage() {
-    // State for pagination, filtering, search, and selection
-    const [currentPage, setCurrentPage] = useState(0); // 0-indexed page
+    const navigate = useNavigate(); // Get navigation function
+    const [currentPage, setCurrentPage] = useState(0);
     const [filter, setFilter] = useState<"all" | "unread">("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-    const notificationsPerPage = 10; // Or make this configurable
+    const notificationsPerPage = 10;
 
-    // Fetch notifications using React Query
     const {
         data: notificationsData,
         isLoading,
@@ -104,7 +142,6 @@ function NotificationsPage() {
         }),
     );
 
-    // Extract notifications content or default to empty array
     const notifications = useMemo(
         () => notificationsData?.content ?? [],
         [notificationsData],
@@ -114,7 +151,6 @@ function NotificationsPage() {
         [notificationsData],
     );
 
-    // Mutations
     const markReadMutation = useMarkNotificationsReadMutation();
     const markAllReadMutation = useMarkAllNotificationsReadMutation();
     const deleteNotificationsMutation = useDeleteNotificationsMutation();
@@ -122,28 +158,38 @@ function NotificationsPage() {
     const filteredNotifications = useMemo(() => {
         return notifications
             .filter((notification) => {
-                if (filter === "unread") return !notification.read; // Use 'read' field
+                if (filter === "unread") return !notification.read;
                 return true;
             })
             .filter((notification) => {
                 const searchLower = searchQuery.toLowerCase();
-                // Search within the nested message text and top-level entity type
+                // Enhanced search: check title, message content, entity type, event name, etc.
+                const title =
+                    generateNotificationTitle(notification).toLowerCase();
+                const messageContent =
+                    typeof notification.message?.message === "string"
+                        ? notification.message.message.toLowerCase()
+                        : "";
+                const entityType =
+                    notification.relatedEntityType?.toLowerCase() || "";
+                const eventName =
+                    notification.message?.eventName?.toLowerCase() || "";
+                const requesterName =
+                    notification.message?.requesterName?.toLowerCase() || "";
+                const actorName =
+                    notification.message?.actorName?.toLowerCase() || "";
+
                 return (
-                    (typeof notification.message?.message === "string" &&
-                        notification.message.message
-                            .toLowerCase()
-                            .includes(searchLower)) ||
-                    notification.relatedEntityType
-                        ?.toLowerCase()
-                        .includes(searchLower) ||
-                    notification.message?.eventName // Also search event name
-                        ?.toLowerCase()
-                        .includes(searchLower)
+                    title.includes(searchLower) ||
+                    messageContent.includes(searchLower) ||
+                    entityType.includes(searchLower) ||
+                    eventName.includes(searchLower) ||
+                    requesterName.includes(searchLower) ||
+                    actorName.includes(searchLower)
                 );
             });
     }, [notifications, filter, searchQuery]);
 
-    // --- Action Handlers ---
     const handleMarkRead = (id: number) => {
         markReadMutation.mutate([id]);
     };
@@ -156,7 +202,7 @@ function NotificationsPage() {
         if (selectedIds.size > 0) {
             deleteNotificationsMutation.mutate([...selectedIds], {
                 onSuccess: () => {
-                    setSelectedIds(new Set()); // Clear selection on success
+                    setSelectedIds(new Set());
                     toast.success("Selected notifications deleted.");
                 },
                 onError: (err) => {
@@ -168,7 +214,6 @@ function NotificationsPage() {
         }
     };
 
-    // --- Selection Logic ---
     const handleSelectAll = (checked: boolean | "indeterminate") => {
         if (checked === true) {
             setSelectedIds(new Set(filteredNotifications.map((n) => n.id)));
@@ -203,67 +248,26 @@ function NotificationsPage() {
           ? "indeterminate"
           : false;
 
-    // --- Icon Logic --- (Similar to Dropdown)
-    const getNotificationIcon = (
-        notification: NotificationDTO,
-    ): { Icon: LucideIcon; color: string } => {
-        // Use nested type and message, fallback to top-level entity type
-        const type =
-            notification.message?.type?.toLowerCase() ||
-            notification.relatedEntityType?.toLowerCase() ||
-            "";
-        const messageText =
-            typeof notification.message?.message === "string"
-                ? notification.message.message.toLowerCase()
-                : "";
-
-        if (messageText.includes("error") || type.includes("error")) {
-            return { Icon: XCircle, color: "text-red-500" };
-        }
-        if (
-            messageText.includes("success") ||
-            messageText.includes("approved") ||
-            type.includes("success") ||
-            type.includes("approval")
-        ) {
-            return { Icon: CheckCircle2, color: "text-green-500" };
-        }
-        if (messageText.includes("warning") || type.includes("warning")) {
-            return { Icon: AlertTriangle, color: "text-yellow-500" };
-        }
-        return { Icon: Info, color: "text-blue-500" }; // Default
-    };
-
-    // --- Pagination Logic ---
     const handlePageChange = (page: number) => {
         if (page >= 0 && page < totalPages) {
             setCurrentPage(page);
-            setSelectedIds(new Set()); // Clear selection when changing page
+            setSelectedIds(new Set());
         }
     };
 
-    // --- JSX ---
     return (
         <div className="flex h-screen flex-col bg-background">
-            {" "}
-            {/* Ensure vertical flex */}
             {/* Header */}
             <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3 md:px-6 md:py-3.5">
-                {" "}
-                {/* Flex wrap for smaller screens */}
                 <h1 className="text-xl font-semibold">Notifications</h1>
                 <div className="flex flex-wrap items-center gap-2">
-                    {" "}
-                    {/* Flex wrap */}
-                    {/* Search Input */}
                     <Input
                         type="search"
                         placeholder="Search..."
-                        className="w-full sm:w-48 md:w-64" // Responsive width
+                        className="w-full sm:w-48 md:w-64"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
-                    {/* Filter Dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
@@ -271,8 +275,6 @@ function NotificationsPage() {
                                 size="sm"
                                 className="gap-1"
                             >
-                                {" "}
-                                {/* Smaller button */}
                                 <Filter className="h-4 w-4" />
                                 <span>
                                     {filter === "unread" ? "Unread" : "All"}
@@ -298,7 +300,6 @@ function NotificationsPage() {
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    {/* Mark All Read Button */}
                     <Button
                         variant="outline"
                         size="sm"
@@ -308,7 +309,6 @@ function NotificationsPage() {
                         <Check className="mr-1.5 h-4 w-4" />
                         Mark all read
                     </Button>
-                    {/* Delete Selected Button */}
                     <Button
                         variant="outline"
                         size="sm"
@@ -325,10 +325,9 @@ function NotificationsPage() {
                     </Button>
                 </div>
             </header>
+
             {/* Main Content */}
             <main className="flex-1 overflow-y-auto p-4 md:p-6">
-                {" "}
-                {/* Allow vertical scroll */}
                 <div className="space-y-4">
                     {/* Select All Checkbox */}
                     {filteredNotifications.length > 0 && (
@@ -378,17 +377,72 @@ function NotificationsPage() {
                     {!isError &&
                         filteredNotifications.map((notification) => {
                             const { Icon, color } =
-                                getNotificationIcon(notification);
+                                getNotificationStyle(notification); // Use consistent style helper
                             const title =
-                                generateNotificationTitle(notification);
+                                generateNotificationTitle(notification); // Use consistent title helper
+
+                            // --- Navigation Logic (Consistent with Dropdown) ---
+                            const entityType =
+                                notification.relatedEntityType?.toUpperCase();
+                            // Use eventId from the message payload if available, otherwise fallback to relatedEntityId
+                            const eventId = notification.message?.eventId;
+                            const primaryEntityId =
+                                notification.relatedEntityId;
+
+                            let canNavigate = false;
+                            let targetPath = "";
+
+                            // Prioritize eventId for navigation if present
+                            if (eventId != null) {
+                                canNavigate = true;
+                                targetPath = `/app/events/${eventId}`;
+                            } else if (primaryEntityId != null) {
+                                // Fallback to relatedEntityId for specific types if eventId is missing
+                                if (entityType === "EVENT") {
+                                    canNavigate = true;
+                                    targetPath = `/app/events/${primaryEntityId}`;
+                                } else if (
+                                    entityType === "EQUIPMENT_RESERVATION"
+                                ) {
+                                    // Navigate to equipment approval page using equipment reservation ID
+                                    canNavigate = true;
+                                    targetPath =
+                                        "/app/equipment-approval/approval"; // Or use primaryEntityId if needed: `/app/equipment-approval/${primaryEntityId}`
+                                }
+                                // Add more specific fallbacks if needed
+                            }
+                            // --- End Navigation Logic ---
+
+                            const handleInteraction = () => {
+                                if (!notification.isRead) {
+                                    handleMarkRead(notification.id);
+                                }
+                                if (canNavigate) {
+                                    navigate({ to: targetPath });
+                                }
+                            };
+
                             return (
                                 <div
                                     key={notification.id}
-                                    className={`flex items-start gap-4 p-4 rounded-lg border ${
-                                        notification.read // Use 'read' field
+                                    role={canNavigate ? "button" : undefined} // Make it a button if navigable
+                                    tabIndex={canNavigate ? 0 : undefined} // Make it focusable if navigable
+                                    className={`flex items-start gap-4 p-4 rounded-lg border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+                                        notification.isRead
                                             ? "bg-background"
-                                            : "bg-muted"
-                                    }`}
+                                            : "bg-muted/50" // Slightly different background for unread
+                                    } ${canNavigate ? "cursor-pointer hover:bg-muted/80" : ""}`} // Add cursor and hover for navigable items
+                                    onClick={handleInteraction}
+                                    onKeyDown={(e) => {
+                                        if (
+                                            canNavigate &&
+                                            (e.key === "Enter" || e.key === " ")
+                                        ) {
+                                            e.preventDefault(); // Prevent spacebar scroll
+                                            handleInteraction();
+                                        }
+                                    }}
+                                    aria-labelledby={`notification-title-${notification.id}`} // Link title for screen readers
                                 >
                                     {/* Checkbox */}
                                     <Checkbox
@@ -396,74 +450,108 @@ function NotificationsPage() {
                                         checked={selectedIds.has(
                                             notification.id,
                                         )}
-                                        onCheckedChange={(checked) =>
+                                        onCheckedChange={(checked) => {
+                                            // Stop propagation to prevent navigation when clicking checkbox
                                             handleSelectOne(
                                                 notification.id,
                                                 checked,
-                                            )
-                                        }
+                                            );
+                                        }}
+                                        onClick={(e) => e.stopPropagation()} // Prevent outer div click
                                         className="mt-1"
                                         aria-labelledby={`notification-title-${notification.id}`}
                                     />
-                                    {/* Icon */}
-                                    <div className={`mt-1 ${color}`}>
-                                        <Icon className="h-5 w-5" />
+                                    {/* Icon (Consistent with Dropdown) */}
+                                    <div
+                                        className={`mt-1 p-1 rounded-full ${color} bg-opacity-10`}
+                                    >
+                                        <Icon className={`h-4 w-4 ${color}`} />
                                     </div>
-                                    {/* Content */}
-                                    <div className="flex-1 space-y-1">
-                                        {" "}
-                                        {/* Add space-y-1 for better spacing */}
+                                    {/* Content (Consistent with Dropdown) */}
+                                    <div className="flex-1 space-y-0.5">
                                         <h3
                                             id={`notification-title-${notification.id}`}
-                                            className="text-sm font-medium"
+                                            className="text-sm font-medium leading-snug line-clamp-1"
                                         >
-                                            {title} {/* Use generated title */}
+                                            {title}
                                         </h3>
                                         {/* Main Message */}
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
                                             {typeof notification.message
-                                                ?.message === "object"
-                                                ? JSON.stringify(
-                                                      notification.message
-                                                          ?.message,
-                                                  )
-                                                : (notification.message
-                                                      ?.message ??
-                                                  "No content.")}
+                                                ?.message === "string"
+                                                ? notification.message.message
+                                                : notification.message?.message
+                                                  ? JSON.stringify(
+                                                        notification.message
+                                                            .message,
+                                                    ).slice(0, 150) // Show a bit more context
+                                                  : "No message content."}
                                         </p>
-                                        {/* Timestamp */}
+                                        {/* Additional Fields (Consistent with Dropdown) */}
+                                        {notification.message?.eventName && (
+                                            <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                                                <Calendar className="h-3 w-3 opacity-70" />
+                                                {typeof notification.message
+                                                    .eventName === "string"
+                                                    ? notification.message
+                                                          .eventName
+                                                    : String(
+                                                          notification.message
+                                                              .eventName,
+                                                      )}
+                                            </span>
+                                        )}
+                                        {notification.message?.approver && ( // Show actor if available
+                                            <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                                                <User className="h-3 w-3 opacity-70" />
+                                                {typeof notification.message
+                                                    .approver === "string"
+                                                    ? notification.message
+                                                          .approver
+                                                    : String(
+                                                          notification.message
+                                                              .approver,
+                                                      )}
+                                            </span>
+                                        )}
+                                        {/* Show Event ID if available and different from primary ID */}
+                                        {/* {eventId != null && eventId !== primaryEntityId && (
+											<span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+												<Hash className="h-3 w-3 opacity-70" />
+												Event ID: {eventId}
+											</span>
+										)} */}
+                                        {/* Timestamp (Consistent with Dropdown) */}
                                         <p className="text-xs text-muted-foreground pt-1">
-                                            {" "}
-                                            {/* Add padding-top */}
-                                            {format(
-                                                new Date(
-                                                    notification.createdAt,
-                                                ),
-                                                "MMM d, yyyy 'at' h:mm a",
-                                            )}
+                                            {new Date(
+                                                notification.createdAt,
+                                            ).toLocaleString([], {
+                                                dateStyle: "short",
+                                                timeStyle: "short",
+                                            })}
                                         </p>
                                     </div>
-                                    {/* Mark as Read Button */}
-                                    {!notification.read && ( // Use 'read' field
+                                    {/* Mark as Read Button (No longer needed if clicking the item marks as read) */}
+                                    {/* {!notification.read && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() =>
-                                                handleMarkRead(notification.id)
-                                            }
-                                            disabled={
-                                                markReadMutation.isPending
-                                            }
-                                            className="self-start" // Align button to top
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Prevent navigation
+                                                handleMarkRead(notification.id);
+                                            }}
+                                            disabled={markReadMutation.isPending}
+                                            className="self-start"
                                         >
                                             Mark read
                                         </Button>
-                                    )}
+                                    )} */}
                                 </div>
                             );
                         })}
                 </div>
             </main>
+
             {/* Footer with Pagination */}
             {!isLoading && !isError && totalPages > 1 && (
                 <footer className="border-t px-4 py-3 md:px-6">
@@ -484,13 +572,11 @@ function NotificationsPage() {
                                     }
                                 />
                             </PaginationItem>
-                            {/* Basic Page Number Display - Can be enhanced */}
                             <PaginationItem>
                                 <span className="px-4 text-sm">
                                     Page {currentPage + 1} of {totalPages}
                                 </span>
                             </PaginationItem>
-                            {/* Add more complex pagination links if needed */}
                             <PaginationItem>
                                 <PaginationNext
                                     href="#"

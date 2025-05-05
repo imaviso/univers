@@ -18,7 +18,7 @@ import {
     useMarkNotificationsReadMutation,
 } from "@/lib/query";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import {
     AlertTriangle,
@@ -86,6 +86,7 @@ const getNotificationStyle = (
 };
 
 export function NotificationDropdown() {
+    const navigate = useNavigate();
     const [connectionStatus] = useAtom(webSocketStatusAtom);
 
     // Fetch unread count
@@ -168,16 +169,45 @@ export function NotificationDropdown() {
                             const title =
                                 generateNotificationTitle(notification);
 
+                            const entityType =
+                                notification.relatedEntityType?.toUpperCase();
+                            const entityId = notification.relatedEntityId;
+                            let canNavigate = false;
+                            let targetPath = "";
+
+                            if (entityId != null) {
+                                if (
+                                    entityType === "EVENT" ||
+                                    entityType === "VENUE_RESERVATION" ||
+                                    entityType === "EVENT_RESERVATION"
+                                ) {
+                                    canNavigate = true;
+                                    targetPath = `/app/events/${entityId}`;
+                                } else if (
+                                    entityType === "EQUIPMENT_RESERVATION"
+                                ) {
+                                    canNavigate = true;
+                                    // Ensure this path matches your route definition
+                                    targetPath =
+                                        "/app/equipment-approval/approval";
+                                }
+                                // Add more 'else if' for other types if needed
+                            }
+
                             return (
                                 <DropdownMenuItem
                                     key={notification.id}
-                                    onSelect={(e) => {
-                                        e.preventDefault(); // Prevent closing menu
+                                    onClick={() => {
                                         if (!notification.read) {
                                             handleMarkRead(notification.id);
                                         }
+                                        if (canNavigate) {
+                                            navigate({ to: targetPath });
+                                        }
+                                        // If !canNavigate, clicking just marks as read
                                     }}
-                                    className={`cursor-pointer items-start space-x-3 ${notification.read ? "opacity-60" : ""}`}
+                                    // Remove onSelect
+                                    className={`items-start space-x-3 ${notification.read ? "opacity-60" : ""} ${canNavigate ? "cursor-pointer" : "cursor-default"}`} // Adjust cursor based on navigation
                                 >
                                     {/* Icon */}
                                     <div
