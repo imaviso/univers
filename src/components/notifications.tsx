@@ -172,8 +172,6 @@ export function NotificationDropdown() {
                             const entityType =
                                 notification.relatedEntityType?.toUpperCase();
                             const entityId = notification.relatedEntityId;
-                            console.log("Notification entityId:", entityId);
-                            console.log("Notification entityType:", entityType);
                             let canNavigate = false;
                             let targetPath = "";
 

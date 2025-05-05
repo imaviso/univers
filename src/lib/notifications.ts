@@ -35,7 +35,7 @@ export interface Notification {
     id: number;
     message: string;
     timestamp: Date;
-    read: boolean;
+    isRead: boolean;
     relatedEntityId: number | null;
     relatedEntityType: string | null;
     title?: string;
