@@ -42,7 +42,12 @@ import {
     type EditEventOutput,
     editEventSchema,
 } from "@/lib/schema";
-import type { Event, EventDTOPayload, Venue } from "@/lib/types";
+import type {
+    DepartmentType,
+    Event,
+    EventDTOPayload,
+    Venue,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,75 +70,68 @@ import { SmartDatetimeInput } from "../ui/smart-date-picker";
 interface EditEventModalProps {
     isOpen: boolean;
     onClose: () => void;
-    event: Event; // Pass the full event object
+    event: Event;
     venues: Venue[];
+    departments: DepartmentType[];
 }
 
 const eventTypes = ["External", "Program-based", "Admin", "SSG/Advocay-based"];
-
-// Helper to create a placeholder File object for existing letter
-const createPlaceholderFile = (filename: string): File => {
-    return new File([], filename, { type: "text/plain" }); // Use a dummy type
-};
 
 export function EditEventModal({
     isOpen,
     onClose,
     event,
     venues,
+    departments,
 }: EditEventModalProps) {
     const queryClient = useQueryClient();
-    const [currentLetterFilename, setCurrentLetterFilename] = useState<
-        string | null
-    >(null);
+    const [, setCurrentLetterFilename] = useState<string | null>(null);
 
     const form = useForm<EditEventInput>({
+        // @ts-ignore
         resolver: valibotResolver(editEventSchema),
         defaultValues: {
             eventName: "",
             eventType: undefined,
             eventVenueId: undefined,
+            departmentId: undefined,
             startTime: undefined,
             endTime: undefined,
-            approvedLetter: [], // Initialize as empty array
+            approvedLetter: [],
         },
         mode: "onChange",
     });
 
-    // --- Pre-populate form ---
     useEffect(() => {
         if (isOpen && event) {
-            const startTime = event.startTime
-                ? new Date(event.startTime)
-                : undefined;
-            const endTime = event.endTime ? new Date(event.endTime) : undefined;
-            const filename = event.approvedLetterPath
-                ? (event.approvedLetterPath.split("/").pop() ?? null)
-                : null;
-            setCurrentLetterFilename(filename);
+            const startDate = new Date(`${event.startTime}Z`);
+            const endDate = new Date(`${event.endTime}Z`);
 
             form.reset({
                 eventName: event.eventName,
                 eventType: event.eventType,
                 eventVenueId: event.eventVenueId,
-                startTime: startTime,
-                endTime: endTime,
-                // If there's an existing letter, create a placeholder File object
-                // This satisfies the schema's initial File[] requirement without needing the actual File blob
-                approvedLetter: filename
-                    ? [createPlaceholderFile(filename)]
-                    : [],
+                departmentId: event.departmentId ?? undefined,
+                startTime: startDate,
+                endTime: endDate,
             });
         } else if (!isOpen) {
-            form.reset(); // Reset form when closing
+            form.reset({
+                eventName: "",
+                eventType: undefined,
+                eventVenueId: undefined,
+                departmentId: undefined,
+                startTime: undefined,
+                endTime: undefined,
+                approvedLetter: undefined,
+            });
             setCurrentLetterFilename(null);
         }
     }, [isOpen, event, form]);
 
-    // --- Mutation ---
     const updateEventMutation = useMutation({
         mutationFn: updateEvent,
-        onSuccess: (message) => {
+        onSuccess: () => {
             toast.success("Event updated successfully.");
             // Invalidate relevant queries
             queryClient.refetchQueries({
@@ -170,10 +168,9 @@ export function EditEventModal({
             eventName: outputValues.eventName,
             eventType: outputValues.eventType,
             eventVenueId: outputValues.eventVenueId,
-            startTime: outputValues.startTime.toISOString(),
-            endTime: outputValues.endTime.toISOString(),
-            // Organizer ID shouldn't change on update usually, but include if needed
-            // organizer: { id: event.organizer.id }
+            departmentId: outputValues.departmentId,
+            startTime: outputValues.startTime?.toISOString(),
+            endTime: outputValues.endTime?.toISOString(),
         };
 
         updateEventMutation.mutate({
@@ -337,6 +334,99 @@ export function EditEventModal({
                                 )}
                             />
 
+                            <div className="col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="departmentId"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel>Department</FormLabel>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            disabled={
+                                                                updateEventMutation.isPending
+                                                                // || isLoadingDepartments
+                                                            }
+                                                            className={cn(
+                                                                "w-full justify-between",
+                                                                !field.value &&
+                                                                    "text-muted-foreground",
+                                                            )}
+                                                        >
+                                                            {field.value
+                                                                ? departments.find(
+                                                                      // Use depts if fetching inside
+                                                                      (dept) =>
+                                                                          dept.id ===
+                                                                          field.value,
+                                                                  )?.name
+                                                                : "Select department"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search department..." />
+                                                        <CommandList>
+                                                            {/* {isLoadingDepartments && (
+                                                            <div className="p-2 text-center text-sm text-muted-foreground">
+                                                                Loading departments...
+                                                            </div>
+                                                        )} */}
+                                                            <CommandEmpty>
+                                                                No department
+                                                                found.
+                                                            </CommandEmpty>
+                                                            <CommandGroup>
+                                                                {departments.map(
+                                                                    // Use depts if fetching inside
+                                                                    (dept) => (
+                                                                        <CommandItem
+                                                                            value={
+                                                                                dept.name
+                                                                            }
+                                                                            key={
+                                                                                dept.id
+                                                                            }
+                                                                            onSelect={() => {
+                                                                                form.setValue(
+                                                                                    "departmentId",
+                                                                                    dept.id,
+                                                                                    {
+                                                                                        shouldValidate: true,
+                                                                                    },
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    "mr-2 h-4 w-4",
+                                                                                    dept.id ===
+                                                                                        field.value
+                                                                                        ? "opacity-100"
+                                                                                        : "opacity-0",
+                                                                                )}
+                                                                            />
+                                                                            {
+                                                                                dept.name
+                                                                            }
+                                                                        </CommandItem>
+                                                                    ),
+                                                                )}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                             {/* Start Date & Time */}
                             <div>
                                 <FormField

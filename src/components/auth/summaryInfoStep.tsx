@@ -12,7 +12,7 @@ interface SummaryStepProps {
 
 export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
     const [formData] = useAtom(registrationFormAtom);
-    const [isLoading, setLoading] = useAtom(registrationLoadingAtom);
+    const [isLoading] = useAtom(registrationLoadingAtom);
 
     return (
         <div className="space-y-6">

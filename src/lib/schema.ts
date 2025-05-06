@@ -134,7 +134,12 @@ export const eventSchema = v.pipe(
         eventVenueId: v.pipe(
             v.number("Venue ID must be a number"),
             v.integer("Venue ID must be an integer"),
-            v.minValue(1, "Please select a valid facility."), // Ensure a positive ID
+            v.minValue(1, "Please select a valid venue."),
+        ),
+        departmentId: v.pipe(
+            v.number("Department ID must be a number"),
+            v.integer("Department ID must be an integer"),
+            v.minValue(1, "Please select a valid department."),
         ),
         startTime: v.date("Start date is required"),
         endTime: v.date("End date is required"),
@@ -192,6 +197,13 @@ export const editEventSchema = v.pipe(
                 v.number("Venue ID must be a number"),
                 v.integer("Venue ID must be an integer"),
                 v.minValue(1, "Please select a valid facility."),
+            ),
+        ),
+        departmentId: v.optional(
+            v.pipe(
+                v.number("Department ID must be a number"),
+                v.integer("Department ID must be an integer"),
+                v.minValue(1, "Please select a valid department."),
             ),
         ),
         startTime: v.optional(v.date()),
@@ -581,66 +593,6 @@ export const departmentSchema = v.object({
 });
 
 export type DepartmentInput = v.InferInput<typeof departmentSchema>;
-
-const UserDTOSchema = v.object({
-    id: v.number(),
-    email: v.string([v.email()]),
-    firstName: v.string(),
-    lastName: v.string(),
-    // Add other relevant fields from UserDTO if necessary
-});
-
-// Status for Venue Approvals
-const VenueApprovalStatusSchema = v.picklist(
-    ["APPROVED", "REJECTED"],
-    "Invalid approval status.",
-);
-
-// Schema for VenueApprovalDTO (as received from backend)
-const VenueApprovalDTOSchema = v.object({
-    id: v.number(),
-    venueReservationId: v.number(),
-    userId: v.number(),
-    signedBy: v.string(),
-    userRole: v.string(), // Consider v.picklist(UserRole values) if strict validation needed
-    remarks: v.optional(v.string(), ""),
-    status: VenueApprovalStatusSchema,
-    dateSigned: v.optional(v.pipe(v.string(), v.isoDateTime()), ""),
-});
-
-// Status for Venue Reservations
-const VenueReservationStatusSchema = v.picklist(
-    ["PENDING", "APPROVED", "REJECTED", "CANCELLED"],
-    "Invalid reservation status.",
-);
-
-// Schema for VenueReservationDTO (as received from backend)
-// const VenueReservationDTOSchema = v.object({
-//     id: v.number(),
-//     eventId: v.optional(v.number(), null),
-//     requestingUser: UserDTOSchema,
-//     departmentId: v.optional(v.number(), null),
-//     departmentName: v.optional(v.string(), null),
-//     venueId: v.number(),
-//     venueName: v.string(),
-//     startTime: v.pipe(v.string(), v.isoDateTime("Invalid start date/time format.")),
-//     endTime: v.pipe(v.string(), v.isoDateTime("Invalid end date/time format.")),
-//     status: VenueReservationStatusSchema,
-//     reservationLetterUrl: v.optional(v.pipe(v.string(), v.url()), null),
-//     approvals: v.optional(v.array(VenueApprovalDTOSchema), null),
-//     createdAt: v.pipe(v.string(), v.isoDateTime()),
-//     updatedAt: v.optional(v.pipe(v.string(), v.isoDateTime()), null),
-// });
-
-// Schema for the Reservation Letter File upload
-const ReservationLetterFileSchema = v.pipe(
-    v.instance(File, "Reservation letter file is required."),
-    v.mimeType(
-        ["application/pdf", "image/jpeg", "image/png", "image/webp"],
-        "Invalid file type. Please select a PDF, JPG, PNG, or WEBP file.",
-    ),
-    v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."), // 5MB limit
-);
 
 // Schema for the Frontend Form to Create a Venue Reservation
 // Adapt fields based on your actual form inputs

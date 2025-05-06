@@ -49,7 +49,6 @@ export function InputOTPForm() {
     });
 
     async function onSubmit(data: OtpInput) {
-        // userEmail is guaranteed to be non-null here due to the check above
         try {
             setIsLoading(true);
             await verifyOTP(userEmail!, data.code);

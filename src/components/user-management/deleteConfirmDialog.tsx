@@ -17,6 +17,7 @@ interface DeleteConfirmDialogProps {
     title: string;
     description: string;
     isLoading?: boolean; // Add isLoading prop
+    buttonText?: string; // Add buttonText prop
 }
 
 export function DeleteConfirmDialog({
@@ -26,6 +27,7 @@ export function DeleteConfirmDialog({
     onConfirm,
     title,
     description,
+    buttonText,
 }: DeleteConfirmDialogProps) {
     return (
         <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -47,12 +49,11 @@ export function DeleteConfirmDialog({
                                 <LoaderCircleIcon
                                     className="-ms-1 animate-spin"
                                     size={16}
-                                    aria-hidden="true"
                                 />
-                                Deactivate
+                                {buttonText || "Delete"}
                             </>
                         ) : (
-                            "Deactivate"
+                            buttonText || "Delete"
                         )}
                     </AlertDialogAction>
                 </AlertDialogFooter>
