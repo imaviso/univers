@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
     ArrowLeft,
+    Building,
     CalendarPlus,
     CheckCircle2,
     Clock,
@@ -51,6 +52,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { approveEvent, cancelEvent, updateEvent } from "@/lib/api";
 import {
+    departmentsQueryOptions,
     equipmentReservationKeys,
     equipmentReservationsByEventIdQueryOptions,
     equipmentsQueryOptions,
@@ -62,7 +64,7 @@ import {
 } from "@/lib/query"; // Import query options
 import type { EquipmentReservationFormInput } from "@/lib/schema";
 import type {
-    Equipment,
+    DepartmentType,
     Event,
     EventApprovalDTO,
     EventDTOPayload,
@@ -81,11 +83,9 @@ import { useMutation, useSuspenseQuery } from "@tanstack/react-query"; // Import
 import {
     createFileRoute,
     notFound,
-    useLoaderData,
     useRouteContext,
     useRouter,
 } from "@tanstack/react-router";
-import { set } from "date-fns";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -113,6 +113,7 @@ export const Route = createFileRoute("/app/events/$eventId")({
         await queryClient.ensureQueryData(
             equipmentReservationsByEventIdQueryOptions(eventIdNum),
         );
+        await queryClient.ensureQueryData(departmentsQueryOptions);
         return eventId;
     },
     component: EventDetailsPage,
@@ -133,6 +134,7 @@ export function EventDetailsPage() {
     );
     const { data: event } = useSuspenseQuery(eventByIdQueryOptions(eventId));
     const { data: venues } = useSuspenseQuery(venuesQueryOptions);
+    const { data: departments } = useSuspenseQuery(departmentsQueryOptions);
     const { data: availableEquipments } = useSuspenseQuery(
         equipmentsQueryOptions(currentUser),
     );
@@ -148,7 +150,6 @@ export function EventDetailsPage() {
     const [isReserveEquipmentDialogOpen, setIsReserveEquipmentDialogOpen] =
         useState(false);
 
-    const venueMap = new Map(venues.map((venue) => [venue.id, venue.name]));
     const venueMap1 = useMemo(() => {
         const map = new Map<number, Venue>();
         for (const venue of venues ?? []) {
@@ -157,6 +158,18 @@ export function EventDetailsPage() {
         return map;
     }, [venues]);
     const eventVenue = venueMap1.get(event.eventVenueId);
+
+    const departmentMap = useMemo(() => {
+        const map = new Map<number, DepartmentType>();
+        for (const dept of departments ?? []) {
+            map.set(dept.id, dept);
+        }
+        return map;
+    }, [departments]);
+
+    const eventDepartment = event.departmentId
+        ? departmentMap.get(event.departmentId)
+        : null;
 
     const hasUserApproved = useMemo(() => {
         if (!currentUser) return false;
@@ -421,7 +434,7 @@ export function EventDetailsPage() {
                 );
             }
         },
-        onSettled: (data, error, variables) => {
+        onSettled: (_data, _error, variables) => {
             // Always invalidate after error or success using the key factory
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.detail(variables.eventId),
@@ -839,6 +852,22 @@ export function EventDetailsPage() {
                                             </div>
                                         </div>
 
+                                        {/* Department */}
+                                        {eventDepartment && (
+                                            <div>
+                                                <h3 className="text-sm font-medium text-muted-foreground">
+                                                    Department
+                                                </h3>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <Building className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="text-sm">
+                                                        {eventDepartment.name ??
+                                                            "N/A"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Approved Letter - Updated */}
                                         {event.approvedLetterUrl && (
                                             <div>
@@ -1121,11 +1150,9 @@ export function EventDetailsPage() {
                 isOpen={isDeleteDialogOpen}
                 onClose={() => setIsDeleteDialogOpen(false)}
                 onConfirm={handleConfirmDelete}
-                title="Cancel Event"
-                description={`Are you sure you want to permanently cancel the event "${event.eventName}"? This action cannot be undone.`}
+                title="Delete Event"
+                description={`Are you sure you want to permanently delete the event "${event.eventName}"? This action cannot be undone.`}
                 isLoading={deleteEventMutation.isPending}
-                confirmText="Yes, Cancel Event"
-                confirmVariant="destructive"
             />
             <CancelConfirmDialog
                 isOpen={isCancelDialogOpen}
@@ -1141,6 +1168,7 @@ export function EventDetailsPage() {
                     onClose={() => setIsEditModalOpen(false)}
                     event={event} // Pass the loaded event data
                     venues={venues} // Pass the loaded venues data
+                    departments={departments} // Pass the loaded departments data
                 />
             )}
             {isOrganizer && (
@@ -1159,7 +1187,6 @@ export function EventDetailsPage() {
                     )}
                     isLoading={createEquipmentReservationMutation.isPending}
                     // Indicate that the event is pre-selected
-                    preselectedEventId={eventIdNum}
                 />
             )}
         </div>

@@ -25,14 +25,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { updateDepartment } from "@/lib/api";
-import { editDepartmentDialogAtom, selectedDepartmentAtom } from "@/lib/atoms"; // Use correct atoms
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import { type DepartmentInput, departmentSchema } from "@/lib/schema";
 import type { DepartmentType, UserType } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAtom } from "jotai";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 

@@ -1,6 +1,5 @@
 import {
     BookCheck,
-    BookText,
     Building,
     Building2,
     CalendarDays,
@@ -8,7 +7,6 @@ import {
     LayoutGrid,
     Package,
     PackageCheck,
-    PackagePlus,
     Settings,
     Users,
 } from "lucide-react";

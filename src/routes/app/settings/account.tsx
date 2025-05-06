@@ -35,7 +35,6 @@ import {
 import { useCurrentUser, userQueryOptions } from "@/lib/query"; // Corrected import name
 import {
     ImageSchema,
-    type OtpInput,
     OtpSchema,
     type SetNewPasswordInput,
     setNewPasswordSchema,
@@ -57,7 +56,7 @@ import {
     X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import * as v from "valibot";
 

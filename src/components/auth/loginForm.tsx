@@ -18,10 +18,7 @@ import { Eye, EyeOff, LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { is } from "valibot";
-import { Drawer, DrawerContent } from "../ui/drawer";
 import { OtpVerificationDrawer } from "./otp-drawer";
-import { InputOTPForm } from "./otp-form";
 
 export default function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);

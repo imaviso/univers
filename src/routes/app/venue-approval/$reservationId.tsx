@@ -22,22 +22,19 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
-    reservationApprovalsQueryOptions, // Use new query options
     reservationByIdQueryOptions,
     useApproveReservationMutation, // Use new mutations
     useRejectReservationMutation,
 } from "@/lib/query";
-import type { VenueApprovalDTO, VenueReservationDTO } from "@/lib/types"; // Use new types
+import type { VenueApprovalDTO } from "@/lib/types"; // Use new types
 import {
     formatDateTime,
     formatRole,
-    getApproverStatusBadge,
     getBadgeVariant,
     getStatusBadgeClass,
 } from "@/lib/utils"; // Import utils
 import { useSuspenseQueries } from "@tanstack/react-query"; // Use useSuspenseQueries
 import {
-    Link,
     createFileRoute,
     notFound,
     useNavigate,

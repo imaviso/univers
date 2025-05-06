@@ -1,5 +1,5 @@
 import { atom } from "jotai";
-import type { DepartmentType, Equipment, UserType, Venue } from "./types"; // Add DepartmentType
+import type { DepartmentType, UserType } from "./types"; // Add DepartmentType
 // Registration form atoms
 export const registrationStepAtom = atom(0);
 

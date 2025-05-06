@@ -23,12 +23,9 @@ import { useAtom } from "jotai";
 import {
     AlertTriangle, // Added
     Bell,
-    Calendar,
     CheckCircle2, // Added
-    Hash, // Added
     Info, // Added
     type LucideIcon, // Added
-    User,
     XCircle, // Added
 } from "lucide-react"; // Import necessary icons
 

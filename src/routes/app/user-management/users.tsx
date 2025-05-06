@@ -6,11 +6,7 @@ import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import type { UserFormInput } from "@/lib/schema";
 import { ROLES } from "@/lib/types";
 import type { UserType } from "@/lib/types";
-import {
-    useMutation,
-    useQueryClient,
-    useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { UserPlus } from "lucide-react";
 import { useState } from "react";

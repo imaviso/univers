@@ -213,8 +213,9 @@ export type EventDTOPayload = {
     eventName: string;
     eventType: string;
     eventVenueId: number;
-    startTime: string; // ISO string
-    endTime: string; // ISO string
+    departmentId: number;
+    startTime: string;
+    endTime: string;
     organizer: {
         // Nested organizer object
         id: number;
@@ -228,6 +229,7 @@ export type EventDTOBackendResponse = {
     organizer: UserDTO;
     approvedLetterPath: string | null;
     eventVenueId: number;
+    departmentId: number;
     startTime: string; // Or Date if parsed on frontend
     endTime: string; // Or Date if parsed on frontend
     status: string; // e.g., "PENDING"
@@ -237,6 +239,7 @@ export type EventInputType = {
     eventName: string;
     eventType: string;
     eventVenueId: number;
+    departmentId: number;
     startTime: Date;
     endTime: Date;
     approvedLetter: File[]; // Input is array
@@ -246,6 +249,7 @@ export type EventOutputType = {
     eventName: string;
     eventType: string;
     eventVenueId: number;
+    departmentId: number;
     startTime: Date;
     endTime: Date;
     approvedLetter: File; // Output is single file
@@ -259,6 +263,7 @@ export type Event = {
     approvedLetterUrl: string | null;
     imageUrl: string | null;
     eventVenueId: number;
+    departmentId: number;
     startTime: string;
     endTime: string;
     status: string;

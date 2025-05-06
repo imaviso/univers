@@ -9,7 +9,6 @@ import {
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -23,18 +22,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { API_BASE_URL } from "@/lib/auth";
-import {
-    ImageSchema, // Import ImageSchema for validation
-    type VenueInput,
-    venueSchema,
-} from "@/lib/schema";
+import { type VenueInput, venueSchema } from "@/lib/schema";
 import type { UserType, Venue } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Loader2, UploadCloud, X } from "lucide-react"; // Import icons
 import { useEffect, useState } from "react"; // Import useState
 import { useForm } from "react-hook-form";
-import * as v from "valibot"; // Import valibot for safeParse
 import {
     FileUpload,
     FileUploadDropzone,
@@ -44,7 +37,6 @@ import {
     FileUploadItemPreview,
     FileUploadList,
 } from "../ui/file-upload"; // Import FileUpload components
-import { Label } from "../ui/label";
 
 const defaultValues: VenueInput = {
     name: "",

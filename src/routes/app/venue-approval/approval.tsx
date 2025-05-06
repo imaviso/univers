@@ -44,11 +44,10 @@ import {
     useRejectReservationMutation,
     venuesQueryOptions,
 } from "@/lib/query";
-import type { Venue, VenueReservationDTO } from "@/lib/types";
-import { formatDateTime, getStatusBadgeClass } from "@/lib/utils";
+import type { VenueReservationDTO } from "@/lib/types";
+import { getStatusBadgeClass } from "@/lib/utils";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
-    Link,
     createFileRoute,
     redirect,
     useNavigate,
@@ -75,7 +74,6 @@ import {
     ChevronDown,
     Download,
     Eye,
-    Filter,
     MoreHorizontal,
     Search,
     X,

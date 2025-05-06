@@ -17,7 +17,6 @@ import {
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -38,15 +37,15 @@ import {
 } from "@/components/ui/select";
 import { createEvent } from "@/lib/api";
 import {
+    departmentsQueryOptions,
     eventsQueryKeys,
-    ownEventsQueryOptions,
     useCurrentUser,
 } from "@/lib/query"; // Import eventsQueryOptions
 import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
-import type { EventDTOPayload, Venue } from "@/lib/types";
+import type { DepartmentType, EventDTOPayload, Venue } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useMutation } from "@tanstack/react-query"; // Import mutation hooks
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query"; // Import mutation hooks
 import { useRouteContext } from "@tanstack/react-router";
 import { startOfDay } from "date-fns";
 import { Check, ChevronsUpDown, Loader2, UploadCloud, X } from "lucide-react";
@@ -76,12 +75,17 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
     const context = useRouteContext({ from: "/app/events/timeline" });
     const queryClient = context.queryClient;
 
+    const { data: departments, isLoading: isLoadingDepartments } =
+        useSuspenseQuery(departmentsQueryOptions);
+
     const form = useForm<EventInput>({
+        // @ts-ignore
         resolver: valibotResolver(eventSchema),
         defaultValues: {
             eventName: "",
             eventType: undefined,
             eventVenueId: undefined,
+            departmentId: undefined,
             startTime: undefined,
             endTime: undefined,
             approvedLetter: [],
@@ -113,6 +117,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                 eventName: eventDTO.eventName,
                 eventType: eventDTO.eventType,
                 eventVenueId: eventDTO.eventVenueId,
+                departmentId: eventDTO.departmentId,
                 startTime: new Date(eventDTO.startTime),
                 endTime: new Date(eventDTO.endTime),
                 approvedLetter: approvedLetter,
@@ -127,7 +132,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
             return { previousOwnEvents };
         },
 
-        onError: (err, variables, context) => {
+        onError: (err, _variables, context) => {
             console.error("Mutation error", err);
             toast.error(
                 `Failed to create event: ${err instanceof Error ? err.message : "Please try again."}`,
@@ -180,6 +185,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                 eventName: outputValues.eventName,
                 eventType: outputValues.eventType,
                 eventVenueId: outputValues.eventVenueId,
+                departmentId: outputValues.departmentId,
                 startTime: outputValues.startTime.toISOString(),
                 endTime: outputValues.endTime.toISOString(),
                 organizer: {
@@ -359,6 +365,105 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                     </FormItem>
                                 )}
                             />
+
+                            <div className="col-span-2">
+                                <FormField
+                                    control={form.control}
+                                    name="departmentId"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel>Department</FormLabel>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                        <Button
+                                                            variant="outline"
+                                                            disabled={
+                                                                createEventMutation.isPending ||
+                                                                isLoadingDepartments
+                                                            }
+                                                            className={cn(
+                                                                "w-full justify-between",
+                                                                !field.value &&
+                                                                    "text-muted-foreground",
+                                                            )}
+                                                        >
+                                                            {field.value
+                                                                ? departments?.find(
+                                                                      (
+                                                                          dept: DepartmentType, // Explicitly type dept
+                                                                      ) =>
+                                                                          dept.id ===
+                                                                          field.value,
+                                                                  )?.name
+                                                                : "Select department"}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search department..." />
+                                                        <CommandList>
+                                                            {isLoadingDepartments && (
+                                                                <div className="p-2 text-center text-sm text-muted-foreground">
+                                                                    Loading
+                                                                    departments...
+                                                                </div>
+                                                            )}
+                                                            <CommandEmpty>
+                                                                No department
+                                                                found.
+                                                            </CommandEmpty>
+                                                            <CommandGroup>
+                                                                {departments?.map(
+                                                                    (
+                                                                        dept: DepartmentType,
+                                                                    ) => (
+                                                                        <CommandItem
+                                                                            value={
+                                                                                dept.name
+                                                                            }
+                                                                            key={
+                                                                                dept.id
+                                                                            }
+                                                                            onSelect={() => {
+                                                                                form.setValue(
+                                                                                    "departmentId",
+                                                                                    dept.id,
+                                                                                    {
+                                                                                        shouldValidate: true,
+                                                                                    },
+                                                                                );
+                                                                            }}
+                                                                        >
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    "mr-2 h-4 w-4",
+                                                                                    dept.id ===
+                                                                                        field.value
+                                                                                        ? "opacity-100"
+                                                                                        : "opacity-0",
+                                                                                )}
+                                                                            />
+                                                                            {
+                                                                                dept.name
+                                                                            }
+                                                                        </CommandItem>
+                                                                    ),
+                                                                )}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            {/* Event Type */}
 
                             {/* Start Date & Time */}
                             <div>

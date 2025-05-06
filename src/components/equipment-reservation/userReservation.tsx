@@ -1,13 +1,7 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Dialog,
     DialogContent,
@@ -25,7 +19,7 @@ import {
 import type { EquipmentReservationDTO } from "@/lib/types";
 import { formatDateTime, getStatusBadgeClass } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, Calendar, Clock, MapPin, Package } from "lucide-react"; // Added Package icon
+import { AlertCircle, Calendar, Clock, Package } from "lucide-react"; // Added Package icon
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 

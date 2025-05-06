@@ -1,30 +1,6 @@
-import ErrorPage from "@/components/ErrorPage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { venuesQueryOptions } from "@/lib/query";
 import type { Venue } from "@/lib/types";
@@ -34,18 +10,7 @@ import {
     useRouter,
 } from "@tanstack/react-router";
 import { format } from "date-fns";
-import {
-    ArrowLeft,
-    Calendar,
-    Clock,
-    Download,
-    Eye,
-    MapPin,
-    MoreHorizontal,
-    UserCircle,
-    Users,
-    Wifi,
-} from "lucide-react";
+import { ArrowLeft, Calendar, Clock, MapPin, UserCircle } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/app/venues/$venueId")({

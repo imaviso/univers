@@ -16,7 +16,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import type { UserType } from "@/lib/types";
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface AssignHeadDialogProps {

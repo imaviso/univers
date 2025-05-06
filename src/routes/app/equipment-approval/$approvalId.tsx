@@ -10,7 +10,6 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
     Table,
     TableBody,
@@ -27,14 +26,9 @@ import {
     useCurrentUser, // To check current user's role
     useRejectEquipmentReservationMutation,
 } from "@/lib/query";
-import type {
-    EquipmentApprovalDTO,
-    EquipmentReservationDTO,
-} from "@/lib/types";
 import { formatDateTime, formatRole, getStatusBadgeClass } from "@/lib/utils";
 import { useSuspenseQueries } from "@tanstack/react-query";
 import {
-    Link,
     createFileRoute,
     useNavigate,
     useRouter,
