@@ -9,7 +9,6 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { webSocketStatusAtom } from "@/lib/notifications"; // Adjust path if needed
 import type { NotificationDTO } from "@/lib/notifications"; // Import DTO type
 import {
     notificationsQueryOptions,
@@ -17,9 +16,8 @@ import {
     useMarkAllNotificationsReadMutation,
     useMarkNotificationsReadMutation,
 } from "@/lib/query";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router"; // Import useNavigate
-import { useAtom } from "jotai";
 import {
     AlertTriangle, // Added
     Bell,
@@ -91,9 +89,7 @@ const getNotificationStyle = (
 };
 
 export function NotificationCenter() {
-    const [connectionStatus] = useAtom(webSocketStatusAtom);
-    const queryClient = useQueryClient();
-    const navigate = useNavigate(); // Get navigation function
+    const navigate = useNavigate();
 
     // Fetch unread count
     const { data: countData } = useQuery(unreadNotificationsCountQueryOptions);
@@ -101,7 +97,7 @@ export function NotificationCenter() {
 
     const params = { page: 0, size: 7 } as const;
     const { data: notificationsData, isLoading: isLoadingNotifications } =
-        useQuery(notificationsQueryOptions(params));
+        useSuspenseQuery(notificationsQueryOptions(params));
 
     const notifications = notificationsData?.content ?? [];
 
@@ -119,25 +115,11 @@ export function NotificationCenter() {
         markAllReadMutation.mutate();
     };
 
-    // --- UI Logic for status indicator ---
-    let statusIndicatorColor = "bg-gray-400";
-    const statusTitle = `WebSocket: ${connectionStatus}`;
-    if (connectionStatus === "connected") statusIndicatorColor = "bg-green-500";
-    else if (connectionStatus === "connecting")
-        statusIndicatorColor = "bg-yellow-500";
-    else if (connectionStatus === "error") statusIndicatorColor = "bg-red-500";
-    else if (connectionStatus === "closed")
-        statusIndicatorColor = "bg-gray-400";
-
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
-                    <span
-                        className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ${statusIndicatorColor} ring-2 ring-white`}
-                        title={statusTitle}
-                    />
                     {unreadCount > 0 && (
                         <Badge
                             variant="destructive"
@@ -213,7 +195,7 @@ export function NotificationCenter() {
                                     key={notification.id}
                                     // Use onClick for combined action
                                     onClick={() => {
-                                        if (!notification.read) {
+                                        if (!notification.isRead) {
                                             handleMarkRead(notification.id);
                                         }
                                         if (canNavigate) {
@@ -223,7 +205,7 @@ export function NotificationCenter() {
                                     }}
                                     // Remove onSelect
                                     // --- Use items-start like the other dropdown ---
-                                    className={`items-start space-x-3 ${notification.read ? "opacity-60" : ""} ${canNavigate ? "cursor-pointer" : "cursor-default"}`} // Adjust cursor
+                                    className={`items-start space-x-3 ${notification.isRead ? "opacity-60" : ""} ${canNavigate ? "cursor-pointer" : "cursor-default"}`} // Adjust cursor
                                 >
                                     {/* --- Add Icon --- */}
                                     <div

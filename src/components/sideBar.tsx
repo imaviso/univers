@@ -16,11 +16,13 @@ import {
 import { NotificationCenter } from "@/contexts/notification-context";
 import { userSignOut } from "@/lib/auth";
 import { allNavigation } from "@/lib/navigation";
+import { webSocketStatusAtom } from "@/lib/notifications";
 import { useCurrentUser } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
+import { useAtom } from "jotai";
 import { Bell, ChevronLeft, LogOut, Menu, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -28,10 +30,11 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 
 export function Sidebar() {
+    const [connectionStatus] = useAtom(webSocketStatusAtom);
     const pathname = useRouterState({ select: (s) => s.location.pathname });
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
-    const { data: user, isLoading, isError } = useCurrentUser();
+    const { data: user } = useCurrentUser();
     const [navigation, setNavigation] = useState(allNavigation);
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -57,6 +60,15 @@ export function Sidebar() {
             console.error("Logout error:", error);
         }
     };
+
+    let statusIndicatorColor = "bg-gray-400";
+    const statusTitle = `Status: ${connectionStatus}`;
+    if (connectionStatus === "connected") statusIndicatorColor = "bg-green-500";
+    else if (connectionStatus === "connecting")
+        statusIndicatorColor = "bg-yellow-500";
+    else if (connectionStatus === "error") statusIndicatorColor = "bg-red-500";
+    else if (connectionStatus === "closed")
+        statusIndicatorColor = "bg-gray-400";
 
     return (
         <TooltipProvider>
@@ -261,15 +273,23 @@ export function Sidebar() {
                             <div className="flex justify-center">
                                 <Tooltip delayDuration={700}>
                                     <TooltipTrigger asChild>
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage
-                                                src={
-                                                    user?.profileImagePath ||
-                                                    undefined
-                                                }
+                                        <div className="relative">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage
+                                                    src={
+                                                        user?.profileImagePath ||
+                                                        undefined
+                                                    }
+                                                />
+                                                <AvatarFallback>
+                                                    {initials}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <span
+                                                className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ${statusIndicatorColor} ring-2 ring-white`}
+                                                title={statusTitle}
                                             />
-                                            <AvatarFallback>JD</AvatarFallback>
-                                        </Avatar>
+                                        </div>
                                     </TooltipTrigger>
                                     <TooltipContent
                                         side="top"
@@ -290,17 +310,23 @@ export function Sidebar() {
                             <Tooltip delayDuration={700}>
                                 <TooltipTrigger asChild>
                                     <div className="flex items-center gap-2">
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage
-                                                src={
-                                                    user?.profileImagePath ||
-                                                    undefined
-                                                }
+                                        <div className="relative">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage
+                                                    src={
+                                                        user?.profileImagePath ||
+                                                        undefined
+                                                    }
+                                                />
+                                                <AvatarFallback>
+                                                    {initials}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <span
+                                                className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ${statusIndicatorColor} ring-2 ring-white`}
+                                                title={statusTitle}
                                             />
-                                            <AvatarFallback>
-                                                {initials}
-                                            </AvatarFallback>
-                                        </Avatar>
+                                        </div>
                                         <div className="flex flex-col">
                                             <span className="text-sm font-medium">
                                                 {user?.firstName}{" "}

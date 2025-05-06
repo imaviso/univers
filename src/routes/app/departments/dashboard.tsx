@@ -27,18 +27,15 @@ function DepartmentsComponent() {
                             size="sm"
                             className="gap-1"
                         >
-                            <Building className="h-4 w-4" />{" "}
-                            {/* Use appropriate icon */}
-                            Add Department
+                            <Building className="h-4 w-4" /> Add Department
                         </Button>
                     </div>
                 </header>
 
-                {/* Add Dialog will be triggered by atom state change */}
                 <AddDepartmentFormDialog />
 
                 <div className="flex-1 overflow-auto p-6">
-                    <DepartmentDataTable /> {/* The main table component */}
+                    <DepartmentDataTable />
                 </div>
             </div>
         </div>

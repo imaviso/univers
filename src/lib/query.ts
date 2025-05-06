@@ -188,6 +188,9 @@ export const eventApprovalsQueryOptions = (eventId: number | string) =>
 
 export const venuesQueryOptions = {
     queryKey: ["venues"],
+    queryOptions: {
+        staleTime: 1000 * 60 * 60,
+    },
     queryFn: async () => {
         const venues = await getAllVenues();
         return venues;
@@ -219,7 +222,7 @@ export const equipmentsQueryOptions = (user: UserType | null | undefined) =>
 export const departmentsQueryOptions = queryOptions({
     queryKey: ["departments"],
     queryFn: getAllDepartments,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 60,
 });
 
 export const notificationsQueryKeys = {
@@ -322,20 +325,20 @@ export const venueReservationKeys = {
 export const allReservationsQueryOptions = queryOptions<VenueReservationDTO[]>({
     queryKey: venueReservationKeys.lists(),
     queryFn: getAllReservations,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
 });
 
 export const ownReservationsQueryOptions = queryOptions<VenueReservationDTO[]>({
     queryKey: venueReservationKeys.own(),
     queryFn: getOwnReservations,
-    staleTime: 1000 * 60 * 2, // 2 minutes stale time
+    staleTime: 1000 * 60 * 2,
 });
 
 export const reservationByIdQueryOptions = (reservationId: number | string) =>
     queryOptions<VenueReservationDTO>({
         queryKey: venueReservationKeys.detail(reservationId),
         queryFn: () => getReservationById(reservationId),
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 1000 * 60 * 5,
     });
 
 export const reservationApprovalsQueryOptions = (
@@ -395,7 +398,7 @@ export const useApproveReservationMutation = () => {
     const queryClient = context.queryClient;
     return useMutation({
         mutationFn: approveReservation,
-        onSuccess: (message, variables) => {
+        onSuccess: (_message, variables) => {
             // Invalidate the specific reservation and potentially lists
             queryClient.invalidateQueries({
                 queryKey: venueReservationKeys.detail(variables.reservationId),
@@ -420,7 +423,7 @@ export const useRejectReservationMutation = () => {
     const queryClient = context.queryClient;
     return useMutation({
         mutationFn: rejectReservation,
-        onSuccess: (message, variables) => {
+        onSuccess: (_message, variables) => {
             // Invalidate the specific reservation and potentially lists
             queryClient.invalidateQueries({
                 queryKey: venueReservationKeys.detail(variables.reservationId),
@@ -445,7 +448,7 @@ export const useCancelReservationMutation = () => {
     const queryClient = context.queryClient;
     return useMutation({
         mutationFn: cancelReservation,
-        onSuccess: (message, reservationId) => {
+        onSuccess: (_message, reservationId) => {
             // Invalidate the specific reservation and potentially lists
             queryClient.invalidateQueries({
                 queryKey: venueReservationKeys.detail(reservationId),
@@ -470,7 +473,7 @@ export const useDeleteReservationMutation = () => {
     const queryClient = context.queryClient;
     return useMutation({
         mutationFn: deleteReservation,
-        onSuccess: (message, reservationId) => {
+        onSuccess: (_message, reservationId) => {
             // Remove the specific reservation from cache and invalidate lists
             queryClient.removeQueries({
                 queryKey: venueReservationKeys.detail(reservationId),
@@ -596,7 +599,7 @@ export const useApproveEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: approveEquipmentReservation,
-        onSuccess: (message, variables) => {
+        onSuccess: (_message, variables) => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.detail(
                     variables.reservationId,
@@ -624,7 +627,7 @@ export const useRejectEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: rejectEquipmentReservation,
-        onSuccess: (message, variables) => {
+        onSuccess: (_message, variables) => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.detail(
                     variables.reservationId,
@@ -652,7 +655,7 @@ export const useCancelEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: cancelEquipmentReservation,
-        onSuccess: (message, reservationId) => {
+        onSuccess: (_message, reservationId) => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.detail(reservationId),
             });
@@ -673,7 +676,7 @@ export const useDeleteEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: deleteEquipmentReservation,
-        onSuccess: (message, reservationId) => {
+        onSuccess: (_message, reservationId) => {
             queryClient.removeQueries({
                 queryKey: equipmentReservationKeys.detail(reservationId),
             });

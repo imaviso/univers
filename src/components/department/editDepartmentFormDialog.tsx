@@ -26,7 +26,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { updateDepartment } from "@/lib/api";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
-import { type DepartmentInput, departmentSchema } from "@/lib/schema";
+import { type EditDepartmentInput, editDepartmentSchema } from "@/lib/schema";
 import type { DepartmentType, UserType } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -52,8 +52,8 @@ export function EditDepartmentFormDialog({
     // const [isOpen, setIsOpen] = useAtom(editDepartmentDialogAtom);
     // const [, setSelectedDepartment] = useAtom(selectedDepartmentAtom); // Not needed if department is passed as prop
 
-    const form = useForm<DepartmentInput>({
-        resolver: valibotResolver(departmentSchema),
+    const form = useForm<EditDepartmentInput>({
+        resolver: valibotResolver(editDepartmentSchema),
         defaultValues: {
             // Default values will be overridden by useEffect
             name: "",
@@ -68,8 +68,8 @@ export function EditDepartmentFormDialog({
         if (isOpen && department) {
             form.reset({
                 name: department.name,
-                description: department.description ?? "", // Handle null description
-                deptHeadId: department.deptHeadId ?? undefined, // Handle null deptHeadId
+                description: department.description ?? "",
+                deptHeadId: department.deptHead?.id ?? undefined,
             });
         }
     }, [isOpen, department, form]);
@@ -79,7 +79,7 @@ export function EditDepartmentFormDialog({
         mutationFn: ({
             departmentId,
             payload,
-        }: { departmentId: number; payload: Partial<DepartmentInput> }) =>
+        }: { departmentId: number; payload: Partial<EditDepartmentInput> }) =>
             updateDepartment(departmentId, payload),
         onMutate: async ({ departmentId, payload }) => {
             await queryClient.cancelQueries({
@@ -114,12 +114,11 @@ export function EditDepartmentFormDialog({
                                   deptHeadId:
                                       payload.deptHeadId !== undefined
                                           ? payload.deptHeadId
-                                          : dept.deptHeadId,
-                                  // Update name only if ID changed
+                                          : dept.deptHead?.id,
                                   deptHeadName:
                                       deptHeadName !== undefined
                                           ? deptHeadName
-                                          : dept.deptHeadName,
+                                          : dept.deptHead?.firstName,
                                   updatedAt: new Date().toISOString(),
                               }
                             : dept,
@@ -127,7 +126,7 @@ export function EditDepartmentFormDialog({
             );
             return { previousDepartments };
         },
-        onError: (err, variables, context) => {
+        onError: (err, _variables, context) => {
             if (context?.previousDepartments) {
                 queryClient.setQueryData(
                     departmentsQueryOptions.queryKey,
@@ -154,14 +153,15 @@ export function EditDepartmentFormDialog({
         },
     });
 
-    const handleFormSubmit = (values: DepartmentInput) => {
+    const handleFormSubmit = (values: EditDepartmentInput) => {
         // Prepare payload - only send changed values if using PATCH effectively
         // Or send all values as per current API setup
-        const payload: Partial<DepartmentInput> = {
+        const payload: Partial<EditDepartmentInput> = {
             name: values.name,
             description: values.description || undefined, // Send null if empty
-            // Map form's deptHeadId to backend's expected 'deptHead' (number | null)
-            deptHead: values.deptHeadId ? Number(values.deptHeadId) : null,
+            deptHeadId: values.deptHeadId
+                ? Number(values.deptHeadId)
+                : undefined,
         };
 
         updateMutation.mutate({ departmentId: department.id, payload });
@@ -247,12 +247,13 @@ export function EditDepartmentFormDialog({
                                                     <SelectValue placeholder="Select a user" />
                                                 </SelectTrigger>
                                             </FormControl>
+
                                             <SelectContent>
                                                 {users?.map(
                                                     (user: UserType) => (
                                                         <SelectItem
                                                             key={user.id}
-                                                            value={user.id.toString()} // Use user ID string (which is fine here)
+                                                            value={user.id.toString()}
                                                         >
                                                             {user.firstName}{" "}
                                                             {user.lastName} (
@@ -280,7 +281,6 @@ export function EditDepartmentFormDialog({
                             <Button
                                 type="submit"
                                 disabled={
-                                    !form.formState.isDirty ||
                                     !form.formState.isValid ||
                                     updateMutation.isPending
                                 } // Only enable if changed and valid

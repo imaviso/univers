@@ -38,16 +38,18 @@ export function useWebSocketNotifications() {
 
         intentionalDisconnect.current = false;
         setStatus("connecting");
-        console.log("Attempting STOMP connection over plain WebSocket...");
 
         const client = new Client({
             brokerURL: SOCKET_URL,
-            debug: (str) => {
+            debug: (_str) => {
                 /* console.log("STOMP: ", str); */
             },
             reconnectDelay: RECONNECT_DELAY,
-            onConnect: (frame) => {
+            onConnect: () => {
                 setStatus("connected");
+                toast.success("You are now back online!", {
+                    description: "You will able to receive notifications.",
+                });
 
                 const userDestination = "/user/queue/notifications";
                 client.subscribe(userDestination, (message: IMessage) => {
@@ -77,9 +79,6 @@ export function useWebSocketNotifications() {
 
                         // --- Conditional Invalidation based on Payload ---
                         if (entityType === "EVENT") {
-                            console.log(
-                                "Invalidating EVENT related queries...",
-                            );
                             queryClient.invalidateQueries({
                                 queryKey: eventsQueryKeys.all,
                             });
@@ -111,9 +110,6 @@ export function useWebSocketNotifications() {
                                 });
                             }
                         } else if (entityType === "VENUE_RESERVATION") {
-                            console.log(
-                                "Invalidating VENUE_RESERVATION related queries...",
-                            );
                             queryClient.invalidateQueries({
                                 queryKey: venueReservationKeys.lists(),
                             });
@@ -151,9 +147,6 @@ export function useWebSocketNotifications() {
                                 });
                             }
                         } else if (entityType === "EQUIPMENT_RESERVATION") {
-                            console.log(
-                                "Invalidating EQUIPMENT_RESERVATION related queries...",
-                            );
                             queryClient.invalidateQueries({
                                 queryKey: equipmentReservationKeys.lists(),
                             });
@@ -252,7 +245,6 @@ export function useWebSocketNotifications() {
                         toast.error("Failed to process incoming notification.");
                     }
                 });
-                console.log(`Subscribed to: ${userDestination}`);
             },
             onStompError: (frame) => {
                 console.error(
@@ -264,14 +256,18 @@ export function useWebSocketNotifications() {
                     description: frame.headers.message || "Check console.",
                 });
             },
-            onWebSocketError: (event) => {
-                console.error("WebSocket error:", event);
+            onWebSocketError: () => {
                 setStatus("error");
+                toast.error("You are offline!", {
+                    description: "Attempting to reconnect...",
+                });
             },
-            onDisconnect: (frame) => {
-                console.log("STOMP Disconnected:", frame);
+            onDisconnect: () => {
                 if (!intentionalDisconnect.current) {
                     setStatus("disconnected");
+                    toast.error("You are offline.", {
+                        description: "Attempting to reconnect...",
+                    });
                 } else {
                     setStatus("closed");
                 }
@@ -284,7 +280,6 @@ export function useWebSocketNotifications() {
 
     const disconnect = useCallback(() => {
         if (stompClientRef.current?.active) {
-            console.log("Deactivating STOMP client intentionally...");
             intentionalDisconnect.current = true;
             stompClientRef.current.deactivate();
             stompClientRef.current = null;

@@ -8,7 +8,6 @@ import type {
 import type {
     CreateEquipmentReservationInput,
     CreateVenueReservationInput,
-    DepartmentDTO,
     DepartmentType,
     Equipment,
     EquipmentActionInput,
@@ -1012,17 +1011,14 @@ export const getAllDepartments = async (): Promise<DepartmentType[]> => {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        const data: DepartmentDTO[] =
+        const data: DepartmentType[] =
             (await handleApiResponse(response, true)) ?? [];
 
         return data.map((dept) => ({
             id: dept.id,
             name: dept.name,
             description: dept.description,
-            deptHeadName: dept.deptHead
-                ? `${dept.deptHead.firstName} ${dept.deptHead.lastName}`
-                : null,
-            deptHeadId: dept.deptHeadId,
+            deptHead: dept.deptHead,
             createdAt: dept.createdAt,
             updatedAt: dept.updatedAt,
         }));
@@ -1038,7 +1034,7 @@ export const getAllDepartments = async (): Promise<DepartmentType[]> => {
 type DepartmentPayload = {
     name: string;
     description?: string | null;
-    deptHead?: number | null;
+    deptHeadId?: number | null;
 };
 
 export const addDepartment = async (
@@ -1068,7 +1064,7 @@ export const updateDepartment = async (
 ): Promise<string> => {
     try {
         const response = await fetch(
-            `${API_BASE_URL}/admin/departments/${departmentId}`,
+            `${API_BASE_URL}/admin/department/${departmentId}`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -1093,7 +1089,7 @@ export const assignDepartmentHead = async (
 ): Promise<string> => {
     try {
         const response = await fetch(
-            `${API_BASE_URL}/admin/${departmentId}/assign-head/${userId}`,
+            `${API_BASE_URL}/admin/department/${departmentId}/assign-head/${userId}`,
             {
                 method: "POST",
                 credentials: "include",
@@ -1115,7 +1111,7 @@ export const deleteDepartment = async (
 ): Promise<string | null> => {
     try {
         const response = await fetch(
-            `${API_BASE_URL}/admin/departments/${departmentId}`,
+            `${API_BASE_URL}/admin/department/${departmentId}`,
             {
                 method: "DELETE",
                 credentials: "include",
