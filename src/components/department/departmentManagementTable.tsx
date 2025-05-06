@@ -23,22 +23,16 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog"; // Assuming a generic one exists
+import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
+import { deleteDepartment } from "@/lib/api";
 import {
-    assignDepartmentHead,
-    deleteDepartment,
-    updateDepartment,
-} from "@/lib/api";
-import {
-    assignHeadDialogAtom,
     deleteDepartmentDialogAtom,
     editDepartmentDialogAtom,
     selectedDepartmentAtom,
 } from "@/lib/atoms";
 import { defineMeta, filterFn } from "@/lib/filters";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
-import type { DepartmentInput } from "@/lib/schema";
-import type { DepartmentType, UserType } from "@/lib/types";
+import type { DepartmentType } from "@/lib/types";
 import {
     useMutation,
     useQueryClient,
@@ -70,16 +64,12 @@ import {
     ChevronsRight,
     MoreHorizontal,
     TextIcon, // For Description
-    Trash2,
-    UserCog, // For Assign Head
-    UserIcon, // For Dept Head Name
+    Trash2, // For Assign Head
+    UserIcon,
 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { AssignHeadDialog } from "./assignHeadDialog";
 import { EditDepartmentFormDialog } from "./editDepartmentFormDialog";
-
-type ProcessedDepartmentType = DepartmentType & { deptHeadName: string | null };
 
 export function DepartmentDataTable() {
     const queryClient = useQueryClient();
@@ -96,112 +86,22 @@ export function DepartmentDataTable() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useAtom(
         deleteDepartmentDialogAtom,
     );
-    const [assignHeadOpen, setAssignHeadOpen] = useAtom(assignHeadDialogAtom);
+    // const [assignHeadOpen, setAssignHeadOpen] = useAtom(assignHeadDialogAtom);
     const [selectedDepartment, setSelectedDepartment] = useAtom(
         selectedDepartmentAtom,
     );
 
     // Fetch departments and users
     const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
-    const { data: usersData } = useSuspenseQuery(usersQueryOptions); // For assigning head
+    const { data: usersData } = useSuspenseQuery(usersQueryOptions);
 
-    const processedDepartments =
-        React.useMemo((): ProcessedDepartmentType[] => {
-            if (!departmentsData || !usersData) return [];
-
-            const userMap = new Map(
-                // Ensure user.id is treated consistently (e.g., as string if that's the type)
-                usersData.map((user: UserType) => [user.id, user]),
-            );
-
-            return departmentsData.map((dept) => {
-                // Ensure dept.deptHeadId is treated consistently (e.g., as string if user.id is string)
-                const headUser = dept.deptHeadId
-                    ? userMap.get(String(dept.deptHeadId)) // Use String() if user.id is string
-                    : null;
-                return {
-                    ...dept,
-                    deptHeadName: headUser
-                        ? `${headUser.firstName} ${headUser.lastName}`
-                        : null,
-                };
-            });
-        }, [departmentsData, usersData]);
-
-    // --- Mutations ---
-    const updateDepartmentMutation = useMutation({
-        mutationFn: ({
-            departmentId,
-            payload,
-        }: {
-            departmentId: number;
-            payload: Partial<DepartmentInput>;
-        }) => updateDepartment(departmentId, payload),
-        onMutate: async ({ departmentId, payload }) => {
-            await queryClient.cancelQueries({
-                queryKey: departmentsQueryOptions.queryKey,
-            });
-            const previousDepartments = queryClient.getQueryData<
-                DepartmentType[]
-            >(departmentsQueryOptions.queryKey);
-
-            // Find dept head name for optimistic update
-            const deptHeadUser = payload.deptHeadId
-                ? users?.find((u) => Number(u.id) === payload.deptHeadId)
-                : null;
-            const deptHeadName = deptHeadUser
-                ? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
-                : null;
-
-            queryClient.setQueryData<DepartmentType[]>(
-                departmentsQueryOptions.queryKey,
-                (old = []) =>
-                    old.map((dept) =>
-                        dept.id === departmentId
-                            ? {
-                                  ...dept,
-                                  ...payload,
-                                  deptHeadName:
-                                      deptHeadName !== undefined
-                                          ? deptHeadName
-                                          : dept.deptHeadName, // Update name if ID changed
-                                  deptHeadId:
-                                      payload.deptHeadId !== undefined
-                                          ? payload.deptHeadId
-                                          : dept.deptHeadId,
-                                  updatedAt: new Date().toISOString(),
-                              }
-                            : dept,
-                    ),
-            );
-            return { previousDepartments };
-        },
-        onError: (err, variables, context) => {
-            if (context?.previousDepartments) {
-                queryClient.setQueryData(
-                    departmentsQueryOptions.queryKey,
-                    context.previousDepartments,
-                );
-            }
-            toast.error(
-                err instanceof Error
-                    ? err.message
-                    : "Failed to update department",
-            );
-        },
-        onSuccess: (data) => {
-            toast.success(data || "Department updated successfully");
-            setEditDialogOpen(false);
-            setSelectedDepartment(null);
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({
-                queryKey: departmentsQueryOptions.queryKey,
-            });
-            // Invalidate users query if head assignment might change user roles/data shown elsewhere
-            // queryClient.invalidateQueries({ queryKey: usersQueryOptions.queryKey });
-        },
-    });
+    const deptUsers = departmentsData
+        ?.map((dept) => dept.deptHead)
+        .filter(
+            Boolean as unknown as (
+                value: DepartmentType["deptHead"],
+            ) => value is NonNullable<DepartmentType["deptHead"]>,
+        ); // Type assertion for filter(Boolean)
 
     const deleteDepartmentMutation = useMutation({
         mutationFn: deleteDepartment, // Expects departmentId (number)
@@ -218,7 +118,7 @@ export function DepartmentDataTable() {
             );
             return { previousDepartments };
         },
-        onError: (err, departmentId, context) => {
+        onError: (err, _departmentId, context) => {
             if (context?.previousDepartments) {
                 queryClient.setQueryData(
                     departmentsQueryOptions.queryKey,
@@ -243,72 +143,70 @@ export function DepartmentDataTable() {
         },
     });
 
-    const assignHeadMutation = useMutation({
-        mutationFn: ({
-            departmentId,
-            userId,
-        }: {
-            departmentId: number;
-            userId: number;
-        }) => assignDepartmentHead(departmentId, userId),
-        // Optimistic update for assign head
-        onMutate: async ({ departmentId, userId }) => {
-            await queryClient.cancelQueries({
-                queryKey: departmentsQueryOptions.queryKey,
-            });
-            const previousDepartments = queryClient.getQueryData<
-                DepartmentType[]
-            >(departmentsQueryOptions.queryKey);
+    // const assignHeadMutation = useMutation({
+    // 	mutationFn: ({
+    // 		departmentId,
+    // 		userId,
+    // 	}: {
+    // 		departmentId: number;
+    // 		userId: number;
+    // 	}) => assignDepartmentHead(departmentId, userId),
+    // 	// Optimistic update for assign head
+    // 	onMutate: async ({ departmentId, userId }) => {
+    // 		await queryClient.cancelQueries({
+    // 			queryKey: departmentsQueryOptions.queryKey,
+    // 		});
+    // 		const previousDepartments = queryClient.getQueryData<DepartmentType[]>(
+    // 			departmentsQueryOptions.queryKey,
+    // 		);
 
-            const deptHeadUser = users?.find((u) => Number(u.id) === userId);
-            const deptHeadName = deptHeadUser
-                ? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
-                : null;
+    // 		const deptHeadUser = usersData?.find((u: UserType) => Number(u.id) === userId);
+    // 		const deptHeadName = deptHeadUser
+    // 			? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
+    // 			: null;
 
-            queryClient.setQueryData<DepartmentType[]>(
-                departmentsQueryOptions.queryKey,
-                (old = []) =>
-                    old.map((dept) =>
-                        dept.id === departmentId
-                            ? {
-                                  ...dept,
-                                  deptHeadId: userId,
-                                  deptHeadName: deptHeadName,
-                                  updatedAt: new Date().toISOString(),
-                              }
-                            : dept,
-                    ),
-            );
-            return { previousDepartments };
-        },
-        onError: (err, variables, context) => {
-            if (context?.previousDepartments) {
-                queryClient.setQueryData(
-                    departmentsQueryOptions.queryKey,
-                    context.previousDepartments,
-                );
-            }
-            toast.error(
-                err instanceof Error
-                    ? err.message
-                    : "Failed to assign department head",
-            );
-        },
-        onSuccess: (data) => {
-            toast.success(data || "Department head assigned successfully");
-            setAssignHeadOpen(false);
-            setSelectedDepartment(null);
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({
-                queryKey: departmentsQueryOptions.queryKey,
-            });
-            // Invalidate users query if head assignment might change user roles/data shown elsewhere
-            queryClient.invalidateQueries({
-                queryKey: usersQueryOptions.queryKey,
-            });
-        },
-    });
+    // 		queryClient.setQueryData<DepartmentType[]>(
+    // 			departmentsQueryOptions.queryKey,
+    // 			(old = []) =>
+    // 				old.map((dept) =>
+    // 					dept.id === departmentId
+    // 						? {
+    // 								...dept,
+    // 								deptHeadId: userId,
+    // 								deptHeadName: deptHeadName,
+    // 								updatedAt: new Date().toISOString(),
+    // 							}
+    // 						: dept,
+    // 				),
+    // 		);
+    // 		return { previousDepartments };
+    // 	},
+    // 	onError: (err, _variables, context) => {
+    // 		if (context?.previousDepartments) {
+    // 			queryClient.setQueryData(
+    // 				departmentsQueryOptions.queryKey,
+    // 				context.previousDepartments,
+    // 			);
+    // 		}
+    // 		toast.error(
+    // 			err instanceof Error ? err.message : "Failed to assign department head",
+    // 		);
+    // 	},
+    // 	onSuccess: (data) => {
+    // 		toast.success(data || "Department head assigned successfully");
+    // 		setAssignHeadOpen(false);
+    // 		setSelectedDepartment(null);
+    // 	},
+    // 	onSettled: () => {
+    // 		queryClient.invalidateQueries({
+    // 			queryKey: departmentsQueryOptions.queryKey,
+    // 		});
+    // 		// Invalidate users query if head assignment might change user roles/data shown elsewhere
+    // 		queryClient.invalidateQueries({
+    // 			queryKey: usersQueryOptions.queryKey,
+    // 		});
+    // 	},
+    // });
 
     // --- Event Handlers ---
     const handleDeleteDepartment = () => {
@@ -318,25 +216,34 @@ export function DepartmentDataTable() {
     };
 
     // Handler for Assign Head Dialog submission
-    const handleAssignHead = (userId: number) => {
-        if (selectedDepartment) {
-            assignHeadMutation.mutate({
-                departmentId: selectedDepartment.id,
-                userId,
-            });
-        }
-    };
+    // const handleAssignHead = (userId: number) => {
+    // 	if (selectedDepartment) {
+    // 		assignHeadMutation.mutate({
+    // 			departmentId: selectedDepartment.id,
+    // 			userId,
+    // 		});
+    // 	}
+    // };
 
-    // --- Filter Options ---
     const USER_OPTIONS = React.useMemo(() => {
-        return (
-            usersData?.map((user: UserType) => ({
-                value: user.id, // Value for filtering (ID)
-                label: `${user.firstName} ${user.lastName}`, // Label for display in filter dropdown
-                icon: UserIcon,
-            })) ?? []
-        );
-    }, [usersData]); //
+        if (!departmentsData) return [];
+        const uniqueHeads = new Map<
+            string,
+            NonNullable<DepartmentType["deptHead"]>
+        >();
+        for (const dept of departmentsData) {
+            if (dept.deptHead && dept.deptHead.id != null) {
+                uniqueHeads.set(String(dept.deptHead.id), dept.deptHead);
+            }
+        }
+        return Array.from(uniqueHeads.values()).map((user) => ({
+            value: String(user.id),
+            label:
+                `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+                `User ID: ${user.id}`,
+            icon: UserIcon,
+        }));
+    }, [departmentsData]);
 
     // --- Columns ---
     const columns = React.useMemo<ColumnDef<DepartmentType>[]>(
@@ -350,7 +257,8 @@ export function DepartmentDataTable() {
             //     enableHiding: false,
             // },
             {
-                accessorKey: "id",
+                id: "id",
+                accessorFn: (row: DepartmentType) => String(row.id),
                 header: ({ column }) => (
                     <Button
                         variant="ghost"
@@ -363,7 +271,11 @@ export function DepartmentDataTable() {
                     </Button>
                 ),
                 cell: ({ row }) => <div>{row.getValue("id")}</div>,
-                // meta: defineMeta(...) // Add filter meta if needed (number type)
+                meta: defineMeta((row: DepartmentType) => String(row.id), {
+                    displayName: "ID",
+                    type: "number",
+                    icon: Building,
+                }) as ColumnMeta<DepartmentType, unknown>,
             },
             {
                 accessorKey: "name",
@@ -404,8 +316,8 @@ export function DepartmentDataTable() {
                 }) as ColumnMeta<DepartmentType, unknown>,
             },
             {
-                accessorKey: "deptHeadName", // Accessor for the processed name
-                id: "deptHead", // Unique ID for the column
+                accessorKey: "deptHead",
+                id: "deptHead",
                 header: ({ column }) => (
                     <Button
                         variant="ghost"
@@ -417,26 +329,29 @@ export function DepartmentDataTable() {
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 ),
-                // Correctly display the name using the accessorKey
-                cell: ({ row }) => (
-                    <div>
-                        {row.getValue("deptHeadName") || ( // Use deptHeadName here
-                            <span className="text-muted-foreground">
-                                Unassigned
-                            </span>
-                        )}
-                    </div>
-                ),
-                filterFn: filterFn("option"), // Use option filter
+                cell: ({ row }) => {
+                    const deptHeadUser = row.original.deptHead;
+                    return (
+                        <div>
+                            {deptHeadUser ? (
+                                `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
+                            ) : (
+                                <span className="text-muted-foreground">
+                                    Unassigned
+                                </span>
+                            )}
+                        </div>
+                    );
+                },
+                filterFn: filterFn("option"),
                 meta: defineMeta(
-                    // Filter based on the original deptHeadId
                     (row: DepartmentType) =>
-                        row.deptHeadId ? String(row.deptHeadId) : null, // Return string ID or null
+                        row.deptHead?.id ? String(row.deptHead.id) : null,
                     {
                         displayName: "Department Head",
                         type: "option",
                         icon: UserIcon,
-                        options: USER_OPTIONS, // Use the options with ID as value, Name as label
+                        options: USER_OPTIONS,
                     },
                 ) as ColumnMeta<DepartmentType, unknown>,
             },
@@ -524,15 +439,14 @@ export function DepartmentDataTable() {
                                 >
                                     <Building className="mr-2 h-4 w-4" /> Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        setSelectedDepartment(department);
-                                        setAssignHeadOpen(true);
-                                    }}
-                                >
-                                    <UserCog className="mr-2 h-4 w-4" /> Assign
-                                    Head
-                                </DropdownMenuItem>
+                                {/* <DropdownMenuItem
+									onClick={() => {
+										setSelectedDepartment(department);
+										setAssignHeadOpen(true);
+									}}
+								>
+									<UserCog className="mr-2 h-4 w-4" /> Assign Head
+								</DropdownMenuItem> */}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     className="text-destructive"
@@ -551,7 +465,6 @@ export function DepartmentDataTable() {
             },
         ],
         [
-            setAssignHeadOpen,
             setEditDialogOpen,
             setDeleteDialogOpen,
             setSelectedDepartment,
@@ -561,7 +474,7 @@ export function DepartmentDataTable() {
 
     // --- Table Instance ---
     const table = useReactTable({
-        data: processedDepartments ?? [],
+        data: departmentsData ?? [],
         columns,
         state: {
             sorting,
@@ -725,7 +638,6 @@ export function DepartmentDataTable() {
                 </div>
             </div>
 
-            {/* Dialogs */}
             {selectedDepartment && (
                 <EditDepartmentFormDialog
                     isOpen={editDialogOpen}
@@ -734,7 +646,7 @@ export function DepartmentDataTable() {
                         setSelectedDepartment(null);
                     }}
                     department={selectedDepartment}
-                    users={usersData ?? []} // Pass users for select dropdown
+                    users={usersData ?? []}
                 />
             )}
             {selectedDepartment && (
@@ -750,20 +662,20 @@ export function DepartmentDataTable() {
                     isLoading={deleteDepartmentMutation.isPending}
                 />
             )}
-            {selectedDepartment && (
-                <AssignHeadDialog
-                    isOpen={assignHeadOpen}
-                    onClose={() => {
-                        setAssignHeadOpen(false);
-                        setSelectedDepartment(null);
-                    }}
-                    departmentName={selectedDepartment.name}
-                    currentHeadId={selectedDepartment.deptHeadId}
-                    users={usersData ?? []} // Pass users for select dropdown
-                    onAssign={handleAssignHead}
-                    isLoading={assignHeadMutation.isPending}
-                />
-            )}
+            {/* {selectedDepartment && (
+				<AssignHeadDialog
+					isOpen={assignHeadOpen}
+					onClose={() => {
+						setAssignHeadOpen(false);
+						setSelectedDepartment(null);
+					}}
+					departmentName={selectedDepartment.name}
+					currentHeadId={selectedDepartment.deptHead?.id}
+					users={usersData ?? []}
+					onAssign={handleAssignHead}
+					isLoading={assignHeadMutation.isPending}
+				/>
+			)} */}
         </div>
     );
 }

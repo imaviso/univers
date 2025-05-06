@@ -23,7 +23,7 @@ interface AssignHeadDialogProps {
     isOpen: boolean;
     onClose: () => void;
     departmentName: string;
-    currentHeadId: number | null;
+    currentHeadId: number | undefined;
     users: UserType[];
     onAssign: (userId: number) => void; // Callback with selected user ID
     isLoading?: boolean;

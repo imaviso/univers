@@ -594,6 +594,20 @@ export const departmentSchema = v.object({
 
 export type DepartmentInput = v.InferInput<typeof departmentSchema>;
 
+export const editDepartmentSchema = v.object({
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    deptHeadId: v.optional(
+        v.pipe(
+            v.number("Dept Head ID must be a number"),
+            v.integer("Dept Head ID must be an integer"),
+            v.minValue(1, "Invalid Dept Head ID"),
+        ),
+    ),
+});
+
+export type EditDepartmentInput = v.InferInput<typeof editDepartmentSchema>;
+
 // Schema for the Frontend Form to Create a Venue Reservation
 // Adapt fields based on your actual form inputs
 export const CreateVenueReservationFormSchema = v.pipe(

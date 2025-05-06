@@ -42,21 +42,21 @@ import { toast } from "sonner";
 export function AddDepartmentFormDialog() {
     const queryClient = useQueryClient();
     const [isOpen, setIsOpen] = useAtom(addDepartmentDialogAtom);
-    const { data: users } = useSuspenseQuery(usersQueryOptions); // Fetch users for select
+    const { data: users } = useSuspenseQuery(usersQueryOptions);
 
     const form = useForm<DepartmentInput>({
         resolver: valibotResolver(departmentSchema),
         defaultValues: {
             name: "",
             description: "",
-            deptHeadId: undefined, // Start with no head selected
+            deptHeadId: undefined,
         },
         mode: "onChange",
     });
 
     const addMutation = useMutation({
         mutationFn: addDepartment,
-        onMutate: async (newDepartment) => {
+        onMutate: async () => {
             // Optional: Optimistic update (more complex for add)
             await queryClient.cancelQueries({
                 queryKey: departmentsQueryOptions.queryKey,
@@ -68,7 +68,7 @@ export function AddDepartmentFormDialog() {
             // Return context
             return { previousDepartments };
         },
-        onError: (err, newDepartment, context) => {
+        onError: (err, _newDepartment, context) => {
             // Rollback on error
             if (context?.previousDepartments) {
                 queryClient.setQueryData(
@@ -95,14 +95,12 @@ export function AddDepartmentFormDialog() {
     });
 
     const handleFormSubmit = (values: DepartmentInput) => {
-        // Prepare payload, ensure deptHeadId is number or null
         const payload = {
             ...values,
-            deptHead: values.deptHeadId ? Number(values.deptHeadId) : null,
+            deptHeadId: values.deptHeadId
+                ? Number(values.deptHeadId)
+                : undefined,
         };
-        // Remove deptHeadId if API expects 'deptHead' only
-        // delete payload.deptHeadId;
-
         addMutation.mutate(payload);
     };
 
@@ -189,7 +187,7 @@ export function AddDepartmentFormDialog() {
                                             {users?.map((user: UserType) => (
                                                 <SelectItem
                                                     key={user.id}
-                                                    value={user.id.toString()} // Use user ID string (which is fine here)
+                                                    value={user.id.toString()}
                                                 >
                                                     {user.firstName}{" "}
                                                     {user.lastName} (
