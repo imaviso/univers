@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { parseISO, startOfDay } from "date-fns";
 import { CloudUpload, MapPin, X } from "lucide-react";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
     FileUpload,
@@ -47,7 +47,6 @@ import {
     FileUploadItemMetadata,
     FileUploadItemPreview,
     FileUploadList,
-    FileUploadTrigger,
 } from "../ui/file-upload";
 import { SmartDatetimeInput } from "../ui/smart-date-picker";
 

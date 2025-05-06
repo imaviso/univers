@@ -1,24 +1,14 @@
 import ErrorPage from "@/components/ErrorPage";
 // import { EventModal } from "@/components/events/eventModal"; // Assuming this is for creation, keep commented if not used yet
 import PendingPage from "@/components/PendingPage";
-import { CreateEventButton } from "@/components/events/createEventButton";
 import { EventDetailsModal } from "@/components/events/eventDetailsModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card"; // Added CardContent
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
-import { approvedEventsQueryOptions, venuesQueryOptions } from "@/lib/query";
+import { approvedEventsQueryOptions } from "@/lib/query";
 import type { Event } from "@/lib/types"; // Use the shared Event type
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { useQuery } from "@tanstack/react-query"; // Import useQuery
 import {
     createFileRoute,
@@ -32,8 +22,6 @@ import {
     eachDayOfInterval, // Use for multi-day events
     endOfDay, // Use for date comparisons
     format,
-    getDay,
-    getDaysInMonth,
     isSameDay,
     isSameMonth,
     isValid, // Check if date parsing is valid
@@ -45,7 +33,7 @@ import {
     startOfWeek,
     subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react"; // Import useMemo
 
 const eventColorClasses = [

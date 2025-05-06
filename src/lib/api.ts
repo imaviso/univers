@@ -3,9 +3,6 @@ import type { NotificationDTO, Page } from "./notifications";
 import type {
     EditUserFormInput,
     EquipmentDTOInput,
-    EquipmentDTOOutput,
-    EventInput,
-    EventOutput,
     VenueInput,
 } from "./schema";
 import type {

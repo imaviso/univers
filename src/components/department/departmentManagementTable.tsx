@@ -1,7 +1,5 @@
 import { DataTableFilter } from "@/components/data-table-filter";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -75,7 +73,6 @@ import {
     Trash2,
     UserCog, // For Assign Head
     UserIcon, // For Dept Head Name
-    X,
 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";

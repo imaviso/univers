@@ -17,7 +17,6 @@ import {
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -37,11 +36,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { createEvent } from "@/lib/api";
-import {
-    eventsQueryKeys,
-    ownEventsQueryOptions,
-    useCurrentUser,
-} from "@/lib/query"; // Import eventsQueryOptions
+import { eventsQueryKeys, useCurrentUser } from "@/lib/query"; // Import eventsQueryOptions
 import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
 import type { EventDTOPayload, Venue } from "@/lib/types";
 import { cn } from "@/lib/utils";

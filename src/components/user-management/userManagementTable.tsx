@@ -24,7 +24,6 @@ import {
     ChevronsLeft,
     ChevronsRight,
     FingerprintIcon,
-    IdCardIcon,
     ListFilterIcon,
     MoreHorizontal,
     PhoneIcon,
@@ -76,21 +75,16 @@ import {
 import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
-import type { EditUserFormInput, UserFormInput } from "@/lib/schema";
+import type { EditUserFormInput } from "@/lib/schema";
 // Remove DEPARTMENTS constant import
 import { ROLES, type UserRole, type UserType } from "@/lib/types";
-import {
-    useMutation,
-    useQueryClient,
-    useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { toast } from "sonner";
 import { ActivateConfirmDialog } from "./activateConfirmDialog";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 import { EditUserFormDialog } from "./editUserFormDialog";
-import { UserFormDialog } from "./userFormDialog";
 
 export function UserDataTable() {
     const context = useRouteContext({ from: "/app/user-management" });

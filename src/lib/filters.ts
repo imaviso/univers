@@ -1,11 +1,4 @@
-import type {
-    AccessorFn,
-    Column,
-    DeepKeys,
-    DeepValue,
-    Row,
-    RowData,
-} from "@tanstack/react-table";
+import type { AccessorFn, Column, Row, RowData } from "@tanstack/react-table";
 import type { ColumnMeta, Table } from "@tanstack/react-table";
 import {
     endOfDay,

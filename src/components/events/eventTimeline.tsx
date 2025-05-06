@@ -22,7 +22,6 @@ import {
     Circle,
     Clock,
     MapPin, // Added for venue
-    Paperclip, // Added for approved letter
     Tag, // Added for event type
 } from "lucide-react";
 

@@ -6,13 +6,10 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { parseDate } from "chrono-node";
-import { format, startOfDay } from "date-fns";
-import { Calendar as CalendarIcon, LucideTextCursorInput } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import React from "react";
-import type { ActiveModifiers } from "react-day-picker";
 import { Scroller } from "./scroller";
 
 /* -------------------------------------------------------------------------- */

@@ -30,7 +30,6 @@ import {
     filterTypeOperatorDetails,
     getColumn,
     getColumnMeta,
-    isColumnOption,
     isColumnOptionArray,
     multiOptionFilterDetails,
     numberFilterDetails,

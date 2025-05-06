@@ -1,4 +1,3 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,11 +6,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import type { Event } from "@/lib/types"; // Use the correct Event type
 import { Link } from "@tanstack/react-router"; // Import Link for navigation
 import { format, isSameDay } from "date-fns";
-import { Clock, ExternalLink, MapPin, Users, X } from "lucide-react"; // Removed Edit, Trash. Added ExternalLink
+import { Clock, ExternalLink, Users } from "lucide-react"; // Removed Edit, Trash. Added ExternalLink
 // Removed useState as Team/Comments tabs are removed
 
 interface EventDetailsModalProps {

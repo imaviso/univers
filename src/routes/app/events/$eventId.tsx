@@ -62,7 +62,6 @@ import {
 } from "@/lib/query"; // Import query options
 import type { EquipmentReservationFormInput } from "@/lib/schema";
 import type {
-    Equipment,
     Event,
     EventApprovalDTO,
     EventDTOPayload,
@@ -81,11 +80,9 @@ import { useMutation, useSuspenseQuery } from "@tanstack/react-query"; // Import
 import {
     createFileRoute,
     notFound,
-    useLoaderData,
     useRouteContext,
     useRouter,
 } from "@tanstack/react-router";
-import { set } from "date-fns";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
