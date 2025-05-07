@@ -2,6 +2,7 @@ import { DataTableFilter } from "@/components/data-table-filter";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
+    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
@@ -58,6 +59,7 @@ import {
     ArrowUpDown,
     Building,
     CalendarIcon,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
@@ -94,14 +96,6 @@ export function DepartmentDataTable() {
     // Fetch departments and users
     const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
     const { data: usersData } = useSuspenseQuery(usersQueryOptions);
-
-    const deptUsers = departmentsData
-        ?.map((dept) => dept.deptHead)
-        .filter(
-            Boolean as unknown as (
-                value: DepartmentType["deptHead"],
-            ) => value is NonNullable<DepartmentType["deptHead"]>,
-        ); // Type assertion for filter(Boolean)
 
     const deleteDepartmentMutation = useMutation({
         mutationFn: deleteDepartment, // Expects departmentId (number)
@@ -271,9 +265,10 @@ export function DepartmentDataTable() {
                     </Button>
                 ),
                 cell: ({ row }) => <div>{row.getValue("id")}</div>,
+                filterFn: filterFn("text"),
                 meta: defineMeta((row: DepartmentType) => String(row.id), {
                     displayName: "ID",
-                    type: "number",
+                    type: "text",
                     icon: Building,
                 }) as ColumnMeta<DepartmentType, unknown>,
             },
@@ -329,6 +324,12 @@ export function DepartmentDataTable() {
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 ),
+                accessorFn: (row: DepartmentType) => {
+                    const deptHeadUser = row.deptHead;
+                    return deptHeadUser
+                        ? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
+                        : "Unassigned";
+                },
                 cell: ({ row }) => {
                     const deptHeadUser = row.original.deptHead;
                     return (
@@ -343,15 +344,18 @@ export function DepartmentDataTable() {
                         </div>
                     );
                 },
-                filterFn: filterFn("option"),
+                filterFn: filterFn("text"),
                 meta: defineMeta(
-                    (row: DepartmentType) =>
-                        row.deptHead?.id ? String(row.deptHead.id) : null,
+                    (row: DepartmentType) => {
+                        const deptHeadUser = row.deptHead;
+                        return deptHeadUser
+                            ? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
+                            : "Unassigned";
+                    },
                     {
                         displayName: "Department Head",
-                        type: "option",
+                        type: "text",
                         icon: UserIcon,
-                        options: USER_OPTIONS,
                     },
                 ) as ColumnMeta<DepartmentType, unknown>,
             },
@@ -464,12 +468,7 @@ export function DepartmentDataTable() {
                 enableHiding: false,
             },
         ],
-        [
-            setEditDialogOpen,
-            setDeleteDialogOpen,
-            setSelectedDepartment,
-            USER_OPTIONS,
-        ], // Add USER_OPTIONS dependency
+        [setEditDialogOpen, setDeleteDialogOpen, setSelectedDepartment],
     );
 
     // --- Table Instance ---
@@ -501,7 +500,39 @@ export function DepartmentDataTable() {
             {/* Filters */}
             <div className="flex items-center justify-between">
                 <DataTableFilter table={table} />
-                {/* Add View Options Dropdown if needed */}
+                {/* Column Visibility Dropdown */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="h-8 gap ml-2">
+                            Columns <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        {table
+                            .getAllColumns()
+                            .filter((column) => column.getCanHide())
+                            .map((column) => {
+                                const displayName =
+                                    (
+                                        column.columnDef.meta as
+                                            | { displayName?: string }
+                                            | undefined
+                                    )?.displayName || column.id;
+                                return (
+                                    <DropdownMenuCheckboxItem
+                                        key={column.id}
+                                        className="capitalize"
+                                        checked={column.getIsVisible()}
+                                        onCheckedChange={(value) =>
+                                            column.toggleVisibility(!!value)
+                                        }
+                                    >
+                                        {displayName}
+                                    </DropdownMenuCheckboxItem>
+                                );
+                            })}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             {/* Table */}
