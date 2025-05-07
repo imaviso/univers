@@ -10,6 +10,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { CustomDialogContent } from "@/components/ui/custom-dialog";
 import {
     Dialog,
     DialogClose,
@@ -32,19 +33,18 @@ import {
     userResetPassword,
     userResetVerificationCode,
 } from "@/lib/auth";
-import { useCurrentUser, userQueryOptions } from "@/lib/query"; // Corrected import name
+import { useCurrentUser, userQueryOptions } from "@/lib/query";
 import {
-    ImageSchema,
     OtpSchema,
     type SetNewPasswordInput,
     setNewPasswordSchema,
 } from "@/lib/schema";
 import { type EmailInput, emailSchema } from "@/lib/schema";
 import type { UserType } from "@/lib/types";
-import { useMutation } from "@tanstack/react-query"; // Corrected import
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import {
-    Camera, // Added
+    Camera,
     CheckCircle2,
     Eye,
     EyeOff,
@@ -56,15 +56,24 @@ import {
     X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as v from "valibot";
+
+import {
+    Cropper,
+    CropperCropArea,
+    CropperDescription,
+    CropperImage,
+} from "@/components/ui/cropper";
+import { Slider } from "@/components/ui/slider";
+import { useFileUpload } from "@/hooks/use-file-upload";
+import { ArrowLeftIcon, ZoomInIcon, ZoomOutIcon } from "lucide-react";
 
 export const Route = createFileRoute("/app/settings/account")({
     component: AccountSettings,
 });
 
-// --- Types and Initial States ---
 const initialNewPasswordState: SetNewPasswordInput = {
     newPassword: "",
     confirmPassword: "",
@@ -73,9 +82,8 @@ const initialNewPasswordState: SetNewPasswordInput = {
 type PasswordDialogStep = "request" | "verify" | "reset" | "success";
 
 const initialChangeEmailState: EmailInput = { email: "" };
-type EmailDialogStep = "input" | "verify" | "success"; // Steps for email change
+type EmailDialogStep = "input" | "verify" | "success";
 
-// Define a type for the editable profile fields
 type EditableProfile = {
     firstName: string;
     lastName: string;
@@ -91,12 +99,95 @@ const getInitialProfileState = (
     avatarUrl: user?.profileImagePath || undefined,
     avatarFile: null,
 });
-// --- End Types and Initial States ---
+
+const createCroppedImage = (
+    imageSrc: string,
+    pixelCrop: { x: number; y: number; width: number; height: number },
+    outputFormat = "image/png",
+    quality = 0.9,
+    outputWidth: number = pixelCrop.width,
+    outputHeight: number = pixelCrop.height,
+): Promise<File | null> => {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = outputWidth;
+            canvas.height = outputHeight;
+            const ctx = canvas.getContext("2d");
+
+            if (!ctx) {
+                toast.error("Failed to get canvas context for cropping.");
+                reject(new Error("Failed to get canvas context"));
+                return;
+            }
+
+            ctx.drawImage(
+                image,
+                pixelCrop.x,
+                pixelCrop.y,
+                pixelCrop.width,
+                pixelCrop.height,
+                0,
+                0,
+                outputWidth,
+                outputHeight,
+            );
+
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) {
+                        toast.error(
+                            "Failed to create blob from cropped image.",
+                        );
+                        reject(new Error("Canvas to Blob failed"));
+                        return;
+                    }
+                    const fileName = `cropped_avatar_${Date.now()}.${outputFormat.split("/")[1] || "png"}`;
+                    resolve(new File([blob], fileName, { type: outputFormat }));
+                },
+                outputFormat,
+                quality,
+            );
+        };
+        image.onerror = (error) => {
+            toast.error(
+                "Failed to load image for cropping. Please try another image.",
+            );
+            console.error("Image load error for cropping:", error);
+            reject(error);
+        };
+        image.src = imageSrc;
+    });
+};
 
 export function AccountSettings() {
     const { theme, setTheme } = useTheme();
     const { data: user } = useCurrentUser();
     const { queryClient } = useRouteContext({ from: "/app/settings" });
+
+    // File Upload Hook
+    const [
+        { files: uploadedFiles, errors: uploadErrors },
+        { openFileDialog, removeFile, clearFiles, getInputProps },
+    ] = useFileUpload({
+        accept: "image/jpeg, image/png, image/webp",
+        multiple: false,
+        maxSize: 5 * 1024 * 1024, // 5MB limit
+        onFilesChange: (newFiles) => {
+            // If files are cleared from the hook, and we haven't confirmed a crop yet,
+            // ensure our cropper UI also resets.
+            if (newFiles.length === 0 && isCropperOpen) {
+                // This case is mostly handled by opening cropper on new file ID.
+            }
+        },
+    });
+
+    const uncroppedPreviewUrl = uploadedFiles[0]?.preview || null;
+    const uncroppedFileId = uploadedFiles[0]?.id;
+    const previousFileIdRef = useRef<string | undefined | null>(null);
+
     if (!user) {
         return <ErrorPage />;
     }
@@ -134,7 +225,19 @@ export function AccountSettings() {
     const [isChangeEmailDialogOpen, setIsChangeEmailDialogOpen] =
         useState(false);
     // Other State
-    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+    // const [twoFactorEnabled, setTwoFactorEnabled] = useState(false); // Removed as per original file state
+
+    // Cropper States
+    const [isCropperOpen, setIsCropperOpen] = useState(false);
+    // cropperImageSrc is now uncroppedPreviewUrl from useFileUpload
+    // const [mediaSize, setMediaSize] = useState<{ width: number; height: number } | null>(null); // Not directly used from comp-554 logic
+    const [currentPixelCrop, setCurrentPixelCrop] = useState<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    } | null>(null);
+    const [zoom, setZoom] = useState(1);
 
     useEffect(() => {
         setProfileForm((prev) => ({
@@ -153,6 +256,27 @@ export function AccountSettings() {
             }));
         }
     }, [user?.profileImagePath, profileForm.avatarFile]);
+
+    // Effect to open dialog when a *new* file is selected via useFileUpload
+    useEffect(() => {
+        if (uncroppedFileId && uncroppedFileId !== previousFileIdRef.current) {
+            setCurrentPixelCrop(null); // Reset crop area for the new file
+            setZoom(1); // Reset zoom for the new file
+            setIsCropperOpen(true); // Open dialog for the new file
+        }
+        previousFileIdRef.current = uncroppedFileId;
+    }, [uncroppedFileId]);
+
+    // Display upload errors from useFileUpload
+    useEffect(() => {
+        if (uploadErrors.length > 0) {
+            for (const err of uploadErrors) {
+                toast.error(err);
+            }
+            // Optionally clear errors from hook after displaying:
+            // clearUploadErrors(); // Assuming clearUploadErrors is exposed by the hook
+        }
+    }, [uploadErrors]);
 
     const updateProfileMutation = useMutation({
         // Pass the correct input type to mutationFn
@@ -217,50 +341,91 @@ export function AccountSettings() {
         setProfileForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            // Validate the file using the schema
-            const result = v.safeParse(ImageSchema, file);
-            if (!result.success) {
-                const errorMessage =
-                    v.flatten(result.issues).root?.[0] || "Invalid image file.";
-                toast.error(`Avatar Error: ${errorMessage}`);
-                // Clear the input field if validation fails
-                e.target.value = "";
-                return;
-            }
+    // handleAvatarChange is now replaced by useFileUpload's openFileDialog
 
-            // Validation passed, update state
-            const reader = new FileReader();
-            reader.onloadend = () => {
+    const handleCropperConfirm = async () => {
+        if (!uncroppedPreviewUrl || !currentPixelCrop) {
+            toast.error(
+                "Cannot confirm crop: Missing image source or crop area data.",
+            );
+            return;
+        }
+        if (currentPixelCrop.width === 0 || currentPixelCrop.height === 0) {
+            toast.error("Crop area is empty. Please select a valid area.");
+            return;
+        }
+
+        try {
+            const outputSize = 256;
+            const croppedFile = await createCroppedImage(
+                uncroppedPreviewUrl,
+                currentPixelCrop,
+                "image/png",
+                0.9,
+                outputSize,
+                outputSize,
+            );
+
+            if (croppedFile) {
+                const croppedFileUrl = URL.createObjectURL(croppedFile);
                 setProfileForm((prev) => ({
                     ...prev,
-                    avatarFile: file,
-                    avatarUrl: reader.result as string, // Show preview
+                    avatarFile: croppedFile,
+                    avatarUrl: croppedFileUrl,
                 }));
-            };
-            reader.readAsDataURL(file);
-        } else {
-            // Handle case where user cancels file selection (optional)
-            // Maybe revert to original avatar if needed, or do nothing
+                toast.success("Avatar cropped and staged for upload.");
+            }
+        } catch (error) {
+            console.error("Error cropping image:", error);
+            toast.error("Failed to crop image. Please try again.");
+        } finally {
+            setIsCropperOpen(false);
+            if (uncroppedFileId) {
+                removeFile(uncroppedFileId);
+            }
         }
     };
 
+    const handleCropperCancel = () => {
+        setIsCropperOpen(false);
+        // Clear the original uncropped file from useFileUpload
+        if (uncroppedFileId) {
+            removeFile(uncroppedFileId);
+        }
+    };
+
+    // onMediaLoaded from previous version is not directly used by comp-554's cropper logic
+    // const onMediaLoaded = useCallback((media: { width: number; height: number; aspectRatio: number }) => {
+    //     setMediaSize({ width: media.width, height: media.height });
+    // }, []);
+
+    // Callback for Cropper to provide crop data (pixels)
+    const handleCropChange = useCallback(
+        (
+            pixels: {
+                x: number;
+                y: number;
+                width: number;
+                height: number;
+            } | null,
+        ) => {
+            setCurrentPixelCrop(pixels);
+        },
+        [],
+    );
+
     const handleRemoveAvatar = () => {
+        // Revoke existing blob URL if it's from a local file preview
+        if (profileForm.avatarUrl?.startsWith("blob:")) {
+            URL.revokeObjectURL(profileForm.avatarUrl);
+        }
         setProfileForm((prev) => ({
             ...prev,
             avatarFile: null,
-            // Revert to original user avatar URL or placeholder
-            avatarUrl: getInitialProfileState(user).avatarUrl,
+            avatarUrl: getInitialProfileState(user).avatarUrl, // Revert to original or placeholder
         }));
-        // Reset the file input visually
-        const input = document.getElementById(
-            "avatar-upload",
-        ) as HTMLInputElement;
-        if (input) {
-            input.value = "";
-        }
+        clearFiles(); // Clear any files from useFileUpload as well
+        toast.info("Staged avatar removed.");
     };
 
     const handleSaveChanges = () => {
@@ -295,19 +460,23 @@ export function AccountSettings() {
         updateProfileMutation.mutate({
             userId: user.id,
             data: dataPayload,
-            imageFile: profileForm.avatarFile, // Pass the file state
+            imageFile: profileForm.avatarFile,
         });
+        // On success, useFileUpload files should already be cleared by handleCropperConfirm
+        // or if no avatar change, it's not involved.
     };
 
     const handleCancelProfileChanges = () => {
-        setProfileForm(getInitialProfileState(user)); // Reset form to initial state
-        // Reset the file input visually
-        const input = document.getElementById(
-            "avatar-upload",
-        ) as HTMLInputElement;
-        if (input) {
-            input.value = "";
+        // Revoke existing blob URL if it's from a local file preview being cancelled
+        if (
+            profileForm.avatarUrl &&
+            profileForm.avatarFile &&
+            profileForm.avatarUrl.startsWith("blob:")
+        ) {
+            URL.revokeObjectURL(profileForm.avatarUrl);
         }
+        setProfileForm(getInitialProfileState(user));
+        clearFiles(); // Clear any files from useFileUpload
         toast.info("Profile changes discarded.");
     };
 
@@ -541,10 +710,14 @@ export function AccountSettings() {
         ? `${user.firstName?.charAt(0)}${user.lastName?.charAt(0)}`
         : "UV";
 
+    // Determine if the displayed avatar is a newly staged one (blob URL)
+    const isNewAvatarStaged =
+        !!profileForm.avatarFile && profileForm.avatarUrl?.startsWith("blob:");
+
     const profileHasChanges = user
         ? profileForm.firstName !== user.firstName ||
           profileForm.lastName !== user.lastName ||
-          !!profileForm.avatarFile // Check if a new avatar file is staged
+          !!profileForm.avatarFile
         : false;
     // --- End Derived State ---
 
@@ -572,20 +745,21 @@ export function AccountSettings() {
                         <div className="relative group">
                             <Avatar className="h-24 w-24">
                                 <AvatarImage
-                                    src={profileForm.avatarUrl}
+                                    src={profileForm.avatarUrl} // This will show original, then cropped preview
                                     alt={profileForm.firstName}
                                 />
                                 <AvatarFallback>{initials}</AvatarFallback>
                             </Avatar>
                             <Label
-                                htmlFor="avatar-upload"
+                                // htmlFor="avatar-upload" // No longer needed if button opens dialog
+                                onClick={openFileDialog} // Changed to useFileUpload's opener
                                 className="absolute bottom-0 right-0 cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-full p-1.5 border group-hover:opacity-100 opacity-60 transition-opacity"
                                 title="Change avatar"
                             >
                                 <Camera className="h-4 w-4" />
                                 <span className="sr-only">Change avatar</span>
                             </Label>
-                            {profileForm.avatarFile && (
+                            {isNewAvatarStaged && ( // Show remove button only for newly staged avatar
                                 <Button
                                     type="button"
                                     variant="ghost"
@@ -600,13 +774,13 @@ export function AccountSettings() {
                                     </span>
                                 </Button>
                             )}
-                            <Input
-                                id="avatar-upload"
-                                type="file"
-                                accept="image/jpeg, image/png, image/webp" // Specify accepted types
-                                className="hidden"
-                                onChange={handleAvatarChange}
-                                disabled={updateProfileMutation.isPending}
+                            <input
+                                {...getInputProps()} // Use props from useFileUpload
+                                className="hidden" // Keep hidden as per hook's design
+                                disabled={
+                                    updateProfileMutation.isPending ||
+                                    isCropperOpen
+                                }
                             />
                         </div>
                         {/* Details Section */}
@@ -1066,6 +1240,105 @@ export function AccountSettings() {
                         </>
                     )}
                 </DialogContent>
+            </Dialog>
+
+            {/* Cropper Dialog */}
+            <Dialog
+                open={isCropperOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        handleCropperCancel(); // Ensure cancel logic (clearing useFileUpload) is called
+                    } else {
+                        // If re-opening and no file in useFileUpload, something is wrong, close it.
+                        // This is mostly defensive, as useEffect on uncroppedFileId should handle opening.
+                        if (!uncroppedPreviewUrl) setIsCropperOpen(false);
+                    }
+                }}
+            >
+                <CustomDialogContent className="gap-0 p-0 sm:max-w-[560px]">
+                    {" "}
+                    {/* USE CustomDialogContent HERE */}
+                    <DialogHeader className="flex flex-row items-center justify-between border-b p-4 text-base">
+                        <div className="flex items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="-my-1 opacity-60"
+                                onClick={handleCropperCancel}
+                                aria-label="Cancel"
+                            >
+                                <ArrowLeftIcon
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                />
+                            </Button>
+                            <DialogTitle>Crop Image</DialogTitle>
+                        </div>
+                        <Button
+                            className="-my-1"
+                            onClick={handleCropperConfirm}
+                            disabled={
+                                !uncroppedPreviewUrl ||
+                                !currentPixelCrop ||
+                                currentPixelCrop.width === 0
+                            }
+                        >
+                            Apply
+                        </Button>
+                    </DialogHeader>
+                    <DialogDescription className="sr-only">
+                        Adjust the image to crop your avatar.
+                    </DialogDescription>
+                    {uncroppedPreviewUrl && (
+                        <div className="h-96 sm:h-120 bg-muted/30">
+                            <Cropper
+                                className="h-full"
+                                image={uncroppedPreviewUrl}
+                                zoom={zoom}
+                                onZoomChange={setZoom}
+                                onCropChange={handleCropChange}
+                                minZoom={0.5}
+                                maxZoom={3}
+                            >
+                                <CropperImage />
+                                <CropperCropArea className="rounded-full" />
+                                <CropperDescription>
+                                    Avatar Cropping Area
+                                </CropperDescription>
+                            </Cropper>
+                        </div>
+                    )}
+                    <DialogFooter className="border-t px-4 py-6">
+                        <div className="mx-auto flex w-full max-w-xs items-center gap-4">
+                            <ZoomOutIcon
+                                className="shrink-0 opacity-60 cursor-pointer"
+                                size={20}
+                                aria-hidden="true"
+                                onClick={() =>
+                                    setZoom((prev) => Math.max(prev - 0.1, 0.5))
+                                }
+                            />
+                            <Slider
+                                defaultValue={[1]}
+                                value={[zoom]}
+                                min={0.5}
+                                max={3}
+                                step={0.01}
+                                onValueChange={(value) => setZoom(value[0])}
+                                aria-label="Zoom slider"
+                            />
+                            <ZoomInIcon
+                                className="shrink-0 opacity-60 cursor-pointer"
+                                size={20}
+                                aria-hidden="true"
+                                onClick={() =>
+                                    setZoom((prev) => Math.min(prev + 0.1, 3))
+                                }
+                            />
+                        </div>
+                    </DialogFooter>
+                </CustomDialogContent>
             </Dialog>
         </div>
     );
