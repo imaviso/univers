@@ -1,7 +1,6 @@
 import { ApprovalTimeChart } from "@/components/dashboard/approvalTimeChart";
 import { CancellationRateChart } from "@/components/dashboard/cancellationRateChart";
 import { EquipmentReservationsChart } from "@/components/dashboard/equipmentReservationsChart";
-import { EventAttendanceChart } from "@/components/dashboard/eventAttendanceChart";
 import { EventCategoriesChart } from "@/components/dashboard/eventCategoriesChart";
 import { EventsOverviewChart } from "@/components/dashboard/eventOverviewChart";
 import { EventsPerVenueChart } from "@/components/dashboard/eventsPerVenueChart";
@@ -22,7 +21,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Calendar, CalendarDays, TrendingUp, Users } from "lucide-react";
+import { Calendar, CalendarDays, TrendingUp } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/app/dashboard")({
@@ -98,7 +97,7 @@ function Dashboard() {
                 <main className="flex-1 overflow-auto p-6">
                     <div className="grid gap-6">
                         {/* Stats Overview */}
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <CardTitle className="text-sm font-medium">
@@ -132,24 +131,6 @@ function Dashboard() {
                                     </div>
                                     <p className="text-xs text-muted-foreground">
                                         Next 30 days
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Total Attendees
-                                    </CardTitle>
-                                    <Users className="h-4 w-4 text-muted-foreground">
-                                        <title>Total Attendees Icon</title>
-                                    </Users>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">
-                                        {stats.totalAttendees.toLocaleString()}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        ~{stats.averageAttendance} per event
                                     </p>
                                 </CardContent>
                             </Card>
@@ -286,19 +267,21 @@ function Dashboard() {
                             </Card>
                         </div>
                         {/* Charts */}
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                            <Card className="col-span-4">
-                                <CardHeader>
-                                    <CardTitle>Events Overview</CardTitle>
-                                    <CardDescription>
-                                        Number of events over time
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="pl-2">
-                                    <EventsOverviewChart />
-                                </CardContent>
-                            </Card>
-                            <Card className="col-span-3">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Events Overview</CardTitle>
+                                <CardDescription>
+                                    Number of events over time
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="pl-2">
+                                <EventsOverviewChart />
+                            </CardContent>
+                        </Card>
+
+                        {/* Bottom Row */}
+                        <div className="grid gap-6 md:grid-cols-3">
+                            <Card>
                                 <CardHeader>
                                     <CardTitle>Event Categories</CardTitle>
                                     <CardDescription>
@@ -309,22 +292,20 @@ function Dashboard() {
                                     <EventCategoriesChart />
                                 </CardContent>
                             </Card>
-                        </div>
-
-                        {/* Bottom Row */}
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                            <Card className="col-span-4">
+                            {/* Recent Activity */}
+                            <Card>
                                 <CardHeader>
-                                    <CardTitle>Attendance Trends</CardTitle>
+                                    <CardTitle>Recent Activity</CardTitle>
                                     <CardDescription>
-                                        Average attendance by event type
+                                        Latest updates and changes
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="pl-2">
-                                    <EventAttendanceChart />
+                                <CardContent>
+                                    <RecentActivity />
                                 </CardContent>
                             </Card>
-                            <Card className="col-span-3">
+
+                            <Card>
                                 <CardHeader>
                                     <CardTitle>Upcoming Events</CardTitle>
                                     <CardDescription>
@@ -336,19 +317,6 @@ function Dashboard() {
                                 </CardContent>
                             </Card>
                         </div>
-
-                        {/* Recent Activity */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Recent Activity</CardTitle>
-                                <CardDescription>
-                                    Latest updates and changes
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <RecentActivity />
-                            </CardContent>
-                        </Card>
                     </div>
                 </main>
             </div>
