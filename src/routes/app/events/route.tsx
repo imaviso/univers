@@ -54,7 +54,15 @@ export const Route = createFileRoute("/app/events")({
     errorComponent: () => <ErrorPage />,
     pendingComponent: () => <PendingPage />,
     loader: async ({ context }) => {
-        if (context.authState?.role === "SUPER_ADMIN") {
+        if (
+            context.authState?.role === "SUPER_ADMIN" ||
+            context.authState?.role === "VP_ADMIN" ||
+            context.authState?.role === "MSDO" ||
+            context.authState?.role === "OPC" ||
+            context.authState?.role === "SSD" ||
+            context.authState?.role === "FAO" ||
+            context.authState?.role === "DEPT_HEAD"
+        ) {
             context.queryClient.ensureQueryData(allEventsQueryOptions);
         }
         context.queryClient.ensureQueryData(venuesQueryOptions);

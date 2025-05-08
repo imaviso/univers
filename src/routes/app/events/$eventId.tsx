@@ -75,6 +75,8 @@ import type {
     EventApprovalDTO,
     EventDTO,
     EventDTOPayload,
+    UserDTO,
+    UserRole,
     VenueDTO,
 } from "@/lib/types";
 import {
@@ -124,6 +126,148 @@ export const Route = createFileRoute("/app/events/$eventId")({
     component: EventDetailsPage,
 });
 
+// Define constants outside the component to prevent re-creation on re-renders
+const DEFAULT_USER_PLACEHOLDER_FIELDS: Omit<
+    UserDTO,
+    "publicId" | "firstName" | "lastName" | "email" | "role" | "department"
+> = {
+    profileImagePath: null,
+    idNumber: null,
+    phoneNumber: null,
+    telephoneNumber: null,
+    active: true,
+    emailVerified: true,
+    createdAt: "",
+    updatedAt: "",
+};
+
+const DEFAULT_DEPARTMENT_PLACEHOLDER_FIELDS: Omit<
+    DepartmentDTO,
+    "publicId" | "name"
+> = {
+    description: "",
+    deptHead: null,
+    createdAt: "",
+    updatedAt: "",
+};
+
+const EXPECTED_APPROVERS_CONFIG: Array<{
+    id: string;
+    label: string;
+    isSigned: (approval: EventApprovalDTO, eventDto: EventDTO) => boolean;
+    getPlaceholderData: (eventDto: EventDTO) => {
+        signedByUserInitial: Partial<UserDTO> & {
+            firstName: string;
+            departmentName: string;
+            departmentPublicId: string;
+            userRole: UserRole;
+        };
+        approvalRole: UserRole;
+    };
+}> = [
+    {
+        id: "DEPT_HEAD",
+        label: "Department Head",
+        isSigned: (approval, eventDto: EventDTO) =>
+            approval.userRole === "DEPT_HEAD" &&
+            approval.signedByUser?.publicId ===
+                eventDto.organizer?.department?.deptHead?.publicId,
+        getPlaceholderData: (eventDto: EventDTO) => {
+            const deptHead = eventDto.organizer?.department?.deptHead;
+            const orgDept = eventDto.organizer?.department;
+            return {
+                signedByUserInitial: {
+                    firstName: deptHead
+                        ? `${deptHead.firstName} ${deptHead.lastName}`
+                        : "Department Head",
+                    userRole: "DEPT_HEAD",
+                    departmentName: orgDept?.name || "N/A",
+                    departmentPublicId: orgDept?.publicId || "",
+                    publicId: deptHead?.publicId,
+                },
+                approvalRole: "DEPT_HEAD",
+            };
+        },
+    },
+    {
+        id: "VP_ADMIN",
+        label: "VP Admin",
+        isSigned: (approval, _eventDto: EventDTO) =>
+            approval.userRole === "VP_ADMIN",
+        getPlaceholderData: (_eventDto: EventDTO) => ({
+            signedByUserInitial: {
+                firstName: "VP Admin",
+                userRole: "VP_ADMIN",
+                departmentName: "Office of VP Admin",
+                departmentPublicId: "vp-admin-dept",
+            },
+            approvalRole: "VP_ADMIN",
+        }),
+    },
+    {
+        id: "MSDO",
+        label: "MSDO Representative",
+        isSigned: (approval, _eventDto: EventDTO) =>
+            approval.signedByUser?.department?.name === "MSDO" &&
+            approval.userRole === "MSDO",
+        getPlaceholderData: (_eventDto: EventDTO) => ({
+            signedByUserInitial: {
+                firstName: "MSDO Representative",
+                userRole: "MSDO",
+                departmentName: "MSDO",
+                departmentPublicId: "msdo-dept",
+            },
+            approvalRole: "MSDO",
+        }),
+    },
+    {
+        id: "OPC",
+        label: "OPC Representative",
+        isSigned: (approval, _eventDto: EventDTO) =>
+            approval.signedByUser?.department?.name === "OPC" &&
+            approval.userRole === "OPC",
+        getPlaceholderData: (_eventDto: EventDTO) => ({
+            signedByUserInitial: {
+                firstName: "OPC Representative",
+                userRole: "OPC",
+                departmentName: "OPC",
+                departmentPublicId: "opc-dept",
+            },
+            approvalRole: "OPC",
+        }),
+    },
+    {
+        id: "SSD",
+        label: "SSD",
+        isSigned: (approval, _eventDto: EventDTO) =>
+            approval.userRole === "SSD",
+        getPlaceholderData: (_eventDto: EventDTO) => ({
+            signedByUserInitial: {
+                firstName: "SSD",
+                userRole: "SSD",
+                departmentName: "Student Services Dept.",
+                departmentPublicId: "ssd-dept",
+            },
+            approvalRole: "SSD",
+        }),
+    },
+    {
+        id: "FAO",
+        label: "FAO",
+        isSigned: (approval, _eventDto: EventDTO) =>
+            approval.userRole === "FAO",
+        getPlaceholderData: (_eventDto: EventDTO) => ({
+            signedByUserInitial: {
+                firstName: "FAO",
+                userRole: "FAO",
+                departmentName: "Finance & Accounting Office",
+                departmentPublicId: "fao-dept",
+            },
+            approvalRole: "FAO",
+        }),
+    },
+];
+
 export function EventDetailsPage() {
     const context = useRouteContext({ from: "/app/events" });
     const role = context.authState?.role;
@@ -132,12 +276,12 @@ export function EventDetailsPage() {
     const queryClient = context.queryClient;
     const onBack = () => router.history.back();
 
-    const eventId = Route.useLoaderData();
+    const loadedEventData = Route.useLoaderData();
     const { data: approvals } = useSuspenseQuery(
-        eventApprovalsQueryOptions(eventId.publicId),
+        eventApprovalsQueryOptions(loadedEventData.publicId),
     );
-    const { data: event } = useSuspenseQuery(
-        eventByIdQueryOptions(eventId.publicId),
+    const { data: event } = useSuspenseQuery<EventDTO>(
+        eventByIdQueryOptions(loadedEventData.publicId),
     );
     const { data: venues } = useSuspenseQuery(venuesQueryOptions);
     const { data: departments } = useSuspenseQuery(departmentsQueryOptions);
@@ -145,7 +289,7 @@ export function EventDetailsPage() {
         equipmentsQueryOptions(currentUser),
     );
     const { data: reservedEquipments } = useSuspenseQuery(
-        equipmentReservationsByEventIdQueryOptions(event.publicId),
+        equipmentReservationsByEventIdQueryOptions(loadedEventData.publicId),
     );
 
     const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
@@ -265,11 +409,11 @@ export function EventDetailsPage() {
         onSuccess: (message) => {
             toast.success(message || "Event approved successfully.");
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.approvals(eventId.publicId),
+                queryKey: eventsQueryKeys.approvals(event.publicId),
             });
             // Invalidate the detail query for this event
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.detail(eventId.publicId),
+                queryKey: eventsQueryKeys.detail(event.publicId),
             });
             // Invalidate general event lists (all, approved, pending, own)
             queryClient.invalidateQueries({
@@ -303,10 +447,10 @@ export function EventDetailsPage() {
         onSuccess: (message) => {
             toast.success(message || "Event rejected successfully.");
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.approvals(eventId.publicId),
+                queryKey: eventsQueryKeys.approvals(event.publicId),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.detail(eventId.publicId),
+                queryKey: eventsQueryKeys.detail(event.publicId),
             });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.lists(),
@@ -338,7 +482,7 @@ export function EventDetailsPage() {
             toast.success(message || "Event canceled successfully.");
             // Invalidate event details and list
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.detail(eventId.publicId),
+                queryKey: eventsQueryKeys.detail(event.publicId),
             });
             // Invalidate relevant lists
             queryClient.invalidateQueries({
@@ -572,7 +716,7 @@ export function EventDetailsPage() {
 
             // Remove the specific event query from cache
             queryClient.removeQueries({
-                queryKey: eventsQueryKeys.detail(eventId.publicId),
+                queryKey: eventsQueryKeys.detail(event.publicId),
             });
 
             setIsDeleteDialogOpen(false); // Close the dialog
@@ -588,7 +732,7 @@ export function EventDetailsPage() {
     const handleApproveClick = () => {
         if (!currentUser) return;
         approveMutation.mutate({
-            eventId: eventId.publicId,
+            eventId: event.publicId,
             remarks: approvalRemarks,
         });
     };
@@ -600,7 +744,7 @@ export function EventDetailsPage() {
     const handleConfirmReject = () => {
         if (!currentUser) return;
         rejectEventMutation.mutate({
-            eventId: eventId.publicId,
+            eventId: event.publicId,
             remarks: rejectionRemarks,
         });
     };
@@ -611,7 +755,7 @@ export function EventDetailsPage() {
 
     // Handler for confirming the cancellation
     const handleConfirmCancel = () => {
-        cancelEventMutation.mutate(eventId.publicId);
+        cancelEventMutation.mutate(event.publicId);
     };
 
     const handleDeleteClick = () => {
@@ -619,7 +763,7 @@ export function EventDetailsPage() {
     };
 
     const handleConfirmDelete = () => {
-        deleteEventMutation.mutate(eventId.publicId);
+        deleteEventMutation.mutate(event.publicId);
     };
 
     // Placeholder handler for edit (e.g., navigate to an edit page)
@@ -724,6 +868,98 @@ export function EventDetailsPage() {
             toast.error("Failed to submit any equipment reservation requests.");
         }
     };
+
+    const approvalTableRows = useMemo(() => {
+        if (!event) return [];
+
+        // Single, comprehensive definition for a placeholder row structure
+        type PlaceholderApprovalRow = {
+            publicId: string;
+            signedByUser: UserDTO;
+            userRole: UserRole;
+            dateSigned: null;
+            status: "PENDING";
+            remarks: string;
+            isPlaceholder: true;
+            // Include all other fields from EventApprovalDTO with appropriate placeholder types/values
+            approvedByDepartmentHead: boolean | null;
+            approvedByVenueOwner: boolean | null;
+            finalStatus: string | null;
+            rejectionReason: string | null;
+            version: number;
+            createdAt: string;
+            updatedAt: string;
+            event: Partial<EventDTO> | undefined; // Keep this flexible for placeholders
+        };
+
+        type ApprovalTableRow = EventApprovalDTO | PlaceholderApprovalRow;
+
+        const outputRows: ApprovalTableRow[] = [];
+        const signedApproverConfigIds = new Set<string>();
+
+        for (const approval of approvals) {
+            outputRows.push({
+                ...approval,
+                isPlaceholder: false,
+            } as EventApprovalDTO);
+            for (const config of EXPECTED_APPROVERS_CONFIG) {
+                if (config.isSigned(approval, event)) {
+                    signedApproverConfigIds.add(config.id);
+                }
+            }
+        }
+
+        for (const config of EXPECTED_APPROVERS_CONFIG) {
+            if (!signedApproverConfigIds.has(config.id)) {
+                const placeholderData = config.getPlaceholderData(event);
+
+                const completeSignedByUserPlaceholder: UserDTO = {
+                    ...DEFAULT_USER_PLACEHOLDER_FIELDS,
+                    publicId:
+                        placeholderData.signedByUserInitial.publicId ||
+                        `placeholder-user-${config.id}`,
+                    firstName: placeholderData.signedByUserInitial.firstName,
+                    lastName:
+                        placeholderData.signedByUserInitial.lastName || "",
+                    email: placeholderData.signedByUserInitial.email || "",
+                    role: placeholderData.signedByUserInitial
+                        .userRole as UserRole,
+                    department: {
+                        ...DEFAULT_DEPARTMENT_PLACEHOLDER_FIELDS,
+                        publicId:
+                            placeholderData.signedByUserInitial
+                                .departmentPublicId,
+                        name: placeholderData.signedByUserInitial
+                            .departmentName,
+                    },
+                };
+
+                const placeholderApproval: PlaceholderApprovalRow = {
+                    publicId: `placeholder-approval-${config.id}`,
+                    signedByUser: completeSignedByUserPlaceholder,
+                    userRole: placeholderData.approvalRole,
+                    dateSigned: null,
+                    status: "PENDING",
+                    remarks: "Awaiting Approval",
+                    isPlaceholder: true,
+                    // Default/null values for other EventApprovalDTO fields consistent with PlaceholderApprovalRow definition
+                    approvedByDepartmentHead: null,
+                    approvedByVenueOwner: null,
+                    finalStatus: null,
+                    rejectionReason: null,
+                    version: 0,
+                    createdAt: "",
+                    updatedAt: "",
+                    event: {
+                        publicId: event.publicId,
+                        eventName: event.eventName,
+                    }, // Provide a partial event ref
+                };
+                outputRows.push(placeholderApproval);
+            }
+        }
+        return outputRows;
+    }, [approvals, event]); // Remove EXPECTED_APPROVERS_CONFIG from dependencies as it's stable
 
     return (
         <div className="flex h-screen bg-background">
@@ -1268,54 +1504,72 @@ export function EventDetailsPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {approvals.map((approval) => (
-                                                <TableRow
-                                                    key={approval.publicId}
-                                                >
-                                                    <TableCell>
-                                                        {
-                                                            approval
-                                                                .signedByUser
-                                                                .firstName
+                                            {approvalTableRows.map(
+                                                (approvalRow) => (
+                                                    <TableRow
+                                                        key={
+                                                            approvalRow.publicId
                                                         }
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge
-                                                            className={getBadgeVariant(
-                                                                approval.userRole,
-                                                            )}
-                                                        >
-                                                            {formatRole(
-                                                                approval.userRole,
-                                                            )}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {
-                                                            approval
+                                                    >
+                                                        <TableCell>
+                                                            {
+                                                                approvalRow
+                                                                    .signedByUser
+                                                                    .firstName
+                                                            }
+                                                            {approvalRow
                                                                 .signedByUser
-                                                                .department
-                                                                ?.name
-                                                        }
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {approval.dateSigned
-                                                            ? formatDateTime(
-                                                                  approval.dateSigned,
-                                                              )
-                                                            : "—"}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {getApproverStatusBadge(
-                                                            approval.status,
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {approval.remarks ||
-                                                            "—"}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
+                                                                .lastName
+                                                                ? ` ${approvalRow.signedByUser.lastName}`
+                                                                : ""}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge
+                                                                className={getBadgeVariant(
+                                                                    approvalRow.userRole as UserRole,
+                                                                )}
+                                                            >
+                                                                {formatRole(
+                                                                    approvalRow.userRole as UserRole,
+                                                                )}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {
+                                                                approvalRow
+                                                                    .signedByUser
+                                                                    .department
+                                                                    ?.name
+                                                            }
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {approvalRow.dateSigned &&
+                                                            !(
+                                                                "isPlaceholder" in
+                                                                    approvalRow &&
+                                                                approvalRow.isPlaceholder
+                                                            )
+                                                                ? formatDateTime(
+                                                                      approvalRow.dateSigned,
+                                                                  )
+                                                                : "—"}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {getApproverStatusBadge(
+                                                                approvalRow.status as string,
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {"isPlaceholder" in
+                                                                approvalRow &&
+                                                            approvalRow.isPlaceholder
+                                                                ? "Awaiting Approval"
+                                                                : approvalRow.remarks ||
+                                                                  "—"}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ),
+                                            )}
                                         </TableBody>
                                     </Table>
                                 ) : (
@@ -1361,7 +1615,7 @@ export function EventDetailsPage() {
                     // Pass the current event directly, not a list
                     // The dialog needs modification to accept a single event or just eventId
                     // For now, passing a single-item array might work depending on dialog logic
-                    event={event} // Pass current event in an array
+                    event={event} // Pass current event, assert non-null as it's guarded by useMemo
                     // Filter available equipment (optional, could be done in dialog)
                     // Use nullish coalescing operator (??) to provide an empty array fallback
                     equipment={(availableEquipments ?? []).filter(
