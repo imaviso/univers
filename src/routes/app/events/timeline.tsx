@@ -34,7 +34,7 @@ function Events() {
                     }
                     className="flex flex-col flex-1 overflow-hidden"
                 >
-                    <header className="flex items-center justify-between border-b px-6 py-4">
+                    <header className="flex items-center justify-between border-b px-6 py-3.5">
                         <div className="flex items-center gap-4">
                             <h1 className="text-xl font-semibold">Events</h1>
                             <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ function Events() {
                         </div>
                     </header>
 
-                    <main className="flex-1 overflow-auto p-6">
+                    <main className="flex-1 overflow-auto pl-6 pr-6">
                         {/* Both TabsContent rendered for SUPER_ADMIN */}
                         <TabsContent value="all" className="mt-0">
                             <EventList activeTab="all" />

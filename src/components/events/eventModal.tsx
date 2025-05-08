@@ -289,7 +289,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col">
                                         <FormLabel>Venue</FormLabel>
-                                        <Popover>
+                                        <Popover modal>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button
@@ -376,7 +376,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Department</FormLabel>
-                                            <Popover>
+                                            <Popover modal>
                                                 <PopoverTrigger asChild>
                                                     <FormControl>
                                                         <Button
@@ -465,8 +465,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                     )}
                                 />
                             </div>
-
-                            {/* Event Type */}
 
                             {/* Start Date & Time */}
                             <div>
