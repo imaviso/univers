@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"; // Added CardContent
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
 import { approvedEventsQueryOptions } from "@/lib/query";
-import type { Event } from "@/lib/types"; // Use the shared Event type
+import type { EventDTO } from "@/lib/types"; // Use the shared Event type
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query"; // Import useQuery
 import {
@@ -70,7 +70,7 @@ const getRandomColorForEvent = (
     return eventColorClasses[index];
 };
 
-interface EventWithDisplayColor extends Event {
+interface EventWithDisplayColor extends EventDTO {
     displayColor: string;
 }
 
@@ -88,10 +88,13 @@ interface EventWithLayout extends EventWithDisplayColor {
     numColumns: number;
 }
 
-const calculateDayLayout = (events: Event[]): EventWithLayout[] => {
+const calculateDayLayout = (events: EventDTO[]): EventWithLayout[] => {
     if (!events || events.length === 0) return [];
 
-    const totalMinutesInView = (20 - 8) * 60; // 8 AM to 8 PM = 12 hours * 60 min
+    // --- Define View Hours (Widened) ---
+    const viewStartHour = 6; // Start at 6 AM
+    const viewEndHour = 22; // End boundary for 9 PM - 10 PM slot (total view ends at 10 PM)
+    const totalMinutesInView = (viewEndHour - viewStartHour) * 60;
 
     // 1. Parse dates, calculate initial vertical layout, and sort
     const parsedEvents = events
@@ -100,9 +103,7 @@ const calculateDayLayout = (events: Event[]): EventWithLayout[] => {
             const end = parseISO(event.endTime);
             if (!isValid(start) || !isValid(end)) return null;
 
-            // Clamp times to the viewable range (8 AM to 8 PM) for layout calculation
-            const viewStartHour = 8;
-            const viewEndHour = 20;
+            // Clamp times to the viewable range (e.g., 6 AM to 10 PM)
             const dayStart = new Date(start);
             dayStart.setHours(viewStartHour, 0, 0, 0);
             const dayEnd = new Date(start);
@@ -131,11 +132,11 @@ const calculateDayLayout = (events: Event[]): EventWithLayout[] => {
                 (minutesFromViewStart / totalMinutesInView) * 100;
             const heightPercent = (durationMinutes / totalMinutesInView) * 100;
 
-            const displayColor = getRandomColorForEvent(event.id);
+            const displayColor = getRandomColorForEvent(event.publicId);
 
             return {
                 ...event,
-                id: event.id ?? `temp-${index}`, // Ensure unique key if id is missing
+                id: event.publicId ?? `temp-${index}`, // Ensure unique key if id is missing
                 startDate: start, // Keep original start/end for display
                 endDate: end,
                 displayColor,
@@ -193,7 +194,7 @@ const calculateDayLayout = (events: Event[]): EventWithLayout[] => {
         const overlappingEvents = parsedEvents.filter(
             (otherEvent) =>
                 // No need for null checks here as parsedEvents is filtered
-                event.id !== otherEvent.id &&
+                event.publicId !== otherEvent.publicId &&
                 event.startDate < otherEvent.endDate &&
                 event.endDate > otherEvent.startDate,
         );
@@ -322,7 +323,7 @@ function Calendar() {
 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<EventDTO | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     type CalendarViewType = "month" | "week" | "day";
     const [calendarView, setCalendarView] = useState<CalendarViewType>("month");
@@ -356,7 +357,7 @@ function Calendar() {
 
                         if (!isValid(eventStart) || !isValid(eventEnd)) {
                             console.warn(
-                                `Invalid date format for event ID ${event.id}`,
+                                `Invalid date format for event ID ${event.publicId}`,
                             );
                             return false; // Skip events with invalid dates
                         }
@@ -371,7 +372,7 @@ function Calendar() {
                     // --- Add displayColor to each filtered event ---
                     .map((event) => ({
                         ...event,
-                        displayColor: getRandomColorForEvent(event.id),
+                        displayColor: getRandomColorForEvent(event.publicId),
                     }))
             );
         };
@@ -472,20 +473,29 @@ function Calendar() {
         return days;
     };
 
-    // Generate hours for day view
+    // Generate hours for day view (Widened Range)
     const generateDayHours = () => {
-        const hours = Array.from({ length: 13 }, (_, i) => {
-            const hour = i + 8; // 8 AM to 8 PM
+        const startHour = 6; // 6 AM
+        const endHour = 22; // Boundary for 10 PM
+        const hoursInRange = endHour - startHour; // Number of full hour intervals
+
+        const hours = Array.from({ length: hoursInRange + 1 }, (_, i) => {
+            // +1 for the labels
+            const hour24 = startHour + i;
+            const hour12 =
+                hour24 > 12 ? hour24 - 12 : hour24 === 0 ? 12 : hour24;
+            const ampm = hour24 >= 12 && hour24 < 24 ? "PM" : "AM";
             return {
-                hour: hour > 12 ? hour - 12 : hour,
-                ampm: hour >= 12 ? "PM" : "AM",
-                label: `${hour > 12 ? hour - 12 : hour === 0 ? 12 : hour} ${hour >= 12 ? "PM" : "AM"}`,
+                hour: hour12,
+                ampm: ampm,
+                label: `${hour12} ${ampm}`,
             };
         });
 
-        const dayEvents = getEventsForDate(currentDate);
+        // Day events fetching remains the same here, layout calculation happens elsewhere
+        // const dayEvents = getEventsForDate(currentDate);
 
-        return { hours, dayEvents };
+        return { hours }; // Return only hours, dayEvents are calculated in renderDayView
     };
 
     const renderMonthView = () => {
@@ -517,7 +527,7 @@ function Calendar() {
                                 <div className="space-y-0.5 overflow-y-auto flex-grow min-h-0 px-0.5 pb-0.5 no-scrollbar">
                                     {day.events.map((event) => (
                                         <button
-                                            key={event.id}
+                                            key={event.publicId}
                                             type="button"
                                             // Reduced padding, adjusted line height implicitly via text size
                                             className={cn(
@@ -593,7 +603,7 @@ function Calendar() {
                             <div className="space-y-1 no-scrollbar">
                                 {day.events.map((event) => (
                                     <button
-                                        key={event.id}
+                                        key={event.publicId}
                                         type="button"
                                         className={cn(
                                             event.displayColor,
@@ -641,9 +651,12 @@ function Calendar() {
 
     // Render day view
     const renderDayView = () => {
-        const { hours } = generateDayHours();
+        const { hours } = generateDayHours(); // Now generates 6 AM - 10 PM
         const dayEventsRaw = getEventsForDate(currentDate);
+        // Pass the updated view hours to the layout calculation if it were parameterized
+        // Since we hardcoded the wider range in calculateDayLayout, no parameters needed here yet.
         const dayEventsWithLayout = calculateDayLayout(dayEventsRaw);
+        const totalHours = hours.length - 1; // Number of intervals (16 for 6AM-10PM)
 
         return (
             <div className="space-y-4">
@@ -662,12 +675,16 @@ function Calendar() {
                     {/* Adjusted width */}
                     {/* Hour Labels */}
                     <div className="space-y-0 border-r pr-2">
-                        {" "}
-                        {/* Adjust spacing/padding */}
                         {hours.map((hour, index) => (
                             <div
                                 key={hour.label}
-                                className="h-[calc(100%/13)] text-xs text-muted-foreground text-right relative -top-2" // Adjust vertical alignment
+                                // Use totalHours (number of intervals) for height calculation
+                                className="h-[calc(100%/var(--total-hours))] text-xs text-muted-foreground text-right relative -top-2"
+                                style={
+                                    {
+                                        "--total-hours": totalHours,
+                                    } as React.CSSProperties
+                                } // Pass totalHours as CSS variable
                             >
                                 {hour.label}
                             </div>
@@ -680,11 +697,12 @@ function Calendar() {
                         {/* Hour Lines */}
                         {hours.map((hour, index) => (
                             <div
-                                key={`line-${hour.label}`} // Use unique hour label as key
-                                className="absolute w-full border-t border-border/50" // Lighter border
+                                key={`line-${hour.label}`}
+                                className="absolute w-full border-t border-border/50"
                                 style={{
-                                    top: `${(index / hours.length) * 100}%`,
-                                    left: 0, // Ensure it starts from the edge
+                                    // Use totalHours (number of intervals) for top calculation
+                                    top: `${(index / totalHours) * 100}%`,
+                                    left: 0,
                                 }}
                             />
                         ))}
@@ -693,7 +711,7 @@ function Calendar() {
                             {dayEventsWithLayout.map((event) => (
                                 <button
                                     type="button"
-                                    key={event.id} // Use the potentially generated unique key
+                                    key={event.publicId} // Use the potentially generated unique key
                                     className={cn(
                                         // Use the assigned random color
                                         event.displayColor,

@@ -43,10 +43,10 @@ import {
     editEventSchema,
 } from "@/lib/schema";
 import type {
-    DepartmentType,
+    DepartmentDTO,
     Event,
     EventDTOPayload,
-    Venue,
+    VenueDTO,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
@@ -71,8 +71,8 @@ interface EditEventModalProps {
     isOpen: boolean;
     onClose: () => void;
     event: Event;
-    venues: Venue[];
-    departments: DepartmentType[];
+    venues: VenueDTO[];
+    departments: DepartmentDTO[];
 }
 
 const eventTypes = ["External", "Program-based", "Admin", "SSG/Advocay-based"];
@@ -93,8 +93,8 @@ export function EditEventModal({
         defaultValues: {
             eventName: "",
             eventType: undefined,
-            eventVenueId: undefined,
-            departmentId: undefined,
+            venuePublicId: undefined,
+            departmentPublicId: undefined,
             startTime: undefined,
             endTime: undefined,
             approvedLetter: [],
@@ -110,8 +110,8 @@ export function EditEventModal({
             form.reset({
                 eventName: event.eventName,
                 eventType: event.eventType,
-                eventVenueId: event.eventVenueId,
-                departmentId: event.departmentId ?? undefined,
+                venuePublicId: event.eventVenue.publicId,
+                departmentPublicId: event.department.publicId,
                 startTime: startDate,
                 endTime: endDate,
             });
@@ -119,8 +119,8 @@ export function EditEventModal({
             form.reset({
                 eventName: "",
                 eventType: undefined,
-                eventVenueId: undefined,
-                departmentId: undefined,
+                venuePublicId: undefined,
+                departmentPublicId: undefined,
                 startTime: undefined,
                 endTime: undefined,
                 approvedLetter: undefined,
@@ -135,7 +135,7 @@ export function EditEventModal({
             toast.success("Event updated successfully.");
             // Invalidate relevant queries
             queryClient.refetchQueries({
-                queryKey: eventByIdQueryOptions(String(event.id)).queryKey,
+                queryKey: eventByIdQueryOptions(event.publicId).queryKey,
             });
             queryClient.invalidateQueries({
                 queryKey: allEventsQueryOptions.queryKey,
@@ -167,14 +167,14 @@ export function EditEventModal({
         const eventData: Partial<EventDTOPayload> = {
             eventName: outputValues.eventName,
             eventType: outputValues.eventType,
-            eventVenueId: outputValues.eventVenueId,
-            departmentId: outputValues.departmentId,
+            venuePublicId: outputValues.venuePublicId,
+            departmentPublicId: outputValues.departmentPublicId,
             startTime: outputValues.startTime?.toISOString(),
             endTime: outputValues.endTime?.toISOString(),
         };
 
         updateEventMutation.mutate({
-            eventId: event.id,
+            eventId: event.publicId,
             eventData,
             approvedLetter: letterFileToSend, // Send the actual file or undefined
         });
@@ -253,7 +253,7 @@ export function EditEventModal({
                             {/* Venue */}
                             <FormField
                                 control={form.control}
-                                name="eventVenueId"
+                                name="venuePublicId"
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col">
                                         <FormLabel>Venue</FormLabel>
@@ -274,7 +274,7 @@ export function EditEventModal({
                                                         {field.value
                                                             ? venues.find(
                                                                   (v) =>
-                                                                      v.id ===
+                                                                      v.publicId ===
                                                                       field.value,
                                                               )?.name
                                                             : "Select venue"}
@@ -297,12 +297,12 @@ export function EditEventModal({
                                                                             venue.name
                                                                         }
                                                                         key={
-                                                                            venue.id
+                                                                            venue.publicId
                                                                         }
                                                                         onSelect={() => {
                                                                             form.setValue(
-                                                                                "eventVenueId",
-                                                                                venue.id,
+                                                                                "venuePublicId",
+                                                                                venue.publicId,
                                                                                 {
                                                                                     shouldValidate: true,
                                                                                 },
@@ -312,7 +312,7 @@ export function EditEventModal({
                                                                         <Check
                                                                             className={cn(
                                                                                 "mr-2 h-4 w-4",
-                                                                                venue.id ===
+                                                                                venue.publicId ===
                                                                                     field.value
                                                                                     ? "opacity-100"
                                                                                     : "opacity-0",
@@ -337,7 +337,7 @@ export function EditEventModal({
                             <div className="col-span-2">
                                 <FormField
                                     control={form.control}
-                                    name="departmentId"
+                                    name="departmentPublicId"
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Department</FormLabel>
@@ -360,7 +360,7 @@ export function EditEventModal({
                                                                 ? departments.find(
                                                                       // Use depts if fetching inside
                                                                       (dept) =>
-                                                                          dept.id ===
+                                                                          dept.publicId ===
                                                                           field.value,
                                                                   )?.name
                                                                 : "Select department"}
@@ -390,12 +390,12 @@ export function EditEventModal({
                                                                                 dept.name
                                                                             }
                                                                             key={
-                                                                                dept.id
+                                                                                dept.publicId
                                                                             }
                                                                             onSelect={() => {
                                                                                 form.setValue(
-                                                                                    "departmentId",
-                                                                                    dept.id,
+                                                                                    "departmentPublicId",
+                                                                                    dept.publicId,
                                                                                     {
                                                                                         shouldValidate: true,
                                                                                     },
@@ -405,7 +405,7 @@ export function EditEventModal({
                                                                             <Check
                                                                                 className={cn(
                                                                                     "mr-2 h-4 w-4",
-                                                                                    dept.id ===
+                                                                                    dept.publicId ===
                                                                                         field.value
                                                                                         ? "opacity-100"
                                                                                         : "opacity-0",

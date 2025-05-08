@@ -27,7 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { updateDepartment } from "@/lib/api";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import { type EditDepartmentInput, editDepartmentSchema } from "@/lib/schema";
-import type { DepartmentType, UserType } from "@/lib/types";
+import type { DepartmentDTO, UserDTO } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -37,8 +37,8 @@ import { toast } from "sonner";
 interface EditDepartmentFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    department: DepartmentType; // The department being edited
-    users: UserType[]; // List of users for the dropdown
+    department: DepartmentDTO; // The department being edited
+    users: UserDTO[]; // List of users for the dropdown
 }
 
 export function EditDepartmentFormDialog({
@@ -69,7 +69,7 @@ export function EditDepartmentFormDialog({
             form.reset({
                 name: department.name,
                 description: department.description ?? "",
-                deptHeadId: department.deptHead?.id ?? undefined,
+                deptHeadId: department.deptHead?.publicId ?? undefined,
             });
         }
     }, [isOpen, department, form]);
@@ -79,19 +79,19 @@ export function EditDepartmentFormDialog({
         mutationFn: ({
             departmentId,
             payload,
-        }: { departmentId: number; payload: Partial<EditDepartmentInput> }) =>
+        }: { departmentId: string; payload: Partial<EditDepartmentInput> }) =>
             updateDepartment(departmentId, payload),
         onMutate: async ({ departmentId, payload }) => {
             await queryClient.cancelQueries({
                 queryKey: departmentsQueryOptions.queryKey,
             });
             const previousDepartments = queryClient.getQueryData<
-                DepartmentType[]
+                DepartmentDTO[]
             >(departmentsQueryOptions.queryKey);
 
             // Find dept head name for optimistic update
             const deptHeadUser = payload.deptHeadId
-                ? users?.find((u) => Number(u.id) === payload.deptHeadId)
+                ? users?.find((u) => u.publicId === payload.deptHeadId)
                 : null;
             const deptHeadName = deptHeadUser
                 ? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
@@ -99,11 +99,11 @@ export function EditDepartmentFormDialog({
                   ? null
                   : undefined; // Handle unassigning optimistically
 
-            queryClient.setQueryData<DepartmentType[]>(
+            queryClient.setQueryData<DepartmentDTO[]>(
                 departmentsQueryOptions.queryKey,
                 (old = []) =>
                     old.map((dept) =>
-                        dept.id === departmentId
+                        dept.publicId === departmentId
                             ? {
                                   ...dept,
                                   name: payload.name ?? dept.name,
@@ -114,7 +114,7 @@ export function EditDepartmentFormDialog({
                                   deptHeadId:
                                       payload.deptHeadId !== undefined
                                           ? payload.deptHeadId
-                                          : dept.deptHead?.id,
+                                          : dept.deptHead?.publicId,
                                   deptHeadName:
                                       deptHeadName !== undefined
                                           ? deptHeadName
@@ -158,13 +158,14 @@ export function EditDepartmentFormDialog({
         // Or send all values as per current API setup
         const payload: Partial<EditDepartmentInput> = {
             name: values.name,
-            description: values.description || undefined, // Send null if empty
-            deptHeadId: values.deptHeadId
-                ? Number(values.deptHeadId)
-                : undefined,
+            description: values.description || undefined,
+            deptHeadId: values.deptHeadId ?? undefined,
         };
 
-        updateMutation.mutate({ departmentId: department.id, payload });
+        updateMutation.mutate({
+            departmentId: department.publicId,
+            payload,
+        });
     };
 
     // Use the onClose prop for closing
@@ -238,7 +239,7 @@ export function EditDepartmentFormDialog({
                                         </FormLabel>
                                         <Select
                                             onValueChange={(value) =>
-                                                field.onChange(Number(value))
+                                                field.onChange(value)
                                             }
                                             value={field.value?.toString()}
                                         >
@@ -249,18 +250,16 @@ export function EditDepartmentFormDialog({
                                             </FormControl>
 
                                             <SelectContent>
-                                                {users?.map(
-                                                    (user: UserType) => (
-                                                        <SelectItem
-                                                            key={user.id}
-                                                            value={user.id.toString()}
-                                                        >
-                                                            {user.firstName}{" "}
-                                                            {user.lastName} (
-                                                            {user.email})
-                                                        </SelectItem>
-                                                    ),
-                                                )}
+                                                {users?.map((user: UserDTO) => (
+                                                    <SelectItem
+                                                        key={user.publicId}
+                                                        value={user.publicId}
+                                                    >
+                                                        {user.firstName}{" "}
+                                                        {user.lastName} (
+                                                        {user.email})
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

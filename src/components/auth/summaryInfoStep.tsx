@@ -5,6 +5,11 @@ import { registrationLoadingAtom } from "@/lib/atoms";
 import { useAtom } from "jotai";
 import { CheckCircle2, LoaderCircleIcon } from "lucide-react";
 
+import { departmentsQueryOptions } from "@/lib/query";
+import type { DepartmentDTO } from "@/lib/types"; // Import DepartmentDTO type
+// Import useQuery and departmentsQueryOptions
+import { useQuery } from "@tanstack/react-query";
+
 interface SummaryStepProps {
     onSubmit: () => void;
     onBack: () => void;
@@ -13,6 +18,17 @@ interface SummaryStepProps {
 export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
     const [formData] = useAtom(registrationFormAtom);
     const [isLoading] = useAtom(registrationLoadingAtom);
+
+    // Fetch departments data
+    const { data: departments = [] } = useQuery(departmentsQueryOptions);
+
+    // Find the selected department name
+    const selectedDepartment = departments.find(
+        (dept: DepartmentDTO) => dept.publicId === formData.departmentPublicId,
+    );
+    const departmentName = selectedDepartment
+        ? selectedDepartment.name
+        : formData.departmentPublicId; // Fallback to ID if not found
 
     return (
         <div className="space-y-6">
@@ -55,7 +71,7 @@ export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
                                         Department:
                                     </div>
                                     <div className="break-all">
-                                        {formData.department}
+                                        {departmentName}
                                     </div>
                                 </div>
                             </div>

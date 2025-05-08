@@ -20,7 +20,8 @@ export const Route = createFileRoute("/app/events")({
                 return true;
             }
             if (item.href === "/app/events/timeline") {
-                const customPathRegex = /^\/app\/events\/\d+$/;
+                const customPathRegex =
+                    /^\/app\/events\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
                 return customPathRegex.test(location.pathname);
             }
             return false;

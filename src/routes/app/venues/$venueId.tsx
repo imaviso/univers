@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { venuesQueryOptions } from "@/lib/query";
-import type { Venue } from "@/lib/types";
+import type { VenueDTO } from "@/lib/types";
 import {
     createFileRoute,
     useNavigate,
@@ -18,9 +18,9 @@ export const Route = createFileRoute("/app/venues/$venueId")({
     loader: async ({ params: { venueId }, context }) => {
         // Find venue in the updated mock data
         const venues = context.queryClient.ensureQueryData(venuesQueryOptions);
-        const venue = (await venues).find((v) => v.id.toString() === venueId) as
-            | Venue
-            | undefined; // Cast or ensure type safety
+        const venue = (await venues).find(
+            (v) => v.publicId.toString() === venueId,
+        ) as VenueDTO | undefined; // Cast or ensure type safety
 
         if (!venue) {
             // Use TanStack Router's notFound utility or throw a specific error

@@ -24,7 +24,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { type UserFormInput, userFormSchema } from "@/lib/schema";
-import type { DepartmentType } from "@/lib/types";
+import type { DepartmentDTO } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -36,7 +36,7 @@ interface UserFormDialogProps {
     isLoading?: boolean;
     onSubmit: (userData: Omit<UserFormInput, "confirmPassword">) => void;
     roles: { value: string; label: string }[];
-    departments: DepartmentType[];
+    departments: DepartmentDTO[];
     // active?: boolean;
 }
 
@@ -58,7 +58,7 @@ export function UserFormDialog({
             password: "",
             confirmPassword: "",
             role: "",
-            departmentId: "",
+            departmentPublicId: "",
             telephoneNumber: "",
             phoneNumber: "",
             active: true,
@@ -284,7 +284,7 @@ export function UserFormDialog({
 
                             <FormField
                                 control={form.control}
-                                name="departmentId"
+                                name="departmentPublicId"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Department</FormLabel>
@@ -301,8 +301,12 @@ export function UserFormDialog({
                                                 {departments.map(
                                                     (department) => (
                                                         <SelectItem
-                                                            key={department.id}
-                                                            value={department.id.toString()}
+                                                            key={
+                                                                department.publicId
+                                                            }
+                                                            value={
+                                                                department.publicId
+                                                            }
                                                         >
                                                             {department.name}
                                                         </SelectItem>

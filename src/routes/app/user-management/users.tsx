@@ -4,8 +4,8 @@ import { UserDataTable } from "@/components/user-management/userManagementTable"
 import { createUser } from "@/lib/api";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import type { UserFormInput } from "@/lib/schema";
+import type { UserDTO } from "@/lib/types";
 import { ROLES } from "@/lib/types";
-import type { UserType } from "@/lib/types";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { UserPlus } from "lucide-react";
@@ -16,11 +16,14 @@ export const Route = createFileRoute("/app/user-management/users")({
     component: UsersComponent,
 });
 
-// Define the input type for the mutation, matching the API function
 type CreateUserInputFE = Omit<
-    UserType,
-    "id" | "emailVerified" | "createdAt" | "updatedAt"
+    UserDTO,
+    "id" | "emailVerified" | "createdAt" | "updatedAt" | "department"
 >;
+
+type CreateUserInputFEWithDepartment = CreateUserInputFE & {
+    departmentPublicId: string;
+};
 
 function UsersComponent() {
     const context = useRouteContext({ from: "/app/user-management" });
@@ -30,34 +33,35 @@ function UsersComponent() {
     const { data: departments } = useSuspenseQuery(departmentsQueryOptions);
 
     const createUserMutation = useMutation({
-        mutationFn: createUser, // Use the updated API function
+        mutationFn: createUser,
         // When mutate is called:
-        onMutate: async (newUserData: CreateUserInputFE) => {
+        onMutate: async (newUserData: CreateUserInputFEWithDepartment) => {
             // Cancel any outgoing refetches for the users list
             await queryClient.cancelQueries({
                 queryKey: usersQueryOptions.queryKey,
             });
 
-            const previousUsers = queryClient.getQueryData<UserType[]>(
+            const previousUsers = queryClient.getQueryData<UserDTO[]>(
                 usersQueryOptions.queryKey,
             );
 
-            queryClient.setQueryData<UserType[]>(
+            queryClient.setQueryData<CreateUserInputFEWithDepartment[]>(
                 usersQueryOptions.queryKey,
                 (old = []) => [
                     ...old,
                     {
                         ...newUserData,
                         id: Math.random().toString(36).substring(2), // Temporary ID
+                        publicId: `${Math.random().toString(36).substring(2)}_user_pub`,
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
                         emailVerified: false,
                         active: newUserData.active ?? true,
-                        departmentId: newUserData.departmentId,
+                        departmentPublicId: newUserData.departmentPublicId,
                         password: "****",
                         // If UserType needs department name, add it here based on deptLabel
                         // departmentName: deptLabel,
-                    } as UserType,
+                    } as CreateUserInputFEWithDepartment,
                 ],
             );
 
@@ -88,14 +92,15 @@ function UsersComponent() {
     const handleAddUser = (
         userData: Omit<UserFormInput, "confirmPassword">,
     ) => {
-        const apiPayload: CreateUserInputFE = {
+        const apiPayload: CreateUserInputFEWithDepartment = {
+            publicId: `${Math.random().toString(36).substring(2)}_user_pub`,
             idNumber: userData.idNumber,
             firstName: userData.firstName,
             lastName: userData.lastName,
             email: userData.email,
             password: userData.password,
-            role: userData.role as UserType["role"],
-            departmentId: userData.departmentId,
+            role: userData.role as UserDTO["role"],
+            departmentPublicId: userData.departmentPublicId,
             telephoneNumber: userData.telephoneNumber,
             phoneNumber: userData.phoneNumber || "",
             active: userData.active,

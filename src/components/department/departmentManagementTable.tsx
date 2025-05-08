@@ -33,7 +33,7 @@ import {
 } from "@/lib/atoms";
 import { defineMeta, filterFn } from "@/lib/filters";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
-import type { DepartmentType } from "@/lib/types";
+import type { DepartmentDTO } from "@/lib/types";
 import {
     useMutation,
     useQueryClient,
@@ -99,16 +99,17 @@ export function DepartmentDataTable() {
 
     const deleteDepartmentMutation = useMutation({
         mutationFn: deleteDepartment, // Expects departmentId (number)
-        onMutate: async (departmentId: number) => {
+        onMutate: async (departmentId: string) => {
             await queryClient.cancelQueries({
                 queryKey: departmentsQueryOptions.queryKey,
             });
             const previousDepartments = queryClient.getQueryData<
-                DepartmentType[]
+                DepartmentDTO[]
             >(departmentsQueryOptions.queryKey);
-            queryClient.setQueryData<DepartmentType[]>(
+            queryClient.setQueryData<DepartmentDTO[]>(
                 departmentsQueryOptions.queryKey,
-                (old = []) => old.filter((dept) => dept.id !== departmentId),
+                (old = []) =>
+                    old.filter((dept) => dept.publicId !== departmentId),
             );
             return { previousDepartments };
         },
@@ -205,7 +206,7 @@ export function DepartmentDataTable() {
     // --- Event Handlers ---
     const handleDeleteDepartment = () => {
         if (selectedDepartment) {
-            deleteDepartmentMutation.mutate(selectedDepartment.id);
+            deleteDepartmentMutation.mutate(selectedDepartment.publicId);
         }
     };
 
@@ -219,28 +220,8 @@ export function DepartmentDataTable() {
     // 	}
     // };
 
-    const USER_OPTIONS = React.useMemo(() => {
-        if (!departmentsData) return [];
-        const uniqueHeads = new Map<
-            string,
-            NonNullable<DepartmentType["deptHead"]>
-        >();
-        for (const dept of departmentsData) {
-            if (dept.deptHead && dept.deptHead.id != null) {
-                uniqueHeads.set(String(dept.deptHead.id), dept.deptHead);
-            }
-        }
-        return Array.from(uniqueHeads.values()).map((user) => ({
-            value: String(user.id),
-            label:
-                `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-                `User ID: ${user.id}`,
-            icon: UserIcon,
-        }));
-    }, [departmentsData]);
-
     // --- Columns ---
-    const columns = React.useMemo<ColumnDef<DepartmentType>[]>(
+    const columns = React.useMemo<ColumnDef<DepartmentDTO>[]>(
         () => [
             // Optional: Select column for bulk actions
             // {
@@ -252,7 +233,7 @@ export function DepartmentDataTable() {
             // },
             {
                 id: "id",
-                accessorFn: (row: DepartmentType) => String(row.id),
+                accessorFn: (row: DepartmentDTO) => String(row.publicId),
                 header: ({ column }) => (
                     <Button
                         variant="ghost"
@@ -266,11 +247,11 @@ export function DepartmentDataTable() {
                 ),
                 cell: ({ row }) => <div>{row.getValue("id")}</div>,
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: DepartmentType) => String(row.id), {
+                meta: defineMeta((row: DepartmentDTO) => String(row.publicId), {
                     displayName: "ID",
                     type: "text",
                     icon: Building,
-                }) as ColumnMeta<DepartmentType, unknown>,
+                }) as ColumnMeta<DepartmentDTO, unknown>,
             },
             {
                 accessorKey: "name",
@@ -289,11 +270,11 @@ export function DepartmentDataTable() {
                     <div className="font-medium">{row.getValue("name")}</div>
                 ),
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: DepartmentType) => row.name, {
+                meta: defineMeta((row: DepartmentDTO) => row.name, {
                     displayName: "Name",
                     type: "text",
                     icon: Building,
-                }) as ColumnMeta<DepartmentType, unknown>,
+                }) as ColumnMeta<DepartmentDTO, unknown>,
             },
             {
                 accessorKey: "description",
@@ -304,11 +285,11 @@ export function DepartmentDataTable() {
                     </div>
                 ),
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: DepartmentType) => row.description, {
+                meta: defineMeta((row: DepartmentDTO) => row.description, {
                     displayName: "Description",
                     type: "text",
                     icon: TextIcon,
-                }) as ColumnMeta<DepartmentType, unknown>,
+                }) as ColumnMeta<DepartmentDTO, unknown>,
             },
             {
                 accessorKey: "deptHead",
@@ -324,7 +305,7 @@ export function DepartmentDataTable() {
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 ),
-                accessorFn: (row: DepartmentType) => {
+                accessorFn: (row: DepartmentDTO) => {
                     const deptHeadUser = row.deptHead;
                     return deptHeadUser
                         ? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
@@ -346,7 +327,7 @@ export function DepartmentDataTable() {
                 },
                 filterFn: filterFn("text"),
                 meta: defineMeta(
-                    (row: DepartmentType) => {
+                    (row: DepartmentDTO) => {
                         const deptHeadUser = row.deptHead;
                         return deptHeadUser
                             ? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
@@ -357,7 +338,7 @@ export function DepartmentDataTable() {
                         type: "text",
                         icon: UserIcon,
                     },
-                ) as ColumnMeta<DepartmentType, unknown>,
+                ) as ColumnMeta<DepartmentDTO, unknown>,
             },
             {
                 accessorKey: "createdAt",
@@ -382,13 +363,13 @@ export function DepartmentDataTable() {
                 },
                 filterFn: filterFn("date"),
                 meta: defineMeta(
-                    (row: DepartmentType) => new Date(row.createdAt),
+                    (row: DepartmentDTO) => new Date(row.createdAt),
                     {
                         displayName: "Created At",
                         type: "date",
                         icon: CalendarIcon,
                     },
-                ) as ColumnMeta<DepartmentType, unknown>,
+                ) as ColumnMeta<DepartmentDTO, unknown>,
             },
             {
                 accessorKey: "updatedAt",
@@ -413,13 +394,13 @@ export function DepartmentDataTable() {
                 },
                 filterFn: filterFn("date"),
                 meta: defineMeta(
-                    (row: DepartmentType) => new Date(row.updatedAt),
+                    (row: DepartmentDTO) => new Date(row.updatedAt),
                     {
                         displayName: "Updated At",
                         type: "date",
                         icon: CalendarIcon,
                     },
-                ) as ColumnMeta<DepartmentType, unknown>,
+                ) as ColumnMeta<DepartmentDTO, unknown>,
             },
             {
                 id: "actions",

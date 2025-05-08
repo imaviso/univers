@@ -38,18 +38,16 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
             idNumber: formData.idNumber,
             firstName: formData.firstName,
             lastName: formData.lastName,
-            department: formData.department,
+            departmentPublicId: formData.departmentPublicId,
         },
     });
 
     const onSubmit = (values: PersonalInfoInput) => {
-        // Update the global form state
         setFormData({
             ...formData,
             ...values,
         });
 
-        // Move to the next step
         onNext();
     };
 
@@ -115,7 +113,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
 
                     <FormField
                         control={form.control}
-                        name="department"
+                        name="departmentPublicId"
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Department</FormLabel>
@@ -131,8 +129,8 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                                     <SelectContent>
                                         {DEPARTMENTS.map((dept) => (
                                             <SelectItem
-                                                key={dept.id}
-                                                value={dept.id.toString()}
+                                                key={dept.publicId}
+                                                value={dept.publicId}
                                             >
                                                 {dept.name}
                                             </SelectItem>

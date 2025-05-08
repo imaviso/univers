@@ -76,8 +76,7 @@ import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import type { EditUserFormInput } from "@/lib/schema";
-// Remove DEPARTMENTS constant import
-import { ROLES, type UserRole, type UserType } from "@/lib/types";
+import { ROLES, type UserDTO, type UserRole } from "@/lib/types";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
 import { useAtom } from "jotai";
@@ -105,18 +104,19 @@ export function UserDataTable() {
     const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
 
     const departmentMap = React.useMemo(() => {
-        const map = new Map<number, string>();
+        const map = new Map<string, string>();
         for (const dept of departmentsData ?? []) {
-            map.set(dept.id, dept.name);
+            map.set(dept.publicId, dept.name);
         }
         return map;
     }, [departmentsData]);
 
     const usersWithDeptNames = React.useMemo(() => {
-        return (initialUsers ?? []).map((user: UserType) => ({
+        return (initialUsers ?? []).map((user: UserDTO) => ({
             ...user,
             departmentName:
-                departmentMap.get(Number(user.departmentId)) ?? "Unknown Dept",
+                departmentMap.get(user.department?.publicId ?? "") ??
+                "Unknown Dept",
         }));
     }, [initialUsers, departmentMap]);
 
@@ -135,17 +135,17 @@ export function UserDataTable() {
             await queryClient.cancelQueries({
                 queryKey: usersQueryOptions.queryKey,
             });
-            const previousUsers = queryClient.getQueryData<UserType[]>(
+            const previousUsers = queryClient.getQueryData<UserDTO[]>(
                 usersQueryOptions.queryKey,
             );
 
-            queryClient.setQueryData<UserType[]>(
+            queryClient.setQueryData<UserDTO[]>(
                 usersQueryOptions.queryKey,
                 (old = []) =>
                     old.map((user) => {
-                        if (user.id !== userId) return user;
+                        if (user.publicId !== userId) return user;
 
-                        const updatedUser: UserType = {
+                        const updatedUser: UserDTO = {
                             ...user,
                             // Apply basic payload fields directly
                             ...(payload.firstName && {
@@ -163,16 +163,10 @@ export function UserDataTable() {
                             ...(payload.telephoneNumber && {
                                 telephoneNumber: payload.telephoneNumber,
                             }),
-                            // Handle role update
                             role:
                                 payload.role !== undefined
                                     ? (payload.role as UserRole)
                                     : user.role,
-                            // Update departmentId and department name based on payload
-                            departmentId:
-                                payload.departmentId !== undefined
-                                    ? payload.departmentId // Use payload value (number or null)
-                                    : user.departmentId, // Keep old ID if not in payload
                             email: user.email,
                             password: user.password,
                             emailVerified: user.emailVerified,
@@ -187,7 +181,7 @@ export function UserDataTable() {
             );
             return { previousUsers };
         },
-        onError: (err, variables, context) => {
+        onError: (err, _variables, context) => {
             if (context?.previousUsers) {
                 queryClient.setQueryData(
                     usersQueryOptions.queryKey,
@@ -218,14 +212,14 @@ export function UserDataTable() {
             await queryClient.cancelQueries({
                 queryKey: usersQueryOptions.queryKey,
             });
-            const previousUsers = queryClient.getQueryData<UserType[]>(
+            const previousUsers = queryClient.getQueryData<UserDTO[]>(
                 usersQueryOptions.queryKey,
             );
-            queryClient.setQueryData<UserType[]>(
+            queryClient.setQueryData<UserDTO[]>(
                 usersQueryOptions.queryKey,
                 (old = []) =>
                     old.map((user) =>
-                        user.id === userId
+                        user.publicId === userId
                             ? {
                                   ...user,
                                   active: false,
@@ -236,7 +230,7 @@ export function UserDataTable() {
             );
             return { previousUsers };
         },
-        onError: (err, userId, context) => {
+        onError: (err, _userId, context) => {
             if (context?.previousUsers) {
                 queryClient.setQueryData(
                     usersQueryOptions.queryKey,
@@ -267,14 +261,14 @@ export function UserDataTable() {
             await queryClient.cancelQueries({
                 queryKey: usersQueryOptions.queryKey,
             });
-            const previousUsers = queryClient.getQueryData<UserType[]>(
+            const previousUsers = queryClient.getQueryData<UserDTO[]>(
                 usersQueryOptions.queryKey,
             );
-            queryClient.setQueryData<UserType[]>(
+            queryClient.setQueryData<UserDTO[]>(
                 usersQueryOptions.queryKey,
                 (old = []) =>
                     old.map((user) =>
-                        user.id === userId
+                        user.publicId === userId
                             ? {
                                   ...user,
                                   active: true,
@@ -285,7 +279,7 @@ export function UserDataTable() {
             );
             return { previousUsers };
         },
-        onError: (err, userId, context) => {
+        onError: (err, _userId, context) => {
             if (context?.previousUsers) {
                 queryClient.setQueryData(
                     usersQueryOptions.queryKey,
@@ -317,7 +311,7 @@ export function UserDataTable() {
         // and other fields matching UpdateUserInputFE.
         // If image upload is needed from the edit dialog, it needs to be handled here too.
         updateUserMutation.mutate({
-            userId: selectedUser.id,
+            userId: selectedUser.publicId,
             payload: payload,
             // imageFile: /* pass image file if collected from dialog */,
         });
@@ -325,13 +319,13 @@ export function UserDataTable() {
 
     const handleDeactivateUser = () => {
         if (selectedUser) {
-            deactivateUserMutation.mutate(selectedUser.id);
+            deactivateUserMutation.mutate(selectedUser.publicId);
         }
     };
 
     const handleActivateUser = () => {
         if (selectedUser) {
-            activateUserMutation.mutate(selectedUser.id);
+            activateUserMutation.mutate(selectedUser.publicId);
         }
     };
 
@@ -339,7 +333,7 @@ export function UserDataTable() {
     const ACTIVE_OPTIONS = React.useMemo(() => {
         const users = initialUsers || [];
         const uniqueActiveStates = Array.from(
-            new Set(users.map((u: UserType) => u.active)),
+            new Set(users.map((u: UserDTO) => u.active)),
         ) as boolean[];
         return uniqueActiveStates.map((isActive) => ({
             value: String(isActive),
@@ -351,7 +345,7 @@ export function UserDataTable() {
     const VERIFIED_OPTIONS = React.useMemo(() => {
         const users = initialUsers || [];
         const uniqueVerifiedStates = Array.from(
-            new Set(users.map((u: UserType) => u.emailVerified)),
+            new Set(users.map((u: UserDTO) => u.emailVerified)),
         ) as boolean[];
         return uniqueVerifiedStates.map((isVerified) => ({
             value: String(isVerified),
@@ -381,9 +375,10 @@ export function UserDataTable() {
     );
 
     // --- Define the columns with filter metadata ---
-    const columns = React.useMemo<ColumnDef<UserType>[]>(
+    const columns = React.useMemo<ColumnDef<UserDTO>[]>(
         () => [
             // ... Select column ...
+
             {
                 id: "select",
                 header: ({ table }) => (
@@ -452,13 +447,13 @@ export function UserDataTable() {
                 },
                 filterFn: filterFn("text"),
                 meta: defineMeta(
-                    (row: UserType) => `${row.firstName} ${row.lastName}`,
+                    (row: UserDTO) => `${row.firstName} ${row.lastName}`,
                     {
                         displayName: "User Name",
                         type: "text",
                         icon: UserIcon,
                     },
-                ) as ColumnMeta<UserType, unknown>,
+                ) as ColumnMeta<UserDTO, unknown>,
             },
             // ... ID Number column ...
             {
@@ -466,11 +461,16 @@ export function UserDataTable() {
                 header: "ID Number",
                 cell: ({ row }) => <div>{row.getValue("idNumber")}</div>,
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: UserType) => row.idNumber, {
+                meta: defineMeta((row: UserDTO) => row.idNumber, {
                     displayName: "ID Number",
                     type: "text",
                     icon: FingerprintIcon, // Changed icon
-                }) as ColumnMeta<UserType, unknown>,
+                }) as ColumnMeta<UserDTO, unknown>,
+            },
+            {
+                id: "publicId",
+                header: "Public ID",
+                cell: ({ row }) => <div>{row.original.publicId}</div>,
             },
             // ... Role column ...
             {
@@ -521,12 +521,12 @@ export function UserDataTable() {
                     );
                 },
                 filterFn: filterFn("option"),
-                meta: defineMeta((row: UserType) => row.role, {
+                meta: defineMeta((row: UserDTO) => row.role, {
                     displayName: "Role",
                     type: "option",
                     icon: UsersIcon,
                     options: ROLE_OPTIONS,
-                }) as ColumnMeta<UserType, unknown>,
+                }) as ColumnMeta<UserDTO, unknown>,
             },
             // ... Phone Number column ...
             {
@@ -547,11 +547,11 @@ export function UserDataTable() {
                     return <div>{telephoneNumber || "-"}</div>;
                 },
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: UserType) => row.telephoneNumber, {
+                meta: defineMeta((row: UserDTO) => row.telephoneNumber, {
                     displayName: "Telephone Number",
                     type: "text",
                     icon: PhoneIcon,
-                }) as ColumnMeta<UserType, unknown>,
+                }) as ColumnMeta<UserDTO, unknown>,
             },
             {
                 accessorKey: "phoneNumber",
@@ -571,11 +571,11 @@ export function UserDataTable() {
                     return <div>{phoneNumber || "-"}</div>;
                 },
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: UserType) => row.phoneNumber, {
+                meta: defineMeta((row: UserDTO) => row.phoneNumber, {
                     displayName: "Phone Number",
                     type: "text",
                     icon: PhoneIcon,
-                }) as ColumnMeta<UserType, unknown>,
+                }) as ColumnMeta<UserDTO, unknown>,
             },
             // --- Department column ---
             {
@@ -596,14 +596,14 @@ export function UserDataTable() {
                 ),
                 filterFn: filterFn("option"),
                 meta: defineMeta(
-                    (row: UserType) => String(row.departmentId ?? ""),
+                    (row: UserDTO) => String(row.department?.publicId ?? ""),
                     {
                         displayName: "Department",
                         type: "option",
                         icon: BuildingIcon,
                         options: DEPARTMENT_OPTIONS,
                     },
-                ) as ColumnMeta<UserType, unknown>,
+                ) as ColumnMeta<UserDTO, unknown>,
             },
             // ... Verified column ...
             {
@@ -621,12 +621,12 @@ export function UserDataTable() {
                     );
                 },
                 filterFn: filterFn("option"),
-                meta: defineMeta((row: UserType) => String(row.emailVerified), {
+                meta: defineMeta((row: UserDTO) => String(row.emailVerified), {
                     displayName: "Verified",
                     type: "option",
                     icon: VerifiedIcon,
                     options: VERIFIED_OPTIONS,
-                }) as ColumnMeta<UserType, unknown>,
+                }) as ColumnMeta<UserDTO, unknown>,
             },
             // ... Active column ...
             {
@@ -644,12 +644,12 @@ export function UserDataTable() {
                     );
                 },
                 filterFn: filterFn("option"),
-                meta: defineMeta((row: UserType) => String(row.active), {
+                meta: defineMeta((row: UserDTO) => String(row.active), {
                     displayName: "Status",
                     type: "option",
                     icon: ListFilterIcon,
                     options: ACTIVE_OPTIONS,
-                }) as ColumnMeta<UserType, unknown>,
+                }) as ColumnMeta<UserDTO, unknown>,
             },
             // ... Created At column ...
             {
@@ -698,7 +698,7 @@ export function UserDataTable() {
                 },
                 filterFn: filterFn("date"),
                 meta: defineMeta(
-                    (row: UserType) => {
+                    (row: UserDTO) => {
                         try {
                             const date = new Date(row.createdAt);
                             return Number.isNaN(date.getTime())
@@ -713,7 +713,7 @@ export function UserDataTable() {
                         type: "date",
                         icon: CalendarIcon,
                     },
-                ) as ColumnMeta<UserType, unknown>,
+                ) as ColumnMeta<UserDTO, unknown>,
             },
             // --- Actions column ---
             {
@@ -814,16 +814,6 @@ export function UserDataTable() {
         getSortedRowModel: getSortedRowModel(),
     });
 
-    // Prepare departments prop for the dialog
-    const dialogDepartments = React.useMemo(
-        () =>
-            (departmentsData ?? []).map((d) => ({
-                value: String(d.id), // String ID for value
-                label: d.name, // Name for label
-            })),
-        [departmentsData],
-    );
-
     return (
         <div className="w-full space-y-4">
             {/* ... Filter/Column Toggle UI ... */}
@@ -840,9 +830,6 @@ export function UserDataTable() {
                             size="sm" // Use size prop
                             className="h-8" // Keep height consistent if needed
                             onClick={() => {
-                                const selectedRowIds = Object.keys(
-                                    table.getState().rowSelection,
-                                );
                                 const selectedUsers = table
                                     .getSelectedRowModel()
                                     .rows.map((row) => row.original);

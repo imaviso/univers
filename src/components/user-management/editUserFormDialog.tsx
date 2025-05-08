@@ -29,7 +29,7 @@ import {
     type EditUserFormOutput,
     editUserFormSchema,
 } from "@/lib/schema";
-import type { DepartmentType } from "@/lib/types";
+import type { DepartmentDTO, UserDTO } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -40,9 +40,9 @@ interface UserFormDialogProps {
     isLoading?: boolean;
     // Update onSubmit prop to expect UpdateUserInputFE
     onSubmit: (userData: EditUserFormOutput) => void;
-    user?: EditUserFormInput;
+    user?: UserDTO;
     roles: { value: string; label: string }[];
-    departments: DepartmentType[];
+    departments: DepartmentDTO[];
 }
 
 export function EditUserFormDialog({
@@ -65,7 +65,7 @@ export function EditUserFormDialog({
             confirmPassword: "",
             email: "",
             role: "",
-            departmentId: "",
+            departmentPublicId: "",
             telephoneNumber: "",
             phoneNumber: "",
         },
@@ -85,7 +85,7 @@ export function EditUserFormDialog({
             email,
             password,
             confirmPassword,
-            departmentId,
+            departmentPublicId,
             telephoneNumber,
             phoneNumber,
         } = values;
@@ -98,7 +98,7 @@ export function EditUserFormDialog({
             email,
             password: password ?? "",
             confirmPassword: confirmPassword ?? "",
-            departmentId,
+            departmentPublicId,
             telephoneNumber,
             phoneNumber: phoneNumber ?? "",
         };
@@ -117,9 +117,7 @@ export function EditUserFormDialog({
                     password: "",
                     confirmPassword: "",
                     role: user.role || "",
-                    departmentId: user.departmentId
-                        ? String(user.departmentId)
-                        : "",
+                    departmentPublicId: user.department?.publicId || "",
                     telephoneNumber: user.telephoneNumber || "",
                     phoneNumber: user.phoneNumber || "",
                 });
@@ -133,7 +131,7 @@ export function EditUserFormDialog({
                     password: "",
                     confirmPassword: "",
                     role: "",
-                    departmentId: "",
+                    departmentPublicId: "",
                     telephoneNumber: "",
                     phoneNumber: "",
                 });
@@ -348,7 +346,7 @@ export function EditUserFormDialog({
                         {/* ... Department field ... */}
                         <FormField
                             control={form.control}
-                            name="departmentId"
+                            name="departmentPublicId"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Department</FormLabel>
@@ -371,8 +369,8 @@ export function EditUserFormDialog({
                                         >
                                             {departments.map((department) => (
                                                 <SelectItem
-                                                    key={department.id}
-                                                    value={department.id.toString()}
+                                                    key={department.publicId}
+                                                    value={department.publicId}
                                                     title={department.name}
                                                     className="overflow-hidden text-ellipsis whitespace-nowrap"
                                                 >

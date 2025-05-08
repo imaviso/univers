@@ -123,10 +123,10 @@ export const getApproverStatusBadge = (status: string | undefined) => {
                     Approved
                 </Badge>
             );
-        case "DISAPPROVED": // Or REJECTED
+        case "REJECTED":
             return (
                 <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-                    Disapproved
+                    Rejected
                 </Badge>
             );
         case "PENDING":

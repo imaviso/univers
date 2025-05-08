@@ -1,5 +1,5 @@
 import { atom } from "jotai";
-import type { DepartmentType, UserType } from "./types"; // Add DepartmentType
+import type { DepartmentDTO, UserDTO } from "./types"; // Add DepartmentType
 // Registration form atoms
 export const registrationStepAtom = atom(0);
 
@@ -9,7 +9,7 @@ export const registrationFormAtom = atom({
     idNumber: "",
     firstName: "",
     lastName: "",
-    department: "",
+    departmentPublicId: "",
     email: "",
     telephoneNumber: "",
     phoneNumber: "",
@@ -50,11 +50,11 @@ const initialUserDetails: UserDetails = {
 export const userDetailsAtom = atom<UserDetails>(initialUserDetails);
 
 export const editDialogAtom = atom(false);
-export const selectedUserAtom = atom<UserType | null>(null);
+export const selectedUserAtom = atom<UserDTO | null>(null);
 export const deleteDialogAtom = atom(false);
 
 export const addDepartmentDialogAtom = atom(false);
 export const editDepartmentDialogAtom = atom(false);
 export const deleteDepartmentDialogAtom = atom(false);
 export const assignHeadDialogAtom = atom(false);
-export const selectedDepartmentAtom = atom<DepartmentType | null>(null);
+export const selectedDepartmentAtom = atom<DepartmentDTO | null>(null);

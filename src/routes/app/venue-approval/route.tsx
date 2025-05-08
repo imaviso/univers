@@ -16,10 +16,10 @@ export const Route = createFileRoute("/app/venue-approval")({
             });
         }
 
-        const detailPathRegex = /^\/app\/venue-approval\/\d+$/;
-        const isDetailPath = detailPathRegex.test(location.pathname);
-
-        if (isDetailPath) {
+        const customPathRegex =
+            /^\/app\/venue-approval\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+        const isCustomPath = customPathRegex.test(location.pathname);
+        if (isCustomPath) {
             return;
         }
 

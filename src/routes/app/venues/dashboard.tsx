@@ -29,7 +29,7 @@ import {
     venuesQueryOptions,
 } from "@/lib/query";
 import type { VenueInput } from "@/lib/schema";
-import type { UserType, Venue } from "@/lib/types";
+import type { UserDTO, VenueDTO } from "@/lib/types";
 import { getStatusBadgeClass } from "@/lib/utils";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
@@ -71,9 +71,9 @@ export function VenueManagement() {
     // State variables
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddVenueOpen, setIsAddVenueOpen] = useState(false);
-    const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
+    const [editingVenue, setEditingVenue] = useState<VenueDTO | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [venueToDelete, setVenueToDelete] = useState<number | null>(null);
+    const [venueToDelete, setVenueToDelete] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
         role === "SUPER_ADMIN" || role === "VENUE_OWNER" ? "table" : "grid",
     );
@@ -91,7 +91,7 @@ export function VenueManagement() {
 
     const venueOwners =
         role === "SUPER_ADMIN"
-            ? users.filter((user: UserType) => user.role === "VENUE_OWNER")
+            ? users.filter((user: UserDTO) => user.role === "VENUE_OWNER")
             : [];
 
     // --- Mutations ---
@@ -126,7 +126,7 @@ export function VenueManagement() {
 
     const deleteVenueMutation = useMutation({
         mutationFn: deleteVenue,
-        onSuccess: (message, venueId) => {
+        onSuccess: (message, _venueId) => {
             toast.success(message || "Venue deleted successfully.");
             queryClient.invalidateQueries({
                 queryKey: venuesQueryOptions.queryKey,
@@ -147,7 +147,7 @@ export function VenueManagement() {
     ) => {
         if (editingVenue) {
             updateVenueMutation.mutate({
-                venueId: editingVenue.id,
+                venueId: editingVenue.publicId,
                 venueData,
                 imageFile,
             });
@@ -156,7 +156,7 @@ export function VenueManagement() {
             if (role === "VENUE_OWNER" && currentUser?.id) {
                 finalVenueData = {
                     ...finalVenueData,
-                    venueOwnerId: Number(currentUser.id),
+                    venueOwnerId: currentUser.id,
                 };
             }
             createVenueMutation.mutate({
@@ -182,7 +182,7 @@ export function VenueManagement() {
         }
     };
 
-    const handleNavigate = (venueId: number) => {
+    const handleNavigate = (venueId: string) => {
         navigate({ to: `/app/venues/${venueId}` });
     };
 
@@ -190,7 +190,7 @@ export function VenueManagement() {
     const baseVenuesToDisplay =
         role === "VENUE_OWNER" && currentUser?.id
             ? venues.filter(
-                  (venue) => venue.venueOwner?.id === Number(currentUser.id),
+                  (venue) => venue.venueOwner?.publicId === currentUser.id,
               )
             : venues;
 
@@ -349,7 +349,7 @@ export function VenueManagement() {
                                 <TableBody>
                                     {filteredVenues.length > 0 ? (
                                         filteredVenues.map((venue) => (
-                                            <TableRow key={venue.id}>
+                                            <TableRow key={venue.publicId}>
                                                 {/* <TableCell>
                                         <Checkbox
                                             // checked={selectedItems.includes(venue.id)}
@@ -376,7 +376,7 @@ export function VenueManagement() {
                                                             className="p-0 h-auto text-left justify-start font-medium truncate"
                                                             onClick={() =>
                                                                 handleNavigate(
-                                                                    venue.id,
+                                                                    venue.publicId,
                                                                 )
                                                             }
                                                             title={venue.name}
@@ -456,7 +456,7 @@ export function VenueManagement() {
                                                             <DropdownMenuItem
                                                                 onClick={() =>
                                                                     handleNavigate(
-                                                                        venue.id,
+                                                                        venue.publicId,
                                                                     )
                                                                 }
                                                             >
@@ -484,7 +484,7 @@ export function VenueManagement() {
                                                                         className="text-destructive focus:text-destructive"
                                                                         onClick={() => {
                                                                             setVenueToDelete(
-                                                                                venue.id,
+                                                                                venue.publicId,
                                                                             );
                                                                             setIsDeleteDialogOpen(
                                                                                 true,
@@ -493,7 +493,7 @@ export function VenueManagement() {
                                                                         disabled={
                                                                             deleteVenueMutation.isPending &&
                                                                             deleteVenueMutation.variables ===
-                                                                                venue.id
+                                                                                venue.publicId
                                                                         }
                                                                     >
                                                                         <Trash2 className="mr-2 h-4 w-4" />{" "}
@@ -531,7 +531,7 @@ export function VenueManagement() {
                             {filteredVenues.length > 0 ? (
                                 filteredVenues.map((venue) => (
                                     <Card
-                                        key={venue.id}
+                                        key={venue.publicId}
                                         className="overflow-hidden flex flex-col group"
                                     >
                                         <div className="aspect-video w-full overflow-hidden relative">
@@ -571,7 +571,7 @@ export function VenueManagement() {
                                                         <DropdownMenuItem
                                                             onClick={() =>
                                                                 handleNavigate(
-                                                                    venue.id,
+                                                                    venue.publicId,
                                                                 )
                                                             }
                                                         >
@@ -599,7 +599,7 @@ export function VenueManagement() {
                                                                     className="text-destructive focus:text-destructive"
                                                                     onClick={() => {
                                                                         setVenueToDelete(
-                                                                            venue.id,
+                                                                            venue.publicId,
                                                                         );
                                                                         setIsDeleteDialogOpen(
                                                                             true,
@@ -608,7 +608,7 @@ export function VenueManagement() {
                                                                     disabled={
                                                                         deleteVenueMutation.isPending &&
                                                                         deleteVenueMutation.variables ===
-                                                                            venue.id
+                                                                            venue.publicId
                                                                     }
                                                                 >
                                                                     <Trash2 className="mr-2 h-4 w-4" />{" "}
@@ -706,12 +706,13 @@ export function VenueManagement() {
                                     </TableHeader>
                                     <TableBody>
                                         {ownReservations.map((res) => (
-                                            <TableRow key={res.id}>
+                                            <TableRow key={res.publicId}>
                                                 <TableCell>
-                                                    {res.venueName ?? "N/A"}
+                                                    {res.venue.name ?? "N/A"}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {res.eventId ?? "N/A"}
+                                                    {res.event?.eventName ??
+                                                        "N/A"}
                                                 </TableCell>
                                                 <TableCell>
                                                     {formatDateTime(
@@ -741,7 +742,7 @@ export function VenueManagement() {
                                                         size="sm"
                                                         onClick={() =>
                                                             navigate({
-                                                                to: `/app/venue-approval/${res.id}`,
+                                                                to: `/app/venue-approval/${res.publicId}`,
                                                             })
                                                         }
                                                     >
@@ -789,7 +790,7 @@ export function VenueManagement() {
                         }}
                         onConfirm={handleDeleteConfirm}
                         title="Delete Venue"
-                        description={`Are you sure you want to delete the venue "${venues.find((v) => v.id === venueToDelete)?.name}"? This action cannot be undone.`}
+                        description={`Are you sure you want to delete the venue "${venues.find((v) => v.publicId === venueToDelete)?.name}"? This action cannot be undone.`}
                         isLoading={deleteVenueMutation.isPending}
                     />
                 </>

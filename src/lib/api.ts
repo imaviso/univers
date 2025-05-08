@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "./auth";
 import type { NotificationDTO, Page } from "./notifications";
 import type {
+    DepartmentInput,
     EditUserFormInput,
     EquipmentDTOInput,
     VenueInput,
@@ -8,21 +9,20 @@ import type {
 import type {
     CreateEquipmentReservationInput,
     CreateVenueReservationInput,
-    DepartmentType,
+    DepartmentDTO,
     Equipment,
     EquipmentActionInput,
     EquipmentApprovalDTO,
     EquipmentReservationDTO,
     Event,
     EventApprovalDTO,
-    EventDTOBackendResponse,
+    EventDTO,
     EventDTOPayload,
     ReservationActionInput,
     UserDTO,
     UserRole,
-    UserType,
-    Venue,
     VenueApprovalDTO,
+    VenueDTO,
     VenueReservationDTO,
 } from "./types";
 
@@ -128,16 +128,13 @@ export const getAllUsers = async () => {
 
 type UpdateProfileInput = {
     userId: string;
-    data: Partial<
-        Pick<
-            UserType,
-            | "firstName"
-            | "lastName"
-            | "phoneNumber"
-            | "idNumber"
-            | "departmentId"
-        >
-    >;
+    data: {
+        firstName?: string;
+        lastName?: string;
+        phoneNumber?: string;
+        idNumber?: string;
+        departmentPublicId?: string;
+    };
     imageFile?: File | null;
 };
 
@@ -147,53 +144,35 @@ export const updateProfile = async ({
     imageFile,
 }: UpdateProfileInput): Promise<string> => {
     try {
-        const numericUserId = Number.parseInt(userId, 10);
-        if (Number.isNaN(numericUserId)) {
-            throw new Error("Invalid User ID format.");
-        }
-
         const formData = new FormData();
-
-        // Construct the DTO payload matching backend expectations
-        const userDtoPayload: Partial<UserDTO> = {
-            // Map frontend fields to backend DTO fields
-            firstName: data.firstName,
-            lastName: data.lastName,
-            phone_number: data.phoneNumber, // Map phoneNumber to phone_number
-            id_number: data.idNumber, // Map idNumber to id_number
-            departmentId: Number(data.departmentId), // Keep departmentId as is if backend expects it directly
-            // Add other fields from UserDTO if needed, ensuring they are optional or handled correctly
-        };
-
-        // Remove undefined fields from the payload before stringifying
-        for (const key of Object.keys(userDtoPayload)) {
-            const k = key as keyof Partial<UserDTO>;
-            if (userDtoPayload[k] === undefined) {
-                delete userDtoPayload[k];
-            }
+        const userDtoPayload: Partial<UserDTO> & {
+            departmentPublicId?: string;
+        } = {};
+        if (data.firstName !== undefined)
+            userDtoPayload.firstName = data.firstName;
+        if (data.lastName !== undefined)
+            userDtoPayload.lastName = data.lastName;
+        if (data.phoneNumber !== undefined)
+            userDtoPayload.phoneNumber = data.phoneNumber;
+        if (data.idNumber !== undefined)
+            userDtoPayload.idNumber = data.idNumber;
+        if (data.departmentPublicId !== undefined) {
+            userDtoPayload.departmentPublicId = data.departmentPublicId;
         }
-
-        // Append the JSON data as a blob part named "userDTO"
         formData.append(
-            "userDTO", // Name must match the backend @RequestPart or inferred name
+            "userDTO",
             new Blob([JSON.stringify(userDtoPayload)], {
                 type: "application/json",
             }),
         );
-
-        // Append the image file if provided, named "image"
         if (imageFile) {
             formData.append("image", imageFile, imageFile.name);
         }
-
-        const response = await fetch(`${API_BASE_URL}/users/${numericUserId}`, {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
             method: "PATCH",
             credentials: "include",
-            body: formData, // Send FormData
-            // No 'Content-Type' header needed; browser sets it for FormData
+            body: formData,
         });
-
-        // Expect a string message on success
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -205,11 +184,15 @@ export const updateProfile = async ({
 };
 
 type CreateUserInputFE = Omit<
-    UserType,
-    "id" | "emailVerified" | "createdAt" | "updatedAt"
+    UserDTO,
+    "id" | "emailVerified" | "createdAt" | "updatedAt" | "department"
 >;
 
-export const createUser = async (userData: CreateUserInputFE) => {
+type CreateUserInputFEWithDepartment = CreateUserInputFE & {
+    departmentPublicId: string;
+};
+
+export const createUser = async (userData: CreateUserInputFEWithDepartment) => {
     try {
         const response = await fetch(`${API_BASE_URL}/admin/users`, {
             method: "POST",
@@ -236,71 +219,43 @@ export const updateUser = async ({
     imageFile?: File | null;
 }): Promise<string> => {
     try {
-        const numericUserId = Number.parseInt(userId, 10);
-        if (Number.isNaN(numericUserId)) {
-            throw new Error("Invalid User ID format.");
-        }
-
         const formData = new FormData();
-
-        const userDtoPayload: Partial<{
-            firstName: string;
-            lastName: string;
-            idNumber: string;
-            email: string;
+        const userDtoPayload: Partial<CreateUserInputFEWithDepartment> & {
+            role?: UserRole;
             password?: string;
-            phoneNumber?: string;
-            telephoneNumber: string;
-            role: UserRole;
-            departmentId: number | null;
-        }> = {};
-
-        if (userData.firstName !== undefined)
-            userDtoPayload.firstName = userData.firstName;
-        if (userData.lastName !== undefined)
-            userDtoPayload.lastName = userData.lastName;
-        if (userData.idNumber !== undefined)
-            userDtoPayload.idNumber = userData.idNumber;
-        if (userData.email !== undefined) userDtoPayload.email = userData.email;
-        if (userData.password !== undefined)
-            userDtoPayload.password = userData.password;
-        if (userData.phoneNumber !== undefined)
-            userDtoPayload.phoneNumber = userData.phoneNumber;
-        if (userData.telephoneNumber !== undefined)
-            userDtoPayload.telephoneNumber = userData.telephoneNumber;
-        if (userData.role !== undefined) {
-            userDtoPayload.role = userData.role as UserRole;
-        }
-        if (userData.departmentId !== undefined)
-            userDtoPayload.departmentId = Number(userData.departmentId);
-
-        for (const key of Object.keys(userDtoPayload)) {
-            const k = key as keyof typeof userDtoPayload;
-            if (userDtoPayload[k] === undefined) {
-                delete userDtoPayload[k];
+        } = {
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            idNumber: userData.idNumber,
+            email: userData.email,
+            password: userData.password,
+            phoneNumber: userData.phoneNumber,
+            telephoneNumber: userData.telephoneNumber,
+            role: userData.role as UserRole,
+            departmentPublicId: userData.departmentPublicId,
+            active: userData.active,
+        };
+        for (const key in userDtoPayload) {
+            if (
+                userDtoPayload[key as keyof typeof userDtoPayload] === undefined
+            ) {
+                delete userDtoPayload[key as keyof typeof userDtoPayload];
             }
         }
-
         formData.append(
             "userDTO",
             new Blob([JSON.stringify(userDtoPayload)], {
                 type: "application/json",
             }),
         );
-
         if (imageFile) {
             formData.append("image", imageFile, imageFile.name);
         }
-
-        const response = await fetch(
-            `${API_BASE_URL}/admin/users/${numericUserId}`,
-            {
-                method: "PATCH",
-                credentials: "include",
-                body: formData,
-            },
-        );
-
+        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+            method: "PATCH",
+            credentials: "include",
+            body: formData,
+        });
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -311,17 +266,10 @@ export const updateUser = async ({
 
 export const deactivateUser = async (userId: string) => {
     try {
-        const numericUserId = Number.parseInt(userId, 10);
-        if (Number.isNaN(numericUserId)) {
-            throw new Error("Invalid User ID format for deactivation.");
-        }
-        const response = await fetch(
-            `${API_BASE_URL}/admin/users/${numericUserId}`,
-            {
-                method: "DELETE",
-                credentials: "include",
-            },
-        );
+        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+            method: "DELETE",
+            credentials: "include",
+        });
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -334,17 +282,10 @@ export const deactivateUser = async (userId: string) => {
 
 export const activateUser = async (userId: string) => {
     try {
-        const numericUserId = Number.parseInt(userId, 10);
-        if (Number.isNaN(numericUserId)) {
-            throw new Error("Invalid User ID format for activation.");
-        }
-        const response = await fetch(
-            `${API_BASE_URL}/admin/users/${numericUserId}`,
-            {
-                method: "POST",
-                credentials: "include",
-            },
-        );
+        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+            method: "POST",
+            credentials: "include",
+        });
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -353,8 +294,7 @@ export const activateUser = async (userId: string) => {
     }
 };
 
-export const getAllVenues = async (): Promise<Venue[]> => {
-    // Add return type
+export const getAllVenues = async (): Promise<VenueDTO[]> => {
     try {
         const response = await fetch(`${API_BASE_URL}/venues`, {
             method: "GET",
@@ -387,16 +327,15 @@ export const getAllEvents = async (): Promise<Event[]> => {
     }
 };
 
-export const getEventById = async (eventId: string): Promise<Event> => {
+export const getEventById = async (eventId: string): Promise<EventDTO> => {
     try {
         const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        // Expect JSON object, handle empty success
         const data = await handleApiResponse(response, true);
-        return data ?? {}; // Default to empty object
+        return data ?? ({} as EventDTO);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -409,26 +348,23 @@ export const getEventById = async (eventId: string): Promise<Event> => {
 export const createEvent = async (
     eventDTO: EventDTOPayload,
     approvedLetter: File,
-): Promise<EventDTOBackendResponse> => {
-    // Update return type if needed
+    eventImage?: File | null,
+): Promise<EventDTO> => {
     try {
         const formData = new FormData();
-
         formData.append(
             "event",
-            new Blob([JSON.stringify(eventDTO)], {
-                type: "application/json",
-            }),
+            new Blob([JSON.stringify(eventDTO)], { type: "application/json" }),
         );
-
         formData.append("approvedLetter", approvedLetter, approvedLetter.name);
-
+        if (eventImage) {
+            formData.append("eventImage", eventImage, eventImage.name);
+        }
         const response = await fetch(`${API_BASE_URL}/events`, {
             method: "POST",
             credentials: "include",
             body: formData,
         });
-
         return await handleApiResponse(response, true);
     } catch (error) {
         throw error instanceof Error
@@ -441,15 +377,16 @@ export const updateEvent = async ({
     eventId,
     eventData,
     approvedLetter,
+    eventImage,
 }: {
-    eventId: number;
-    eventData: Partial<EventDTOPayload>; // Use Partial as not all fields might be updated
+    eventId: string;
+    eventData: Partial<EventDTOPayload>;
     approvedLetter?: File | null;
+    eventImage?: File | null;
 }): Promise<string> => {
     try {
         const formData = new FormData();
 
-        // Append the event data as a JSON blob
         formData.append(
             "event",
             new Blob([JSON.stringify(eventData)], {
@@ -457,13 +394,15 @@ export const updateEvent = async ({
             }),
         );
 
-        // Append the optional approved letter file
         if (approvedLetter) {
             formData.append(
                 "approvedLetter",
                 approvedLetter,
                 approvedLetter.name,
             );
+        }
+        if (eventImage) {
+            formData.append("eventImage", eventImage, eventImage.name);
         }
 
         const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
@@ -472,7 +411,6 @@ export const updateEvent = async ({
             body: formData,
         });
 
-        // Expect a string message on success
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -483,17 +421,20 @@ export const updateEvent = async ({
     }
 };
 
-export const cancelEvent = async (eventId: number): Promise<string> => {
+export const cancelEvent = async (
+    eventId: string,
+    reason?: string,
+): Promise<string> => {
     try {
-        const response = await fetch(
-            `${API_BASE_URL}/events/${eventId}/cancel`,
-            {
-                method: "PATCH",
-                credentials: "include",
-            },
-        );
+        const url = new URL(`${API_BASE_URL}/events/${eventId}/cancel`);
+        if (reason) {
+            url.searchParams.append("reason", reason);
+        }
+        const response = await fetch(url.toString(), {
+            method: "PATCH",
+            credentials: "include",
+        });
 
-        // Expect a string message on success
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -504,11 +445,27 @@ export const cancelEvent = async (eventId: number): Promise<string> => {
     }
 };
 
+export const deleteEvent = async (eventId: string): Promise<string> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
+            method: "DELETE",
+            credentials: "include",
+        });
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred during deleting event ${eventId}.`,
+              );
+    }
+};
+
 export const approveEvent = async ({
     eventId,
     remarks,
 }: {
-    eventId: number;
+    eventId: string;
     remarks: string;
 }): Promise<string> => {
     try {
@@ -536,7 +493,7 @@ export const approveEvent = async ({
 };
 
 export const getAllApprovalsOfEvent = async (
-    eventId: number,
+    eventId: string,
 ): Promise<EventApprovalDTO[]> => {
     try {
         const response = await fetch(
@@ -640,47 +597,30 @@ export const createVenue = async ({
     venueData,
     imageFile,
 }: {
-    venueData: VenueInput; // Form data type
-    imageFile: File | null; // Separate image file
-}): Promise<Venue> => {
-    // Returns the created Venue DTO
+    venueData: VenueInput;
+    imageFile: File | null;
+}): Promise<VenueDTO> => {
     try {
         const formData = new FormData();
-
-        // Prepare the JSON part, nesting venueOwnerId
         const { venueOwnerId, ...restOfVenueData } = venueData;
-        const venueJsonPayload: {
-            name: string;
-            location: string;
-            venueOwner?: { id: number };
-        } = { ...restOfVenueData }; // Start with name, location
+        const venueJsonPayload: Partial<VenueDTO> = { ...restOfVenueData };
         if (venueOwnerId) {
-            // Nest owner ID according to backend DTO structure
-            venueJsonPayload.venueOwner = { id: venueOwnerId };
-        } else {
-            // If no owner selected, venueOwner remains undefined, which is handled by JSON.stringify
+            venueJsonPayload.venueOwner = { publicId: venueOwnerId } as UserDTO;
         }
-
-        // Append JSON part named "venue"
         formData.append(
             "venue",
             new Blob([JSON.stringify(venueJsonPayload)], {
                 type: "application/json",
             }),
         );
-
-        // Append image file if provided, named "image"
         if (imageFile) {
             formData.append("image", imageFile, imageFile.name);
         }
-
-        // Endpoint is /venues (not /admin/venues)
         const response = await fetch(`${API_BASE_URL}/admin/venues`, {
             method: "POST",
             credentials: "include",
-            body: formData, // Send FormData
+            body: formData,
         });
-        // Expect created Venue DTO back
         return await handleApiResponse(response, true);
     } catch (error) {
         throw error instanceof Error
@@ -694,52 +634,36 @@ export const updateVenue = async ({
     venueData,
     imageFile,
 }: {
-    venueId: number;
-    venueData: VenueInput; // Form data type
-    imageFile: File | null; // Optional new image file
-}): Promise<Venue> => {
-    // Returns the updated Venue DTO
+    venueId: string;
+    venueData: VenueInput;
+    imageFile: File | null;
+}): Promise<VenueDTO> => {
     try {
         const formData = new FormData();
-
-        // Prepare the JSON part for update, nesting venueOwnerId
         const { venueOwnerId, ...restOfVenueData } = venueData;
-        const venueJsonPayload: Partial<{
-            name: string;
-            location: string;
-            venueOwner?: { id: number };
-        }> = { ...restOfVenueData }; // name, location
-        if (venueOwnerId) {
-            venueJsonPayload.venueOwner = { id: venueOwnerId };
-        } else {
-            // If API expects null to remove owner, send null.
-            // If omitting the field keeps the owner, adjust accordingly.
-            venueJsonPayload.venueOwner = undefined; // Explicitly set to undefined to potentially remove it
+        const venueJsonPayload: Partial<VenueDTO> = { ...restOfVenueData };
+        if (venueOwnerId !== undefined) {
+            venueJsonPayload.venueOwner = venueOwnerId
+                ? ({ publicId: venueOwnerId } as UserDTO)
+                : null;
         }
-
-        // Append JSON part named "venue"
         formData.append(
             "venue",
             new Blob([JSON.stringify(venueJsonPayload)], {
                 type: "application/json",
             }),
         );
-
-        // Append image file if provided, named "image"
         if (imageFile) {
             formData.append("image", imageFile, imageFile.name);
         }
-
-        // Endpoint is PATCH /venues/{venueId}
         const response = await fetch(
             `${API_BASE_URL}/admin/venues/${venueId}`,
             {
-                method: "PATCH", // Use PATCH
+                method: "PATCH",
                 credentials: "include",
-                body: formData, // Send FormData
+                body: formData,
             },
         );
-        // Expect updated Venue DTO back
         return await handleApiResponse(response, true);
     } catch (error) {
         throw error instanceof Error
@@ -750,14 +674,13 @@ export const updateVenue = async ({
     }
 };
 
-export const deleteVenue = async (venueId: number): Promise<string | null> => {
+export const deleteVenue = async (venueId: string): Promise<string | null> => {
     try {
         const response = await fetch(
             `${API_BASE_URL}/admin/venues/${venueId}`,
             {
                 method: "DELETE",
                 credentials: "include",
-                // No Content-Type or body needed for standard DELETE
             },
         );
         return await handleApiResponse(response, false);
@@ -769,23 +692,6 @@ export const deleteVenue = async (venueId: number): Promise<string | null> => {
               );
     }
 };
-
-// Add deleteVenues function if needed by the UI (currently commented out)
-// export const deleteVenues = async (venueIds: number[]) => {
-//     try {
-//         const response = await fetch(`${API_BASE_URL}/venues/bulk-delete`, { // Example endpoint
-//             method: "POST", // Or DELETE with body, depending on API design
-//             headers: { "Content-Type": "application/json" },
-//             credentials: "include",
-//             body: JSON.stringify({ ids: venueIds }),
-//         });
-//         // Expect text or no content
-//         return await handleApiResponse(response, false);
-//     } catch (error) {
-//         throw error instanceof Error ? error : new Error("An unexpected error occurred during bulk deleting venues.");
-//     }
-// };
-//
 
 export const getAllEquipmentsAdmin = async (): Promise<Equipment[]> => {
     try {
@@ -806,7 +712,7 @@ export const getAllEquipmentsAdmin = async (): Promise<Equipment[]> => {
 };
 
 export const getEquipmentReservationsByEventId = async (
-    eventId: number | string,
+    eventId: string,
 ): Promise<EquipmentReservationDTO[]> => {
     try {
         const response = await fetch(
@@ -829,11 +735,11 @@ export const getEquipmentReservationsByEventId = async (
 };
 
 export const getAllEquipmentsByOwner = async (
-    ownerUserId: number,
+    ownerUserId: string,
 ): Promise<Equipment[]> => {
     try {
         const url = new URL(`${API_BASE_URL}/equipments`);
-        url.searchParams.append("userId", ownerUserId.toString());
+        url.searchParams.append("userId", ownerUserId);
         const response = await fetch(url.toString(), {
             method: "GET",
             credentials: "include",
@@ -854,7 +760,7 @@ export const addEquipment = async ({
     equipmentData,
     imageFile,
 }: {
-    userId: number;
+    userId: string;
     equipmentData: EquipmentDTOInput;
     imageFile: File;
 }): Promise<Equipment> => {
@@ -862,14 +768,23 @@ export const addEquipment = async ({
         const formData = new FormData();
 
         const { ownerId, ...restOfEquipmentData } = equipmentData;
-        const equipmentJsonPayload: {
-            name: string;
-            brand: string;
-            quantity: number;
-            equipmentOwner?: { id: number };
+        const equipmentJsonPayload: Partial<
+            Omit<
+                Equipment,
+                | "publicId"
+                | "equipmentOwner"
+                | "imagePath"
+                | "createdAt"
+                | "updatedAt"
+            >
+        > & {
+            equipmentOwner?: { publicId: string };
         } = { ...restOfEquipmentData };
+
         if (ownerId) {
-            equipmentJsonPayload.equipmentOwner = { id: ownerId };
+            equipmentJsonPayload.equipmentOwner = {
+                publicId: ownerId as unknown as string,
+            };
         }
 
         formData.append(
@@ -879,13 +794,10 @@ export const addEquipment = async ({
             }),
         );
 
-        // Backend requires image for add? Controller says optional, service implies required.
-        // Assuming required based on previous logic. Add check if needed.
-        // if (!imageFile) throw new Error("Image file is required for adding equipment.");
         formData.append("image", imageFile, imageFile.name);
 
         const url = new URL(`${API_BASE_URL}/equipments`);
-        url.searchParams.append("userId", userId.toString());
+        url.searchParams.append("userId", userId);
 
         const response = await fetch(url.toString(), {
             method: "POST",
@@ -908,8 +820,8 @@ export const editEquipment = async ({
     equipmentData,
     imageFile,
 }: {
-    equipmentId: number;
-    userId: number;
+    equipmentId: string;
+    userId: string;
     equipmentData: EquipmentDTOInput;
     imageFile?: File | null;
 }): Promise<Equipment> => {
@@ -917,14 +829,23 @@ export const editEquipment = async ({
         const formData = new FormData();
 
         const { ownerId, ...restOfEquipmentData } = equipmentData;
-        const equipmentJsonPayload: Partial<{
-            name: string;
-            brand: string;
-            quantity: number;
-            equipmentOwner?: { id: number };
-        }> = { ...restOfEquipmentData };
+        const equipmentJsonPayload: Partial<
+            Omit<
+                Equipment,
+                | "publicId"
+                | "equipmentOwner"
+                | "imagePath"
+                | "createdAt"
+                | "updatedAt"
+            >
+        > & {
+            equipmentOwner?: { publicId: string };
+        } = { ...restOfEquipmentData };
+
         if (ownerId) {
-            equipmentJsonPayload.equipmentOwner = { id: ownerId };
+            equipmentJsonPayload.equipmentOwner = {
+                publicId: ownerId as unknown as string,
+            };
         }
 
         formData.append(
@@ -939,7 +860,7 @@ export const editEquipment = async ({
         }
 
         const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`);
-        url.searchParams.append("userId", userId.toString());
+        url.searchParams.append("userId", userId);
 
         const response = await fetch(url.toString(), {
             method: "PATCH",
@@ -957,12 +878,12 @@ export const editEquipment = async ({
 };
 
 export const deleteEquipment = async (
-    equipmentId: number,
-    userId: number,
+    equipmentId: string,
+    userId: string,
 ): Promise<void> => {
     try {
         const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`);
-        url.searchParams.append("userId", userId.toString());
+        url.searchParams.append("userId", userId);
 
         const response = await fetch(url.toString(), {
             method: "DELETE",
@@ -978,44 +899,17 @@ export const deleteEquipment = async (
     }
 };
 
-// export const bulkDeleteEquipment = async (
-//     equipmentIds: number[],
-//     userId: number, // Add userId if backend needs it for authorization
-// ): Promise<void> => {
-//     console.warn("bulkDeleteEquipment API function not fully implemented.");
-//     try {
-//         const url = new URL(`${API_BASE_URL}/equipments/bulk-delete`); // Example endpoint
-//         // url.searchParams.append("userId", userId.toString()); // If needed as query param
-
-//         const response = await fetch(url.toString(), {
-//             method: "POST", // Or DELETE with body
-//             headers: { "Content-Type": "application/json" },
-//             credentials: "include",
-//             body: JSON.stringify({ ids: equipmentIds /*, userId: userId */ }), // Add userId if needed in body
-//         });
-//         // Expect No Content (204) or potentially text confirmation
-//         await handleApiResponse(response, false);
-//     } catch (error) {
-//         throw error instanceof Error
-//             ? error
-//             : new Error(
-//                   "An unexpected error occurred during bulk deleting equipment.",
-//               );
-//     }
-// };
-
-export const getAllDepartments = async (): Promise<DepartmentType[]> => {
+export const getAllDepartments = async (): Promise<DepartmentDTO[]> => {
     try {
         const response = await fetch(`${API_BASE_URL}/departments`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        const data: DepartmentType[] =
+        const data: DepartmentDTO[] =
             (await handleApiResponse(response, true)) ?? [];
-
         return data.map((dept) => ({
-            id: dept.id,
+            publicId: dept.publicId,
             name: dept.name,
             description: dept.description,
             deptHead: dept.deptHead,
@@ -1031,23 +925,23 @@ export const getAllDepartments = async (): Promise<DepartmentType[]> => {
     }
 };
 
-type DepartmentPayload = {
-    name: string;
-    description?: string | null;
-    deptHeadId?: number | null;
-};
-
 export const addDepartment = async (
-    departmentData: DepartmentPayload,
+    departmentData: DepartmentInput,
 ): Promise<string> => {
     try {
+        const payload: Partial<DepartmentDTO> = {
+            name: departmentData.name,
+            description: departmentData.description,
+            deptHead: departmentData.deptHeadId
+                ? ({ publicId: departmentData.deptHeadId } as UserDTO)
+                : null,
+        };
         const response = await fetch(`${API_BASE_URL}/admin/departments`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify(departmentData),
+            body: JSON.stringify(payload),
         });
-
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -1059,20 +953,29 @@ export const addDepartment = async (
 };
 
 export const updateDepartment = async (
-    departmentId: number,
-    departmentData: Partial<DepartmentPayload>,
+    departmentId: string,
+    departmentData: Partial<DepartmentInput>,
 ): Promise<string> => {
     try {
+        const payload: Partial<DepartmentDTO> = {};
+        if (departmentData.name !== undefined)
+            payload.name = departmentData.name;
+        if (departmentData.description !== undefined)
+            payload.description = departmentData.description;
+        if (departmentData.deptHeadId !== undefined) {
+            payload.deptHead = departmentData.deptHeadId
+                ? ({ publicId: departmentData.deptHeadId } as UserDTO)
+                : null;
+        }
         const response = await fetch(
             `${API_BASE_URL}/admin/department/${departmentId}`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify(departmentData),
+                body: JSON.stringify(payload),
             },
         );
-
         return await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -1084,8 +987,8 @@ export const updateDepartment = async (
 };
 
 export const assignDepartmentHead = async (
-    departmentId: number,
-    userId: number,
+    departmentId: string,
+    userId: string,
 ): Promise<string> => {
     try {
         const response = await fetch(
@@ -1107,7 +1010,7 @@ export const assignDepartmentHead = async (
 };
 
 export const deleteDepartment = async (
-    departmentId: number,
+    departmentId: string,
 ): Promise<string | null> => {
     try {
         const response = await fetch(
@@ -1128,78 +1031,47 @@ export const deleteDepartment = async (
     }
 };
 
-export const getNotifications = async (
-    page = 0,
-    size = 10,
-): Promise<Page<NotificationDTO>> => {
-    try {
-        const url = new URL(`${API_BASE_URL}/notifications`);
-        url.searchParams.append("page", page.toString());
-        url.searchParams.append("size", size.toString());
-        // Add sort parameters if needed, e.g., url.searchParams.append("sort", "createdAt,desc");
+const NOTIFICATIONS_BASE_URL = `${API_BASE_URL}/notifications`;
 
-        const response = await fetch(url.toString(), {
-            method: "GET",
+// GET /notifications
+export const getNotifications = async (
+    page: number,
+    size: number,
+): Promise<Page<NotificationDTO>> => {
+    const response = await fetch(
+        `${NOTIFICATIONS_BASE_URL}?page=${page}&size=${size}`,
+        {
             credentials: "include",
-        });
-        // Expect a Page object
-        const data = await handleApiResponse(response, true);
-        // Provide a default structure if null/undefined is returned on empty success
-        return (
-            data ?? {
-                content: [],
-                totalPages: 0,
-                totalElements: 0,
-                number: 0,
-                size: size,
-            }
-        );
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred while fetching notifications.",
-              );
-    }
+        },
+    );
+    return handleApiResponse(response);
 };
 
+// GET /notifications/count-unread
 export const getUnreadNotificationCount = async (): Promise<{
     unreadCount: number;
 }> => {
-    try {
-        const response = await fetch(
-            `${API_BASE_URL}/notifications/count-unread`,
-            {
-                method: "GET",
-                credentials: "include",
-            },
-        );
-        // Expect { "unreadCount": number }
-        const data = await handleApiResponse(response, true);
-        return data ?? { unreadCount: 0 }; // Default if null/undefined
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred while fetching unread notification count.",
-              );
-    }
+    const response = await fetch(`${NOTIFICATIONS_BASE_URL}/count-unread`, {
+        credentials: "include",
+    });
+    return handleApiResponse(response);
 };
 
+// PATCH /notifications/read
 export const markNotificationsRead = async (
-    notificationIds: number[],
+    notificationPublicIds: string[],
 ): Promise<void> => {
     try {
-        if (!notificationIds || notificationIds.length === 0) {
+        if (!notificationPublicIds || notificationPublicIds.length === 0) {
             return; // Nothing to mark
         }
         const response = await fetch(`${API_BASE_URL}/notifications/read`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify(notificationIds),
+            body: JSON.stringify(notificationPublicIds),
         });
-        await handleApiResponse(response, false); // Expect no content or text
+        await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1209,13 +1081,14 @@ export const markNotificationsRead = async (
     }
 };
 
+// PATCH /notifications/read-all
 export const markAllNotificationsRead = async (): Promise<void> => {
     try {
         const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
             method: "PATCH",
             credentials: "include",
         });
-        await handleApiResponse(response, false); // Expect no content or text
+        await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1225,20 +1098,21 @@ export const markAllNotificationsRead = async (): Promise<void> => {
     }
 };
 
+// DELETE /notifications
 export const deleteNotifications = async (
-    notificationIds: number[],
+    notificationPublicIds: string[],
 ): Promise<void> => {
     try {
-        if (!notificationIds || notificationIds.length === 0) {
+        if (!notificationPublicIds || notificationPublicIds.length === 0) {
             return; // Nothing to delete
         }
         const response = await fetch(`${API_BASE_URL}/notifications`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify(notificationIds),
+            body: JSON.stringify(notificationPublicIds),
         });
-        await handleApiResponse(response, false); // Expect no content (204) or text
+        await handleApiResponse(response, false);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1248,15 +1122,32 @@ export const deleteNotifications = async (
     }
 };
 
+// DELETE /notifications/all
+export const deleteAllNotifications = async (): Promise<void> => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/notifications/all`, {
+            method: "DELETE",
+            credentials: "include",
+        });
+        await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while deleting all notifications.",
+              );
+    }
+};
+
 const VENUE_RESERVATIONS_BASE_URL = `${API_BASE_URL}/venue-reservations`;
 
-export const createVenueReservation = async ({
-    reservationData,
-}: CreateVenueReservationInput): Promise<VenueReservationDTO> => {
+export const createVenueReservation = async (
+    reservationInput: CreateVenueReservationInput,
+): Promise<VenueReservationDTO> => {
     const formData = new FormData();
     formData.append(
         "reservation",
-        new Blob([JSON.stringify(reservationData)], {
+        new Blob([JSON.stringify(reservationInput)], {
             type: "application/json",
         }),
     );
@@ -1314,7 +1205,7 @@ export const getOwnReservations = async (): Promise<VenueReservationDTO[]> => {
 };
 
 export const getReservationById = async (
-    reservationId: number | string,
+    reservationId: string,
 ): Promise<VenueReservationDTO> => {
     try {
         const response = await fetch(
@@ -1335,14 +1226,13 @@ export const getReservationById = async (
     }
 };
 
-// PATCH /venue-reservations/{reservationId}/approve
 export const approveReservation = async ({
-    reservationId,
+    reservationPublicId,
     remarks,
 }: ReservationActionInput): Promise<string> => {
     try {
         const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}/approve`,
+            `${VENUE_RESERVATIONS_BASE_URL}/${reservationPublicId}/approve`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -1356,14 +1246,13 @@ export const approveReservation = async ({
         throw error instanceof Error
             ? error
             : new Error(
-                  `An unexpected error occurred approving reservation ${reservationId}.`,
+                  `An unexpected error occurred approving reservation ${reservationPublicId}.`,
               );
     }
 };
 
-// PATCH /venue-reservations/{reservationId}/reject
 export const rejectReservation = async ({
-    reservationId,
+    reservationPublicId,
     remarks,
 }: ReservationActionInput): Promise<string> => {
     if (!remarks || remarks.trim() === "") {
@@ -1371,7 +1260,7 @@ export const rejectReservation = async ({
     }
     try {
         const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}/reject`,
+            `${VENUE_RESERVATIONS_BASE_URL}/${reservationPublicId}/reject`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -1385,14 +1274,13 @@ export const rejectReservation = async ({
         throw error instanceof Error
             ? error
             : new Error(
-                  `An unexpected error occurred rejecting reservation ${reservationId}.`,
+                  `An unexpected error occurred rejecting reservation ${reservationPublicId}.`,
               );
     }
 };
 
-// PATCH /venue-reservations/{reservationId}/cancel
 export const cancelReservation = async (
-    reservationId: number | string,
+    reservationId: string,
 ): Promise<string> => {
     try {
         const response = await fetch(
@@ -1415,7 +1303,7 @@ export const cancelReservation = async (
 };
 
 export const deleteReservation = async (
-    reservationId: number | string,
+    reservationId: string,
 ): Promise<string> => {
     try {
         const response = await fetch(
@@ -1438,7 +1326,7 @@ export const deleteReservation = async (
 };
 
 export const getApprovalsForReservation = async (
-    reservationId: number | string,
+    reservationId: string,
 ): Promise<VenueApprovalDTO[]> => {
     try {
         const response = await fetch(
@@ -1508,13 +1396,13 @@ export const getAllVenueOwnerReservations = async (): Promise<
 
 const EQUIPMENT_RESERVATIONS_BASE_URL = `${API_BASE_URL}/equipment-reservations`;
 
-export const createEquipmentReservation = async ({
-    reservationData,
-}: CreateEquipmentReservationInput): Promise<EquipmentReservationDTO> => {
+export const createEquipmentReservation = async (
+    reservationInput: CreateEquipmentReservationInput,
+): Promise<EquipmentReservationDTO> => {
     const formData = new FormData();
     formData.append(
         "reservation",
-        new Blob([JSON.stringify(reservationData)], {
+        new Blob([JSON.stringify(reservationInput)], {
             type: "application/json",
         }),
     );
@@ -1579,7 +1467,7 @@ export const getAllEquipmentReservations = async (): Promise<
 
 // GET /equipment-reservations/{reservationId}
 export const getEquipmentReservationById = async (
-    reservationId: number | string,
+    reservationId: string,
 ): Promise<EquipmentReservationDTO> => {
     try {
         const response = await fetch(
@@ -1602,13 +1490,13 @@ export const getEquipmentReservationById = async (
 
 // PATCH /equipment-reservations/{reservationId}/approve
 export const approveEquipmentReservation = async ({
-    reservationId,
+    reservationPublicId,
     remarks,
 }: EquipmentActionInput): Promise<string> => {
     try {
         const payload = { remarks: remarks || "" };
         const response = await fetch(
-            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/approve`,
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationPublicId}/approve`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -1622,14 +1510,14 @@ export const approveEquipmentReservation = async ({
         throw error instanceof Error
             ? error
             : new Error(
-                  `An unexpected error occurred approving equipment reservation ${reservationId}.`,
+                  `An unexpected error occurred approving equipment reservation ${reservationPublicId}.`,
               );
     }
 };
 
 // PATCH /equipment-reservations/{reservationId}/reject
 export const rejectEquipmentReservation = async ({
-    reservationId,
+    reservationPublicId,
     remarks,
 }: EquipmentActionInput): Promise<string> => {
     if (!remarks || remarks.trim() === "") {
@@ -1638,7 +1526,7 @@ export const rejectEquipmentReservation = async ({
     try {
         const payload = { remarks };
         const response = await fetch(
-            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/reject`,
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationPublicId}/reject`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -1652,14 +1540,14 @@ export const rejectEquipmentReservation = async ({
         throw error instanceof Error
             ? error
             : new Error(
-                  `An unexpected error occurred rejecting equipment reservation ${reservationId}.`,
+                  `An unexpected error occurred rejecting equipment reservation ${reservationPublicId}.`,
               );
     }
 };
 
 // PATCH /equipment-reservations/{reservationId}/cancel
 export const cancelEquipmentReservation = async (
-    reservationId: number | string,
+    reservationId: string,
 ): Promise<string> => {
     try {
         const response = await fetch(
@@ -1682,7 +1570,7 @@ export const cancelEquipmentReservation = async (
 
 // DELETE /equipment-reservations/{reservationId}
 export const deleteEquipmentReservation = async (
-    reservationId: number | string,
+    reservationId: string,
 ): Promise<string> => {
     try {
         const response = await fetch(
@@ -1705,7 +1593,7 @@ export const deleteEquipmentReservation = async (
 
 // GET /equipment-reservations/{reservationId}/approvals
 export const getApprovalsForEquipmentReservation = async (
-    reservationId: number | string,
+    reservationId: string,
 ): Promise<EquipmentApprovalDTO[]> => {
     try {
         const response = await fetch(
@@ -1771,6 +1659,30 @@ export const getAllEquipmentOwnerReservations = async (): Promise<
             ? error
             : new Error(
                   "An unexpected error occurred fetching all equipment owner reservations.",
+              );
+    }
+};
+
+export const rejectEvent = async (data: {
+    eventId: string;
+    remarks: string;
+}): Promise<string> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/event-approval/${data.eventId}/reject`,
+            {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ remarks: data.remarks }),
+                credentials: "include",
+            },
+        );
+        return await handleApiResponse(response, false);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while rejecting the event.",
               );
     }
 };

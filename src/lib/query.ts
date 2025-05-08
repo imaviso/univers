@@ -53,8 +53,8 @@ import type {
     EquipmentApprovalDTO,
     EquipmentReservationDTO,
     EventApprovalDTO,
+    UserDTO,
     UserRole,
-    UserType,
     VenueApprovalDTO,
     VenueReservationDTO,
 } from "./types"; // Import UserRole and Event (aliased)
@@ -182,7 +182,7 @@ export const eventApprovalsQueryOptions = (eventId: number | string) =>
     queryOptions<EventApprovalDTO[]>({
         // Specify return type
         queryKey: eventsQueryKeys.approvals(eventId), // Use the new key structure
-        queryFn: () => getAllApprovalsOfEvent(Number(eventId)), // Ensure ID is number if needed by API
+        queryFn: () => getAllApprovalsOfEvent(String(eventId)),
         staleTime: 1000 * 60 * 2, // 2 minutes stale time
     });
 
@@ -197,10 +197,10 @@ export const venuesQueryOptions = {
     },
 };
 
-export const equipmentsQueryOptions = (user: UserType | null | undefined) =>
+export const equipmentsQueryOptions = (user: UserDTO | null | undefined) =>
     queryOptions({
         // Include role in query key if fetch logic depends on it, or just userId if sufficient
-        queryKey: ["equipments", user?.id, user?.role],
+        queryKey: ["equipments", user?.publicId, user?.role],
         queryFn: async () => {
             if (!user) return []; // Don't fetch if no user
 
@@ -208,7 +208,7 @@ export const equipmentsQueryOptions = (user: UserType | null | undefined) =>
                 return await getAllEquipmentsAdmin();
             }
             if (user.role === "EQUIPMENT_OWNER") {
-                return await getAllEquipmentsByOwner(Number(user.id));
+                return await getAllEquipmentsByOwner(user.publicId);
             }
             // Other roles (like ORGANIZER) might need all available equipment?
             // Adjust this logic based on requirements. Fetching all for now.
@@ -337,13 +337,11 @@ export const ownReservationsQueryOptions = queryOptions<VenueReservationDTO[]>({
 export const reservationByIdQueryOptions = (reservationId: number | string) =>
     queryOptions<VenueReservationDTO>({
         queryKey: venueReservationKeys.detail(reservationId),
-        queryFn: () => getReservationById(reservationId),
+        queryFn: () => getReservationById(String(reservationId)),
         staleTime: 1000 * 60 * 5,
     });
 
-export const reservationApprovalsQueryOptions = (
-    reservationId: number | string,
-) =>
+export const reservationApprovalsQueryOptions = (reservationId: string) =>
     queryOptions<VenueApprovalDTO[]>({
         queryKey: venueReservationKeys.approvals(reservationId),
         queryFn: () => getApprovalsForReservation(reservationId),
@@ -378,7 +376,7 @@ export const useCreateReservationMutation = () => {
             });
             // Optionally, set the data for the new reservation's detail query
             queryClient.setQueryData(
-                venueReservationKeys.detail(newReservation.id),
+                venueReservationKeys.detail(newReservation.publicId),
                 newReservation,
             );
             queryClient.invalidateQueries({
@@ -401,7 +399,9 @@ export const useApproveReservationMutation = () => {
         onSuccess: (_message, variables) => {
             // Invalidate the specific reservation and potentially lists
             queryClient.invalidateQueries({
-                queryKey: venueReservationKeys.detail(variables.reservationId),
+                queryKey: venueReservationKeys.detail(
+                    variables.reservationPublicId,
+                ),
             });
             queryClient.invalidateQueries({
                 queryKey: venueReservationKeys.lists(),
@@ -426,7 +426,9 @@ export const useRejectReservationMutation = () => {
         onSuccess: (_message, variables) => {
             // Invalidate the specific reservation and potentially lists
             queryClient.invalidateQueries({
-                queryKey: venueReservationKeys.detail(variables.reservationId),
+                queryKey: venueReservationKeys.detail(
+                    variables.reservationPublicId,
+                ),
             });
             queryClient.invalidateQueries({
                 queryKey: venueReservationKeys.lists(),
@@ -531,18 +533,14 @@ export const ownEquipmentReservationsQueryOptions = queryOptions<
     staleTime: 1000 * 60 * 2, // 2 minutes
 });
 
-export const equipmentReservationsByEventIdQueryOptions = (
-    eventId: number | string,
-) =>
+export const equipmentReservationsByEventIdQueryOptions = (eventId: string) =>
     queryOptions<EquipmentReservationDTO[]>({
         queryKey: equipmentReservationKeys.byEvent(eventId),
         queryFn: () => getEquipmentReservationsByEventId(eventId),
         staleTime: 1000 * 60 * 2,
     });
 
-export const equipmentReservationByIdQueryOptions = (
-    reservationId: number | string,
-) =>
+export const equipmentReservationByIdQueryOptions = (reservationId: string) =>
     queryOptions<EquipmentReservationDTO>({
         queryKey: equipmentReservationKeys.detail(reservationId),
         queryFn: () => getEquipmentReservationById(reservationId),
@@ -550,7 +548,7 @@ export const equipmentReservationByIdQueryOptions = (
     });
 
 export const equipmentReservationApprovalsQueryOptions = (
-    reservationId: number | string,
+    reservationId: string,
 ) =>
     queryOptions<EquipmentApprovalDTO[]>({
         queryKey: equipmentReservationKeys.approvals(reservationId),
@@ -588,7 +586,7 @@ export const useCreateEquipmentReservationMutation = () => {
                 queryKey: equipmentReservationKeys.own(),
             });
             queryClient.setQueryData(
-                equipmentReservationKeys.detail(newReservation.id),
+                equipmentReservationKeys.detail(newReservation.publicId),
                 newReservation,
             );
         },
@@ -602,12 +600,12 @@ export const useApproveEquipmentReservationMutation = () => {
         onSuccess: (_message, variables) => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.detail(
-                    variables.reservationId,
+                    variables.reservationPublicId,
                 ),
             });
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.approvals(
-                    variables.reservationId,
+                    variables.reservationPublicId,
                 ),
             });
             queryClient.invalidateQueries({
@@ -630,12 +628,12 @@ export const useRejectEquipmentReservationMutation = () => {
         onSuccess: (_message, variables) => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.detail(
-                    variables.reservationId,
+                    variables.reservationPublicId,
                 ),
             });
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.approvals(
-                    variables.reservationId,
+                    variables.reservationPublicId,
                 ),
             });
             queryClient.invalidateQueries({

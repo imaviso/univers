@@ -23,7 +23,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { type VenueInput, venueSchema } from "@/lib/schema";
-import type { UserType, Venue } from "@/lib/types";
+import type { UserDTO, VenueDTO } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Loader2, UploadCloud, X } from "lucide-react"; // Import icons
 import { useEffect, useState } from "react"; // Import useState
@@ -49,9 +49,9 @@ interface VenueFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (venueData: VenueInput, imageFile: File | null) => void;
-    venue?: Venue | null;
+    venue?: VenueDTO | null;
     isLoading?: boolean;
-    venueOwners: UserType[];
+    venueOwners: UserDTO[];
     currentUserRole?: string;
 }
 
@@ -64,7 +64,6 @@ export function VenueFormDialog({
     venueOwners,
     currentUserRole,
 }: VenueFormDialogProps) {
-    // State for the image file
     const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
     const [imageFiles, setImageFiles] = useState<File[]>([]);
 
@@ -74,9 +73,7 @@ export function VenueFormDialog({
             ? {
                   name: venue.name,
                   location: venue.location,
-                  venueOwnerId: venue.venueOwner?.id
-                      ? Number(venue.venueOwner.id)
-                      : undefined,
+                  venueOwnerId: venue.venueOwner?.publicId ?? undefined,
                   image: undefined,
               }
             : defaultValues;
@@ -89,15 +86,12 @@ export function VenueFormDialog({
 
     useEffect(() => {
         if (isOpen) {
-            // Reset form with appropriate defaults when dialog opens or venue changes
             const resetValues =
                 isEditing && venue
                     ? {
                           name: venue.name,
                           location: venue.location,
-                          venueOwnerId: venue.venueOwner?.id
-                              ? Number(venue.venueOwner.id)
-                              : undefined,
+                          venueOwnerId: venue.venueOwner?.publicId ?? undefined,
                           image: undefined,
                       }
                     : defaultValues;
@@ -106,7 +100,7 @@ export function VenueFormDialog({
             const previewUrl = venue?.imagePath ?? null;
             setInitialImageUrl(previewUrl);
         }
-    }, [isOpen, venue, form, isEditing]); // Add isEditing dependency
+    }, [isOpen, venue, form, isEditing]);
 
     const handleFileValueChange = (files: File[]) => {
         setImageFiles(files); // Update local state for FileUpload component
@@ -120,7 +114,7 @@ export function VenueFormDialog({
         const finalData = {
             ...data,
             venueOwnerId:
-                data.venueOwnerId === 0 ? undefined : data.venueOwnerId, // Assuming 0 represents 'none' after onChange conversion
+                data.venueOwnerId === undefined ? undefined : data.venueOwnerId,
         };
         onSubmit(finalData, imageFiles[0] ?? null);
     };
@@ -194,29 +188,38 @@ export function VenueFormDialog({
                                                 if (value === "none") {
                                                     field.onChange(undefined); // Set form value to undefined for 'none'
                                                 } else {
-                                                    field.onChange(
-                                                        Number(value),
-                                                    ); // Parse number for actual IDs
+                                                    field.onChange(value);
                                                 }
                                             }}
                                             disabled={isLoading}
                                         >
                                             <FormControl>
                                                 <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select the owner" />
+                                                    <SelectValue placeholder="Select the venue owner" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {venueOwners.map((owner) => (
+                                                {venueOwners.length > 0 ? (
+                                                    venueOwners.map((owner) => (
+                                                        <SelectItem
+                                                            key={owner.publicId}
+                                                            value={
+                                                                owner.publicId
+                                                            }
+                                                        >
+                                                            {owner.firstName}{" "}
+                                                            {owner.lastName} (
+                                                            {owner.email})
+                                                        </SelectItem>
+                                                    ))
+                                                ) : (
                                                     <SelectItem
-                                                        key={owner.id}
-                                                        value={owner.id.toString()}
+                                                        value="Empty"
+                                                        disabled
                                                     >
-                                                        {owner.firstName}{" "}
-                                                        {owner.lastName} (
-                                                        {owner.email})
+                                                        No venue owners found
                                                     </SelectItem>
-                                                ))}
+                                                )}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

@@ -105,9 +105,9 @@ export function NotificationCenter() {
     const markReadMutation = useMarkNotificationsReadMutation();
     const markAllReadMutation = useMarkAllNotificationsReadMutation();
 
-    const handleMarkRead = (id: number) => {
-        if (id) {
-            markReadMutation.mutate([id]);
+    const handleMarkRead = (publicId: string) => {
+        if (publicId) {
+            markReadMutation.mutate([publicId]);
         }
     };
 
@@ -163,18 +163,30 @@ export function NotificationCenter() {
                             // Determine if navigation is possible
                             const entityType =
                                 notification.relatedEntityType?.toUpperCase();
-                            const entityId = notification.relatedEntityId;
+                            const entityId = notification.relatedEntityPublicId;
                             let canNavigate = false;
                             let targetPath = "";
 
                             if (entityId != null) {
                                 if (
                                     entityType === "EVENT" ||
+                                    entityType === "EVENT_APPROVED" ||
+                                    entityType === "EVENT_REJECTED" ||
+                                    entityType === "EVENT_RESERVATION" ||
                                     entityType === "VENUE_RESERVATION" ||
+                                    entityType ===
+                                        "VENUE_RESERVATION_APPROVED" ||
+                                    entityType ===
+                                        "VENUE_RESERVATION_REJECTED" ||
                                     entityType ===
                                         "VENUE_RESERVATION_REQUEST" ||
                                     entityType === "EQUIPMENT_RESERVATION" ||
-                                    entityType === "EVENT_RESERVATION"
+                                    entityType ===
+                                        "EQUIPMENT_RESERVATION_APPROVED" ||
+                                    entityType ===
+                                        "EQUIPMENT_RESERVATION_REJECTED" ||
+                                    entityType ===
+                                        "EQUIPMENT_RESERVATION_FULLY_APPROVED"
                                 ) {
                                     canNavigate = true;
                                     targetPath = `/app/events/${entityId}`;
@@ -192,11 +204,13 @@ export function NotificationCenter() {
 
                             return (
                                 <DropdownMenuItem
-                                    key={notification.id}
+                                    key={notification.publicId}
                                     // Use onClick for combined action
                                     onClick={() => {
                                         if (!notification.isRead) {
-                                            handleMarkRead(notification.id);
+                                            handleMarkRead(
+                                                notification.publicId,
+                                            );
                                         }
                                         if (canNavigate) {
                                             navigate({ to: targetPath });
@@ -222,15 +236,20 @@ export function NotificationCenter() {
                                         </p>
                                         {/* --- Access nested message string --- */}
                                         <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
-                                            {typeof notification.message
-                                                ?.message === "string"
-                                                ? notification.message.message
-                                                : notification.message?.message
-                                                  ? JSON.stringify(
-                                                        notification.message
-                                                            .message,
-                                                    ).slice(0, 100)
-                                                  : "No message content."}
+                                            {
+                                                typeof notification.message ===
+                                                "string"
+                                                    ? notification.message // Display if notification.message itself is the string
+                                                    : typeof notification
+                                                            .message
+                                                            ?.message ===
+                                                        "string" // Check nested if message is object
+                                                      ? notification.message
+                                                            .message
+                                                      : notification.message // Check if message object exists
+                                                        ? `Details: ${JSON.stringify(notification.message).slice(0, 100)}...` // Stringify the whole message object for context (shorter for dropdown)
+                                                        : "No message content." // Fallback
+                                            }
                                         </p>
                                         {/* --- Add condensed additional fields --- */}
                                         {/* {notification.message?.eventName && (

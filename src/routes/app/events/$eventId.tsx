@@ -50,7 +50,13 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
-import { approveEvent, cancelEvent, updateEvent } from "@/lib/api";
+import {
+    approveEvent,
+    cancelEvent,
+    deleteEvent,
+    rejectEvent,
+    updateEvent,
+} from "@/lib/api";
 import {
     departmentsQueryOptions,
     equipmentReservationKeys,
@@ -61,15 +67,16 @@ import {
     eventsQueryKeys,
     useCreateEquipmentReservationMutation,
     venuesQueryOptions,
-} from "@/lib/query"; // Import query options
+} from "@/lib/query";
 import type { EquipmentReservationFormInput } from "@/lib/schema";
 import type {
-    DepartmentType,
-    Event,
+    CreateEquipmentReservationInput,
+    DepartmentDTO,
     EventApprovalDTO,
+    EventDTO,
     EventDTOPayload,
-    Venue,
-} from "@/lib/types"; // Import Event type
+    VenueDTO,
+} from "@/lib/types";
 import {
     formatDateRange,
     formatDateTime,
@@ -79,8 +86,9 @@ import {
     getInitials,
     getStatusColor,
 } from "@/lib/utils";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query"; // Import suspense query hook
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import {
+    Link,
     createFileRoute,
     notFound,
     useRouteContext,
@@ -94,8 +102,7 @@ export const Route = createFileRoute("/app/events/$eventId")({
         params: { eventId },
         context: { authState, queryClient },
     }) => {
-        const eventIdNum = Number.parseInt(eventId, 10);
-        if (Number.isNaN(eventIdNum)) {
+        if (!eventId) {
             throw notFound();
         }
         const event = await queryClient.ensureQueryData(
@@ -105,16 +112,14 @@ export const Route = createFileRoute("/app/events/$eventId")({
         if (!event || Object.keys(event).length === 0) {
             throw notFound();
         }
-        await queryClient.ensureQueryData(
-            eventApprovalsQueryOptions(eventIdNum),
-        );
+        await queryClient.ensureQueryData(eventApprovalsQueryOptions(eventId));
         await queryClient.ensureQueryData(venuesQueryOptions);
         await queryClient.ensureQueryData(equipmentsQueryOptions(authState));
         await queryClient.ensureQueryData(
-            equipmentReservationsByEventIdQueryOptions(eventIdNum),
+            equipmentReservationsByEventIdQueryOptions(eventId),
         );
         await queryClient.ensureQueryData(departmentsQueryOptions);
-        return eventId;
+        return event;
     },
     component: EventDetailsPage,
 });
@@ -128,18 +133,19 @@ export function EventDetailsPage() {
     const onBack = () => router.history.back();
 
     const eventId = Route.useLoaderData();
-    const eventIdNum = Number.parseInt(eventId, 10);
     const { data: approvals } = useSuspenseQuery(
-        eventApprovalsQueryOptions(eventId),
+        eventApprovalsQueryOptions(eventId.publicId),
     );
-    const { data: event } = useSuspenseQuery(eventByIdQueryOptions(eventId));
+    const { data: event } = useSuspenseQuery(
+        eventByIdQueryOptions(eventId.publicId),
+    );
     const { data: venues } = useSuspenseQuery(venuesQueryOptions);
     const { data: departments } = useSuspenseQuery(departmentsQueryOptions);
     const { data: availableEquipments } = useSuspenseQuery(
         equipmentsQueryOptions(currentUser),
     );
     const { data: reservedEquipments } = useSuspenseQuery(
-        equipmentReservationsByEventIdQueryOptions(event.id),
+        equipmentReservationsByEventIdQueryOptions(event.publicId),
     );
 
     const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
@@ -149,26 +155,28 @@ export function EventDetailsPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isReserveEquipmentDialogOpen, setIsReserveEquipmentDialogOpen] =
         useState(false);
+    const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+    const [rejectionRemarks, setRejectionRemarks] = useState("");
 
     const venueMap1 = useMemo(() => {
-        const map = new Map<number, Venue>();
+        const map = new Map<string, VenueDTO>();
         for (const venue of venues ?? []) {
-            map.set(venue.id, venue);
+            map.set(venue.publicId, venue);
         }
         return map;
     }, [venues]);
-    const eventVenue = venueMap1.get(event.eventVenueId);
+    const eventVenue = venueMap1.get(event.eventVenue.publicId);
 
     const departmentMap = useMemo(() => {
-        const map = new Map<number, DepartmentType>();
+        const map = new Map<string, DepartmentDTO>();
         for (const dept of departments ?? []) {
-            map.set(dept.id, dept);
+            map.set(dept.publicId, dept);
         }
         return map;
     }, [departments]);
 
-    const eventDepartment = event.departmentId
-        ? departmentMap.get(event.departmentId)
+    const eventDepartment = event.department.publicId
+        ? departmentMap.get(event.department.publicId)
         : null;
 
     const hasUserApproved = useMemo(() => {
@@ -176,65 +184,92 @@ export function EventDetailsPage() {
 
         return approvals.some((appr: EventApprovalDTO) => {
             // 1. Check by userId if both currentUser.id and appr.userId exist
-            if (currentUser.id && appr.userId != null) {
+            if (
+                currentUser.publicId &&
+                appr.signedByUser &&
+                appr.signedByUser.publicId != null
+            ) {
                 // Check for null/undefined
-                return Number(appr.userId) === Number(currentUser.id);
+                return appr.signedByUser.publicId === currentUser.publicId;
             }
             // 2. Fallback: Check by signedBy name if appr.userId is missing
             //    Ensure currentUser has names to compare against.
-            if (currentUser.firstName && currentUser.lastName) {
+            if (
+                appr.signedByUser &&
+                currentUser.firstName &&
+                currentUser.lastName
+            ) {
+                // Also check appr.signedBy here
                 // Construct the name exactly as it appears in signedBy
                 // Adjust this if the format in signedBy is different (e.g., "LastName, FirstName")
                 const currentUserName = `${currentUser.firstName} ${currentUser.lastName}`;
-                return appr.signedBy === currentUserName;
+                return appr.signedByUser.firstName === currentUserName;
             }
             // If neither check is possible, this approval doesn't match the current user
             return false;
         });
     }, [approvals, currentUser]); // Recalculate when approvals or currentUser changes
 
-    const isOrganizer = currentUser?.id === event.organizer.id;
+    const isOrganizer = currentUser?.publicId === event.organizer.publicId;
     const isSuperAdmin = role === "SUPER_ADMIN";
 
     const canUserApprove =
         currentUser &&
-        !hasUserApproved && // User must not have approved already
-        event.status === "PENDING" && // Event must be pending
-        // EITHER: User has a general approver role OR is the specific venue owner
-        ([
-            // General approver roles (excluding VENUE_OWNER for this part)
-            "SUPER_ADMIN",
-            "OPC",
-            "MSDO",
-            "EQUIPMENT_OWNER",
-            "DEPT_HEAD",
-            "VP_ADMIN",
-            "VPAA",
-            "SSD",
-            "FAO",
-        ].includes(currentUser.role) ||
-            // OR: User is the VENUE_OWNER for *this* venue
+        !hasUserApproved &&
+        event.status === "PENDING" &&
+        (isSuperAdmin || // Super Admin
+            (currentUser.role === "DEPT_HEAD" &&
+                event.organizer?.department?.deptHead?.publicId ===
+                    currentUser.publicId) ||
             (currentUser.role === "VENUE_OWNER" &&
-                eventVenue?.venueOwner?.id === Number(currentUser.id)));
+                eventVenue?.venueOwner?.publicId === currentUser.publicId) || // Venue Owner of event venue
+            // MSDO related approval
+            ((currentUser.role === "EQUIPMENT_OWNER" ||
+                currentUser.role === "MSDO") &&
+                currentUser.department?.name === "MSDO") ||
+            // OPC related approval
+            ((currentUser.role === "EQUIPMENT_OWNER" ||
+                currentUser.role === "OPC") &&
+                currentUser.department?.name === "OPC") ||
+            // Other general approver roles
+            ["VP_ADMIN", "VPAA", "SSD", "FAO"].includes(currentUser.role));
+
+    const canUserReject =
+        currentUser &&
+        event.status === "PENDING" &&
+        (isSuperAdmin || // Super Admin
+            (currentUser.role === "DEPT_HEAD" &&
+                event.organizer?.department?.deptHead?.publicId ===
+                    currentUser.publicId) || // Department Head of event organizer
+            (currentUser.role === "VENUE_OWNER" &&
+                eventVenue?.venueOwner?.publicId === currentUser.publicId) || // Venue Owner of event venue
+            // MSDO related approval
+            ((currentUser.role === "EQUIPMENT_OWNER" ||
+                currentUser.role === "MSDO") &&
+                currentUser.department?.name === "MSDO") ||
+            // OPC related approval
+            ((currentUser.role === "EQUIPMENT_OWNER" ||
+                currentUser.role === "OPC") &&
+                currentUser.department?.name === "OPC") ||
+            // Other general approver roles
+            ["VP_ADMIN", "VPAA", "SSD", "FAO"].includes(currentUser.role));
 
     const canCancelEvent =
-        event.status !== "CANCELED" && event.status !== "COMPLETED";
+        event.status === "PENDING" || event.status === "APPROVED";
 
     const canEditEvent =
-        (isOrganizer || isSuperAdmin) && // User must be organizer OR super admin
-        event.status !== "CANCELED" && // Event must not be canceled
-        event.status !== "COMPLETED"; // Event must not be completed
+        isSuperAdmin || (isOrganizer && event.status === "PENDING");
 
     const approveMutation = useMutation({
         mutationFn: approveEvent,
         onSuccess: (message) => {
             toast.success(message || "Event approved successfully.");
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.approvals(eventIdNum),
+                queryKey: eventsQueryKeys.approvals(eventId.publicId),
             });
             // Invalidate the detail query for this event
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.detail(eventIdNum),
+                queryKey: eventsQueryKeys.detail(eventId.publicId),
             });
             // Invalidate general event lists (all, approved, pending, own)
             queryClient.invalidateQueries({
@@ -263,13 +298,47 @@ export function EventDetailsPage() {
         },
     });
 
+    const rejectEventMutation = useMutation({
+        mutationFn: rejectEvent,
+        onSuccess: (message) => {
+            toast.success(message || "Event rejected successfully.");
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.approvals(eventId.publicId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.detail(eventId.publicId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.approved(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pending(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingDeptHead(),
+            });
+            queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
+            setIsRejectionDialogOpen(false);
+            setRejectionRemarks("");
+        },
+        onError: (error) => {
+            toast.error(`Rejection failed: ${error.message}`);
+        },
+    });
+
     const cancelEventMutation = useMutation({
         mutationFn: cancelEvent,
         onSuccess: (message) => {
             toast.success(message || "Event canceled successfully.");
             // Invalidate event details and list
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.detail(eventIdNum),
+                queryKey: eventsQueryKeys.detail(eventId.publicId),
             });
             // Invalidate relevant lists
             queryClient.invalidateQueries({
@@ -303,7 +372,7 @@ export function EventDetailsPage() {
         mutationFn: updateEvent, // API function: updateEvent({ eventId, eventData, approvedLetter? })
 
         onMutate: async (variables: {
-            eventId: number;
+            eventId: string;
             eventData: Partial<EventDTOPayload>;
             approvedLetter?: File | null;
         }) => {
@@ -322,17 +391,17 @@ export function EventDetailsPage() {
 
             // Snapshot previous values
             const previousEventDetails =
-                queryClient.getQueryData<Event>(eventDetailsKey);
+                queryClient.getQueryData<EventDTO>(eventDetailsKey);
             const previousApprovedEvents =
-                queryClient.getQueryData<Event[]>(approvedEventsKey);
+                queryClient.getQueryData<EventDTO[]>(approvedEventsKey);
             const previousOwnEvents =
-                queryClient.getQueryData<Event[]>(ownEventsKey);
+                queryClient.getQueryData<EventDTO[]>(ownEventsKey);
             const previousAllEvents =
-                queryClient.getQueryData<Event[]>(allEventsKey); // Snapshot general list
+                queryClient.getQueryData<EventDTO[]>(allEventsKey);
 
             // Optimistically update the event details
             if (previousEventDetails) {
-                const optimisticEventDetails: Event = {
+                const optimisticEventDetails: EventDTO = {
                     ...previousEventDetails,
                     eventName:
                         variables.eventData.eventName ??
@@ -340,9 +409,22 @@ export function EventDetailsPage() {
                     eventType:
                         variables.eventData.eventType ??
                         previousEventDetails.eventType,
-                    eventVenueId:
-                        variables.eventData.eventVenueId ??
-                        previousEventDetails.eventVenueId,
+                    eventVenue: variables.eventData.venuePublicId
+                        ? ({
+                              // If venuePublicId is changing, optimistically update/create a VenueDTO like object
+                              // It's best if previousEventDetails.eventVenue is guaranteed to exist or handled
+                              ...(previousEventDetails.eventVenue || {}),
+                              publicId: variables.eventData.venuePublicId,
+                              // 'name' and other VenueDTO fields would ideally be updated here
+                              // but we might not have them. For optimistic update, an ID change is key.
+                              // If previousEventDetails.eventVenue is null/undefined and we have a new ID,
+                              // we'd ideally show a placeholder name or fetch it.
+                              // For now, we ensure the structure is at least partially a VenueDTO.
+                              name:
+                                  previousEventDetails.eventVenue?.name ||
+                                  "Venue name updating...", // Example placeholder
+                          } as VenueDTO) // Type assertion might be needed if structure isn't full enough
+                        : previousEventDetails.eventVenue,
                     startTime:
                         variables.eventData.startTime ??
                         previousEventDetails.startTime, // Keep as string for now
@@ -360,10 +442,10 @@ export function EventDetailsPage() {
 
             // Optimistically update the event in the lists (approved and own)
             const updateList = (
-                list: Event[] | undefined,
-            ): Event[] | undefined => {
+                list: EventDTO[] | undefined,
+            ): EventDTO[] | undefined => {
                 return list?.map((ev) =>
-                    ev.id === eventId
+                    ev.publicId === variables.eventId
                         ? {
                               ...ev,
                               eventName:
@@ -371,8 +453,8 @@ export function EventDetailsPage() {
                               eventType:
                                   variables.eventData.eventType ?? ev.eventType,
                               eventVenueId:
-                                  variables.eventData.eventVenueId ??
-                                  ev.eventVenueId,
+                                  variables.eventData.venuePublicId ??
+                                  ev.eventVenue.publicId,
                               startTime:
                                   variables.eventData.startTime ?? ev.startTime,
                               endTime:
@@ -467,7 +549,7 @@ export function EventDetailsPage() {
 
     // Using cancelEvent for delete action for now as per original code
     const deleteEventMutation = useMutation({
-        mutationFn: cancelEvent, // Still using cancelEvent based on original code
+        mutationFn: deleteEvent,
         onSuccess: (message) => {
             toast.success(message || "Event deleted successfully."); // Changed message for clarity
             // Invalidate relevant lists
@@ -490,7 +572,7 @@ export function EventDetailsPage() {
 
             // Remove the specific event query from cache
             queryClient.removeQueries({
-                queryKey: eventsQueryKeys.detail(eventIdNum),
+                queryKey: eventsQueryKeys.detail(eventId.publicId),
             });
 
             setIsDeleteDialogOpen(false); // Close the dialog
@@ -506,8 +588,20 @@ export function EventDetailsPage() {
     const handleApproveClick = () => {
         if (!currentUser) return;
         approveMutation.mutate({
-            eventId: eventIdNum,
+            eventId: eventId.publicId,
             remarks: approvalRemarks,
+        });
+    };
+
+    const handleRejectClick = () => {
+        setIsRejectionDialogOpen(true);
+    };
+
+    const handleConfirmReject = () => {
+        if (!currentUser) return;
+        rejectEventMutation.mutate({
+            eventId: eventId.publicId,
+            remarks: rejectionRemarks,
         });
     };
 
@@ -517,7 +611,7 @@ export function EventDetailsPage() {
 
     // Handler for confirming the cancellation
     const handleConfirmCancel = () => {
-        cancelEventMutation.mutate(eventIdNum);
+        cancelEventMutation.mutate(eventId.publicId);
     };
 
     const handleDeleteClick = () => {
@@ -525,7 +619,7 @@ export function EventDetailsPage() {
     };
 
     const handleConfirmDelete = () => {
-        deleteEventMutation.mutate(eventIdNum);
+        deleteEventMutation.mutate(eventId.publicId);
     };
 
     // Placeholder handler for edit (e.g., navigate to an edit page)
@@ -574,31 +668,25 @@ export function EventDetailsPage() {
 
         const { selectedEquipment } = formData;
 
-        // Use event's start/end time
-        const eventStartTime = event.startTime;
-        const eventEndTime = event.endTime;
-
-        // Prepare common data
-        const commonReservationData = {
-            eventId: eventIdNum,
-            startTime: eventStartTime,
-            endTime: eventEndTime,
-        };
+        if (!event || !event.publicId) {
+            toast.error(
+                "Event details are not available to make a reservation.",
+            );
+            return;
+        }
 
         let successCount = 0;
         let errorCount = 0;
 
         for (const item of selectedEquipment) {
-            const reservationData = {
-                ...commonReservationData,
-                equipmentId: Number(item.equipmentId),
+            const payload: CreateEquipmentReservationInput = {
+                event: { publicId: event.publicId },
+                equipment: { publicId: item.equipmentId },
                 quantity: item.quantity,
             };
 
             try {
-                await createEquipmentReservationMutation.mutateAsync({
-                    reservationData,
-                });
+                await createEquipmentReservationMutation.mutateAsync(payload);
                 successCount++;
             } catch (error) {
                 errorCount++;
@@ -606,13 +694,14 @@ export function EventDetailsPage() {
                     `Failed to reserve equipment ID ${item.equipmentId}:`,
                     error,
                 );
-                // Show individual error toast
                 const equipmentName =
                     availableEquipments.find(
-                        (eq) => eq.id === Number(item.equipmentId),
+                        (eq) => eq.publicId === item.equipmentId,
                     )?.name || `ID ${item.equipmentId}`;
                 toast.error(
-                    `Failed to reserve item ${equipmentName}: ${(error as Error).message}`,
+                    `Failed to reserve item ${equipmentName}: ${
+                        error instanceof Error ? error.message : String(error)
+                    }`,
                 );
             }
         }
@@ -621,21 +710,18 @@ export function EventDetailsPage() {
             toast.success(
                 `Successfully submitted ${successCount} equipment reservation request(s).`,
             );
-            // Invalidate the query for reserved equipment for this event
             queryClient.invalidateQueries({
-                queryKey: equipmentReservationKeys.byEvent(eventIdNum),
+                queryKey: equipmentReservationKeys.byEvent(event.publicId),
             });
-        } else if (successCount > 0 && errorCount > 0) {
+        } else if (errorCount > 0 && successCount > 0) {
             toast.warning(
-                `Submitted ${successCount} reservation request(s) successfully, but ${errorCount} failed.`,
+                `Partially submitted: ${successCount} succeeded, ${errorCount} failed.`,
             );
             queryClient.invalidateQueries({
-                queryKey: equipmentReservationKeys.byEvent(eventIdNum),
+                queryKey: equipmentReservationKeys.byEvent(event.publicId),
             });
-        } else if (successCount === 0 && errorCount > 0) {
-            toast.error(
-                `Failed to submit ${errorCount} equipment reservation request(s).`,
-            );
+        } else if (errorCount > 0 && successCount === 0) {
+            toast.error("Failed to submit any equipment reservation requests.");
         }
     };
 
@@ -712,51 +798,111 @@ export function EventDetailsPage() {
                                 </DialogContent>
                             </Dialog>
                         )}
+                        {/* Show Reject Button if user can reject */}
+                        {canUserReject && (
+                            <Dialog
+                                open={isRejectionDialogOpen}
+                                onOpenChange={setIsRejectionDialogOpen}
+                            >
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="gap-1"
+                                    >
+                                        <XCircle className="h-4 w-4" />
+                                        Reject Event
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Reject Event</DialogTitle>
+                                        <DialogDescription>
+                                            Provide remarks for rejecting this
+                                            event. Remarks are required for
+                                            rejection.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-4">
+                                        <Textarea
+                                            placeholder="Enter rejection remarks (required)..."
+                                            value={rejectionRemarks}
+                                            onChange={(e) =>
+                                                setRejectionRemarks(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            rows={4}
+                                        />
+                                    </div>
+                                    <DialogFooter>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() =>
+                                                setIsRejectionDialogOpen(false)
+                                            }
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            onClick={handleConfirmReject}
+                                            disabled={
+                                                rejectEventMutation.isPending ||
+                                                !rejectionRemarks.trim()
+                                            }
+                                        >
+                                            {rejectEventMutation.isPending
+                                                ? "Rejecting..."
+                                                : "Confirm Rejection"}
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        )}
 
-                        {(isOrganizer || isSuperAdmin) && (
-                            <>
-                                {/* Edit Button */}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1"
-                                    onClick={handleEditClick} // Use updated handler
-                                    disabled={
-                                        !canEditEvent ||
-                                        updateEventMutation.isPending
-                                    }
-                                >
-                                    <Edit className="h-4 w-4" />
-                                    Edit
-                                </Button>
-                                {/* More Options Dropdown */}
+                        {/* Container for Edit and More Options buttons */}
+                        {/* Render Edit button only if canEditEvent is true */}
+                        {canEditEvent && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1"
+                                onClick={handleEditClick}
+                                disabled={updateEventMutation.isPending} // Only disable if mutation is pending
+                            >
+                                <Edit className="h-4 w-4" />
+                                Edit
+                            </Button>
+                        )}
+
+                        {/* Render More Options Dropdown if user is organizer or superAdmin AND there are actions available (cancel or delete) */}
+                        {(isOrganizer || isSuperAdmin) &&
+                            (canCancelEvent || isSuperAdmin) && (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8"
-                                            // Disable dropdown if no actions are available
-                                            disabled={
-                                                !canCancelEvent && !isSuperAdmin
-                                            }
                                         >
                                             <MoreHorizontal className="h-4 w-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        {/* Cancel Event Item */}
-                                        <DropdownMenuItem
-                                            className="text-orange-600 focus:text-orange-700 focus:bg-orange-100"
-                                            onClick={handleCancelClick}
-                                            disabled={
-                                                !canCancelEvent ||
-                                                cancelEventMutation.isPending
-                                            }
-                                        >
-                                            <XCircle className="mr-2 h-4 w-4" />
-                                            Cancel Event
-                                        </DropdownMenuItem>
+                                        {/* Cancel Event Item - Render only if canCancelEvent is true */}
+                                        {canCancelEvent && (
+                                            <DropdownMenuItem
+                                                className="text-orange-600 focus:text-orange-700 focus:bg-orange-100"
+                                                onClick={handleCancelClick}
+                                                disabled={
+                                                    cancelEventMutation.isPending
+                                                }
+                                            >
+                                                <XCircle className="mr-2 h-4 w-4" />
+                                                Cancel Event
+                                            </DropdownMenuItem>
+                                        )}
                                         {/* Delete Event Item (Only for SUPER_ADMIN) */}
                                         {isSuperAdmin && (
                                             <DropdownMenuItem
@@ -772,8 +918,7 @@ export function EventDetailsPage() {
                                         )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
-                            </>
-                        )}
+                            )}
                     </div>
                 </header>
                 <ScrollArea className="flex-1">
@@ -837,6 +982,32 @@ export function EventDetailsPage() {
                                             </div>
                                         </div>
 
+                                        <div>
+                                            <h3 className="text-sm font-medium text-muted-foreground">
+                                                Venue
+                                            </h3>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                                {eventVenue?.publicId ? (
+                                                    <Link
+                                                        to="/app/venues/$venueId"
+                                                        params={{
+                                                            venueId:
+                                                                eventVenue.publicId,
+                                                        }}
+                                                        className="text-sm underline-offset-4 hover:underline text-primary"
+                                                    >
+                                                        {eventVenue.name ??
+                                                            "Unknown Venue"}
+                                                    </Link>
+                                                ) : (
+                                                    <span className="text-sm">
+                                                        {eventVenue?.name ??
+                                                            "Unknown Venue"}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
                                         {/* Location */}
                                         <div>
                                             <h3 className="text-sm font-medium text-muted-foreground">
@@ -845,9 +1016,8 @@ export function EventDetailsPage() {
                                             <div className="flex items-center gap-2 mt-1">
                                                 <MapPin className="h-4 w-4 text-muted-foreground" />
                                                 <span className="text-sm">
-                                                    {/* Display venue name from the full object */}
-                                                    {eventVenue?.name ??
-                                                        "Unknown Venue"}
+                                                    {eventVenue?.location ??
+                                                        "Unknown Location"}
                                                 </span>
                                             </div>
                                         </div>
@@ -1027,19 +1197,20 @@ export function EventDetailsPage() {
                                                 <TableHead>Equipment</TableHead>
                                                 <TableHead>Quantity</TableHead>
                                                 <TableHead>Status</TableHead>
-                                                {/* Add more columns if needed */}
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {reservedEquipments.map(
                                                 (reservation) => (
                                                     <TableRow
-                                                        key={reservation.id}
+                                                        key={
+                                                            reservation.publicId
+                                                        }
                                                     >
                                                         <TableCell>
-                                                            {
-                                                                reservation.equipmentName
-                                                            }
+                                                            {reservation
+                                                                .equipment
+                                                                ?.name ?? "N/A"}
                                                         </TableCell>
                                                         <TableCell>
                                                             {
@@ -1098,9 +1269,15 @@ export function EventDetailsPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {approvals.map((approval) => (
-                                                <TableRow key={approval.id}>
+                                                <TableRow
+                                                    key={approval.publicId}
+                                                >
                                                     <TableCell>
-                                                        {approval.signedBy}
+                                                        {
+                                                            approval
+                                                                .signedByUser
+                                                                .firstName
+                                                        }
                                                     </TableCell>
                                                     <TableCell>
                                                         <Badge
@@ -1114,7 +1291,12 @@ export function EventDetailsPage() {
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell>
-                                                        {approval.department}
+                                                        {
+                                                            approval
+                                                                .signedByUser
+                                                                .department
+                                                                ?.name
+                                                        }
                                                     </TableCell>
                                                     <TableCell>
                                                         {approval.dateSigned
