@@ -578,7 +578,7 @@ const DateTimeLocalInput = ({
     );
 
     return (
-        <Popover>
+        <Popover modal>
             <PopoverTrigger asChild>
                 <Button
                     disabled={typeof disabled === "boolean" ? disabled : false}
