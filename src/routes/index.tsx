@@ -1,4 +1,4 @@
-import { userQueryOptions } from "@/lib/query";
+import { notificationsQueryOptions, userQueryOptions } from "@/lib/query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
@@ -9,6 +9,12 @@ export const Route = createFileRoute("/")({
             // Attempt to fetch user data. If successful, user is authenticated.
             // Using fetchQuery ensures we get the data or an error.
             const user = await queryClient.fetchQuery(userQueryOptions);
+            await queryClient.fetchQuery({
+                queryKey: notificationsQueryOptions({
+                    page: 0,
+                    size: 10,
+                }).queryKey,
+            });
             isAuthenticated = !!user; // Check if user data exists
         } catch (error) {
             // If fetchQuery throws (e.g., 401 error, network error), treat as unauthenticated.
