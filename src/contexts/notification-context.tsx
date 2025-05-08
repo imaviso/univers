@@ -13,10 +13,11 @@ import type { NotificationDTO } from "@/lib/notifications"; // Import DTO type
 import {
     notificationsQueryOptions,
     unreadNotificationsCountQueryOptions,
+    useCurrentUser,
     useMarkAllNotificationsReadMutation,
     useMarkNotificationsReadMutation,
 } from "@/lib/query";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router"; // Import useNavigate
 import {
     AlertTriangle, // Added
@@ -90,14 +91,19 @@ const getNotificationStyle = (
 
 export function NotificationCenter() {
     const navigate = useNavigate();
-
+    const { data: currentUser } = useCurrentUser();
     // Fetch unread count
     const { data: countData } = useQuery(unreadNotificationsCountQueryOptions);
     const unreadCount = countData?.unreadCount ?? 0;
 
     const params = { page: 0, size: 7 } as const;
     const { data: notificationsData, isLoading: isLoadingNotifications } =
-        useSuspenseQuery(notificationsQueryOptions(params));
+        useQuery(
+            notificationsQueryOptions({
+                ...params,
+                enabled: !!currentUser,
+            }),
+        );
 
     const notifications = notificationsData?.content ?? [];
 

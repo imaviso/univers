@@ -26,10 +26,8 @@ import { addEquipment, deleteEquipment, editEquipment } from "@/lib/api";
 import { allNavigation } from "@/lib/navigation";
 import {
     equipmentsQueryOptions,
-    ownEventsQueryOptions,
     useCurrentUser,
     usersQueryOptions,
-    venuesQueryOptions,
 } from "@/lib/query";
 import type { EquipmentDTOInput } from "@/lib/schema";
 import type { Equipment, UserDTO } from "@/lib/types";
@@ -92,8 +90,8 @@ export const Route = createFileRoute("/app/equipments")({
         context.queryClient.ensureQueryData(
             equipmentsQueryOptions(context.authState),
         );
-        context.queryClient.ensureQueryData(venuesQueryOptions);
-        context.queryClient.ensureQueryData(ownEventsQueryOptions);
+        // context.queryClient.ensureQueryData(venuesQueryOptions);
+        // context.queryClient.ensureQueryData(ownEventsQueryOptions);
     },
 });
 
@@ -102,8 +100,13 @@ function EquipmentInventory() {
         from: "/app/equipments",
     });
     const { data: currentUser } = useCurrentUser();
-    const role = currentUser?.role ?? "USER";
+    const role = currentUser?.role;
     const navigate = useNavigate();
+
+    const isPrivilegedUser = useMemo(() => {
+        if (!role) return false;
+        return ["SUPER_ADMIN", "EQUIPMENT_OWNER", "MSDO", "OPC"].includes(role);
+    }, [role]);
 
     const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
     const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(
@@ -115,7 +118,7 @@ function EquipmentInventory() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
     const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
-        role === "SUPER_ADMIN" || role === "EQUIPMENT_OWNER" ? "table" : "grid",
+        isPrivilegedUser ? "table" : "grid",
     );
     const [isReservationDialogOpen, setIsReservationDialogOpen] =
         useState(false);
@@ -125,8 +128,8 @@ function EquipmentInventory() {
         equipmentsQueryOptions(currentUser),
     );
 
-    const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
-    const { data: events = [] } = useSuspenseQuery(ownEventsQueryOptions);
+    /*    const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
+    const { data: events = [] } = useSuspenseQuery(ownEventsQueryOptions); */
 
     const { data: allUsers = [] } = useQuery({
         ...usersQueryOptions,
@@ -365,7 +368,7 @@ function EquipmentInventory() {
     const columns: ColumnDef<Equipment>[] = useMemo(
         () => [
             // Select column (only for roles that can manage)
-            ...(role === "SUPER_ADMIN" || role === "EQUIPMENT_OWNER"
+            ...(isPrivilegedUser
                 ? [
                       {
                           id: "select",
@@ -392,13 +395,15 @@ function EquipmentInventory() {
                                   // Disable selection if user cannot manage this specific item
                                   disabled={
                                       !(
-                                          (
-                                              role === "SUPER_ADMIN" ||
-                                              (role === "EQUIPMENT_OWNER" &&
-                                                  row.original.equipmentOwner
-                                                      ?.publicId ===
-                                                      currentUser?.publicId)
-                                          ) // Compare numbers
+                                          role === "SUPER_ADMIN" ||
+                                          ([
+                                              "EQUIPMENT_OWNER",
+                                              "MSDO",
+                                              "OPC",
+                                          ].includes(role ?? "") &&
+                                              row.original.equipmentOwner
+                                                  ?.publicId ===
+                                                  currentUser?.publicId)
                                       )
                                   }
                               />
@@ -480,7 +485,7 @@ function EquipmentInventory() {
                   ]
                 : []),
             // Actions column (only for roles that can manage)
-            ...(role === "SUPER_ADMIN" || role === "EQUIPMENT_OWNER"
+            ...(isPrivilegedUser
                 ? [
                       {
                           id: "actions",
@@ -489,7 +494,9 @@ function EquipmentInventory() {
                               // Check if the current user can manage this specific item
                               const canManage =
                                   role === "SUPER_ADMIN" ||
-                                  (role === "EQUIPMENT_OWNER" &&
+                                  (["EQUIPMENT_OWNER", "MSDO", "OPC"].includes(
+                                      role ?? "",
+                                  ) &&
                                       item.equipmentOwner?.publicId ===
                                           currentUser?.publicId);
 
@@ -556,6 +563,7 @@ function EquipmentInventory() {
             deleteMutation.variables,
             getStatusBadge, // Added dependency
             handleEditEquipment, // Added dependency
+            isPrivilegedUser, // Added dependency
         ],
     ); // Add mutation states/variables
 
@@ -574,8 +582,7 @@ function EquipmentInventory() {
                 <header className="flex items-center justify-between border-b px-6 py-3.5 h-16">
                     <h1 className="text-xl font-semibold">Equipments</h1>
                     <div className="flex items-center gap-2">
-                        {(role === "SUPER_ADMIN" ||
-                            role === "EQUIPMENT_OWNER") && (
+                        {isPrivilegedUser && (
                             <Button
                                 onClick={() => {
                                     setEditingEquipment(null);
@@ -697,29 +704,23 @@ function EquipmentInventory() {
                             }
                         >
                             <TabsList>
-                                {(role === "SUPER_ADMIN" ||
-                                    role === "EQUIPMENT_OWNER") && (
+                                {isPrivilegedUser && (
                                     <TabsTrigger value="table">
                                         Table
                                     </TabsTrigger>
                                 )}
                                 <TabsTrigger value="grid">
-                                    {role === "SUPER_ADMIN" ||
-                                    role === "EQUIPMENT_OWNER"
-                                        ? "Grid"
-                                        : "Equipments"}
+                                    {isPrivilegedUser ? "Grid" : "Equipments"}
                                 </TabsTrigger>
-                                {role !== "SUPER_ADMIN" &&
-                                    role !== "EQUIPMENT_OWNER" && (
-                                        <TabsTrigger value="reservations">
-                                            My Reservations
-                                        </TabsTrigger>
-                                    )}
+                                {!isPrivilegedUser && (
+                                    <TabsTrigger value="reservations">
+                                        My Reservations
+                                    </TabsTrigger>
+                                )}
                             </TabsList>
                         </Tabs>
                         {/* Add Filters Dropdown if needed */}
-                        {(role === "SUPER_ADMIN" ||
-                            role === "EQUIPMENT_OWNER") && (
+                        {isPrivilegedUser && (
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -739,21 +740,19 @@ function EquipmentInventory() {
                 {/* Main Content Area */}
                 <div className="flex-1 overflow-auto p-6">
                     {/* Table View */}
-                    {viewMode === "table" &&
-                        (role === "SUPER_ADMIN" ||
-                            role === "EQUIPMENT_OWNER") && (
-                            <DataTable
-                                columns={columns}
-                                data={filteredEquipment}
-                                searchColumn="name"
-                                searchPlaceholder="Search equipment..."
-                                // Pass the state object directly
-                                rowSelection={rowSelection}
-                                // Pass the state setter directly
-                                onRowSelectionChange={setRowSelection}
-                                // Enable row selection (managed by DataTable)
-                            />
-                        )}
+                    {viewMode === "table" && isPrivilegedUser && (
+                        <DataTable
+                            columns={columns}
+                            data={filteredEquipment}
+                            searchColumn="name"
+                            searchPlaceholder="Search equipment..."
+                            // Pass the state object directly
+                            rowSelection={rowSelection}
+                            // Pass the state setter directly
+                            onRowSelectionChange={setRowSelection}
+                            // Enable row selection (managed by DataTable)
+                        />
+                    )}
 
                     {/* Grid View */}
                     {viewMode === "grid" && (
@@ -762,7 +761,11 @@ function EquipmentInventory() {
                                 const imageUrl = item.imagePath;
                                 const canManage =
                                     role === "SUPER_ADMIN" ||
-                                    (role === "EQUIPMENT_OWNER" &&
+                                    ([
+                                        "EQUIPMENT_OWNER",
+                                        "MSDO",
+                                        "OPC",
+                                    ].includes(role ?? "") &&
                                         item.equipmentOwner?.publicId ===
                                             currentUser?.publicId); // Compare numbers
                                 const isMutatingItem =
@@ -925,7 +928,7 @@ function EquipmentInventory() {
 
                 {/* Dialogs */}
                 {/* Add/Edit Dialog */}
-                {(role === "SUPER_ADMIN" || role === "EQUIPMENT_OWNER") && (
+                {isPrivilegedUser && role && (
                     <EquipmentFormDialog
                         isOpen={isAddEquipmentOpen}
                         onClose={() => {
@@ -943,7 +946,7 @@ function EquipmentInventory() {
                 )}
 
                 {/* Delete Confirmation Dialog */}
-                {(role === "SUPER_ADMIN" || role === "EQUIPMENT_OWNER") && (
+                {isPrivilegedUser && (
                     <DeleteConfirmDialog
                         isOpen={isDeleteDialogOpen}
                         onClose={() => {

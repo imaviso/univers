@@ -298,3 +298,15 @@ export type EquipmentActionInput = {
     reservationPublicId: string;
     remarks?: string;
 };
+
+export type AUTHORIZED_ROLES =
+    | "SUPER_ADMIN"
+    | "VP_ADMIN"
+    | "MSDO"
+    | "OPC"
+    | "CORE"
+    | "TSG"
+    | "VPAA"
+    | "SSD"
+    | "FAO"
+    | "DEPT_HEAD";

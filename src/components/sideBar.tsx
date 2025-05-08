@@ -118,7 +118,9 @@ export function Sidebar() {
                                         : "flex items-center gap-2",
                                 )}
                             >
-                                {!isCollapsed && <NotificationCenter />}
+                                {!isCollapsed && !!user && (
+                                    <NotificationCenter />
+                                )}
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -204,7 +206,7 @@ export function Sidebar() {
                                 <Tooltip delayDuration={700}>
                                     <TooltipTrigger asChild>
                                         <div>
-                                            <NotificationCenter />
+                                            {!!user && <NotificationCenter />}
                                         </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="right">
