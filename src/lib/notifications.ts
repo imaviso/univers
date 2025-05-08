@@ -9,7 +9,7 @@ export interface BackendNotificationPayload {
 }
 
 export interface NotificationDTO {
-    id: number;
+    publicId: string;
     eventId: string;
     message: {
         equipmentId?: string;
@@ -27,16 +27,16 @@ export interface NotificationDTO {
     };
     createdAt: string;
     isRead: boolean;
-    relatedEntityId: number | null;
+    relatedEntityPublicId: string | null;
     relatedEntityType: string | null;
 }
 
 export interface Notification {
-    id: number;
+    publicId: string;
     message: string;
     timestamp: Date;
     isRead: boolean;
-    relatedEntityId: number | null;
+    relatedEntityPublicId: string | null;
     relatedEntityType: string | null;
     title?: string;
     type: "default" | "success" | "error" | "warning";
@@ -67,7 +67,7 @@ export const webSocketStatusAtom = atom<WebSocketStatus>("disconnected");
 
 // Derived atom for the count of unread notifications
 export const unreadNotificationsCountAtom = atom(
-    (get) => get(notificationsAtom).filter((n) => !n.read).length,
+    (get) => get(notificationsAtom).filter((n) => !n.isRead).length,
 );
 
 // Atom to add a new notification
@@ -76,13 +76,16 @@ export const addNotificationAtom = atom(
     (
         get,
         set,
-        newNotificationData: Omit<Notification, "id" | "timestamp" | "read">,
+        newNotificationData: Omit<
+            Notification,
+            "publicId" | "timestamp" | "isRead"
+        >,
     ) => {
         const newNotification: Notification = {
             ...newNotificationData,
-            id: Date.now(), // Use timestamp as a simple unique ID
+            publicId: Date.now().toString(),
             timestamp: new Date(),
-            read: false,
+            isRead: false,
             type: newNotificationData.type ?? "default",
         };
         set(notificationsAtom, (prev) => [newNotification, ...prev]);
@@ -92,9 +95,11 @@ export const addNotificationAtom = atom(
 // Atom to mark a notification as read
 export const markNotificationAsReadAtom = atom(
     null, // write-only atom
-    (get, set, id: number) => {
+    (get, set, publicId: string) => {
         set(notificationsAtom, (prev) =>
-            prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+            prev.map((n) =>
+                n.publicId === publicId ? { ...n, isRead: true } : n,
+            ),
         );
     },
 );

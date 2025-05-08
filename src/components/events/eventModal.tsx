@@ -42,13 +42,14 @@ import {
     useCurrentUser,
 } from "@/lib/query"; // Import eventsQueryOptions
 import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
-import type { DepartmentType, EventDTOPayload, Venue } from "@/lib/types";
+import type { DepartmentDTO, EventDTOPayload, VenueDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query"; // Import mutation hooks
 import { useRouteContext } from "@tanstack/react-router";
 import { startOfDay } from "date-fns";
 import { Check, ChevronsUpDown, Loader2, UploadCloud, X } from "lucide-react";
+import { useEffect } from "react"; // Import useEffect
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -65,7 +66,7 @@ import { SmartDatetimeInput } from "../ui/smart-date-picker";
 interface EventModalProps {
     isOpen: boolean;
     onClose: () => void;
-    venues: Venue[];
+    venues: VenueDTO[];
 }
 
 const eventTypes = ["External", "Program-based", "Admin", "SSG/Advocay-based"];
@@ -84,13 +85,19 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
         defaultValues: {
             eventName: "",
             eventType: undefined,
-            eventVenueId: undefined,
-            departmentId: undefined,
+            venuePublicId: undefined,
+            departmentPublicId: undefined,
             startTime: undefined,
             endTime: undefined,
             approvedLetter: [],
         },
     });
+
+    useEffect(() => {
+        if (!isOpen) {
+            form.reset();
+        }
+    }, [isOpen, form]);
 
     const createEventMutation = useMutation({
         mutationFn: ({
@@ -116,8 +123,8 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                 id: Date.now(),
                 eventName: eventDTO.eventName,
                 eventType: eventDTO.eventType,
-                eventVenueId: eventDTO.eventVenueId,
-                departmentId: eventDTO.departmentId,
+                venuePublicId: eventDTO.venuePublicId,
+                departmentPublicId: eventDTO.departmentPublicId,
                 startTime: new Date(eventDTO.startTime),
                 endTime: new Date(eventDTO.endTime),
                 approvedLetter: approvedLetter,
@@ -169,12 +176,11 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                 description: `Event ${createdEvent.eventName} created successfully.`,
             });
             onClose();
-            form.reset();
         },
     });
 
     async function onSubmit(values: EventInput) {
-        if (!currentUser?.id) {
+        if (!currentUser?.publicId) {
             toast.error("You must be logged in to create an event.");
             return;
         }
@@ -184,13 +190,10 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
             const eventDTO: EventDTOPayload = {
                 eventName: outputValues.eventName,
                 eventType: outputValues.eventType,
-                eventVenueId: outputValues.eventVenueId,
-                departmentId: outputValues.departmentId,
+                venuePublicId: outputValues.venuePublicId,
+                departmentPublicId: outputValues.departmentPublicId,
                 startTime: outputValues.startTime.toISOString(),
                 endTime: outputValues.endTime.toISOString(),
-                organizer: {
-                    id: Number.parseInt(currentUser.id),
-                },
             };
 
             createEventMutation.mutate({
@@ -282,7 +285,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                             {/* Venue */}
                             <FormField
                                 control={form.control}
-                                name="eventVenueId"
+                                name="venuePublicId"
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col">
                                         <FormLabel>Venue</FormLabel>
@@ -305,7 +308,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                         {field.value
                                                             ? venues.find(
                                                                   (v) =>
-                                                                      v.id ===
+                                                                      v.publicId ===
                                                                       field.value,
                                                               )?.name
                                                             : "Select venue"}
@@ -329,12 +332,12 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                                             venue.name
                                                                         }
                                                                         key={
-                                                                            venue.id
+                                                                            venue.publicId
                                                                         }
                                                                         onSelect={() => {
                                                                             form.setValue(
-                                                                                "eventVenueId",
-                                                                                venue.id,
+                                                                                "venuePublicId",
+                                                                                venue.publicId,
                                                                                 {
                                                                                     shouldValidate: true,
                                                                                 },
@@ -344,7 +347,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                                         <Check
                                                                             className={cn(
                                                                                 "mr-2 h-4 w-4",
-                                                                                venue.id ===
+                                                                                venue.publicId ===
                                                                                     field.value
                                                                                     ? "opacity-100"
                                                                                     : "opacity-0",
@@ -369,7 +372,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                             <div className="col-span-2">
                                 <FormField
                                     control={form.control}
-                                    name="departmentId"
+                                    name="departmentPublicId"
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Department</FormLabel>
@@ -391,9 +394,9 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                             {field.value
                                                                 ? departments?.find(
                                                                       (
-                                                                          dept: DepartmentType, // Explicitly type dept
+                                                                          dept: DepartmentDTO,
                                                                       ) =>
-                                                                          dept.id ===
+                                                                          dept.publicId ===
                                                                           field.value,
                                                                   )?.name
                                                                 : "Select department"}
@@ -418,19 +421,19 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                             <CommandGroup>
                                                                 {departments?.map(
                                                                     (
-                                                                        dept: DepartmentType,
+                                                                        dept: DepartmentDTO,
                                                                     ) => (
                                                                         <CommandItem
                                                                             value={
                                                                                 dept.name
                                                                             }
                                                                             key={
-                                                                                dept.id
+                                                                                dept.publicId
                                                                             }
                                                                             onSelect={() => {
                                                                                 form.setValue(
-                                                                                    "departmentId",
-                                                                                    dept.id,
+                                                                                    "departmentPublicId",
+                                                                                    dept.publicId,
                                                                                     {
                                                                                         shouldValidate: true,
                                                                                     },
@@ -440,7 +443,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                                             <Check
                                                                                 className={cn(
                                                                                     "mr-2 h-4 w-4",
-                                                                                    dept.id ===
+                                                                                    dept.publicId ===
                                                                                         field.value
                                                                                         ? "opacity-100"
                                                                                         : "opacity-0",
@@ -565,8 +568,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                             to upload
                                                         </p>
                                                         <p className="text-xs text-muted-foreground">
-                                                            PDF or Image (max
-                                                            5MB)
+                                                            Image (max 5MB)
                                                         </p>
                                                     </FileUploadDropzone>
                                                     <FileUploadList className="p-3">

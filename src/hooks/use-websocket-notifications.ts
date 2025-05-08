@@ -66,10 +66,10 @@ export function useWebSocketNotifications() {
                             receivedPayload.message?.type?.toLowerCase() || ""; // Get type from nested message
                         const entityType =
                             receivedPayload.relatedEntityType?.toUpperCase(); // Top-level entity type
-                        const entityId = receivedPayload.relatedEntityId; // Top-level entity ID
-                        const eventId = receivedPayload.message?.eventId; // Event ID from nested message
+                        const entityId = receivedPayload.relatedEntityPublicId; // Top-level entity ID (NOW ALWAYS EVENT ID)
+                        // const eventId = receivedPayload.message?.eventId; // REMOVED - entityId is now the eventId
 
-                        // --- Invalidate Notification Queries ---
+                        // --- Invalidate Notification Queries --- Always do this
                         queryClient.invalidateQueries({
                             queryKey: notificationsQueryKeys.lists(),
                         });
@@ -78,116 +78,73 @@ export function useWebSocketNotifications() {
                         });
 
                         // --- Conditional Invalidation based on Payload ---
-                        if (entityType === "EVENT") {
+                        if (entityId) {
+                            // Only proceed if we have an event ID (which entityId now is)
+                            // Always invalidate the related event's details and approvals
                             queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.all,
+                                queryKey: eventsQueryKeys.detail(entityId),
                             });
+                            queryClient.invalidateQueries({
+                                queryKey: eventsQueryKeys.approvals(entityId),
+                            });
+                            // Also invalidate general event lists as status might change
+                            queryClient.invalidateQueries({
+                                queryKey: eventsQueryKeys.lists(),
+                            }); // Covers all, approved, etc.
                             queryClient.invalidateQueries({
                                 queryKey: eventsQueryKeys.own(),
                             });
                             queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.approved(),
-                            });
-
-                            // Use actualMessageText for content checks
-                            if (actualMessageText.includes("approval")) {
-                                queryClient.invalidateQueries({
-                                    queryKey:
-                                        eventsQueryKeys.pendingVenueOwner(),
-                                });
-                                queryClient.invalidateQueries({
-                                    queryKey: eventsQueryKeys.pendingDeptHead(),
-                                });
-                            }
-                            // Use primary entityId for detail/approval invalidation
-                            if (entityId) {
-                                queryClient.invalidateQueries({
-                                    queryKey: eventsQueryKeys.detail(entityId),
-                                });
-                                queryClient.invalidateQueries({
-                                    queryKey:
-                                        eventsQueryKeys.approvals(entityId),
-                                });
-                            }
-                        } else if (entityType === "VENUE_RESERVATION") {
-                            queryClient.invalidateQueries({
-                                queryKey: venueReservationKeys.lists(),
+                                queryKey: eventsQueryKeys.pending(),
                             });
                             queryClient.invalidateQueries({
-                                queryKey: venueReservationKeys.own(),
+                                queryKey: eventsQueryKeys.pendingVenueOwner(),
+                            });
+                            queryClient.invalidateQueries({
+                                queryKey: eventsQueryKeys.pendingDeptHead(),
                             });
 
-                            // Use actualMessageText for content checks
-                            if (actualMessageText.includes("approval")) {
+                            // Invalidate specific lists based on the original trigger type
+                            if (
+                                entityType === "VENUE_RESERVATION" ||
+                                entityType === "VENUE_RESERVATION_REQUEST"
+                            ) {
+                                // Invalidate venue reservation lists (cannot invalidate detail without reservation ID)
                                 queryClient.invalidateQueries({
-                                    queryKey:
-                                        venueReservationKeys.pendingVenueOwner(),
+                                    queryKey: venueReservationKeys.lists(),
+                                });
+                                queryClient.invalidateQueries({
+                                    queryKey: venueReservationKeys.own(),
                                 });
                                 queryClient.invalidateQueries({
                                     queryKey: venueReservationKeys.pending(),
                                 });
-                            }
-                            // Use primary entityId for detail/approval invalidation
-                            if (entityId) {
                                 queryClient.invalidateQueries({
                                     queryKey:
-                                        venueReservationKeys.detail(entityId),
+                                        venueReservationKeys.pendingVenueOwner(),
+                                });
+                            } else if (
+                                entityType === "EQUIPMENT_RESERVATION" ||
+                                entityType === "EQUIPMENT_RESERVATION_REQUEST"
+                            ) {
+                                // Invalidate equipment reservation lists (cannot invalidate detail without reservation ID)
+                                queryClient.invalidateQueries({
+                                    queryKey: equipmentReservationKeys.lists(),
                                 });
                                 queryClient.invalidateQueries({
-                                    queryKey:
-                                        venueReservationKeys.approvals(
-                                            entityId,
-                                        ),
-                                });
-                            }
-                            // Invalidate related event if eventId is present
-                            if (eventId) {
-                                queryClient.invalidateQueries({
-                                    queryKey: eventsQueryKeys.detail(eventId),
-                                });
-                            }
-                        } else if (entityType === "EQUIPMENT_RESERVATION") {
-                            queryClient.invalidateQueries({
-                                queryKey: equipmentReservationKeys.lists(),
-                            });
-                            queryClient.invalidateQueries({
-                                queryKey: equipmentReservationKeys.own(),
-                            });
-
-                            // Use actualMessageText for content checks
-                            if (actualMessageText.includes("approval")) {
-                                queryClient.invalidateQueries({
-                                    queryKey:
-                                        equipmentReservationKeys.pendingEquipmentOwner(),
+                                    queryKey: equipmentReservationKeys.own(),
                                 });
                                 queryClient.invalidateQueries({
                                     queryKey:
                                         equipmentReservationKeys.pending(),
                                 });
-                            }
-                            // Use primary entityId for detail/approval invalidation
-                            if (entityId) {
                                 queryClient.invalidateQueries({
                                     queryKey:
-                                        equipmentReservationKeys.detail(
-                                            entityId,
-                                        ),
-                                });
-                                queryClient.invalidateQueries({
-                                    queryKey:
-                                        equipmentReservationKeys.approvals(
-                                            entityId,
-                                        ),
+                                        equipmentReservationKeys.pendingEquipmentOwner(),
                                 });
                             }
-                            // Invalidate related event if eventId is present
-                            if (eventId) {
-                                queryClient.invalidateQueries({
-                                    queryKey: eventsQueryKeys.detail(eventId),
-                                });
-                            }
+                            // No special list invalidation needed if entityType was just "EVENT"
                         }
-                        // Add more 'else if' blocks for other entity types (USER, etc.)
 
                         // --- End Conditional Invalidation ---
 

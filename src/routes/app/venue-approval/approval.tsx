@@ -37,16 +37,20 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { approveEvent, rejectEvent } from "@/lib/api";
 import { allNavigation } from "@/lib/navigation";
 import {
     allVenueOwnerReservationsQueryOptions,
-    useApproveReservationMutation,
-    useRejectReservationMutation,
+    eventsQueryKeys,
     venuesQueryOptions,
 } from "@/lib/query";
 import type { VenueReservationDTO } from "@/lib/types";
 import { getStatusBadgeClass } from "@/lib/utils";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+    useMutation,
+    useQueryClient,
+    useSuspenseQuery,
+} from "@tanstack/react-query";
 import {
     createFileRoute,
     redirect,
@@ -113,15 +117,16 @@ export const Route = createFileRoute("/app/venue-approval/approval")({
 type ViewMode = "all" | "pending" | "approved" | "rejected";
 
 type SingleActionInfo = {
-    id: number | null;
+    reservationId: string | null;
+    eventId: string | null;
     type: "approve" | "reject" | null;
 };
 
 export function VenueReservationApproval() {
-    // ... hooks and state ...
     const navigate = useNavigate();
     const context = useRouteContext({ from: "/app/venue-approval/approval" });
-    const currentUserId = context.authState?.id;
+    const currentUserId = context.authState?.publicId;
+    const queryClient = useQueryClient();
 
     const { data: fetchedReservations } = useSuspenseQuery(
         allVenueOwnerReservationsQueryOptions,
@@ -140,9 +145,9 @@ export function VenueReservationApproval() {
         {},
     );
 
-    // --- Dialog States ---
     const [singleActionInfo, setSingleActionInfo] = useState<SingleActionInfo>({
-        id: null,
+        reservationId: null,
+        eventId: null,
         type: null,
     });
     const [singleActionRemarks, setSingleActionRemarks] = useState("");
@@ -152,12 +157,83 @@ export function VenueReservationApproval() {
     const [bulkApproveRemarks, setBulkApproveRemarks] = useState("");
     const [isBulkRejectDialogOpen, setIsBulkRejectDialogOpen] = useState(false);
     const [bulkRejectionRemarks, setBulkRejectionRemarks] = useState("");
-    // --- End Dialog States ---
 
-    const approveMutation = useApproveReservationMutation();
-    const rejectMutation = useRejectReservationMutation();
+    const approveEventMutation = useMutation({
+        mutationFn: approveEvent,
+        onSuccess: (
+            message,
+            variables: { eventId: string; remarks: string },
+        ) => {
+            toast.success(message || "Event approved successfully.");
+            queryClient.invalidateQueries({
+                queryKey: allVenueOwnerReservationsQueryOptions.queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.detail(variables.eventId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.approvals(variables.eventId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.approved(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pending(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingDeptHead(),
+            });
+            queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
+        },
+        onError: (error) => {
+            toast.error(error.message || "Failed to approve event.");
+        },
+    });
 
-    // ... preFilteredReservations memo ...
+    const rejectEventMutation = useMutation({
+        mutationFn: rejectEvent,
+        onSuccess: (
+            message,
+            variables: { eventId: string; remarks: string },
+        ) => {
+            toast.success(message || "Event rejected successfully.");
+            queryClient.invalidateQueries({
+                queryKey: allVenueOwnerReservationsQueryOptions.queryKey,
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.detail(variables.eventId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.approvals(variables.eventId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.lists(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.approved(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pending(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.pendingDeptHead(),
+            });
+            queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
+        },
+        onError: (error) => {
+            toast.error(error.message || "Failed to reject event.");
+        },
+    });
+
     const preFilteredReservations = useMemo(() => {
         return (fetchedReservations ?? []).filter(
             (reservation: VenueReservationDTO) => {
@@ -166,7 +242,7 @@ export function VenueReservationApproval() {
                       statusFilter.toLowerCase()
                     : true;
                 const matchesVenue = venueFilter
-                    ? reservation.venueId.toString() === venueFilter
+                    ? reservation.venue.publicId === venueFilter
                     : true;
                 const matchesViewMode =
                     viewMode === "all"
@@ -186,188 +262,232 @@ export function VenueReservationApproval() {
     }, [fetchedReservations, statusFilter, venueFilter, viewMode]);
 
     const handleViewDetails = React.useCallback(
-        (eventId: number) => {
+        (eventId: string) => {
             navigate({ to: `/app/events/${eventId}` });
         },
         [navigate],
     );
     const handleNavigateToVenue = React.useCallback(
-        (venueId: number | undefined) => {
+        (venueId: string | undefined) => {
             if (venueId === undefined) return;
             navigate({ from: Route.fullPath, to: `/app/venues/${venueId}` });
         },
         [navigate],
     );
 
-    // --- Single Action Dialog Triggers ---
     const openSingleApproveDialog = React.useCallback(
-        (reservationId: number) => {
-            setSingleActionInfo({ id: reservationId, type: "approve" });
-            setSingleActionRemarks(""); // Reset remarks
+        (reservation: VenueReservationDTO) => {
+            if (!reservation.event?.publicId) {
+                toast.error("Event ID is missing for this reservation.");
+                return;
+            }
+            setSingleActionInfo({
+                reservationId: reservation.publicId,
+                eventId: reservation.event.publicId,
+                type: "approve",
+            });
+            setSingleActionRemarks("");
         },
         [],
-    ); // State setters are stable
+    );
 
     const openSingleRejectDialog = React.useCallback(
-        (reservationId: number) => {
-            setSingleActionInfo({ id: reservationId, type: "reject" });
-            setSingleActionRemarks(""); // Reset remarks
+        (reservation: VenueReservationDTO) => {
+            if (!reservation.event?.publicId) {
+                toast.error("Event ID is missing for this reservation.");
+                return;
+            }
+            setSingleActionInfo({
+                reservationId: reservation.publicId,
+                eventId: reservation.event.publicId,
+                type: "reject",
+            });
+            setSingleActionRemarks("");
         },
         [],
-    ); // State setters are stable
+    );
 
     const closeSingleActionDialog = () => {
-        setSingleActionInfo({ id: null, type: null });
+        setSingleActionInfo({ reservationId: null, eventId: null, type: null });
         setSingleActionRemarks("");
     };
-    // --- End Single Action Dialog Triggers ---
 
-    // --- Dialog Confirmation Handlers ---
     const confirmSingleApprove = () => {
-        if (singleActionInfo.type !== "approve" || singleActionInfo.id === null)
+        if (
+            singleActionInfo.type !== "approve" ||
+            singleActionInfo.eventId === null
+        ) {
+            toast.error("Cannot approve: Event ID is missing.");
             return;
-
-        approveMutation.mutate(
-            {
-                reservationId: singleActionInfo.id,
-                remarks: singleActionRemarks, // Use remarks from state
+        }
+        const payload = {
+            eventId: singleActionInfo.eventId,
+            remarks: singleActionRemarks,
+        };
+        approveEventMutation.mutate(payload, {
+            onSuccess: (message) => {
+                toast.success(message || "Event approved.");
+                setRowSelection({});
+                closeSingleActionDialog();
             },
-            {
-                onSuccess: (message) => {
-                    toast.success(message || "Reservation approved.");
-                    setRowSelection({});
-                    closeSingleActionDialog(); // Close dialog on success
-                },
-                onError: (error) => {
-                    toast.error(error.message || "Failed to approve.");
-                    // Optionally keep dialog open on error?
-                },
+            onError: (error) => {
+                toast.error(error.message || "Failed to approve event.");
             },
-        );
+        });
     };
 
     const confirmSingleReject = () => {
-        if (singleActionInfo.type !== "reject" || singleActionInfo.id === null)
+        if (
+            singleActionInfo.type !== "reject" ||
+            singleActionInfo.eventId === null
+        ) {
+            toast.error("Cannot reject: Event ID is missing.");
             return;
+        }
         if (!singleActionRemarks.trim()) {
             toast.warning("Please provide a reason for rejection.");
-            return; // Keep dialog open
+            return;
         }
-
-        rejectMutation.mutate(
-            {
-                reservationId: singleActionInfo.id,
-                remarks: singleActionRemarks, // Use remarks from state
+        const payload = {
+            eventId: singleActionInfo.eventId,
+            remarks: singleActionRemarks,
+        };
+        rejectEventMutation.mutate(payload, {
+            onSuccess: (message) => {
+                toast.success(message || "Event rejected.");
+                setRowSelection({});
+                closeSingleActionDialog();
             },
-            {
-                onSuccess: (message) => {
-                    toast.success(message || "Reservation rejected.");
-                    setRowSelection({});
-                    closeSingleActionDialog(); // Close dialog on success
-                },
-                onError: (error) => {
-                    toast.error(error.message || "Failed to reject.");
-                    // Optionally keep dialog open on error?
-                },
+            onError: (error) => {
+                toast.error(error.message || "Failed to reject event.");
             },
-        );
+        });
     };
 
     const confirmBulkApprove = () => {
         const selectedRows = table.getFilteredSelectedRowModel().rows;
-        const eligibleRows = selectedRows.filter((row) => {
-            const reservation = row.original;
-            const isPending = reservation.status === "PENDING";
-            const hasCurrentUserActed =
-                currentUserId != null &&
-                reservation.approvals?.some(
-                    (approval) => approval.userId.toString() === currentUserId,
+        const eligibleEventPayloads = selectedRows
+            .filter((row) => {
+                const reservation = row.original;
+                const isPending = reservation.status === "PENDING";
+                const hasCurrentUserActedOnReservation =
+                    currentUserId != null &&
+                    reservation.approvals?.some(
+                        (approval) =>
+                            approval.signedByUser.publicId === currentUserId,
+                    );
+                return (
+                    isPending &&
+                    !hasCurrentUserActedOnReservation &&
+                    reservation.event &&
+                    reservation.event.publicId
                 );
-            return isPending && !hasCurrentUserActed;
-        });
-        const selectedIds = eligibleRows.map((row) => row.original.id);
+            })
+            .map((row) => {
+                const eventId = row.original.event?.publicId;
+                if (!eventId) return null;
+                return {
+                    eventId: eventId,
+                    remarks: bulkApproveRemarks,
+                };
+            })
+            .filter(
+                (payload): payload is { eventId: string; remarks: string } =>
+                    payload !== null,
+            );
 
-        if (selectedIds.length === 0) {
-            toast.info("No eligible reservations selected for approval.");
-            setIsBulkApproveDialogOpen(false); // Close dialog if none eligible
+        if (eligibleEventPayloads.length === 0) {
+            toast.info("No eligible reservations selected for event approval.");
+            setIsBulkApproveDialogOpen(false);
             setBulkApproveRemarks("");
             return;
         }
 
-        const promises = selectedIds.map((id) =>
-            approveMutation.mutateAsync({
-                reservationId: id,
-                remarks: bulkApproveRemarks, // Use remarks from state
-            }),
+        const promises = eligibleEventPayloads.map((payload) =>
+            approveEventMutation.mutateAsync(payload),
         );
 
         toast.promise(Promise.all(promises), {
-            loading: `Approving ${selectedIds.length} reservation(s)...`,
-            success: () => {
+            loading: `Approving events for ${eligibleEventPayloads.length} reservation(s)...`,
+            success: (messages: string[]) => {
                 setRowSelection({});
-                setIsBulkApproveDialogOpen(false); // Close dialog
-                setBulkApproveRemarks(""); // Reset remarks
-                return `${selectedIds.length} reservation(s) approved.`;
+                setIsBulkApproveDialogOpen(false);
+                setBulkApproveRemarks("");
+                return `${eligibleEventPayloads.length} event(s) approved.`;
             },
-            error: (err) => {
-                // Keep dialog open on error?
-                return `Failed to approve some reservations: ${err instanceof Error ? err.message : "Unknown error"}`;
+            error: (err: Error) => {
+                return `Failed to approve some events: ${err.message}`;
             },
         });
     };
 
     const confirmBulkReject = () => {
-        // Renamed from handleBulkReject
         const selectedRows = table.getFilteredSelectedRowModel().rows;
-        const eligibleRows = selectedRows.filter((row) => {
-            const reservation = row.original;
-            const isPending = reservation.status === "PENDING";
-            const hasCurrentUserActed =
-                currentUserId != null &&
-                reservation.approvals?.some(
-                    (approval) => approval.userId.toString() === currentUserId,
-                );
-            return isPending && !hasCurrentUserActed;
-        });
-        const selectedIds = eligibleRows.map((row) => row.original.id);
 
-        if (selectedIds.length === 0) {
-            toast.info("No eligible reservations selected for rejection.");
-            setIsBulkRejectDialogOpen(false); // Close dialog if none eligible
+        if (!bulkRejectionRemarks.trim()) {
+            toast.warning("Please provide a reason for rejection.");
+            return;
+        }
+
+        const eligibleEventPayloads = selectedRows
+            .filter((row) => {
+                const reservation = row.original;
+                const isPending = reservation.status === "PENDING";
+                const hasCurrentUserActedOnReservation =
+                    currentUserId != null &&
+                    reservation.approvals?.some(
+                        (approval) =>
+                            approval.signedByUser.publicId === currentUserId,
+                    );
+                return (
+                    isPending &&
+                    !hasCurrentUserActedOnReservation &&
+                    reservation.event &&
+                    reservation.event.publicId
+                );
+            })
+            .map((row) => {
+                const eventId = row.original.event?.publicId;
+                if (!eventId) return null;
+                return {
+                    eventId: eventId,
+                    remarks: bulkRejectionRemarks,
+                };
+            })
+            .filter(
+                (payload): payload is { eventId: string; remarks: string } =>
+                    payload !== null,
+            );
+
+        if (eligibleEventPayloads.length === 0) {
+            toast.info(
+                "No eligible reservations selected for event rejection.",
+            );
+            setIsBulkRejectDialogOpen(false);
             setBulkRejectionRemarks("");
             return;
         }
-        if (!bulkRejectionRemarks.trim()) {
-            toast.warning("Please provide a reason for rejection.");
-            return; // Keep dialog open
-        }
 
-        const promises = selectedIds.map((id) =>
-            rejectMutation.mutateAsync({
-                reservationId: id,
-                remarks: bulkRejectionRemarks, // Use remarks from state
-            }),
+        const promises = eligibleEventPayloads.map((payload) =>
+            rejectEventMutation.mutateAsync(payload),
         );
 
         toast.promise(Promise.all(promises), {
-            loading: `Rejecting ${selectedIds.length} reservation(s)...`,
-            success: () => {
+            loading: `Rejecting events for ${eligibleEventPayloads.length} reservation(s)...`,
+            success: (messages: string[]) => {
                 setRowSelection({});
-                setIsBulkRejectDialogOpen(false); // Close dialog
-                setBulkRejectionRemarks(""); // Reset remarks
-                return `${selectedIds.length} reservation(s) rejected.`;
+                setIsBulkRejectDialogOpen(false);
+                setBulkRejectionRemarks("");
+                return `${eligibleEventPayloads.length} event(s) rejected.`;
             },
-            error: (err) => {
-                // Keep dialog open on error?
-                return `Failed to reject some reservations: ${err instanceof Error ? err.message : "Unknown error"}`;
+            error: (err: Error) => {
+                return `Failed to reject some events: ${err.message}`;
             },
         });
     };
-    // --- End Dialog Confirmation Handlers ---
 
     const columns = useMemo<ColumnDef<VenueReservationDTO>[]>(
         () => [
-            // ... select column ...
             {
                 id: "select",
                 header: ({ table }) => (
@@ -395,7 +515,6 @@ export function VenueReservationApproval() {
                 enableSorting: false,
                 enableHiding: false,
             },
-            // ... other columns ...
             {
                 accessorKey: "venueName",
                 header: ({ column }) => (
@@ -416,10 +535,12 @@ export function VenueReservationApproval() {
                             variant="link"
                             className="p-0 h-auto font-medium"
                             onClick={() =>
-                                handleNavigateToVenue(reservation.venueId)
+                                handleNavigateToVenue(
+                                    reservation.venue.publicId,
+                                )
                             }
                         >
-                            {reservation.venueName}
+                            {reservation.venue.name}
                         </Button>
                     );
                 },
@@ -427,7 +548,7 @@ export function VenueReservationApproval() {
             {
                 accessorKey: "departmentName",
                 header: "Department",
-                cell: ({ row }) => row.original.departmentName ?? "N/A",
+                cell: ({ row }) => row.original.department?.name ?? "N/A",
             },
             {
                 accessorKey: "startTime",
@@ -466,7 +587,7 @@ export function VenueReservationApproval() {
                         currentUserId != null
                             ? reservation.approvals?.find(
                                   (approval) =>
-                                      approval.userId.toString() ===
+                                      approval.signedByUser.publicId ===
                                       currentUserId,
                               )
                             : undefined;
@@ -523,7 +644,7 @@ export function VenueReservationApproval() {
                         currentUserId != null
                             ? reservation.approvals?.find(
                                   (approval) =>
-                                      approval.userId.toString() ===
+                                      approval.signedByUser.publicId ===
                                       currentUserId,
                               )
                             : undefined;
@@ -549,13 +670,13 @@ export function VenueReservationApproval() {
                                     </DropdownMenuLabel>
                                     <DropdownMenuItem
                                         onClick={() => {
-                                            if (reservation.eventId !== null) {
+                                            if (reservation.event !== null) {
                                                 handleViewDetails(
-                                                    reservation.eventId,
+                                                    reservation.event.publicId,
                                                 );
                                             }
                                         }}
-                                        disabled={reservation.eventId === null}
+                                        disabled={reservation.event === null}
                                     >
                                         <Eye className="mr-2 h-4 w-4" />
                                         View Details
@@ -563,7 +684,7 @@ export function VenueReservationApproval() {
                                     <DropdownMenuItem
                                         onClick={() =>
                                             handleNavigateToVenue(
-                                                reservation.venueId,
+                                                reservation.venue.publicId,
                                             )
                                         }
                                     >
@@ -574,30 +695,28 @@ export function VenueReservationApproval() {
                                         <>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
-                                                // onClick={() => handleApproveSingle(reservation.id)} // Old direct action
                                                 onClick={() =>
                                                     openSingleApproveDialog(
-                                                        reservation.id,
+                                                        reservation,
                                                     )
-                                                } // Open dialog instead
+                                                }
                                                 disabled={
-                                                    approveMutation.isPending ||
-                                                    rejectMutation.isPending
+                                                    approveEventMutation.isPending ||
+                                                    rejectEventMutation.isPending
                                                 }
                                             >
                                                 <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />
                                                 Approve
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
-                                                // onClick={() => handleRejectSingle(reservation.id)} // Old direct action
                                                 onClick={() =>
                                                     openSingleRejectDialog(
-                                                        reservation.id,
+                                                        reservation,
                                                     )
-                                                } // Open dialog instead
+                                                }
                                                 disabled={
-                                                    approveMutation.isPending ||
-                                                    rejectMutation.isPending
+                                                    approveEventMutation.isPending ||
+                                                    rejectEventMutation.isPending
                                                 }
                                                 className="text-destructive focus:text-destructive focus:bg-destructive/10"
                                             >
@@ -635,8 +754,8 @@ export function VenueReservationApproval() {
             },
         ],
         [
-            approveMutation.isPending,
-            rejectMutation.isPending,
+            approveEventMutation.isPending,
+            rejectEventMutation.isPending,
             currentUserId,
             handleNavigateToVenue,
             openSingleApproveDialog,
@@ -645,7 +764,6 @@ export function VenueReservationApproval() {
         ],
     );
 
-    // ... table instance ...
     const table = useReactTable({
         data: preFilteredReservations,
         columns,
@@ -664,10 +782,9 @@ export function VenueReservationApproval() {
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
-        getRowId: (row) => row.id.toString(),
+        getRowId: (row) => row.publicId.toString(),
     });
 
-    // ... stats memo ...
     const stats = useMemo(() => {
         const allReservations = fetchedReservations ?? [];
         return {
@@ -686,7 +803,6 @@ export function VenueReservationApproval() {
         };
     }, [fetchedReservations]);
 
-    // ... numSelected, numEligibleSelected ...
     const numSelected = table.getFilteredSelectedRowModel().rows.length;
     const numEligibleSelected = table
         .getFilteredSelectedRowModel()
@@ -696,18 +812,16 @@ export function VenueReservationApproval() {
             const hasCurrentUserActed =
                 currentUserId != null &&
                 reservation.approvals?.some(
-                    (approval) => approval.userId.toString() === currentUserId,
+                    (approval) =>
+                        approval.signedByUser.publicId === currentUserId,
                 );
             return isPending && !hasCurrentUserActed;
         }).length;
 
-    // ... return JSX ...
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
-                {/* Header */}
                 <header className="flex items-center justify-between border-b px-6 py-3.5">
-                    {/* ... header content ... */}
                     <h1 className="text-xl font-semibold">
                         Venue Reservation Approval
                     </h1>
@@ -725,9 +839,7 @@ export function VenueReservationApproval() {
                     </div>
                 </header>
 
-                {/* Stats Cards */}
                 <div className="grid grid-cols-4 gap-4 p-6 pb-0">
-                    {/* ... stats cards ... */}
                     <Card
                         className="hover:shadow-md transition-shadow cursor-pointer"
                         onClick={() => setViewMode("all")}
@@ -790,9 +902,7 @@ export function VenueReservationApproval() {
                     </Card>
                 </div>
 
-                {/* Filters and Actions Bar */}
                 <div className="flex items-center justify-between border-b px-6 py-2">
-                    {/* ... tabs and bulk actions ... */}
                     <div className="flex items-center gap-2">
                         <Tabs
                             value={viewMode}
@@ -822,13 +932,12 @@ export function VenueReservationApproval() {
                                     variant="outline"
                                     size="sm"
                                     className="gap-1"
-                                    // onClick={handleBulkApprove} // Old direct action
                                     onClick={() =>
                                         setIsBulkApproveDialogOpen(true)
-                                    } // Open dialog
+                                    }
                                     disabled={
-                                        approveMutation.isPending ||
-                                        rejectMutation.isPending
+                                        approveEventMutation.isPending ||
+                                        rejectEventMutation.isPending
                                     }
                                 >
                                     <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -842,8 +951,8 @@ export function VenueReservationApproval() {
                                         setIsBulkRejectDialogOpen(true)
                                     }
                                     disabled={
-                                        approveMutation.isPending ||
-                                        rejectMutation.isPending
+                                        approveEventMutation.isPending ||
+                                        rejectEventMutation.isPending
                                     }
                                 >
                                     <X className="h-4 w-4" />
@@ -860,7 +969,6 @@ export function VenueReservationApproval() {
                                 </div>
                             )}
                     </div>
-                    {/* ... filters and column toggle ... */}
                     <div className="flex items-center gap-2">
                         <Select
                             value={venueFilter || "all"}
@@ -875,8 +983,8 @@ export function VenueReservationApproval() {
                                 <SelectItem value="all">All Venues</SelectItem>
                                 {(venues ?? []).map((venue) => (
                                     <SelectItem
-                                        key={venue.id}
-                                        value={venue.id.toString()}
+                                        key={venue.publicId}
+                                        value={venue.publicId}
                                     >
                                         {venue.name}
                                     </SelectItem>
@@ -930,11 +1038,9 @@ export function VenueReservationApproval() {
                     </div>
                 </div>
 
-                {/* Table */}
                 <div className="flex-1 overflow-auto p-6">
                     <div className="rounded-md border">
                         <Table>
-                            {/* ... table header ... */}
                             <TableHeader>
                                 {table.getHeaderGroups().map((headerGroup) => (
                                     <TableRow key={headerGroup.id}>
@@ -955,12 +1061,11 @@ export function VenueReservationApproval() {
                                     </TableRow>
                                 ))}
                             </TableHeader>
-                            {/* ... table body ... */}
                             <TableBody>
                                 {table.getRowModel().rows?.length ? (
                                     table.getRowModel().rows.map((row) => (
                                         <TableRow
-                                            key={row.id}
+                                            key={row.original.publicId}
                                             data-state={
                                                 row.getIsSelected() &&
                                                 "selected"
@@ -994,7 +1099,6 @@ export function VenueReservationApproval() {
                             </TableBody>
                         </Table>
                     </div>
-                    {/* Pagination and Selected Count */}
                     <div className="flex items-center justify-between space-x-2 py-4">
                         <div className="flex-1 text-sm text-muted-foreground">
                             {numSelected} of{" "}
@@ -1023,9 +1127,6 @@ export function VenueReservationApproval() {
                 </div>
             </div>
 
-            {/* --- Dialogs --- */}
-
-            {/* Single Action Dialog (Approve/Reject) */}
             <Dialog
                 open={singleActionInfo.type !== null}
                 onOpenChange={(isOpen) => !isOpen && closeSingleActionDialog()}
@@ -1062,8 +1163,8 @@ export function VenueReservationApproval() {
                             variant="outline"
                             onClick={closeSingleActionDialog}
                             disabled={
-                                approveMutation.isPending ||
-                                rejectMutation.isPending
+                                approveEventMutation.isPending ||
+                                rejectEventMutation.isPending
                             }
                         >
                             Cancel
@@ -1071,9 +1172,9 @@ export function VenueReservationApproval() {
                         {singleActionInfo.type === "approve" && (
                             <Button
                                 onClick={confirmSingleApprove}
-                                disabled={approveMutation.isPending}
+                                disabled={approveEventMutation.isPending}
                             >
-                                {approveMutation.isPending
+                                {approveEventMutation.isPending
                                     ? "Approving..."
                                     : "Confirm Approval"}
                             </Button>
@@ -1084,10 +1185,10 @@ export function VenueReservationApproval() {
                                 onClick={confirmSingleReject}
                                 disabled={
                                     !singleActionRemarks.trim() ||
-                                    rejectMutation.isPending
+                                    rejectEventMutation.isPending
                                 }
                             >
-                                {rejectMutation.isPending
+                                {rejectEventMutation.isPending
                                     ? "Rejecting..."
                                     : "Confirm Rejection"}
                             </Button>
@@ -1096,7 +1197,6 @@ export function VenueReservationApproval() {
                 </DialogContent>
             </Dialog>
 
-            {/* Bulk Approve Dialog */}
             <Dialog
                 open={isBulkApproveDialogOpen}
                 onOpenChange={setIsBulkApproveDialogOpen}
@@ -1127,18 +1227,18 @@ export function VenueReservationApproval() {
                                 setIsBulkApproveDialogOpen(false);
                                 setBulkApproveRemarks("");
                             }}
-                            disabled={approveMutation.isPending}
+                            disabled={approveEventMutation.isPending}
                         >
                             Cancel
                         </Button>
                         <Button
                             onClick={confirmBulkApprove}
                             disabled={
-                                approveMutation.isPending ||
+                                approveEventMutation.isPending ||
                                 numEligibleSelected === 0
                             }
                         >
-                            {approveMutation.isPending
+                            {approveEventMutation.isPending
                                 ? "Approving..."
                                 : `Confirm Approval (${numEligibleSelected})`}
                         </Button>
@@ -1146,7 +1246,6 @@ export function VenueReservationApproval() {
                 </DialogContent>
             </Dialog>
 
-            {/* Bulk Rejection Dialog */}
             <Dialog
                 open={isBulkRejectDialogOpen}
                 onOpenChange={setIsBulkRejectDialogOpen}
@@ -1177,27 +1276,26 @@ export function VenueReservationApproval() {
                                 setIsBulkRejectDialogOpen(false);
                                 setBulkRejectionRemarks("");
                             }}
-                            disabled={rejectMutation.isPending}
+                            disabled={rejectEventMutation.isPending}
                         >
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
-                            onClick={confirmBulkReject} // Use the confirmation handler
+                            onClick={confirmBulkReject}
                             disabled={
                                 !bulkRejectionRemarks.trim() ||
-                                rejectMutation.isPending ||
+                                rejectEventMutation.isPending ||
                                 numEligibleSelected === 0
                             }
                         >
-                            {rejectMutation.isPending
+                            {rejectEventMutation.isPending
                                 ? "Rejecting..."
                                 : `Confirm Rejection (${numEligibleSelected})`}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            {/* --- End Dialogs --- */}
         </div>
     );
 }

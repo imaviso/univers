@@ -29,7 +29,7 @@ import {
     ImageSchema,
     equipmentDataSchema,
 } from "@/lib/schema";
-import { type Equipment, STATUS_EQUIPMENT, type UserType } from "@/lib/types";
+import { type Equipment, STATUS_EQUIPMENT, type UserDTO } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { UploadCloud, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -60,8 +60,8 @@ interface EquipmentFormDialogProps {
     equipment?: Equipment;
     onSubmit: (data: EquipmentDTOInput, imageFile: File | null) => void;
     isMutating: boolean;
-    currentUserRole: UserType["role"];
-    equipmentOwners: UserType[];
+    currentUserRole: UserDTO["role"];
+    equipmentOwners: UserDTO[];
 }
 
 export function EquipmentFormDialog({
@@ -87,9 +87,7 @@ export function EquipmentFormDialog({
               availability: equipment.availability,
               quantity: equipment.quantity,
               status: equipment.status,
-              ownerId: equipment.equipmentOwner?.id
-                  ? Number(equipment.equipmentOwner.id)
-                  : undefined,
+              ownerId: equipment.equipmentOwner?.publicId ?? undefined,
           }
         : defaultValues;
 
@@ -109,9 +107,7 @@ export function EquipmentFormDialog({
                           availability: equipment.availability,
                           quantity: equipment.quantity,
                           status: equipment.status,
-                          ownerId: equipment.equipmentOwner?.id
-                              ? Number(equipment.equipmentOwner.id)
-                              : undefined,
+                          ownerId: equipment.equipmentOwner?.publicId,
                       }
                     : defaultValues,
             );
@@ -204,9 +200,9 @@ export function EquipmentFormDialog({
                                         <FormLabel>Equipment Owner *</FormLabel>
                                         <Select
                                             onValueChange={(value) =>
-                                                field.onChange(Number(value))
+                                                field.onChange(value)
                                             } // Ensure value is number
-                                            value={field.value?.toString()} // Convert number to string for Select value
+                                            value={field.value}
                                             disabled={isMutating}
                                         >
                                             <FormControl>
@@ -219,21 +215,24 @@ export function EquipmentFormDialog({
                                                     equipmentOwners.map(
                                                         (owner) => (
                                                             <SelectItem
-                                                                // Ensure owner.id is string or number as needed by UserType
-                                                                key={owner.id}
-                                                                value={owner.id.toString()} // Value must be string
+                                                                key={
+                                                                    owner.publicId
+                                                                }
+                                                                value={
+                                                                    owner.publicId
+                                                                }
                                                             >
                                                                 {
                                                                     owner.firstName
-                                                                }{" "}
-                                                                {owner.lastName}{" "}
+                                                                }
+                                                                {owner.lastName}
                                                                 ({owner.email})
                                                             </SelectItem>
                                                         ),
                                                     )
                                                 ) : (
                                                     <SelectItem
-                                                        value=""
+                                                        value="Empty"
                                                         disabled
                                                     >
                                                         No equipment owners

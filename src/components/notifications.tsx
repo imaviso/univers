@@ -103,9 +103,9 @@ export function NotificationDropdown() {
     const markReadMutation = useMarkNotificationsReadMutation();
     const markAllReadMutation = useMarkAllNotificationsReadMutation();
 
-    const handleMarkRead = (id: number) => {
-        if (id) {
-            markReadMutation.mutate([id]);
+    const handleMarkRead = (publicId: string) => {
+        if (publicId) {
+            markReadMutation.mutate([publicId]);
         }
     };
 
@@ -171,7 +171,7 @@ export function NotificationDropdown() {
 
                             const entityType =
                                 notification.relatedEntityType?.toUpperCase();
-                            const entityId = notification.relatedEntityId;
+                            const entityId = notification.relatedEntityPublicId;
                             let canNavigate = false;
                             let targetPath = "";
 
@@ -196,10 +196,12 @@ export function NotificationDropdown() {
 
                             return (
                                 <DropdownMenuItem
-                                    key={notification.id}
+                                    key={notification.publicId}
                                     onClick={() => {
-                                        if (!notification.read) {
-                                            handleMarkRead(notification.id);
+                                        if (!notification.isRead) {
+                                            handleMarkRead(
+                                                notification.publicId,
+                                            );
                                         }
                                         if (canNavigate) {
                                             navigate({ to: targetPath });
@@ -207,7 +209,7 @@ export function NotificationDropdown() {
                                         // If !canNavigate, clicking just marks as read
                                     }}
                                     // Remove onSelect
-                                    className={`items-start space-x-3 ${notification.read ? "opacity-60" : ""} ${canNavigate ? "cursor-pointer" : "cursor-default"}`} // Adjust cursor based on navigation
+                                    className={`items-start space-x-3 ${notification.isRead ? "opacity-60" : ""} ${canNavigate ? "cursor-pointer" : "cursor-default"}`} // Adjust cursor based on navigation
                                 >
                                     {/* Icon */}
                                     <div

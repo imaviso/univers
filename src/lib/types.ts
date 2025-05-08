@@ -2,6 +2,7 @@ export const isAuthenticated = !!localStorage.getItem("token");
 
 export type UserType = {
     id: string;
+    uuid: string;
     idNumber: string;
     firstName: string;
     lastName: string;
@@ -19,19 +20,22 @@ export type UserType = {
 };
 
 export type UserDTO = {
-    id: number;
+    publicId: string;
     email: string;
     firstName: string;
     lastName: string;
-    id_number: string | null;
-    phone_number: string | null;
+    password?: string;
+    confirmPassword?: string;
+    idNumber: string | null;
+    phoneNumber: string | null;
     telephoneNumber: string | null;
-    roles: string;
-    departmentId: number | null;
+    role: UserRole;
+    department: DepartmentDTO | null;
     emailVerified: boolean | null;
     active: boolean;
     createdAt: string;
     updatedAt: string;
+    profileImagePath?: string | null;
 };
 
 export type UserRole =
@@ -60,14 +64,14 @@ export const STATUS_EQUIPMENT = [
 ];
 
 export type Equipment = {
-    id: number; // Changed from string to number if backend uses Long/Integer ID
+    publicId: string;
     name: string;
     availability: boolean;
     brand: string;
     quantity: number;
     equipmentOwner: UserDTO;
-    imagePath: string; // Path to the image file
-    status: // Use the exact enum values from backend
+    imagePath: string;
+    status:
         | "APPROVED"
         | "PENDING"
         | "CANCELED"
@@ -75,9 +79,10 @@ export type Equipment = {
         | "MAINTENANCE"
         | "NEED_REPLACEMENT"
         | "NEW";
-    createdAt: string; // ISO Date string
-    updatedAt: string; // ISO Date string
+    createdAt: string;
+    updatedAt: string;
 };
+
 export type LoginResponse = {
     token: string;
     tokenType: string;
@@ -102,96 +107,25 @@ export const ROLES = [
     { value: "EQUIPMENT_OWNER", label: "Equipment Owner" },
 ];
 
-export const DEPARTMENTS = [
-    { value: 1, label: "Vice-President for Academic Affairs (VPAA)" }, // Example ID
+export const DEPARTMENTS: Array<{ value: string; label: string }> = [
     {
-        value: 2, // Example ID
+        value: "uuid-vpaa-dept",
+        label: "Vice-President for Academic Affairs (VPAA)",
+    },
+    {
+        value: "uuid-msdo-dept",
         label: "Multimedia Solutions and Documentation Office (MSDO)",
     },
-    { value: 3, label: "Safety and Security Department (SSD)" }, // Example ID
-    { value: 4, label: "Executive Office (EO)" }, // Example ID
-    {
-        value: 5, // Example ID
-        label: "Office of Property Custodian (OPC)",
-    },
-    {
-        value: 6, // Example ID
-        label: "Finance and Accounting Office (FAO)",
-    },
-    {
-        value: 7, // Example ID
-        label: "Office of Admission and Scholarships (OAS)",
-    },
-    {
-        value: 8, // Example ID
-        label: "Students Success Office (SSO)",
-    },
-    {
-        value: 9, // Example ID
-        label: "Center for Communications, Creatives, and Marketing (CORE)",
-    },
-    { value: 10, label: "Elementary" }, // Example ID
-    { value: 11, label: "Junior High School (JHS)" }, // Example ID
-    { value: 12, label: "Senior High School (SHS)" }, // Example ID
-    { value: 13, label: "Physical Education (PE)" }, // Example ID
-    { value: 14, label: "College of Arts, Sciences, and Education (CASE)" }, // Example ID
-    {
-        value: 15, // Example ID
-        label: "College of Management, Business and Accountancy (CMBA)",
-    },
-    {
-        value: 16, // Example ID
-        label: "College of Nursing and Allied Health Services (CNAHS)",
-    },
-    { value: 17, label: "College of Engineering and Architecture (CEA)" }, // Example ID
-    { value: 18, label: "College of Criminal Justice (CCJ)" }, // Example ID
-    { value: 19, label: "College of Computer Studies (CCS)" }, // Example ID
+    { value: "uuid-ssd-dept", label: "Safety and Security Department (SSD)" },
+    { value: "uuid-ccs-dept", label: "College of Computer Studies (CCS)" },
 ];
 
-export const OLD_DEPARTMENTS = [
-    { value: "VPAA", label: "Vice-President for Academic Affairs (VPAA)" },
+export const OLD_DEPARTMENTS: Array<{ value: string; label: string }> = [
     {
-        value: "MSDO",
-        label: "Multimedia Solutions and Documentation Office (MSDO)",
+        value: "VPAA_OLD_UUID",
+        label: "Vice-President for Academic Affairs (VPAA)",
     },
-    { value: "SSD", label: "Safety and Security Department (SSD)" },
-    { value: "EO", label: "Executive Office (EO)" },
-    {
-        value: "OPC",
-        label: "Office of Property Custodian (OPC)",
-    },
-    {
-        value: "FAO",
-        label: "Finance and Accounting Office (FAO)",
-    },
-    {
-        value: "OAS",
-        label: "Office of Admission and Scholarships (OAS)",
-    },
-    {
-        value: "SSO",
-        label: "Students Success Office (SSO)",
-    },
-    {
-        value: "CORE",
-        label: "Center for Communications, Creatives, and Marketing (CORE)",
-    },
-    { value: "ELEM", label: "Elementary" },
-    { value: "JHS", label: "Junior High School (JHS)" },
-    { value: "SHS", label: "Senior High School (SHS)" },
-    { value: "PE", label: "Physical Education (PE)" },
-    { value: "CASE", label: "College of Arts, Sciences, and Education (CASE)" },
-    {
-        value: "CMBA",
-        label: "College of Management, Business and Accountancy (CMBA)",
-    },
-    {
-        value: "CNAHS",
-        label: "College of Nursing and Allied Health Services (CNAHS)",
-    },
-    { value: "CEA", label: "College of Engineering and Architecture (CEA)" },
-    { value: "CCJ", label: "College of Criminal Justice (CCJ)" },
-    { value: "CCS", label: "College of Computer Studies (CCS)" },
+    { value: "CCS_OLD_UUID", label: "College of Computer Studies (CCS)" },
 ];
 
 export const ACTIVE = [
@@ -199,8 +133,8 @@ export const ACTIVE = [
     { value: false, label: "False" },
 ];
 
-export type Venue = {
-    id: number;
+export type VenueDTO = {
+    publicId: string;
     name: string;
     location: string;
     venueOwner: UserDTO | null;
@@ -212,37 +146,38 @@ export type Venue = {
 export type EventDTOPayload = {
     eventName: string;
     eventType: string;
-    eventVenueId: number;
-    departmentId: number;
+    venuePublicId: string;
+    departmentPublicId: string;
     startTime: string;
     endTime: string;
-    organizer: {
-        // Nested organizer object
-        id: number;
-    };
 };
 
-export type EventDTOBackendResponse = {
-    id: number;
+export type EventDTO = {
+    publicId: string;
     eventName: string;
     eventType: string;
     organizer: UserDTO;
-    approvedLetterPath: string | null;
-    eventVenueId: number;
-    departmentId: number;
-    startTime: string; // Or Date if parsed on frontend
-    endTime: string; // Or Date if parsed on frontend
-    status: string; // e.g., "PENDING"
+    approvedLetterUrl: string | null;
+    imageUrl: string | null;
+    eventVenue: VenueDTO;
+    department: DepartmentDTO;
+    startTime: string;
+    endTime: string;
+    status: string;
+    approvals: EventApprovalDTO[] | null;
+    cancellationReason: string | null;
+    createdAt: string;
+    updatedAt: string;
 };
 
 export type EventInputType = {
     eventName: string;
     eventType: string;
-    eventVenueId: number;
-    departmentId: number;
+    eventVenuePublicId: string;
+    departmentPublicId: string;
     startTime: Date;
     endTime: Date;
-    approvedLetter: File[]; // Input is array
+    approvedLetter: File[];
 };
 
 export type EventOutputType = {
@@ -252,50 +187,46 @@ export type EventOutputType = {
     departmentId: number;
     startTime: Date;
     endTime: Date;
-    approvedLetter: File; // Output is single file
+    approvedLetter: File;
 };
 
 export type Event = {
-    id: number;
+    publicId: string;
     eventName: string;
     eventType: string;
-    organizer: UserType;
+    organizer: UserDTO;
     approvedLetterUrl: string | null;
     imageUrl: string | null;
-    eventVenueId: number;
-    departmentId: number;
+    eventVenue: VenueDTO;
+    department: DepartmentDTO;
     startTime: string;
     endTime: string;
     status: string;
 };
 
 export type EventApprovalDTO = {
-    id: number;
-    eventId: number;
-    userId: number;
+    publicId: string;
+    eventPublicId: string;
+    signedByUser: UserDTO;
     userRole: string;
-    department: string;
-    signedBy: string;
     remarks: string | null;
     status: string;
     dateSigned: string | null;
 };
 
-export type DepartmentType = {
-    id: number;
+export type DepartmentDTO = {
+    publicId: string;
     name: string;
     description: string | null;
-    deptHeadId: number | null | undefined;
     deptHead: UserDTO | null;
     createdAt: string;
     updatedAt: string;
 };
 
 export type VenueApprovalDTO = {
-    id: number;
-    venueReservationId: number;
-    userId: number;
-    signedBy: string;
+    publicId: string;
+    venueReservationPublicId: string;
+    signedByUser: UserDTO;
     userRole: string;
     remarks: string | null;
     status: string;
@@ -303,13 +234,12 @@ export type VenueApprovalDTO = {
 };
 
 export type VenueReservationDTO = {
-    id: number;
-    eventId: number | null;
+    publicId: string;
+    event: EventDTO | null;
     requestingUser: UserDTO;
-    departmentId: number | null;
-    departmentName: string | null;
-    venueId: number;
-    venueName: string;
+    department: DepartmentDTO | null;
+    venue: VenueDTO;
+    purpose: string;
     startTime: string;
     endTime: string;
     status: string;
@@ -318,34 +248,25 @@ export type VenueReservationDTO = {
     updatedAt: string | null;
 };
 
-// Input type for creating a reservation
 export type CreateVenueReservationInput = {
-    reservationData: Omit<
-        VenueReservationDTO,
-        | "id"
-        | "requestingUser"
-        | "venueName"
-        | "departmentName"
-        | "approvals"
-        | "createdAt"
-        | "updatedAt"
-        | "status"
-    > & {
-        // Add specific fields needed for creation if different from DTO
-        // Example: maybe only venueId, startTime, endTime are needed initially
-    };
+    event?: { publicId: string };
+    requestingUser?: { publicId: string };
+    department?: { publicId: string };
+    venue: { publicId: string };
+    purpose: string;
+    startTime: string;
+    endTime: string;
 };
 
 export type ReservationActionInput = {
-    reservationId: number;
+    reservationPublicId: string;
     remarks?: string;
 };
 
 export type EquipmentApprovalDTO = {
-    id: number;
-    equipmentReservationId: number;
-    userId: number;
-    signedBy: string;
+    publicId: string;
+    equipmentReservationPublicId: string;
+    signedByUser: UserDTO;
     userRole: string;
     remarks: string | null;
     status: string;
@@ -353,14 +274,11 @@ export type EquipmentApprovalDTO = {
 };
 
 export type EquipmentReservationDTO = {
-    id: number;
-    eventId: number;
-    eventName: string;
+    publicId: string;
+    event: EventDTO;
     requestingUser: UserDTO;
-    departmentId: number;
-    departmentName: string;
-    equipmentId: number;
-    equipmentName: string;
+    department: DepartmentDTO;
+    equipment: Equipment;
     quantity: number;
     startTime: string;
     endTime: string;
@@ -371,17 +289,15 @@ export type EquipmentReservationDTO = {
 };
 
 export type CreateEquipmentReservationInput = {
-    reservationData: {
-        eventId: number;
-        equipmentId: number;
-        quantity: number;
-        departmentId?: number;
-        startTime?: string;
-        endTime?: string;
-    };
+    event: { publicId: string };
+    equipment: { publicId: string };
+    quantity: number;
+    department?: { publicId: string };
+    startTime?: string;
+    endTime?: string;
 };
 
 export type EquipmentActionInput = {
-    reservationId: number;
+    reservationPublicId: string;
     remarks?: string;
 };

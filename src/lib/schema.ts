@@ -15,7 +15,10 @@ export const personalInfoSchema = v.object({
     idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),
     firstName: v.pipe(v.string(), v.nonEmpty("First name is required")),
     lastName: v.pipe(v.string(), v.nonEmpty("Last name is required")),
-    department: v.pipe(v.string(), v.nonEmpty("Department is required")),
+    departmentPublicId: v.pipe(
+        v.string(),
+        v.nonEmpty("Department is required"),
+    ),
 });
 
 export type PersonalInfoInput = v.InferInput<typeof personalInfoSchema>;
@@ -131,15 +134,15 @@ export const eventSchema = v.pipe(
             v.string("Event Type is required"),
             v.nonEmpty("Event Type is required"),
         ),
-        eventVenueId: v.pipe(
-            v.number("Venue ID must be a number"),
-            v.integer("Venue ID must be an integer"),
-            v.minValue(1, "Please select a valid venue."),
+        venuePublicId: v.pipe(
+            v.string("Event Type is required"),
+            v.nonEmpty("Event Type is required"),
+            v.uuid("Event Venue Public ID must be a valid UUID"),
         ),
-        departmentId: v.pipe(
-            v.number("Department ID must be a number"),
-            v.integer("Department ID must be an integer"),
-            v.minValue(1, "Please select a valid department."),
+        departmentPublicId: v.pipe(
+            v.string("Event Type is required"),
+            v.nonEmpty("Event Type is required"),
+            v.uuid("Department Public ID must be a valid UUID"),
         ),
         startTime: v.date("Start date is required"),
         endTime: v.date("End date is required"),
@@ -192,18 +195,16 @@ export const editEventSchema = v.pipe(
                 v.nonEmpty("Event Type cannot be empty if provided"),
             ),
         ),
-        eventVenueId: v.optional(
+        venuePublicId: v.optional(
             v.pipe(
-                v.number("Venue ID must be a number"),
-                v.integer("Venue ID must be an integer"),
-                v.minValue(1, "Please select a valid facility."),
+                v.string("Venue Public ID must be a string"),
+                v.uuid("Venue Public ID must be a valid UUID"),
             ),
         ),
-        departmentId: v.optional(
+        departmentPublicId: v.optional(
             v.pipe(
-                v.number("Department ID must be a number"),
-                v.integer("Department ID must be an integer"),
-                v.minValue(1, "Please select a valid department."),
+                v.string("Department Public ID must be a string"),
+                v.uuid("Department Public ID must be a valid UUID"),
             ),
         ),
         startTime: v.optional(v.date()),
@@ -250,7 +251,7 @@ export const userFormSchema = v.pipe(
         idNumber: v.pipe(v.string(), v.nonEmpty("ID Number is required")),
         firstName: v.pipe(v.string(), v.nonEmpty("First name is required")),
         lastName: v.pipe(v.string(), v.nonEmpty("Last name is required")),
-        departmentId: v.string("Department selection is required."),
+        departmentPublicId: v.string("Department selection is required."),
         email: v.pipe(
             v.string(),
             v.nonEmpty("Email is required"),
@@ -351,12 +352,14 @@ export const editUserFormSchema = v.pipe(
         ),
         confirmPassword: v.optional(v.string(), ""),
         role: v.pipe(v.string(), v.nonEmpty("Role is required")),
-        departmentId: v.string("Department selection is required."),
+        departmentPublicId: v.string("Department selection is required."),
         telephoneNumber: v.pipe(
             v.string(),
             v.nonEmpty("Telephone number is required"),
         ),
         phoneNumber: v.optional(v.string(), ""),
+        active: v.optional(v.boolean()),
+        emailVerified: v.optional(v.boolean()),
     }),
     v.forward(
         v.check((input) => {
@@ -374,7 +377,6 @@ export const editUserFormSchema = v.pipe(
         ["confirmPassword"],
     ),
 );
-
 export type EditUserFormInput = v.InferInput<typeof editUserFormSchema>;
 export type EditUserFormOutput = v.InferOutput<typeof editUserFormSchema>;
 
@@ -481,20 +483,11 @@ export const venueSchema = v.object({
         v.string("Location is required"),
         v.nonEmpty("Location is required"),
     ),
-    venueOwnerId: v.optional(
-        v.pipe(
-            v.number("Venue Owner ID must be a number"),
-            v.integer("Venue Owner ID must be an integer"),
-            v.minValue(1, "Invalid Venue Owner ID"),
-        ),
-    ),
-    // Update image schema for FileUpload (File[]) and make it optional
+    venueOwnerId: v.optional(v.pipe(v.string())),
     image: v.optional(
         v.pipe(
             v.array(
-                // Array of files
                 v.pipe(
-                    // Schema for each file in the array
                     v.instance(File, "Each item must be a file."),
                     v.mimeType(
                         ["image/jpeg", "image/png", "image/webp"],
@@ -502,20 +495,16 @@ export const venueSchema = v.object({
                     ),
                     v.maxSize(1024 * 1024 * 10, "File too large (max 10MB)."),
                 ),
-                "Image must be a list of files.", // Message for array schema
+                "Image must be a list of files.",
             ),
-            // Validations/transformations on the array as a whole
             v.check((arr) => arr.length <= 1, "Only one file allowed."),
-            v.transform((arr) => (arr.length > 0 ? arr[0] : undefined)), // Transform File[] to single File or undefined
+            v.transform((arr) => (arr.length > 0 ? arr[0] : undefined)),
         ),
     ),
 });
 
 export type VenueInput = v.InferInput<typeof venueSchema>;
 
-// ... existing schemas ...
-
-// Schema for the final step of password reset/change via code
 export const setNewPasswordSchema = v.pipe(
     v.object({
         newPassword: v.pipe(
@@ -538,7 +527,7 @@ export const setNewPasswordSchema = v.pipe(
             (input) => input.newPassword === input.confirmPassword,
             "New passwords do not match.",
         ),
-        ["confirmPassword"], // Apply error to confirmPassword field
+        ["confirmPassword"],
     ),
 );
 export type SetNewPasswordInput = v.InferInput<typeof setNewPasswordSchema>;
@@ -565,13 +554,7 @@ export const equipmentDataSchema = v.object({
         v.minValue(0, "Quantity cannot be negative."),
     ),
     status: v.pipe(EquipmentStatusSchema, v.nonEmpty("Status is required.")),
-    ownerId: v.optional(
-        v.pipe(
-            v.number("Owner ID must be a number."),
-            v.integer("Owner ID must be an integer."),
-            v.minValue(1, "Invalid Owner ID."),
-        ),
-    ),
+    ownerId: v.optional(v.pipe(v.string("Owner ID must be a string."))),
 });
 
 export type EquipmentDTOInput = v.InferInput<typeof equipmentDataSchema>;
@@ -583,13 +566,7 @@ export const departmentSchema = v.object({
         v.nonEmpty("Department Name is required"),
     ),
     description: v.optional(v.string()),
-    deptHeadId: v.optional(
-        v.pipe(
-            v.number("Dept Head ID must be a number"),
-            v.integer("Dept Head ID must be an integer"),
-            v.minValue(1, "Invalid Dept Head ID"),
-        ),
-    ),
+    deptHeadId: v.optional(v.string()),
 });
 
 export type DepartmentInput = v.InferInput<typeof departmentSchema>;
@@ -597,19 +574,11 @@ export type DepartmentInput = v.InferInput<typeof departmentSchema>;
 export const editDepartmentSchema = v.object({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
-    deptHeadId: v.optional(
-        v.pipe(
-            v.number("Dept Head ID must be a number"),
-            v.integer("Dept Head ID must be an integer"),
-            v.minValue(1, "Invalid Dept Head ID"),
-        ),
-    ),
+    deptHeadId: v.optional(v.string()),
 });
 
 export type EditDepartmentInput = v.InferInput<typeof editDepartmentSchema>;
 
-// Schema for the Frontend Form to Create a Venue Reservation
-// Adapt fields based on your actual form inputs
 export const CreateVenueReservationFormSchema = v.pipe(
     v.object({
         eventId: v.number("Event ID is required."),
@@ -634,26 +603,21 @@ export const CreateVenueReservationFormSchema = v.pipe(
                         ],
                         "Invalid file type. Please select a PDF or image.",
                     ),
-                    v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."), // Validation 2 for the element
+                    v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."),
                 ),
-                "Approved letter must be a list of files.", // Message for the array schema itself
+                "Approved letter must be a list of files.",
             ),
-            // Validations/transformations on the array as a whole
             v.check((arr) => arr.length > 0, "Approved letter is required."),
             v.check((arr) => arr.length <= 1, "Only one file allowed."),
-            v.transform((arr) => arr[0]), // Transform File[] to single File
+            v.transform((arr) => arr[0]),
         ),
-
-        // Add other fields collected in the form (e.g., eventName if creating ad-hoc)
-        // eventName: v.optional(v.string([v.minLength(2, "Event name too short")])),
     }),
-    // Validate that end time is after start time
     v.forward(
         v.check(
             (input) => isBefore(input.startTime, input.endTime),
             "End date/time cannot be before start date/time.",
         ),
-        ["endTime"], // Apply error to endTime field
+        ["endTime"],
     ),
 );
 
@@ -664,10 +628,7 @@ export type CreateVenueReservationFormOutput = v.InferOutput<
     typeof CreateVenueReservationFormSchema
 >;
 
-// Schema for the JSON payload sent when approving/rejecting
 export const ReservationActionPayloadSchema = v.object({
-    // Remarks are optional in the schema itself.
-    // The requirement for rejection should be handled in the API call logic or mutation.
     remarks: v.optional(v.string()),
 });
 

@@ -32,7 +32,7 @@ import {
     venuesQueryOptions,
 } from "@/lib/query";
 import type { EquipmentDTOInput } from "@/lib/schema";
-import type { Equipment, UserType } from "@/lib/types";
+import type { Equipment, UserDTO } from "@/lib/types";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
@@ -109,7 +109,7 @@ function EquipmentInventory() {
     const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(
         null,
     );
-    const [equipmentToDelete, setEquipmentToDelete] = useState<number | null>(
+    const [equipmentToDelete, setEquipmentToDelete] = useState<string | null>(
         null,
     );
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -128,18 +128,16 @@ function EquipmentInventory() {
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: events = [] } = useSuspenseQuery(ownEventsQueryOptions);
 
-    // Fetch all users ONLY if the current user is SUPER_ADMIN (for owner selection)
     const { data: allUsers = [] } = useQuery({
         ...usersQueryOptions,
-        enabled: role === "SUPER_ADMIN", // Enable only for SUPER_ADMIN
+        enabled: role === "SUPER_ADMIN",
     });
 
-    // Derive equipment owners list if SUPER_ADMIN
     const equipmentOwners = useMemo(
         () =>
             role === "SUPER_ADMIN"
                 ? allUsers.filter(
-                      (user: UserType) => user.role === "EQUIPMENT_OWNER",
+                      (user: UserDTO) => user.role === "EQUIPMENT_OWNER",
                   )
                 : [],
         [role, allUsers],
@@ -179,7 +177,7 @@ function EquipmentInventory() {
     const deleteMutation = useMutation<
         void, // Return type of mutationFn
         Error, // Error type
-        { equipmentId: number; userId: number } // Variables type
+        { equipmentId: string; userId: string } // Variables type
     >({
         mutationFn: ({ equipmentId, userId }) =>
             deleteEquipment(equipmentId, userId), // Destructure variables
@@ -217,7 +215,7 @@ function EquipmentInventory() {
             // Single delete
             deleteMutation.mutate({
                 equipmentId: equipmentToDelete,
-                userId: Number(currentUser.id),
+                userId: currentUser.publicId,
             });
         }
         // Bulk delete logic removed as backend doesn't support it
@@ -238,13 +236,12 @@ function EquipmentInventory() {
             toast.error("User not found. Cannot submit form.");
             return;
         }
-        const currentUserId = Number(currentUser.id); // Ensure ID is number
 
         if (editingEquipment) {
             // Edit existing equipment
             editMutation.mutate({
-                equipmentId: editingEquipment.id,
-                userId: currentUserId, // Pass current user's ID
+                equipmentId: editingEquipment.publicId,
+                userId: currentUser.publicId, // Pass current user's ID
                 equipmentData: data, // Pass data including optional ownerId
                 imageFile: imageFile, // Pass optional image file
             });
@@ -256,7 +253,7 @@ function EquipmentInventory() {
                 return;
             }
             addMutation.mutate({
-                userId: currentUserId, // Pass current user's ID
+                userId: currentUser.publicId, // Pass current user's ID
                 equipmentData: data, // Pass data including optional ownerId
                 imageFile: imageFile,
             });
@@ -399,8 +396,8 @@ function EquipmentInventory() {
                                               role === "SUPER_ADMIN" ||
                                               (role === "EQUIPMENT_OWNER" &&
                                                   row.original.equipmentOwner
-                                                      ?.id ===
-                                                      Number(currentUser?.id))
+                                                      ?.publicId ===
+                                                      currentUser?.publicId)
                                           ) // Compare numbers
                                       )
                                   }
@@ -493,8 +490,8 @@ function EquipmentInventory() {
                               const canManage =
                                   role === "SUPER_ADMIN" ||
                                   (role === "EQUIPMENT_OWNER" &&
-                                      item.equipmentOwner?.id ===
-                                          currentUser?.id);
+                                      item.equipmentOwner?.publicId ===
+                                          currentUser?.publicId);
 
                               if (!canManage) {
                                   return null; // No actions if user cannot manage
@@ -503,7 +500,7 @@ function EquipmentInventory() {
                               const isMutatingItem =
                                   deleteMutation.isPending &&
                                   deleteMutation.variables?.equipmentId ===
-                                      item.id;
+                                      item.publicId;
 
                               return (
                                   <DropdownMenu>
@@ -533,7 +530,9 @@ function EquipmentInventory() {
                                           <DropdownMenuItem
                                               className="text-destructive"
                                               onClick={() => {
-                                                  setEquipmentToDelete(item.id);
+                                                  setEquipmentToDelete(
+                                                      item.publicId,
+                                                  );
                                                   setIsDeleteDialogOpen(true);
                                               }}
                                               disabled={isMutatingItem} // Disable if this item is being deleted
@@ -551,7 +550,7 @@ function EquipmentInventory() {
         ],
         [
             role,
-            currentUser?.id,
+            currentUser?.publicId,
             editMutation.isPending,
             deleteMutation.isPending,
             deleteMutation.variables,
@@ -753,7 +752,6 @@ function EquipmentInventory() {
                                 // Pass the state setter directly
                                 onRowSelectionChange={setRowSelection}
                                 // Enable row selection (managed by DataTable)
-                                enableRowSelection
                             />
                         )}
 
@@ -765,15 +763,15 @@ function EquipmentInventory() {
                                 const canManage =
                                     role === "SUPER_ADMIN" ||
                                     (role === "EQUIPMENT_OWNER" &&
-                                        item.equipmentOwner?.id ===
-                                            Number(currentUser?.id)); // Compare numbers
+                                        item.equipmentOwner?.publicId ===
+                                            currentUser?.publicId); // Compare numbers
                                 const isMutatingItem =
                                     deleteMutation.isPending &&
                                     deleteMutation.variables?.equipmentId ===
-                                        item.id;
+                                        item.publicId;
                                 return (
                                     <Card
-                                        key={item.id}
+                                        key={item.publicId}
                                         className="overflow-hidden"
                                     >
                                         <CardHeader className="p-0 relative">
@@ -843,7 +841,7 @@ function EquipmentInventory() {
                                                                 className="text-destructive"
                                                                 onClick={() => {
                                                                     setEquipmentToDelete(
-                                                                        item.id,
+                                                                        item.publicId,
                                                                     );
                                                                     setIsDeleteDialogOpen(
                                                                         true,
@@ -940,7 +938,7 @@ function EquipmentInventory() {
                             addMutation.isPending || editMutation.isPending
                         }
                         currentUserRole={role}
-                        equipmentOwners={equipmentOwners} // Pass owners list (UserType[])
+                        equipmentOwners={equipmentOwners}
                     />
                 )}
 

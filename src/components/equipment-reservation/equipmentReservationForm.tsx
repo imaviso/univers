@@ -18,7 +18,7 @@ import {
     type EquipmentReservationFormInput,
     equipmentReservationFormSchema,
 } from "@/lib/schema";
-import type { Equipment, Event } from "@/lib/types";
+import type { Equipment, EventDTO } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { parseISO } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -30,7 +30,7 @@ interface EquipmentReservationFormDialogProps {
     onSubmit: (data: {
         selectedEquipment: EquipmentReservationFormInput["selectedEquipment"];
     }) => void;
-    event: Event;
+    event: EventDTO;
     equipment: Equipment[];
     isLoading?: boolean;
 }

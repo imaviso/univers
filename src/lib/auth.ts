@@ -1,4 +1,4 @@
-import type { UserType } from "@/lib/types";
+import type { UserDTO, UserType } from "@/lib/types";
 export const API_BASE_URL = "http://localhost:8080"; // Backend API URL
 
 export const userSignIn = async (email: string, password: string) => {
@@ -59,7 +59,7 @@ export const userSignUp = async (
                 idNumber: idNumber,
                 firstName: firstName,
                 lastName: lastName,
-                departmentId: department,
+                departmentPublicId: department,
                 email: email,
                 telephoneNumber: telephoneNumber,
                 phoneNumber: phoneNumber,
@@ -125,7 +125,7 @@ export const userSignOut = async () => {
     }
 };
 
-export const getCurrentUser = async (): Promise<UserType | null> => {
+export const getCurrentUser = async (): Promise<UserDTO | null> => {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
             method: "GET",

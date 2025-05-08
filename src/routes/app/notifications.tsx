@@ -125,7 +125,7 @@ function NotificationsPage() {
     const [currentPage, setCurrentPage] = useState(0);
     const [filter, setFilter] = useState<"all" | "unread">("all");
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const notificationsPerPage = 10;
 
     const {
@@ -156,7 +156,7 @@ function NotificationsPage() {
     const filteredNotifications = useMemo(() => {
         return notifications
             .filter((notification) => {
-                if (filter === "unread") return !notification.read;
+                if (filter === "unread") return !notification.isRead;
                 return true;
             })
             .filter((notification) => {
@@ -175,7 +175,7 @@ function NotificationsPage() {
                 const requesterName =
                     notification.message?.requesterName?.toLowerCase() || "";
                 const actorName =
-                    notification.message?.actorName?.toLowerCase() || "";
+                    notification.message?.approver?.toLowerCase() || "";
 
                 return (
                     title.includes(searchLower) ||
@@ -188,7 +188,7 @@ function NotificationsPage() {
             });
     }, [notifications, filter, searchQuery]);
 
-    const handleMarkRead = (id: number) => {
+    const handleMarkRead = (id: string) => {
         markReadMutation.mutate([id]);
     };
 
@@ -214,14 +214,16 @@ function NotificationsPage() {
 
     const handleSelectAll = (checked: boolean | "indeterminate") => {
         if (checked === true) {
-            setSelectedIds(new Set(filteredNotifications.map((n) => n.id)));
+            setSelectedIds(
+                new Set(filteredNotifications.map((n) => n.publicId)),
+            );
         } else {
             setSelectedIds(new Set());
         }
     };
 
     const handleSelectOne = (
-        id: number,
+        id: string,
         checked: boolean | "indeterminate",
     ) => {
         setSelectedIds((prev) => {
@@ -385,7 +387,7 @@ function NotificationsPage() {
                             // Use eventId from the message payload if available, otherwise fallback to relatedEntityId
                             const eventId = notification.message?.eventId;
                             const primaryEntityId =
-                                notification.relatedEntityId;
+                                notification.relatedEntityPublicId;
 
                             let canNavigate = false;
                             let targetPath = "";
@@ -413,7 +415,7 @@ function NotificationsPage() {
 
                             const handleInteraction = () => {
                                 if (!notification.isRead) {
-                                    handleMarkRead(notification.id);
+                                    handleMarkRead(notification.publicId);
                                 }
                                 if (canNavigate) {
                                     navigate({ to: targetPath });
@@ -422,7 +424,7 @@ function NotificationsPage() {
 
                             return (
                                 <div
-                                    key={notification.id}
+                                    key={notification.publicId}
                                     role={canNavigate ? "button" : undefined} // Make it a button if navigable
                                     tabIndex={canNavigate ? 0 : undefined} // Make it focusable if navigable
                                     className={`flex items-start gap-4 p-4 rounded-lg border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
@@ -440,24 +442,24 @@ function NotificationsPage() {
                                             handleInteraction();
                                         }
                                     }}
-                                    aria-labelledby={`notification-title-${notification.id}`} // Link title for screen readers
+                                    aria-labelledby={`notification-title-${notification.publicId}`} // Link title for screen readers
                                 >
                                     {/* Checkbox */}
                                     <Checkbox
-                                        id={`select-${notification.id}`}
+                                        id={`select-${notification.publicId}`}
                                         checked={selectedIds.has(
-                                            notification.id,
+                                            notification.publicId,
                                         )}
                                         onCheckedChange={(checked) => {
                                             // Stop propagation to prevent navigation when clicking checkbox
                                             handleSelectOne(
-                                                notification.id,
+                                                notification.publicId,
                                                 checked,
                                             );
                                         }}
                                         onClick={(e) => e.stopPropagation()} // Prevent outer div click
                                         className="mt-1"
-                                        aria-labelledby={`notification-title-${notification.id}`}
+                                        aria-labelledby={`notification-title-${notification.publicId}`}
                                     />
                                     {/* Icon (Consistent with Dropdown) */}
                                     <div
@@ -468,22 +470,27 @@ function NotificationsPage() {
                                     {/* Content (Consistent with Dropdown) */}
                                     <div className="flex-1 space-y-0.5">
                                         <h3
-                                            id={`notification-title-${notification.id}`}
+                                            id={`notification-title-${notification.publicId}`}
                                             className="text-sm font-medium leading-snug line-clamp-1"
                                         >
                                             {title}
                                         </h3>
                                         {/* Main Message */}
                                         <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
-                                            {typeof notification.message
-                                                ?.message === "string"
-                                                ? notification.message.message
-                                                : notification.message?.message
-                                                  ? JSON.stringify(
-                                                        notification.message
-                                                            .message,
-                                                    ).slice(0, 150) // Show a bit more context
-                                                  : "No message content."}
+                                            {
+                                                typeof notification.message ===
+                                                "string"
+                                                    ? notification.message // Display if notification.message itself is the string
+                                                    : typeof notification
+                                                            .message
+                                                            ?.message ===
+                                                        "string" // Check nested if message is object
+                                                      ? notification.message
+                                                            .message
+                                                      : notification.message // Check if message object exists
+                                                        ? `Details: ${JSON.stringify(notification.message).slice(0, 150)}...` // Stringify the whole message object for context
+                                                        : "No message content." // Fallback
+                                            }
                                         </p>
                                         {/* Additional Fields (Consistent with Dropdown) */}
                                         {notification.message?.eventName && (

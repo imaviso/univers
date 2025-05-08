@@ -28,7 +28,7 @@ import { addDepartment } from "@/lib/api";
 import { addDepartmentDialogAtom } from "@/lib/atoms";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import { type DepartmentInput, departmentSchema } from "@/lib/schema";
-import type { UserType } from "@/lib/types";
+import type { UserDTO } from "@/lib/types";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import {
     useMutation,
@@ -98,7 +98,7 @@ export function AddDepartmentFormDialog() {
         const payload = {
             ...values,
             deptHeadId: values.deptHeadId
-                ? Number(values.deptHeadId)
+                ? String(values.deptHeadId)
                 : undefined,
         };
         addMutation.mutate(payload);
@@ -184,10 +184,10 @@ export function AddDepartmentFormDialog() {
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {users?.map((user: UserType) => (
+                                            {users?.map((user: UserDTO) => (
                                                 <SelectItem
-                                                    key={user.id}
-                                                    value={user.id.toString()}
+                                                    key={user.publicId}
+                                                    value={user.publicId.toString()}
                                                 >
                                                     {user.firstName}{" "}
                                                     {user.lastName} (

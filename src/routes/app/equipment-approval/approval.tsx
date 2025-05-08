@@ -111,7 +111,7 @@ export const Route = createFileRoute("/app/equipment-approval/approval")({
 type ViewMode = "all" | "pending" | "approved" | "rejected";
 
 type SingleActionInfo = {
-    id: number | null;
+    id: string | null;
     type: "approve" | "reject" | null;
 };
 
@@ -119,7 +119,7 @@ export function EquipmentReservationApproval() {
     const navigate = useNavigate();
     const { authState } = useRouteContext({ from: "/app" });
     const currentUserRole = authState?.role as UserRole | undefined;
-    const currentUserId = Number(authState?.id);
+    const currentUserId = authState?.publicId;
 
     const [viewMode, setViewMode] = useState<ViewMode>("pending");
 
@@ -159,7 +159,7 @@ export function EquipmentReservationApproval() {
     }, [reservations, viewMode]);
 
     const handleViewDetails = React.useCallback(
-        (eventId: number | undefined) => {
+        (eventId: string | undefined) => {
             if (eventId === undefined) return;
             navigate({ to: `/app/events/${eventId}` });
         },
@@ -167,7 +167,7 @@ export function EquipmentReservationApproval() {
     );
 
     const openSingleApproveDialog = React.useCallback(
-        (reservationId: number) => {
+        (reservationId: string) => {
             setSingleActionInfo({ id: reservationId, type: "approve" });
             setSingleActionRemarks("");
         },
@@ -175,7 +175,7 @@ export function EquipmentReservationApproval() {
     );
 
     const openSingleRejectDialog = React.useCallback(
-        (reservationId: number) => {
+        (reservationId: string) => {
             setSingleActionInfo({ id: reservationId, type: "reject" });
             setSingleActionRemarks("");
         },
@@ -193,7 +193,7 @@ export function EquipmentReservationApproval() {
 
         approveMutation.mutate(
             {
-                reservationId: singleActionInfo.id,
+                reservationPublicId: singleActionInfo.id,
                 remarks: singleActionRemarks,
             },
             {
@@ -219,7 +219,7 @@ export function EquipmentReservationApproval() {
 
         rejectMutation.mutate(
             {
-                reservationId: singleActionInfo.id,
+                reservationPublicId: singleActionInfo.id,
                 remarks: singleActionRemarks,
             },
             {
@@ -243,11 +243,12 @@ export function EquipmentReservationApproval() {
             const hasCurrentUserActed =
                 currentUserId != null &&
                 reservation.approvals?.some(
-                    (approval) => approval.userId === currentUserId,
+                    (approval) =>
+                        approval.signedByUser.publicId === currentUserId,
                 );
             return isPending && !hasCurrentUserActed;
         });
-        const selectedIds = eligibleRows.map((row) => row.original.id);
+        const selectedIds = eligibleRows.map((row) => row.original.publicId);
 
         if (selectedIds.length === 0) {
             toast.info("No eligible reservations selected for approval.");
@@ -258,7 +259,7 @@ export function EquipmentReservationApproval() {
 
         const promises = selectedIds.map((id) =>
             approveMutation.mutateAsync({
-                reservationId: id,
+                reservationPublicId: id,
                 remarks: bulkApproveRemarks,
             }),
         );
@@ -285,11 +286,12 @@ export function EquipmentReservationApproval() {
             const hasCurrentUserActed =
                 currentUserId != null &&
                 reservation.approvals?.some(
-                    (approval) => approval.userId === currentUserId,
+                    (approval) =>
+                        approval.signedByUser.publicId === currentUserId,
                 );
             return isPending && !hasCurrentUserActed;
         });
-        const selectedIds = eligibleRows.map((row) => row.original.id);
+        const selectedIds = eligibleRows.map((row) => row.original.publicId);
 
         if (selectedIds.length === 0) {
             toast.info("No eligible reservations selected for rejection.");
@@ -304,7 +306,7 @@ export function EquipmentReservationApproval() {
 
         const promises = selectedIds.map((id) =>
             rejectMutation.mutateAsync({
-                reservationId: id,
+                reservationPublicId: id,
                 remarks: bulkRejectionRemarks,
             }),
         );
@@ -361,16 +363,18 @@ export function EquipmentReservationApproval() {
                     <Button
                         variant="link"
                         className="p-0 h-auto font-medium"
-                        onClick={() => handleViewDetails(row.original.eventId)}
+                        onClick={() =>
+                            handleViewDetails(row.original.event.publicId)
+                        }
                     >
-                        {row.original.eventName ?? "N/A"}
+                        {row.original.event.eventName ?? "N/A"}
                     </Button>
                 ),
             },
             {
                 accessorKey: "equipmentName",
                 header: "Equipment",
-                cell: ({ row }) => row.original.equipmentName ?? "N/A",
+                cell: ({ row }) => row.original.equipment.name ?? "N/A",
             },
             {
                 accessorKey: "quantity",
@@ -386,7 +390,7 @@ export function EquipmentReservationApproval() {
             {
                 accessorKey: "departmentName",
                 header: "Department",
-                cell: ({ row }) => row.original.departmentName ?? "N/A",
+                cell: ({ row }) => row.original.department.name ?? "N/A",
             },
             {
                 accessorKey: "startTime",
@@ -426,7 +430,8 @@ export function EquipmentReservationApproval() {
                         currentUserId != null
                             ? reservation.approvals?.find(
                                   (approval) =>
-                                      approval.userId === currentUserId,
+                                      approval.signedByUser.publicId ===
+                                      currentUserId,
                               )
                             : undefined;
 
@@ -478,7 +483,8 @@ export function EquipmentReservationApproval() {
                         currentUserId != null
                             ? reservation.approvals?.find(
                                   (approval) =>
-                                      approval.userId === currentUserId,
+                                      approval.signedByUser.publicId ===
+                                      currentUserId,
                               )
                             : undefined;
                     const hasCurrentUserActed = !!currentUserApproval;
@@ -504,7 +510,7 @@ export function EquipmentReservationApproval() {
                                     <DropdownMenuItem
                                         onClick={() =>
                                             handleViewDetails(
-                                                reservation.eventId,
+                                                reservation.event.publicId,
                                             )
                                         }
                                     >
@@ -522,7 +528,7 @@ export function EquipmentReservationApproval() {
                                             <DropdownMenuItem
                                                 onClick={() =>
                                                     openSingleApproveDialog(
-                                                        reservation.id,
+                                                        reservation.publicId,
                                                     )
                                                 }
                                                 disabled={
@@ -535,7 +541,7 @@ export function EquipmentReservationApproval() {
                                             <DropdownMenuItem
                                                 onClick={() =>
                                                     openSingleRejectDialog(
-                                                        reservation.id,
+                                                        reservation.publicId,
                                                     )
                                                 }
                                                 disabled={
@@ -588,7 +594,7 @@ export function EquipmentReservationApproval() {
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
-        getRowId: (row) => row.id.toString(),
+        getRowId: (row) => row.publicId,
     });
 
     const stats = useMemo(() => {
@@ -612,7 +618,8 @@ export function EquipmentReservationApproval() {
             const hasCurrentUserActed =
                 currentUserId != null &&
                 reservation.approvals?.some(
-                    (approval) => approval.userId === currentUserId,
+                    (approval) =>
+                        approval.signedByUser.publicId === currentUserId,
                 );
             return isPending && !hasCurrentUserActed;
         }).length;

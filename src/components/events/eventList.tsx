@@ -14,7 +14,7 @@ import {
     useCurrentUser,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
-import type { Event, Venue } from "@/lib/types"; // Ensure Venue is imported if not already
+import type { EventDTO, VenueDTO } from "@/lib/types"; // Ensure Venue is imported if not already
 import { formatDateRange, getInitials } from "@/lib/utils";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
@@ -46,9 +46,9 @@ function EventCard({
     venueMap,
     onNavigate,
 }: {
-    event: Event;
-    venueMap: Map<number, string>;
-    onNavigate: (eventId: number | undefined) => void;
+    event: EventDTO;
+    venueMap: Map<string, string>;
+    onNavigate: (eventId: string | undefined) => void;
 }) {
     let dateDisplayString = "Date not available";
 
@@ -66,13 +66,13 @@ function EventCard({
             dateDisplayString = formatDateRange(startDate, endDate);
         } else {
             console.error(
-                `Failed to parse dates for event ${event.id}: start='${event.startTime}', end='${event.endTime}'`,
+                `Failed to parse dates for event ${event.publicId}: start='${event.startTime}', end='${event.endTime}'`,
             );
             dateDisplayString = "Invalid date format received";
         }
     } else {
         console.warn(
-            `Missing or invalid date strings for event ${event.id}: start='${event.startTime}', end='${event.endTime}'`,
+            `Missing or invalid date strings for event ${event.publicId}: start='${event.startTime}', end='${event.endTime}'`,
         );
         dateDisplayString = "Date missing";
     }
@@ -83,7 +83,7 @@ function EventCard({
 
     return (
         <Card
-            key={event.id ?? `temp-${Math.random()}`}
+            key={event.publicId ?? `temp-${Math.random()}`}
             className="overflow-hidden transition-all hover:shadow-md flex flex-col"
         >
             <CardHeader>
@@ -110,7 +110,7 @@ function EventCard({
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <MapPin className="h-4 w-4" />
                         <span>
-                            {venueMap.get(event.eventVenueId) ??
+                            {venueMap.get(event.eventVenue?.publicId) ??
                                 "Unknown Venue"}
                         </span>
                     </div>
@@ -136,8 +136,8 @@ function EventCard({
                     variant="ghost"
                     size="icon"
                     className="flex items-center gap-2 text-sm font-normal"
-                    onClick={() => onNavigate(event.id)}
-                    disabled={typeof event.id !== "number"}
+                    onClick={() => onNavigate(event.publicId)}
+                    disabled={typeof event.publicId !== "string"}
                 >
                     <span className="sr-only">View Details</span>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -162,11 +162,11 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
     });
 
     const venueMap = new Map(
-        venues.map((venue: Venue) => [venue.id, venue.name]),
+        venues.map((venue: VenueDTO) => [venue.publicId, venue.name]),
     );
 
-    const handleNavigate = (eventId: number | undefined) => {
-        if (typeof eventId === "number") {
+    const handleNavigate = (eventId: string | undefined) => {
+        if (typeof eventId === "string") {
             navigate({ to: `/app/events/${eventId}` });
         } else {
             console.warn("Attempted to navigate with invalid event ID");
@@ -204,9 +204,9 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pt-4">
-                    {eventsToDisplay.map((event: Event) => (
+                    {eventsToDisplay.map((event) => (
                         <EventCard
-                            key={`${activeTab}-${event.id}`} // Ensure unique key across tabs
+                            key={`${activeTab}-${event.publicId}`}
                             event={event}
                             venueMap={venueMap}
                             onNavigate={handleNavigate}

@@ -27,7 +27,7 @@ export default function EquipmentList({
 }: EquipmentListProps) {
     const handleCheckboxChange = (
         checked: boolean | string,
-        equipmentId: number,
+        equipmentId: string,
     ) => {
         const currentSelection = [...value];
         const equipmentIdStr = equipmentId.toString();
@@ -43,13 +43,15 @@ export default function EquipmentList({
         onChange(currentSelection);
     };
 
-    const handleQuantityChange = (newQuantity: number, equipmentId: number) => {
+    const handleQuantityChange = (newQuantity: number, equipmentId: string) => {
         const currentSelection = [...value];
         const equipmentIdStr = equipmentId.toString();
         const existingIndex = currentSelection.findIndex(
             (item) => item.equipmentId === equipmentIdStr,
         );
-        const equipmentItem = equipment.find((item) => item.id === equipmentId);
+        const equipmentItem = equipment.find(
+            (item) => item.publicId === equipmentIdStr,
+        );
         const maxQuantity = equipmentItem?.quantity ?? 1;
 
         const validQuantity = Math.max(1, Math.min(newQuantity, maxQuantity));
@@ -91,17 +93,17 @@ export default function EquipmentList({
                     {equipment.map((item) => {
                         const isSelected = value.some(
                             (selected) =>
-                                selected.equipmentId === item.id.toString(),
+                                selected.equipmentId === item.publicId,
                         );
                         const selectedItem = value.find(
                             (selected) =>
-                                selected.equipmentId === item.id.toString(),
+                                selected.equipmentId === item.publicId,
                         );
                         const currentQuantity = selectedItem?.quantity ?? 1;
 
                         return (
                             <TableRow
-                                key={item.id}
+                                key={item.publicId}
                                 className={cn(
                                     "transition-colors duration-150",
                                     !item.availability
@@ -115,12 +117,12 @@ export default function EquipmentList({
                             >
                                 <TableCell className="px-3">
                                     <Checkbox
-                                        id={`equip-${item.id}`}
+                                        id={`equip-${item.publicId}`}
                                         checked={isSelected}
                                         onCheckedChange={(checked) =>
                                             handleCheckboxChange(
                                                 !!checked,
-                                                item.id,
+                                                item.publicId,
                                             )
                                         }
                                         disabled={!item.availability}
@@ -143,7 +145,7 @@ export default function EquipmentList({
                                         </div>
                                         <div>
                                             <Label
-                                                htmlFor={`equip-${item.id}`}
+                                                htmlFor={`equip-${item.publicId}`}
                                                 className={cn(
                                                     item.availability
                                                         ? "cursor-pointer"
@@ -180,7 +182,7 @@ export default function EquipmentList({
                                 <TableCell className="text-center py-2">
                                     {isSelected && item.availability ? (
                                         <Input
-                                            id={`qty-${item.id}`}
+                                            id={`qty-${item.publicId}`}
                                             type="number"
                                             min="1"
                                             max={item.quantity}
@@ -191,7 +193,7 @@ export default function EquipmentList({
                                                         e.target.value,
                                                         10,
                                                     ) || 1,
-                                                    item.id,
+                                                    item.publicId,
                                                 )
                                             }
                                             className="h-8 w-20 mx-auto"
