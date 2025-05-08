@@ -76,7 +76,9 @@ export function EventTimeline() {
         currentUser?.role === "SUPER_ADMIN" ? allEvents : approvedEvents;
 
     // Create a map for quick venue lookup
-    const venueMap = new Map(venues.map((venue) => [venue.id, venue.name]));
+    const venueMap = new Map(
+        venues.map((venue) => [venue.publicId, venue.name]),
+    );
 
     // Group events by month and year using the selected source
     const groupedEvents = timelineEventsSource.reduce(
@@ -84,14 +86,14 @@ export function EventTimeline() {
             // Ensure startTime is valid before parsing
             if (typeof event.startTime !== "string") {
                 console.warn(
-                    `Event ${event.id} has invalid startTime: ${event.startTime}`,
+                    `Event ${event.publicId} has invalid startTime: ${event.startTime}`,
                 );
                 return acc; // Skip this event
             }
             const startDate = new Date(`${event.startTime}Z`);
             if (Number.isNaN(startDate.getTime())) {
                 console.warn(
-                    `Event ${event.id} failed to parse startTime: ${event.startTime}`,
+                    `Event ${event.publicId} failed to parse startTime: ${event.startTime}`,
                 );
                 return acc; // Skip if date parsing fails
             }
@@ -141,8 +143,8 @@ export function EventTimeline() {
         return monthA - monthB;
     });
 
-    const handleNavigate = (eventId: number | undefined) => {
-        if (typeof eventId === "number") {
+    const handleNavigate = (eventId: string | undefined) => {
+        if (typeof eventId === "string") {
             navigate({ to: `/app/events/${eventId}` });
         } else {
             console.warn("Attempted to navigate with invalid event ID");
@@ -207,7 +209,7 @@ export function EventTimeline() {
                                     return (
                                         <Card
                                             key={
-                                                event.id ??
+                                                event.publicId ??
                                                 `temp-${Math.random()}`
                                             }
                                             className="overflow-hidden border-l-4"
@@ -257,7 +259,8 @@ export function EventTimeline() {
                                                     <MapPin className="h-4 w-4" />
                                                     <span>
                                                         {venueMap.get(
-                                                            event.eventVenueId,
+                                                            event.eventVenue
+                                                                ?.publicId,
                                                         ) ?? "Unknown Venue"}
                                                     </span>
                                                 </div>
@@ -280,11 +283,11 @@ export function EventTimeline() {
                                                         className="flex items-center gap-2 text-sm font-normal"
                                                         onClick={() =>
                                                             handleNavigate(
-                                                                event.id,
+                                                                event.publicId,
                                                             )
                                                         }
                                                         disabled={
-                                                            typeof event.id !==
+                                                            typeof event.publicId !==
                                                             "number"
                                                         }
                                                     >

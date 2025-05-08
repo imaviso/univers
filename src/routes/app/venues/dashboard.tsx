@@ -153,10 +153,10 @@ export function VenueManagement() {
             });
         } else {
             let finalVenueData = { ...venueData };
-            if (role === "VENUE_OWNER" && currentUser?.id) {
+            if (role === "VENUE_OWNER" && currentUser?.publicId) {
                 finalVenueData = {
                     ...finalVenueData,
-                    venueOwnerId: currentUser.id,
+                    venueOwnerId: currentUser.publicId,
                 };
             }
             createVenueMutation.mutate({
@@ -188,9 +188,10 @@ export function VenueManagement() {
 
     // Filter venues
     const baseVenuesToDisplay =
-        role === "VENUE_OWNER" && currentUser?.id
+        role === "VENUE_OWNER" && currentUser?.publicId
             ? venues.filter(
-                  (venue) => venue.venueOwner?.publicId === currentUser.id,
+                  (venue) =>
+                      venue.venueOwner?.publicId === currentUser.publicId,
               )
             : venues;
 
