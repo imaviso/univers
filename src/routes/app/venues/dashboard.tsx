@@ -307,9 +307,11 @@ export function VenueManagement() {
                                         : "Venues"}
                                 </TabsTrigger>
                                 {/* Separate tab for user's reservations */}
-                                <TabsTrigger value="reservations">
-                                    My Reservations
-                                </TabsTrigger>
+                                {role !== "SUPER_ADMIN" && (
+                                    <TabsTrigger value="reservations">
+                                        My Reservations
+                                    </TabsTrigger>
+                                )}
                             </TabsList>
                         </Tabs>
                         {/* Add Export button if needed */}
