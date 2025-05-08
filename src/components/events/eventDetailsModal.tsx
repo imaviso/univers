@@ -77,7 +77,7 @@ export function EventDetailsModal({
                         >
                             <Link
                                 to="/app/events/$eventId"
-                                params={{ eventId: String(event.id) }}
+                                params={{ eventId: event.publicId }}
                             >
                                 <ExternalLink className="h-4 w-4" />
                             </Link>

@@ -121,13 +121,13 @@ export default function UserReservations() {
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                             {filteredReservations.map((reservation) => (
                                 <Card
-                                    key={reservation.id}
+                                    key={reservation.publicId}
                                     className="overflow-hidden flex flex-col"
                                 >
                                     <CardHeader>
                                         <div className="flex justify-between items-start">
                                             <CardTitle className="text-lg">
-                                                {reservation.eventName}
+                                                {reservation.event?.eventName}
                                             </CardTitle>
                                             <Badge
                                                 className={getStatusBadgeClass(
@@ -147,7 +147,7 @@ export default function UserReservations() {
                                         <div className="flex items-center gap-1">
                                             <Package className="h-3.5 w-3.5 flex-shrink-0" />
                                             <span>
-                                                {reservation.equipmentName}{" "}
+                                                {reservation.equipment?.name}
                                                 (Qty: {reservation.quantity})
                                             </span>
                                         </div>
@@ -205,7 +205,7 @@ export default function UserReservations() {
                                                     disabled={
                                                         cancelMutation.isPending &&
                                                         cancelMutation.variables ===
-                                                            reservation.id
+                                                            reservation.publicId
                                                     }
                                                 >
                                                     Cancel
@@ -248,14 +248,16 @@ export default function UserReservations() {
                                     <h4 className="font-medium text-muted-foreground">
                                         Event
                                     </h4>
-                                    <p>{selectedReservation.eventName}</p>
+                                    <p>
+                                        {selectedReservation.event?.eventName}
+                                    </p>
                                 </div>
                                 <div>
                                     <h4 className="font-medium text-muted-foreground">
                                         Equipment
                                     </h4>
                                     <p>
-                                        {selectedReservation.equipmentName}{" "}
+                                        {selectedReservation.equipment?.name}
                                         (Qty: {selectedReservation.quantity})
                                     </p>
                                 </div>
@@ -263,7 +265,12 @@ export default function UserReservations() {
                                     <h4 className="font-medium text-muted-foreground">
                                         Department
                                     </h4>
-                                    <p>{selectedReservation.departmentName}</p>
+                                    <p>
+                                        {
+                                            selectedReservation.event
+                                                ?.department?.name
+                                        }
+                                    </p>
                                 </div>
                                 <div>
                                     <h4 className="font-medium text-muted-foreground">
@@ -316,7 +323,7 @@ export default function UserReservations() {
                                             )}
                                     </div>
                                 </div>
-                                {selectedReservation.reservationLetterUrl && (
+                                {selectedReservation.reservationLetter && (
                                     <div>
                                         <h4 className="font-medium text-muted-foreground">
                                             Reservation Letter
@@ -328,7 +335,7 @@ export default function UserReservations() {
                                         >
                                             <a
                                                 href={
-                                                    selectedReservation.reservationLetterUrl
+                                                    selectedReservation.reservationLetter
                                                 }
                                                 target="_blank"
                                                 rel="noopener noreferrer"
@@ -349,9 +356,22 @@ export default function UserReservations() {
                                             <ul className="list-disc pl-5 space-y-1 mt-1 text-sm">
                                                 {selectedReservation.approvals.map(
                                                     (approval) => (
-                                                        <li key={approval.id}>
+                                                        <li
+                                                            key={
+                                                                approval.publicId
+                                                            }
+                                                        >
                                                             {approval.status} by{" "}
-                                                            {approval.signedBy}{" "}
+                                                            {
+                                                                approval
+                                                                    .signedByUser
+                                                                    .firstName
+                                                            }{" "}
+                                                            {
+                                                                approval
+                                                                    .signedByUser
+                                                                    .lastName
+                                                            }{" "}
                                                             ({approval.userRole}
                                                             ) on{" "}
                                                             {formatDateTime(
@@ -413,8 +433,8 @@ export default function UserReservations() {
                             {" "}
                             {/* Use DialogDescription */}
                             Are you sure you want to cancel the reservation for
-                            "{selectedReservation?.equipmentName}" for the event
-                            "{selectedReservation?.eventName}"?
+                            "{selectedReservation?.equipment?.name}" for the
+                            event "{selectedReservation?.event?.eventName}"?
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">

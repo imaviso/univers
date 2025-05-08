@@ -458,7 +458,7 @@ export function AccountSettings() {
 
         // Call the mutation with userId, data, and the image file
         updateProfileMutation.mutate({
-            userId: user.id,
+            userId: user.publicId,
             data: dataPayload,
             imageFile: profileForm.avatarFile,
         });
