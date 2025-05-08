@@ -23,7 +23,9 @@ function Events() {
             currentUser?.role === "OPC" ||
             currentUser?.role === "SSD" ||
             currentUser?.role === "FAO" ||
-            currentUser?.role === "DEPT_HEAD"
+            currentUser?.role === "VPAA" ||
+            currentUser?.role === "DEPT_HEAD" ||
+            currentUser?.role === "VENUE_OWNER"
             ? "all"
             : "mine",
     );
@@ -36,7 +38,9 @@ function Events() {
         currentUser?.role === "OPC" ||
         currentUser?.role === "SSD" ||
         currentUser?.role === "FAO" ||
-        currentUser?.role === "DEPT_HEAD";
+        currentUser?.role === "DEPT_HEAD" ||
+        currentUser?.role === "VPAA" ||
+        currentUser?.role === "VENUE_OWNER";
 
     return (
         <div className="bg-background">

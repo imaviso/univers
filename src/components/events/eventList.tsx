@@ -11,15 +11,28 @@ import {
     allEventsQueryOptions,
     approvedEventsQueryOptions,
     ownEventsQueryOptions,
+    pendingVenueOwnerEventsQueryOptions,
     useCurrentUser,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
 import type { EventDTO, VenueDTO } from "@/lib/types"; // Ensure Venue is imported if not already
+import type { Event as AppEvent } from "@/lib/types"; // Import the simpler Event type as AppEvent
 import { formatDateRange, getInitials } from "@/lib/utils";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+
+// Helper function to map AppEvent to EventDTO, providing defaults for missing fields
+const mapEventToEventDTO = (event: AppEvent): EventDTO => {
+    return {
+        ...event,
+        approvals: [], // Default missing field
+        cancellationReason: null, // Default missing field
+        createdAt: "", // Default missing field (Ideally, this should exist in Event type)
+        updatedAt: "", // Default missing field (Ideally, this should exist in Event type)
+    };
+};
 
 const getStatusColor = (status: string | undefined) => {
     switch (
@@ -152,11 +165,13 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
     const navigate = useNavigate();
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: currentUser } = useCurrentUser();
-    const { data: ownEvents = [] } = useSuspenseQuery(ownEventsQueryOptions);
-    const { data: approvedEvents = [] } = useSuspenseQuery(
+
+    // Fetch raw data (typed as AppEvent[])
+    const { data: rawOwnEvents = [] } = useSuspenseQuery(ownEventsQueryOptions);
+    const { data: rawApprovedEvents = [] } = useSuspenseQuery(
         approvedEventsQueryOptions,
     );
-    const { data: allEvents = [] } = useQuery({
+    const { data: rawAllEvents = [] } = useQuery({
         ...allEventsQueryOptions,
         enabled:
             currentUser?.role === "SUPER_ADMIN" ||
@@ -165,12 +180,24 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
             currentUser?.role === "OPC" ||
             currentUser?.role === "SSD" ||
             currentUser?.role === "FAO" ||
+            currentUser?.role === "VPAA" ||
             currentUser?.role === "DEPT_HEAD",
+    });
+    const { data: rawPendingVenueOwnerEvents = [] } = useQuery({
+        ...pendingVenueOwnerEventsQueryOptions,
+        enabled: currentUser?.role === "VENUE_OWNER",
     });
 
     const venueMap = new Map(
         venues.map((venue: VenueDTO) => [venue.publicId, venue.name]),
     );
+
+    // Map raw data to EventDTO[]
+    const ownEvents = rawOwnEvents.map(mapEventToEventDTO);
+    const approvedEvents = rawApprovedEvents.map(mapEventToEventDTO);
+    const allEvents = (rawAllEvents ?? []).map(mapEventToEventDTO);
+    const pendingVenueOwnerEvents =
+        rawPendingVenueOwnerEvents.map(mapEventToEventDTO);
 
     const handleNavigate = (eventId: string | undefined) => {
         if (typeof eventId === "string") {
@@ -189,6 +216,7 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
             currentUser?.role !== "OPC" &&
             currentUser?.role !== "SSD" &&
             currentUser?.role !== "FAO" &&
+            currentUser?.role !== "VPAA" &&
             currentUser?.role !== "DEPT_HEAD"
         ) {
             return false;
@@ -197,16 +225,25 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
     });
 
     // Determine which list to render for the 'all' tab based on role
-    const allEventsSource =
+    let allEventsSource: EventDTO[] = []; // Initialize with correct type
+
+    if (currentUser?.role === "VENUE_OWNER") {
+        allEventsSource = pendingVenueOwnerEvents;
+    } else if (
         currentUser?.role === "SUPER_ADMIN" ||
         currentUser?.role === "VP_ADMIN" ||
         currentUser?.role === "MSDO" ||
         currentUser?.role === "OPC" ||
         currentUser?.role === "SSD" ||
         currentUser?.role === "FAO" ||
+        currentUser?.role === "VPAA" ||
         currentUser?.role === "DEPT_HEAD"
-            ? allEvents
-            : approvedEvents;
+    ) {
+        allEventsSource = allEvents;
+    } else {
+        // Default to approved events for other roles (like ORGANIZER)
+        allEventsSource = approvedEvents;
+    }
 
     // Determine which list to render based on the activeTab prop
     const eventsToDisplay =

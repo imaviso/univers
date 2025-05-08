@@ -169,6 +169,8 @@ export const getBadgeVariant = (role: string): string => {
             return "bg-blue-100 text-blue-800";
         case "DEPT_HEAD":
             return "bg-yellow-100 text-yellow-800";
+        case "VPAA":
+            return "bg-fuchsia-100 text-fuchsia-800";
         case "VENUE_OWNER":
             return "bg-indigo-100 text-indigo-800";
         case "EQUIPMENT_OWNER":
@@ -181,6 +183,10 @@ export const getBadgeVariant = (role: string): string => {
             return "bg-orange-100 text-orange-800";
         case "FAO":
             return "bg-lime-100 text-lime-800";
+        case "TSG":
+            return "bg-green-100 text-green-800";
+        case "CORE":
+            return "bg-violet-100 text-violet-800";
         default:
             return "bg-gray-100 text-gray-800";
     }

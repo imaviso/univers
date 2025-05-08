@@ -5,6 +5,7 @@ import {
     allEventsQueryOptions,
     approvedEventsQueryOptions,
     ownEventsQueryOptions,
+    pendingVenueOwnerEventsQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
@@ -61,9 +62,15 @@ export const Route = createFileRoute("/app/events")({
             context.authState?.role === "OPC" ||
             context.authState?.role === "SSD" ||
             context.authState?.role === "FAO" ||
+            context.authState?.role === "VPAA" ||
             context.authState?.role === "DEPT_HEAD"
         ) {
             context.queryClient.ensureQueryData(allEventsQueryOptions);
+        }
+        if (context.authState?.role === "VENUE_OWNER") {
+            context.queryClient.ensureQueryData(
+                pendingVenueOwnerEventsQueryOptions,
+            );
         }
         context.queryClient.ensureQueryData(venuesQueryOptions);
         context.queryClient.ensureQueryData(ownEventsQueryOptions);

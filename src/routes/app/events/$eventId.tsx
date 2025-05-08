@@ -190,6 +190,30 @@ const EXPECTED_APPROVERS_CONFIG: Array<{
         },
     },
     {
+        id: "VENUE_OWNER",
+        label: "Venue Owner",
+        isSigned: (approval, eventDto: EventDTO) =>
+            approval.userRole === "VENUE_OWNER" &&
+            approval.signedByUser?.publicId ===
+                eventDto.eventVenue?.venueOwner?.publicId,
+        getPlaceholderData: (eventDto: EventDTO) => {
+            const venueOwnerUser = eventDto.eventVenue?.venueOwner;
+            const eventVenue = eventDto.eventVenue;
+            return {
+                signedByUserInitial: {
+                    firstName: venueOwnerUser
+                        ? `${venueOwnerUser.firstName} ${venueOwnerUser.lastName}`
+                        : "Venue Owner",
+                    userRole: "VENUE_OWNER",
+                    departmentName: eventVenue?.name || "Event Venue N/A", // Using venue name as department for placeholder display
+                    departmentPublicId: eventVenue?.publicId || "",
+                    publicId: venueOwnerUser?.publicId,
+                },
+                approvalRole: "VENUE_OWNER",
+            };
+        },
+    },
+    {
         id: "VP_ADMIN",
         label: "VP Admin",
         isSigned: (approval, _eventDto: EventDTO) =>
@@ -205,10 +229,28 @@ const EXPECTED_APPROVERS_CONFIG: Array<{
         }),
     },
     {
+        id: "VPAA",
+        label: "VPAA Representative",
+        isSigned: (approval, _eventDto: EventDTO) =>
+            (approval.signedByUser?.department?.name?.includes("VPAA") ??
+                false) &&
+            approval.userRole === "VPAA",
+        getPlaceholderData: (_eventDto: EventDTO) => ({
+            signedByUserInitial: {
+                firstName: "VPAA Representative",
+                userRole: "VPAA",
+                departmentName: "VPAA",
+                departmentPublicId: "vp-aa-dept",
+            },
+            approvalRole: "VPAA",
+        }),
+    },
+    {
         id: "MSDO",
         label: "MSDO Representative",
         isSigned: (approval, _eventDto: EventDTO) =>
-            approval.signedByUser?.department?.name === "MSDO" &&
+            (approval.signedByUser?.department?.name?.includes("MSDO") ??
+                false) &&
             approval.userRole === "MSDO",
         getPlaceholderData: (_eventDto: EventDTO) => ({
             signedByUserInitial: {
@@ -224,7 +266,8 @@ const EXPECTED_APPROVERS_CONFIG: Array<{
         id: "OPC",
         label: "OPC Representative",
         isSigned: (approval, _eventDto: EventDTO) =>
-            approval.signedByUser?.department?.name === "OPC" &&
+            (approval.signedByUser?.department?.name?.includes("OPC") ??
+                false) &&
             approval.userRole === "OPC",
         getPlaceholderData: (_eventDto: EventDTO) => ({
             signedByUserInitial: {
@@ -370,11 +413,11 @@ export function EventDetailsPage() {
             // MSDO related approval
             ((currentUser.role === "EQUIPMENT_OWNER" ||
                 currentUser.role === "MSDO") &&
-                currentUser.department?.name === "MSDO") ||
+                currentUser.department?.name?.includes("(MSDO)")) ||
             // OPC related approval
             ((currentUser.role === "EQUIPMENT_OWNER" ||
                 currentUser.role === "OPC") &&
-                currentUser.department?.name === "OPC") ||
+                currentUser.department?.name?.includes("(OPC)")) ||
             // Other general approver roles
             ["VP_ADMIN", "VPAA", "SSD", "FAO"].includes(currentUser.role));
 
@@ -390,11 +433,11 @@ export function EventDetailsPage() {
             // MSDO related approval
             ((currentUser.role === "EQUIPMENT_OWNER" ||
                 currentUser.role === "MSDO") &&
-                currentUser.department?.name === "MSDO") ||
+                currentUser.department?.name?.includes("MSDO")) ||
             // OPC related approval
             ((currentUser.role === "EQUIPMENT_OWNER" ||
                 currentUser.role === "OPC") &&
-                currentUser.department?.name === "OPC") ||
+                currentUser.department?.name?.includes("OPC")) ||
             // Other general approver roles
             ["VP_ADMIN", "VPAA", "SSD", "FAO"].includes(currentUser.role));
 
@@ -872,7 +915,9 @@ export function EventDetailsPage() {
     const approvalTableRows = useMemo(() => {
         if (!event) return [];
 
-        // Single, comprehensive definition for a placeholder row structure
+        // Ensure currentApprovals is always an array for consistent processing
+        const currentApprovals = Array.isArray(approvals) ? approvals : [];
+
         type PlaceholderApprovalRow = {
             publicId: string;
             signedByUser: UserDTO;
@@ -897,7 +942,8 @@ export function EventDetailsPage() {
         const outputRows: ApprovalTableRow[] = [];
         const signedApproverConfigIds = new Set<string>();
 
-        for (const approval of approvals) {
+        // Process existing approvals first and identify which config types are met
+        for (const approval of currentApprovals) {
             outputRows.push({
                 ...approval,
                 isPlaceholder: false,
@@ -959,7 +1005,7 @@ export function EventDetailsPage() {
             }
         }
         return outputRows;
-    }, [approvals, event]); // Remove EXPECTED_APPROVERS_CONFIG from dependencies as it's stable
+    }, [approvals, event]); // Ensure event is a dependency if its properties are used in getPlaceholderData or isSigned
 
     return (
         <div className="flex h-screen bg-background">
@@ -1487,7 +1533,7 @@ export function EventDetailsPage() {
                                 <CardTitle>Approval Status</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                {approvals.length > 0 ? (
+                                {approvalTableRows.length > 0 ? (
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -1574,7 +1620,8 @@ export function EventDetailsPage() {
                                     </Table>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
-                                        No approval records found yet.
+                                        No approval records or pending
+                                        placeholders found.
                                     </p>
                                 )}
                             </CardContent>

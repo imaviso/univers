@@ -49,7 +49,7 @@ import {
 } from "@tanstack/react-query";
 import { type AnyRoute, useRouteContext } from "@tanstack/react-router"; // Added AnyRoute import
 import type {
-    Event as AppEvent,
+    Event as AppEvent, // Alias Event to AppEvent
     EquipmentApprovalDTO,
     EquipmentReservationDTO,
     EventApprovalDTO,
@@ -208,13 +208,17 @@ export const equipmentsQueryOptions = (user: UserDTO | null | undefined) =>
             if (user.role === "SUPER_ADMIN") {
                 return await getAllEquipmentsAdmin();
             }
-            if (user.role === "EQUIPMENT_OWNER") {
+            if (
+                user.role === "EQUIPMENT_OWNER" ||
+                user.role === "MSDO" ||
+                user.role === "OPC"
+            ) {
                 return await getAllEquipmentsByOwner(user.publicId);
             }
             // Other roles (like ORGANIZER) might need all available equipment?
             // Adjust this logic based on requirements. Fetching all for now.
             // Consider if non-owners should see only 'available' equipment via a different endpoint/filter.
-            return await getAllEquipmentsAdmin(); // Defaulting to all for other roles for now
+            return await getAllEquipmentsByOwner(user.publicId);
         },
         enabled: !!user,
         staleTime: 1000 * 60 * 2, // 2 minutes stale time
@@ -237,10 +241,12 @@ export const notificationsQueryKeys = {
 export const notificationsQueryOptions = (params: {
     page: number;
     size: number;
+    enabled?: boolean;
 }) =>
     queryOptions({
         queryKey: notificationsQueryKeys.list(params.page, params.size),
         queryFn: () => getNotifications(params.page, params.size),
+        enabled: params.enabled,
         placeholderData: (previousData) => previousData, // Keep previous data while loading next page
         staleTime: 1000 * 60 * 1, // 1 minute stale time
     });
