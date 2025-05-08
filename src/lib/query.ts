@@ -53,6 +53,7 @@ import type {
     EquipmentApprovalDTO,
     EquipmentReservationDTO,
     EventApprovalDTO,
+    EventDTO,
     UserDTO,
     UserRole,
     VenueApprovalDTO,
@@ -170,7 +171,7 @@ export const pendingDeptHeadEventsQueryOptions = queryOptions<AppEvent[]>({
 
 // Updated eventQueryOptions (now eventByIdQueryOptions for clarity)
 export const eventByIdQueryOptions = (eventId: number | string) =>
-    queryOptions<AppEvent>({
+    queryOptions<EventDTO>({
         // Specify return type
         queryKey: eventsQueryKeys.detail(eventId), // Use the new key structure
         queryFn: () => getEventById(String(eventId)), // Ensure ID is string if needed by API

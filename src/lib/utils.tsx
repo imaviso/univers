@@ -87,9 +87,7 @@ export const getStatusColor = (status: string | undefined) => {
     }
 };
 
-export function getStatusBadgeClass(
-    status: Status | string | undefined,
-): string {
+export function getStatusBadgeClass(status: string | undefined): string {
     switch (status) {
         case "NEW":
             return "border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400";
@@ -110,8 +108,12 @@ export function getEquipmentNameById(
     equipmentList: Equipment[],
     id: string | number,
 ): string | null {
-    const numericId = typeof id === "string" ? Number.parseInt(id, 10) : id;
-    const equipment = equipmentList.find((item) => item.id === numericId);
+    const equipment = equipmentList.find((item) => {
+        if (typeof id === "string" && item.publicId === id) {
+            return true;
+        }
+        return false;
+    });
     return equipment ? equipment.name : null;
 }
 
@@ -154,7 +156,8 @@ export function formatRole(role: string | null | undefined): string {
             (word) =>
                 word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
         ) // Capitalize each word
-        .join(" "); // Join with space
+        .join(" ") // Join with space
+        .toUpperCase(); // Convert the whole string to uppercase
 }
 export const getBadgeVariant = (role: string): string => {
     switch (role) {
@@ -170,6 +173,14 @@ export const getBadgeVariant = (role: string): string => {
             return "bg-indigo-100 text-indigo-800";
         case "EQUIPMENT_OWNER":
             return "bg-teal-100 text-teal-800";
+        case "MSDO":
+            return "bg-pink-100 text-pink-800";
+        case "OPC":
+            return "bg-cyan-100 text-cyan-800";
+        case "SSD":
+            return "bg-orange-100 text-orange-800";
+        case "FAO":
+            return "bg-lime-100 text-lime-800";
         default:
             return "bg-gray-100 text-gray-800";
     }

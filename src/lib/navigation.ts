@@ -16,7 +16,7 @@ export const allNavigation = [
         name: "Dashboard",
         href: "/app/dashboard",
         icon: Home,
-        roles: ["SUPER_ADMIN", "VP_ADMIN"],
+        roles: ["SUPER_ADMIN"],
     },
     {
         name: "Calendar",
@@ -82,7 +82,7 @@ export const allNavigation = [
         name: "Venue Approval",
         href: "/app/venue-approval/approval",
         icon: BookCheck,
-        roles: ["VENUE_OWNER", "VPAA", "VP_ADMIN", "MSDO", "OPC", "SSD", "FAO"],
+        roles: ["VENUE_OWNER"],
     },
     {
         name: "Users",
@@ -114,21 +114,13 @@ export const allNavigation = [
         name: "Equipment Approval",
         href: "/app/equipment-approval/approval",
         icon: PackageCheck,
-        roles: [
-            "EQUIPMENT_OWNER",
-            "VPAA",
-            "VP_ADMIN",
-            "MSDO",
-            "OPC",
-            "SSD",
-            "FAO",
-        ],
+        roles: ["EQUIPMENT_OWNER", "MSDO", "OPC"],
     },
     {
         name: "Departments",
         href: "/app/departments/dashboard",
         icon: Building2,
-        roles: ["SUPER_ADMIN", "VP_ADMIN"],
+        roles: ["SUPER_ADMIN"],
     },
 ];
 

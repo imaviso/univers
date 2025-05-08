@@ -17,16 +17,31 @@ function Events() {
     const { data: currentUser } = useCurrentUser(); // Get current user
     const [view, setView] = useState<"list" | "timeline">("list");
     const [activeTab, setActiveTab] = useState<"all" | "mine">(
-        currentUser?.role === "SUPER_ADMIN" ? "all" : "mine",
+        currentUser?.role === "SUPER_ADMIN" ||
+            currentUser?.role === "VP_ADMIN" ||
+            currentUser?.role === "MSDO" ||
+            currentUser?.role === "OPC" ||
+            currentUser?.role === "SSD" ||
+            currentUser?.role === "FAO" ||
+            currentUser?.role === "DEPT_HEAD"
+            ? "all"
+            : "mine",
     );
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+    const isAuthorized =
+        currentUser?.role === "SUPER_ADMIN" ||
+        currentUser?.role === "VP_ADMIN" ||
+        currentUser?.role === "MSDO" ||
+        currentUser?.role === "OPC" ||
+        currentUser?.role === "SSD" ||
+        currentUser?.role === "FAO" ||
+        currentUser?.role === "DEPT_HEAD";
 
     return (
         <div className="bg-background">
             {/* Use Tabs only if SUPER_ADMIN and view is list, otherwise just render content */}
-            {isSuperAdmin && view === "list" ? (
+            {isAuthorized && view === "list" ? (
                 <Tabs
                     value={activeTab}
                     onValueChange={(value) =>

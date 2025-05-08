@@ -158,7 +158,14 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
     );
     const { data: allEvents = [] } = useQuery({
         ...allEventsQueryOptions,
-        enabled: currentUser?.role === "SUPER_ADMIN",
+        enabled:
+            currentUser?.role === "SUPER_ADMIN" ||
+            currentUser?.role === "VP_ADMIN" ||
+            currentUser?.role === "MSDO" ||
+            currentUser?.role === "OPC" ||
+            currentUser?.role === "SSD" ||
+            currentUser?.role === "FAO" ||
+            currentUser?.role === "DEPT_HEAD",
     });
 
     const venueMap = new Map(
@@ -176,7 +183,13 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
     const filteredOwnEvents = ownEvents.filter((event) => {
         if (
             event.status?.toUpperCase() === "CANCELED" &&
-            currentUser?.role !== "SUPER_ADMIN"
+            currentUser?.role !== "SUPER_ADMIN" &&
+            currentUser?.role !== "VP_ADMIN" &&
+            currentUser?.role !== "MSDO" &&
+            currentUser?.role !== "OPC" &&
+            currentUser?.role !== "SSD" &&
+            currentUser?.role !== "FAO" &&
+            currentUser?.role !== "DEPT_HEAD"
         ) {
             return false;
         }
@@ -185,7 +198,15 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
 
     // Determine which list to render for the 'all' tab based on role
     const allEventsSource =
-        currentUser?.role === "SUPER_ADMIN" ? allEvents : approvedEvents;
+        currentUser?.role === "SUPER_ADMIN" ||
+        currentUser?.role === "VP_ADMIN" ||
+        currentUser?.role === "MSDO" ||
+        currentUser?.role === "OPC" ||
+        currentUser?.role === "SSD" ||
+        currentUser?.role === "FAO" ||
+        currentUser?.role === "DEPT_HEAD"
+            ? allEvents
+            : approvedEvents;
 
     // Determine which list to render based on the activeTab prop
     const eventsToDisplay =
