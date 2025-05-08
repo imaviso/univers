@@ -54,9 +54,6 @@ export type UserRole =
     | "EQUIPMENT_OWNER";
 
 export const STATUS_EQUIPMENT = [
-    { value: "APPROVED", label: "Approved" },
-    { value: "PENDING", label: "Pending" },
-    { value: "CANCELED", label: "Canceled" },
     { value: "DEFECT", label: "Defect" },
     { value: "MAINTENANCE", label: "Maintenance" },
     { value: "NEED_REPLACEMENT", label: "Need Replacement" },
