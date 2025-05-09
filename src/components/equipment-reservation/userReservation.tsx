@@ -19,7 +19,14 @@ import {
 import type { EquipmentReservationDTO } from "@/lib/types";
 import { formatDateTime, getStatusBadgeClass } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, Calendar, Clock, Package } from "lucide-react"; // Added Package icon
+import { Link, useNavigate } from "@tanstack/react-router"; // Added Link and useNavigate import
+import {
+    AlertCircle,
+    Calendar,
+    CalendarDays,
+    Clock,
+    Package,
+} from "lucide-react"; // Added Package icon and CalendarDays for event
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -39,6 +46,7 @@ export default function UserReservations() {
 
     // Cancel mutation
     const cancelMutation = useCancelEquipmentReservationMutation();
+    const navigate = useNavigate(); // Added useNavigate hook
 
     // Filter reservations based on the active tab
     const filteredReservations = useMemo(() => {
@@ -53,7 +61,7 @@ export default function UserReservations() {
     const handleCancel = () => {
         if (!selectedReservation) return;
 
-        cancelMutation.mutate(selectedReservation.id, {
+        cancelMutation.mutate(selectedReservation.publicId, {
             onSuccess: (message) => {
                 toast.success(message || "Reservation cancelled successfully.");
                 setShowCancelDialog(false);
@@ -104,12 +112,12 @@ export default function UserReservations() {
                 className="w-full"
             >
                 <div className="flex items-center justify-between">
-                    <TabsList>
+                    <TabsList className="text-foreground h-auto gap-2 rounded-none border-b bg-transparent px-0 py-1">
                         {availableTabs.map((tab) => (
                             <TabsTrigger
                                 key={tab}
                                 value={tab}
-                                className="capitalize"
+                                className="capitalize hover:bg-accent hover:text-foreground data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent relative after:absolute after:inset-x-0 after:bottom-0 after:-mb-1 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                             >
                                 {tab}
                             </TabsTrigger>
@@ -118,16 +126,39 @@ export default function UserReservations() {
                 </div>
                 <TabsContent value={activeTab} className="pt-4">
                     {filteredReservations.length > 0 ? (
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                             {filteredReservations.map((reservation) => (
                                 <Card
                                     key={reservation.publicId}
                                     className="overflow-hidden flex flex-col"
                                 >
+                                    {/* Equipment Image */}
+                                    {reservation.equipment?.imagePath && (
+                                        <div className="aspect-video w-full overflow-hidden bg-muted">
+                                            <img
+                                                src={
+                                                    reservation.equipment
+                                                        .imagePath
+                                                }
+                                                alt={
+                                                    reservation.equipment
+                                                        .name ??
+                                                    "Equipment image"
+                                                }
+                                                className="h-full w-full object-cover"
+                                                onError={(e) => {
+                                                    e.currentTarget.src =
+                                                        "/placeholder.svg";
+                                                }}
+                                                loading="lazy"
+                                            />
+                                        </div>
+                                    )}
                                     <CardHeader>
                                         <div className="flex justify-between items-start">
                                             <CardTitle className="text-lg">
-                                                {reservation.event?.eventName}
+                                                {reservation.equipment?.name ??
+                                                    "Equipment N/A"}
                                             </CardTitle>
                                             <Badge
                                                 className={getStatusBadgeClass(
@@ -137,18 +168,34 @@ export default function UserReservations() {
                                                 {reservation.status}
                                             </Badge>
                                         </div>
-                                        {/* Venue name isn't directly in EquipmentReservationDTO, maybe add later if needed */}
-                                        {/* <CardDescription className="flex items-center gap-1">
-                                            <MapPin className="h-3.5 w-3.5" />
-                                            {reservation.venueName}
-                                        </CardDescription> */}
                                     </CardHeader>
                                     <CardContent className="flex-grow space-y-2 text-sm">
+                                        {/* Event Name as Link */}
+                                        {reservation.event?.publicId &&
+                                            reservation.event?.eventName && (
+                                                <div className="flex items-center gap-1">
+                                                    <CalendarDays className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                                                    <Link
+                                                        to="/app/events/$eventId"
+                                                        params={{
+                                                            eventId:
+                                                                reservation
+                                                                    .event
+                                                                    .publicId,
+                                                        }}
+                                                        className="hover:underline text-primary font-medium"
+                                                    >
+                                                        {
+                                                            reservation.event
+                                                                .eventName
+                                                        }
+                                                    </Link>
+                                                </div>
+                                            )}
                                         <div className="flex items-center gap-1">
                                             <Package className="h-3.5 w-3.5 flex-shrink-0" />
                                             <span>
-                                                {reservation.equipment?.name}
-                                                (Qty: {reservation.quantity})
+                                                Quantity: {reservation.quantity}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-1">
@@ -177,11 +224,32 @@ export default function UserReservations() {
                                                 size="sm"
                                                 className="w-full"
                                                 onClick={() => {
-                                                    setSelectedReservation(
-                                                        reservation,
-                                                    );
-                                                    setShowDetailsDialog(true);
+                                                    if (
+                                                        reservation.event
+                                                            ?.publicId
+                                                    ) {
+                                                        navigate({
+                                                            to: "/app/events/$eventId",
+                                                            params: {
+                                                                eventId:
+                                                                    reservation
+                                                                        .event
+                                                                        .publicId,
+                                                            },
+                                                        });
+                                                    } else {
+                                                        toast.error(
+                                                            "Event details are not available for this reservation.",
+                                                        );
+                                                    }
+                                                    // setSelectedReservation(
+                                                    //     reservation,
+                                                    // );
+                                                    // setShowDetailsDialog(true);
                                                 }}
+                                                disabled={
+                                                    !reservation.event?.publicId
+                                                } // Disable if no eventId
                                             >
                                                 View Details
                                             </Button>
@@ -323,74 +391,6 @@ export default function UserReservations() {
                                             )}
                                     </div>
                                 </div>
-                                {selectedReservation.reservationLetter && (
-                                    <div>
-                                        <h4 className="font-medium text-muted-foreground">
-                                            Reservation Letter
-                                        </h4>
-                                        <Button
-                                            variant="link"
-                                            asChild
-                                            className="p-0 h-auto"
-                                        >
-                                            <a
-                                                href={
-                                                    selectedReservation.reservationLetter
-                                                }
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1"
-                                            >
-                                                View Letter
-                                            </a>
-                                        </Button>
-                                    </div>
-                                )}
-                                {selectedReservation.approvals &&
-                                    selectedReservation.approvals.length >
-                                        0 && (
-                                        <div>
-                                            <h4 className="font-medium text-muted-foreground">
-                                                Approval History
-                                            </h4>
-                                            <ul className="list-disc pl-5 space-y-1 mt-1 text-sm">
-                                                {selectedReservation.approvals.map(
-                                                    (approval) => (
-                                                        <li
-                                                            key={
-                                                                approval.publicId
-                                                            }
-                                                        >
-                                                            {approval.status} by{" "}
-                                                            {
-                                                                approval
-                                                                    .signedByUser
-                                                                    .firstName
-                                                            }{" "}
-                                                            {
-                                                                approval
-                                                                    .signedByUser
-                                                                    .lastName
-                                                            }{" "}
-                                                            ({approval.userRole}
-                                                            ) on{" "}
-                                                            {formatDateTime(
-                                                                approval.dateSigned,
-                                                            )}
-                                                            {approval.remarks && (
-                                                                <span className="block text-xs text-muted-foreground">
-                                                                    Remarks:{" "}
-                                                                    {
-                                                                        approval.remarks
-                                                                    }
-                                                                </span>
-                                                            )}
-                                                        </li>
-                                                    ),
-                                                )}
-                                            </ul>
-                                        </div>
-                                    )}
                                 <div>
                                     <h4 className="font-medium text-muted-foreground">
                                         Submitted On

@@ -1,40 +1,61 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { venuesQueryOptions } from "@/lib/query";
-import type { VenueDTO } from "@/lib/types";
 import {
+    Card,
+    CardContent,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getOngoingAndApprovedEventsByVenue } from "@/lib/api";
+import { eventsQueryKeys, venuesQueryOptions } from "@/lib/query";
+import type { Event as AppEvent, VenueDTO } from "@/lib/types";
+import { formatDateRange, getStatusBadgeClass } from "@/lib/utils";
+import {
+    Link,
     createFileRoute,
     useNavigate,
     useRouter,
 } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { ArrowLeft, Calendar, Clock, MapPin, UserCircle } from "lucide-react";
+import {
+    ArrowLeft,
+    Calendar,
+    Clock,
+    Eye,
+    MapPin,
+    UserCircle,
+} from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/app/venues/$venueId")({
     component: VenueDetails,
     loader: async ({ params: { venueId }, context }) => {
-        // Find venue in the updated mock data
-        const venues = context.queryClient.ensureQueryData(venuesQueryOptions);
+        const { queryClient } = context;
+        const venues = queryClient.ensureQueryData(venuesQueryOptions);
         const venue = (await venues).find(
             (v) => v.publicId.toString() === venueId,
-        ) as VenueDTO | undefined; // Cast or ensure type safety
+        ) as VenueDTO | undefined;
 
         if (!venue) {
-            // Use TanStack Router's notFound utility or throw a specific error
             throw new Error(`Venue with ID ${venueId} not found`);
-            // Or: throw notFound(); // if you import { notFound } from '@tanstack/react-router'
         }
 
-        return { venue /*, reservations */ };
+        // Fetch ongoing and approved events for this venue
+        const ongoingAndApprovedEvents = await queryClient.ensureQueryData({
+            queryKey: eventsQueryKeys.ongoingAndApprovedByVenue(venue.publicId),
+            queryFn: () => getOngoingAndApprovedEventsByVenue(venue.publicId),
+            staleTime: 1000 * 60 * 5, // Optional: 5 minutes stale time
+        });
+
+        return { venue, ongoingAndApprovedEvents };
     },
 });
 
 export function VenueDetails() {
     const navigate = useNavigate();
-    const { venue } = Route.useLoaderData();
+    const { venue, ongoingAndApprovedEvents } = Route.useLoaderData();
     const router = useRouter();
     const onBack = () => router.history.back();
     const [activeTab, setActiveTab] = useState("overview");
@@ -43,17 +64,7 @@ export function VenueDetails() {
         return (
             <div className="flex h-screen bg-background">
                 <div className="flex flex-col flex-1 items-center justify-center">
-                    <p>Loading venue details...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!venue) {
-        return (
-            <div className="flex h-screen bg-background">
-                <div className="flex flex-col flex-1 items-center justify-center">
-                    <p>Loading venue details...</p>
+                    <p>Loading venue details or events...</p>
                 </div>
             </div>
         );
@@ -143,9 +154,9 @@ export function VenueDetails() {
                         </TabsTrigger>
                         <TabsTrigger
                             className="hover:bg-accent hover:text-foreground data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent relative after:absolute after:inset-x-0 after:bottom-0 after:-mb-1 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                            value="reservations"
+                            value="events"
                         >
-                            Reservations
+                            Events
                         </TabsTrigger>
                         <TabsTrigger
                             className="hover:bg-accent hover:text-foreground data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent relative after:absolute after:inset-x-0 after:bottom-0 after:-mb-1 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
@@ -226,16 +237,106 @@ export function VenueDetails() {
                             </div>
                         </TabsContent>
 
-                        {/* Reservations Tab */}
-                        <TabsContent value="reservations" className="h-full">
+                        {/* Events Tab */}
+                        <TabsContent value="events" className="h-full">
                             <div className="space-y-6">
-                                <h2 className="text-lg font-semibold">
-                                    Venue Reservations
-                                </h2>
-                                {/* Add Table or List for reservations here */}
-                                <div className="text-center text-muted-foreground py-8 border rounded-md">
-                                    Reservation list placeholder.
-                                </div>
+                                {ongoingAndApprovedEvents &&
+                                ongoingAndApprovedEvents.length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                        {ongoingAndApprovedEvents.map(
+                                            (event: AppEvent) => {
+                                                const eventDate =
+                                                    formatDateRange(
+                                                        new Date(
+                                                            event.startTime,
+                                                        ),
+                                                        new Date(event.endTime),
+                                                    );
+                                                return (
+                                                    <Card
+                                                        key={event.publicId}
+                                                        className="flex flex-col"
+                                                    >
+                                                        <CardHeader>
+                                                            <div className="flex justify-between items-start">
+                                                                <CardTitle className="text-base">
+                                                                    {
+                                                                        event.eventName
+                                                                    }
+                                                                </CardTitle>
+                                                                <Badge
+                                                                    className={getStatusBadgeClass(
+                                                                        event.status,
+                                                                    )}
+                                                                    variant={
+                                                                        event.status?.toLowerCase() ===
+                                                                            "approved" ||
+                                                                        event.status?.toLowerCase() ===
+                                                                            "ongoing"
+                                                                            ? "default"
+                                                                            : "secondary"
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        event.status
+                                                                    }
+                                                                </Badge>
+                                                            </div>
+                                                        </CardHeader>
+                                                        <CardContent className="flex-grow space-y-2 text-sm">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                                                <span>
+                                                                    {eventDate}
+                                                                </span>
+                                                            </div>
+                                                            {event.organizer && (
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <UserCircle className="h-4 w-4 text-muted-foreground" />
+                                                                    <span>
+                                                                        {
+                                                                            event
+                                                                                .organizer
+                                                                                .firstName
+                                                                        }{" "}
+                                                                        {
+                                                                            event
+                                                                                .organizer
+                                                                                .lastName
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </CardContent>
+                                                        <CardFooter className="border-t pt-4">
+                                                            <Button
+                                                                asChild
+                                                                className="w-full"
+                                                                size="sm"
+                                                            >
+                                                                <Link
+                                                                    to="/app/events/$eventId"
+                                                                    params={{
+                                                                        eventId:
+                                                                            event.publicId,
+                                                                    }}
+                                                                >
+                                                                    <Eye className="mr-2 h-4 w-4" />{" "}
+                                                                    View Details
+                                                                </Link>
+                                                            </Button>
+                                                        </CardFooter>
+                                                    </Card>
+                                                );
+                                            },
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-muted-foreground py-8 border rounded-md">
+                                        No ongoing or approved events found for
+                                        this venue.
+                                    </div>
+                                )}
                             </div>
                         </TabsContent>
 

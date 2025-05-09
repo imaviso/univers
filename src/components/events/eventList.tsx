@@ -21,6 +21,7 @@ import { formatDateRange, getInitials } from "@/lib/utils";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
+import { useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 // Helper function to map AppEvent to EventDTO, providing defaults for missing fields
@@ -160,8 +161,11 @@ function EventCard({
     );
 }
 
-// Accept activeTab as a prop
-export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
+// Accept activeTab and eventStatusFilter as props
+export function EventList({
+    activeTab,
+    eventStatusFilter,
+}: { activeTab: "all" | "mine"; eventStatusFilter: string }) {
     const navigate = useNavigate();
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: currentUser } = useCurrentUser();
@@ -246,8 +250,19 @@ export function EventList({ activeTab }: { activeTab: "all" | "mine" }) {
     }
 
     // Determine which list to render based on the activeTab prop
-    const eventsToDisplay =
+    const baseEventsToDisplay =
         activeTab === "all" ? allEventsSource : filteredOwnEvents;
+
+    // Apply status filter
+    const eventsToDisplay = useMemo(() => {
+        if (eventStatusFilter === "ALL" || !baseEventsToDisplay) {
+            return baseEventsToDisplay ?? [];
+        }
+        return baseEventsToDisplay.filter(
+            (event) =>
+                event.status?.toUpperCase() === eventStatusFilter.toUpperCase(),
+        );
+    }, [baseEventsToDisplay, eventStatusFilter]);
 
     const noEventsMessage =
         activeTab === "all"

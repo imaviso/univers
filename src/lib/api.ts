@@ -1686,3 +1686,49 @@ export const rejectEvent = async (data: {
               );
     }
 };
+
+export const getApprovedEventsByVenue = async (
+    venueId: string,
+): Promise<Event[]> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/events/approved/by-venue/${venueId}`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while fetching approved events for the venue.",
+              );
+    }
+};
+
+export const getOngoingAndApprovedEventsByVenue = async (
+    venueId: string,
+): Promise<Event[]> => {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/events/ongoing-and-approved/by-venue/${venueId}`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+            },
+        );
+        const data = await handleApiResponse(response, true);
+        return data ?? [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while fetching ongoing and approved events for the venue.",
+              );
+    }
+};

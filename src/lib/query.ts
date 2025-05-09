@@ -133,6 +133,10 @@ export const eventsQueryKeys = {
     pendingDeptHead: () => [...eventsQueryKeys.pending(), "deptHead"] as const,
     own: () => [...eventsQueryKeys.all, "own"] as const,
     approved: () => [...eventsQueryKeys.all, "approved"] as const,
+    approvedByVenue: (venueId: string) =>
+        [...eventsQueryKeys.approved(), "byVenue", venueId] as const,
+    ongoingAndApprovedByVenue: (venueId: string) =>
+        [...eventsQueryKeys.all, "ongoingAndApprovedByVenue", venueId] as const,
 };
 
 export const allEventsQueryOptions = queryOptions<AppEvent[]>({

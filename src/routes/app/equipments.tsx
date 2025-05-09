@@ -918,9 +918,6 @@ function EquipmentInventory() {
                         role !== "SUPER_ADMIN" &&
                         role !== "EQUIPMENT_OWNER" && (
                             <div>
-                                <h2 className="text-lg font-semibold mb-4">
-                                    My Equipment Reservations
-                                </h2>
                                 <UserReservations />
                             </div>
                         )}
