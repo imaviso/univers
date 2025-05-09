@@ -47,9 +47,6 @@ export function useWebSocketNotifications() {
             reconnectDelay: RECONNECT_DELAY,
             onConnect: () => {
                 setStatus("connected");
-                toast.success("You are now back online!", {
-                    description: "You will able to receive notifications.",
-                });
 
                 const userDestination = "/user/queue/notifications";
                 client.subscribe(userDestination, (message: IMessage) => {

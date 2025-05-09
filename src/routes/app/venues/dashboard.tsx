@@ -42,14 +42,16 @@ import {
     Building,
     Edit,
     Eye,
+    HelpCircle,
     MapPin,
     MoreHorizontal,
     Plus,
     Search,
     Trash2,
+    UserCheck,
     UserCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/venues/dashboard")({
@@ -77,6 +79,8 @@ export function VenueManagement() {
     const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
         role === "SUPER_ADMIN" || role === "VENUE_OWNER" ? "table" : "grid",
     );
+    const [activeVenueReservationTab, setActiveVenueReservationTab] =
+        useState("all"); // State for venue reservation tabs
 
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: users = [] } = useQuery({
@@ -143,13 +147,13 @@ export function VenueManagement() {
 
     const handleAddOrEditSubmit = (
         venueData: VenueInput,
-        imageFile: File | null,
+        imageFile: File | null | undefined,
     ) => {
         if (editingVenue) {
             updateVenueMutation.mutate({
                 venueId: editingVenue.publicId,
                 venueData,
-                imageFile,
+                imageFile: imageFile === undefined ? null : imageFile,
             });
         } else {
             let finalVenueData = { ...venueData };
@@ -161,7 +165,7 @@ export function VenueManagement() {
             }
             createVenueMutation.mutate({
                 venueData: finalVenueData,
-                imageFile,
+                imageFile: imageFile === undefined ? null : imageFile,
             });
         }
     };
@@ -213,7 +217,30 @@ export function VenueManagement() {
     // Stats
     const stats = {
         total: baseVenuesToDisplay.length,
+        myVenues:
+            role === "VENUE_OWNER" && currentUser?.publicId
+                ? venues.filter(
+                      (venue) =>
+                          venue.venueOwner?.publicId === currentUser.publicId,
+                  ).length
+                : 0,
+        unassignedVenues:
+            role === "SUPER_ADMIN"
+                ? venues.filter((venue) => !venue.venueOwner).length
+                : 0,
     };
+
+    // Filtered venue reservations based on active tab
+    const filteredVenueReservations = useMemo(() => {
+        if (activeVenueReservationTab === "all" || !ownReservations) {
+            return ownReservations ?? [];
+        }
+        return ownReservations.filter(
+            (res) =>
+                res.status.toLowerCase() ===
+                activeVenueReservationTab.toLowerCase(),
+        );
+    }, [ownReservations, activeVenueReservationTab]);
 
     // --- Render Logic ---
     const isMutating =
@@ -226,7 +253,7 @@ export function VenueManagement() {
             <div className="flex flex-col flex-1 overflow-hidden">
                 {/* Header */}
                 <header className="flex items-center justify-between border-b px-6 py-3.5 h-16">
-                    <h1 className="text-xl font-semibold">Venue Management</h1>
+                    <h1 className="text-xl font-semibold">Venues</h1>
                     <div className="flex items-center gap-2">
                         <div className="relative">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -270,7 +297,36 @@ export function VenueManagement() {
                             </div>
                         </CardContent>
                     </Card>
-                    {/* Add other stats cards here */}
+                    {role === "VENUE_OWNER" && (
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">
+                                    My Venues
+                                </CardTitle>
+                                <UserCheck className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">
+                                    {stats.myVenues}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                    {role === "SUPER_ADMIN" && (
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">
+                                    Unassigned Venues
+                                </CardTitle>
+                                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">
+                                    {stats.unassignedVenues}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
                 {/* Filters and Actions Bar */}
@@ -550,78 +606,70 @@ export function VenueManagement() {
                                                 }}
                                                 loading="lazy"
                                             />
-                                            {(role === "SUPER_ADMIN" ||
-                                                role === "VENUE_OWNER") && (
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="icon"
+                                                        className="absolute top-2 right-2 h-7 w-7 opacity-80 group-hover:opacity-100"
+                                                        disabled={isMutating}
                                                     >
-                                                        <Button
-                                                            variant="secondary"
-                                                            size="icon"
-                                                            className="absolute top-2 right-2 h-7 w-7 opacity-80 group-hover:opacity-100"
-                                                            disabled={
-                                                                isMutating
-                                                            }
-                                                        >
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                            <span className="sr-only">
-                                                                Venue Actions
-                                                            </span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                handleNavigate(
-                                                                    venue.publicId,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Eye className="mr-2 h-4 w-4" />{" "}
-                                                            View Details
-                                                        </DropdownMenuItem>
-                                                        {role ===
-                                                            "SUPER_ADMIN" && (
-                                                            <>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => {
-                                                                        setEditingVenue(
-                                                                            venue,
-                                                                        );
-                                                                        setIsAddVenueOpen(
-                                                                            true,
-                                                                        );
-                                                                    }}
-                                                                >
-                                                                    <Edit className="mr-2 h-4 w-4" />{" "}
-                                                                    Edit
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem
-                                                                    className="text-destructive focus:text-destructive"
-                                                                    onClick={() => {
-                                                                        setVenueToDelete(
-                                                                            venue.publicId,
-                                                                        );
-                                                                        setIsDeleteDialogOpen(
-                                                                            true,
-                                                                        );
-                                                                    }}
-                                                                    disabled={
-                                                                        deleteVenueMutation.isPending &&
-                                                                        deleteVenueMutation.variables ===
-                                                                            venue.publicId
-                                                                    }
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" />{" "}
-                                                                    Delete
-                                                                </DropdownMenuItem>
-                                                            </>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            )}
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">
+                                                            Venue Actions
+                                                        </span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            handleNavigate(
+                                                                venue.publicId,
+                                                            )
+                                                        }
+                                                    >
+                                                        <Eye className="mr-2 h-4 w-4" />{" "}
+                                                        View Details
+                                                    </DropdownMenuItem>
+                                                    {role === "SUPER_ADMIN" && (
+                                                        <>
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setEditingVenue(
+                                                                        venue,
+                                                                    );
+                                                                    setIsAddVenueOpen(
+                                                                        true,
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <Edit className="mr-2 h-4 w-4" />{" "}
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                className="text-destructive focus:text-destructive"
+                                                                onClick={() => {
+                                                                    setVenueToDelete(
+                                                                        venue.publicId,
+                                                                    );
+                                                                    setIsDeleteDialogOpen(
+                                                                        true,
+                                                                    );
+                                                                }}
+                                                                disabled={
+                                                                    deleteVenueMutation.isPending &&
+                                                                    deleteVenueMutation.variables ===
+                                                                        venue.publicId
+                                                                }
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />{" "}
+                                                                Delete
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                         <CardHeader className="pb-2 pt-4 px-4">
                                             <CardTitle
@@ -688,79 +736,123 @@ export function VenueManagement() {
 
                     {viewMode === "reservations" && (
                         <div>
-                            <h2 className="text-lg font-semibold mb-4">
-                                My Venue Reservations
-                            </h2>
+                            <Tabs
+                                value={activeVenueReservationTab}
+                                onValueChange={setActiveVenueReservationTab}
+                                className="w-full mb-4"
+                            >
+                                <TabsList className="text-foreground h-auto gap-2 rounded-none border-b bg-transparent px-0 py-1">
+                                    {[
+                                        "all",
+                                        "pending",
+                                        "approved",
+                                        "rejected",
+                                        "canceled",
+                                    ].map((tab) => (
+                                        <TabsTrigger
+                                            key={tab}
+                                            value={tab}
+                                            className="capitalize data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent relative after:absolute after:inset-x-0 after:bottom-0 after:-mb-1 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                                        >
+                                            {tab}
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
+                            </Tabs>
+
                             {isLoadingOwnReservations ? (
                                 <p className="text-muted-foreground">
                                     Loading reservations...
                                 </p>
-                            ) : ownReservations.length > 0 ? (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Venue</TableHead>
-                                            <TableHead>Event</TableHead>
-                                            <TableHead>Start Time</TableHead>
-                                            <TableHead>End Time</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {ownReservations.map((res) => (
-                                            <TableRow key={res.publicId}>
-                                                <TableCell>
+                            ) : filteredVenueReservations.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {filteredVenueReservations.map((res) => (
+                                        <Card
+                                            key={res.publicId}
+                                            className="overflow-hidden flex flex-col group"
+                                        >
+                                            <div className="aspect-video w-full overflow-hidden relative">
+                                                <img
+                                                    src={
+                                                        res.venue.imagePath ??
+                                                        "/placeholder.svg"
+                                                    }
+                                                    alt={
+                                                        res.venue.name ??
+                                                        "Venue image"
+                                                    }
+                                                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                    onError={(e) => {
+                                                        e.currentTarget.src =
+                                                            "/placeholder.svg";
+                                                    }}
+                                                    loading="lazy"
+                                                />
+                                            </div>
+                                            <CardHeader className="pb-2 pt-4 px-4">
+                                                <CardTitle
+                                                    className="text-base font-semibold truncate"
+                                                    title={
+                                                        res.venue.name ??
+                                                        undefined
+                                                    }
+                                                >
                                                     {res.venue.name ?? "N/A"}
-                                                </TableCell>
-                                                <TableCell>
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="text-sm text-muted-foreground flex-grow px-4 pb-3 space-y-1.5">
+                                                <div>
+                                                    <strong>Event:</strong>{" "}
                                                     {res.event?.eventName ??
                                                         "N/A"}
-                                                </TableCell>
-                                                <TableCell>
+                                                </div>
+                                                <div>
+                                                    <strong>Starts:</strong>{" "}
                                                     {formatDateTime(
                                                         res.startTime,
                                                     )}
-                                                </TableCell>
-                                                <TableCell>
+                                                </div>
+                                                <div>
+                                                    <strong>Ends:</strong>{" "}
                                                     {formatDateTime(
                                                         res.endTime,
                                                     )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <TableCell>
-                                                        <Badge
-                                                            className={getStatusBadgeClass(
-                                                                res.status,
-                                                            )}
-                                                        >
-                                                            {res.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {/* Add actions like View Details, Cancel */}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            navigate({
-                                                                to: `/app/venue-approval/${res.publicId}`,
-                                                            })
-                                                        }
+                                                </div>
+                                                <div>
+                                                    <strong>Status:</strong>{" "}
+                                                    <Badge
+                                                        className={getStatusBadgeClass(
+                                                            res.status,
+                                                        )}
                                                     >
-                                                        View
-                                                    </Button>
-                                                    {/* Add Cancel button if applicable */}
-                                                    {/* {res.status === 'PENDING' && <CancelReservationButton reservationId={res.id} />} */}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                                        {res.status}
+                                                    </Badge>
+                                                </div>
+                                            </CardContent>
+                                            <div className="p-4 pt-0 border-t mt-auto">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full"
+                                                    onClick={() =>
+                                                        navigate({
+                                                            to: `/app/events/${res.event?.publicId}`,
+                                                        })
+                                                    }
+                                                >
+                                                    View Details
+                                                </Button>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
                             ) : (
                                 <div className="text-center text-muted-foreground py-8 border rounded-md bg-muted/20">
-                                    You have no venue reservations.
+                                    You have no{" "}
+                                    {activeVenueReservationTab !== "all"
+                                        ? activeVenueReservationTab
+                                        : ""}{" "}
+                                    venue reservations.
                                 </div>
                             )}
                         </div>

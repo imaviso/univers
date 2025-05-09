@@ -1216,27 +1216,6 @@ export function EventDetailsPage() {
                                 <div className="grid md:grid-cols-2 gap-6">
                                     {/* Left Column */}
                                     <div className="space-y-4">
-                                        {/* ID and Status */}
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <h3 className="text-sm font-medium text-muted-foreground">
-                                                    Status
-                                                </h3>
-                                                <Badge
-                                                    className={`${getStatusColor(event.status)} mt-1`}
-                                                >
-                                                    {event.status
-                                                        ? event.status
-                                                              .charAt(0)
-                                                              .toUpperCase() +
-                                                          event.status
-                                                              .slice(1)
-                                                              .toLowerCase()
-                                                        : "Unknown"}
-                                                </Badge>
-                                            </div>
-                                        </div>
-
                                         {/* Event Type */}
                                         <div>
                                             <h3 className="text-sm font-medium text-muted-foreground">
@@ -1260,46 +1239,6 @@ export function EventDetailsPage() {
                                                 {/* Display formatted date range */}
                                                 <span className="text-sm">
                                                     {dateDisplayString}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <h3 className="text-sm font-medium text-muted-foreground">
-                                                Venue
-                                            </h3>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                                {eventVenue?.publicId ? (
-                                                    <Link
-                                                        to="/app/venues/$venueId"
-                                                        params={{
-                                                            venueId:
-                                                                eventVenue.publicId,
-                                                        }}
-                                                        className="text-sm underline-offset-4 hover:underline text-primary"
-                                                    >
-                                                        {eventVenue.name ??
-                                                            "Unknown Venue"}
-                                                    </Link>
-                                                ) : (
-                                                    <span className="text-sm">
-                                                        {eventVenue?.name ??
-                                                            "Unknown Venue"}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {/* Location */}
-                                        <div>
-                                            <h3 className="text-sm font-medium text-muted-foreground">
-                                                Location
-                                            </h3>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                                <span className="text-sm">
-                                                    {eventVenue?.location ??
-                                                        "Unknown Location"}
                                                 </span>
                                             </div>
                                         </div>
@@ -1370,13 +1309,6 @@ export function EventDetailsPage() {
                                                 </Dialog>
                                             </div>
                                         )}
-
-                                        {/* Removed Attendees */}
-                                    </div>
-
-                                    {/* Right Column */}
-                                    <div className="space-y-4">
-                                        {/* Organizer */}
                                         <div>
                                             <h3 className="text-sm font-medium text-muted-foreground">
                                                 Organizer
@@ -1445,7 +1377,54 @@ export function EventDetailsPage() {
                                                 </div>
                                             )}
                                         </div>
+                                    </div>
 
+                                    <div className="space-y-4">
+                                        {eventVenue && (
+                                            <div>
+                                                <div className="rounded-lg overflow-hidden border aspect-[16/10] bg-muted mb-2 max-h-80">
+                                                    <img
+                                                        src={
+                                                            eventVenue.imagePath ??
+                                                            "/placeholder.svg"
+                                                        }
+                                                        alt={
+                                                            eventVenue.name ??
+                                                            "Venue image"
+                                                        }
+                                                        className="h-full w-full object-cover"
+                                                        onError={(e) => {
+                                                            e.currentTarget.src =
+                                                                "/placeholder.svg";
+                                                        }}
+                                                    />
+                                                </div>
+                                                <h4 className="text-sm font-semibold hover:underline text-primary">
+                                                    {eventVenue.publicId ? (
+                                                        <Link
+                                                            to={
+                                                                "/app/venues/$venueId"
+                                                            }
+                                                            params={{
+                                                                venueId:
+                                                                    eventVenue.publicId,
+                                                            }}
+                                                        >
+                                                            {eventVenue.name ??
+                                                                "Unknown Venue"}
+                                                        </Link>
+                                                    ) : (
+                                                        (eventVenue.name ??
+                                                        "Unknown Venue")
+                                                    )}
+                                                </h4>
+                                                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                                                    {eventVenue.location ??
+                                                        "Unknown Location"}
+                                                </p>
+                                            </div>
+                                        )}
                                         {/* Removed Description (can add back if needed) */}
                                         {/* Removed Progress */}
                                     </div>

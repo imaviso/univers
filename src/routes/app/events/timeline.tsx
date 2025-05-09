@@ -2,15 +2,34 @@ import { CreateEventButton } from "@/components/events/createEventButton";
 import { EventList } from "@/components/events/eventList";
 import { EventModal } from "@/components/events/eventModal";
 import { EventTimeline } from "@/components/events/eventTimeline";
+import { Button } from "@/components/ui/button"; // Added Button import
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Added Dropdown imports
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 import { useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import useCurrentUser
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { ListFilter } from "lucide-react"; // Added ListFilter icon
 import { useState } from "react";
 
 export const Route = createFileRoute("/app/events/timeline")({
     component: Events,
 });
+
+// Define EventStatus constants locally
+const EventStatus = {
+    PENDING: "Pending",
+    APPROVED: "Approved",
+    ONGOING: "Ongoing",
+    COMPLETED: "Completed",
+    REJECTED: "Rejected",
+    CANCELED: "Canceled",
+} as const;
 
 function Events() {
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
@@ -30,6 +49,7 @@ function Events() {
             : "mine",
     );
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [eventStatusFilter, setEventStatusFilter] = useState<string>("ALL"); // Added state for status filter, default to ALL
 
     const isAuthorized =
         currentUser?.role === "SUPER_ADMIN" ||
@@ -78,13 +98,74 @@ function Events() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            {/* TabsList only shown for SUPER_ADMIN in list view */}
+                            {/* Status Filter Dropdown - only for list view */}
+                            {/* Condition for isAuthorized is handled by the parent conditional rendering of this header block */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="ml-auto"
+                                    >
+                                        <ListFilter className="mr-2 h-4 w-4" />
+                                        Filter (
+                                        {eventStatusFilter === "ALL"
+                                            ? "All"
+                                            : eventStatusFilter
+                                                  .charAt(0)
+                                                  .toUpperCase() +
+                                              eventStatusFilter
+                                                  .slice(1)
+                                                  .toLowerCase()}
+                                        )
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuRadioGroup
+                                        value={eventStatusFilter}
+                                        onValueChange={setEventStatusFilter}
+                                    >
+                                        <DropdownMenuRadioItem value="ALL">
+                                            All
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value={EventStatus.PENDING}
+                                        >
+                                            {EventStatus.PENDING}
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value={EventStatus.APPROVED}
+                                        >
+                                            {EventStatus.APPROVED}
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value={EventStatus.ONGOING}
+                                        >
+                                            {EventStatus.ONGOING}
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value={EventStatus.COMPLETED}
+                                        >
+                                            {EventStatus.COMPLETED}
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value={EventStatus.REJECTED}
+                                        >
+                                            {EventStatus.REJECTED}
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value={EventStatus.CANCELED}
+                                        >
+                                            {EventStatus.CANCELED}
+                                        </DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            {/* TabsList only shown for these authorized roles in list view */}
                             <TabsList className="grid grid-cols-2">
+                                <TabsTrigger value="all">Events</TabsTrigger>
                                 <TabsTrigger value="mine">
                                     My Events
-                                </TabsTrigger>
-                                <TabsTrigger value="all">
-                                    All Events
                                 </TabsTrigger>
                             </TabsList>
                             <CreateEventButton
@@ -96,10 +177,16 @@ function Events() {
                     <main className="flex-1 overflow-auto pl-6 pr-6">
                         {/* Both TabsContent rendered for SUPER_ADMIN */}
                         <TabsContent value="all" className="mt-0">
-                            <EventList activeTab="all" />
+                            <EventList
+                                activeTab="all"
+                                eventStatusFilter={eventStatusFilter}
+                            />
                         </TabsContent>
                         <TabsContent value="mine" className="mt-0">
-                            <EventList activeTab="mine" />
+                            <EventList
+                                activeTab="mine"
+                                eventStatusFilter={eventStatusFilter}
+                            />
                         </TabsContent>
                     </main>
                 </Tabs>
@@ -136,7 +223,69 @@ function Events() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            {/* No TabsList here */}
+                            {/* Status Filter Dropdown for non-authorized users in list view */}
+                            {view === "list" && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="ml-auto"
+                                        >
+                                            <ListFilter className="mr-2 h-4 w-4" />
+                                            Filter (
+                                            {eventStatusFilter === "ALL"
+                                                ? "All"
+                                                : eventStatusFilter
+                                                      .charAt(0)
+                                                      .toUpperCase() +
+                                                  eventStatusFilter
+                                                      .slice(1)
+                                                      .toLowerCase()}
+                                            )
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuRadioGroup
+                                            value={eventStatusFilter}
+                                            onValueChange={setEventStatusFilter}
+                                        >
+                                            <DropdownMenuRadioItem value="ALL">
+                                                All
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.PENDING}
+                                            >
+                                                {EventStatus.PENDING}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.APPROVED}
+                                            >
+                                                {EventStatus.APPROVED}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.ONGOING}
+                                            >
+                                                {EventStatus.ONGOING}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.COMPLETED}
+                                            >
+                                                {EventStatus.COMPLETED}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.REJECTED}
+                                            >
+                                                {EventStatus.REJECTED}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.CANCELED}
+                                            >
+                                                {EventStatus.CANCELED}
+                                            </DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
                             <CreateEventButton
                                 onClick={() => setIsModalOpen(true)}
                             />
@@ -146,7 +295,10 @@ function Events() {
                         {/* Conditionally render based on view */}
                         {view === "list" ? (
                             // Non-SUPER_ADMIN only sees 'mine'
-                            <EventList activeTab="mine" />
+                            <EventList
+                                activeTab="mine"
+                                eventStatusFilter={eventStatusFilter}
+                            />
                         ) : (
                             <EventTimeline />
                         )}

@@ -22,33 +22,29 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { type FileMetadata, useFileUpload } from "@/hooks/use-file-upload"; // Updated import
 import { type VenueInput, venueSchema } from "@/lib/schema";
 import type { UserDTO, VenueDTO } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { Loader2, UploadCloud, X } from "lucide-react"; // Import icons
-import { useEffect, useState } from "react"; // Import useState
+import { AlertCircleIcon, ImageUpIcon, Loader2, XIcon } from "lucide-react"; // Updated imports
+import { useEffect } from "react"; // Added useEffect import
 import { useForm } from "react-hook-form";
-import {
-    FileUpload,
-    FileUploadDropzone,
-    FileUploadItem,
-    FileUploadItemDelete,
-    FileUploadItemMetadata,
-    FileUploadItemPreview,
-    FileUploadList,
-} from "../ui/file-upload"; // Import FileUpload components
 
 const defaultValues: VenueInput = {
     name: "",
     location: "",
-    venueOwnerId: undefined, // Use venueOwnerId for form
-    image: undefined, // Image is handled separately
+    venueOwnerId: undefined,
+    image: undefined,
 };
 
 interface VenueFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (venueData: VenueInput, imageFile: File | null) => void;
+    onSubmit: (
+        venueData: VenueInput,
+        imageFile: File | null | undefined,
+    ) => void; // imageFile can be File | null | undefined
     venue?: VenueDTO | null;
     isLoading?: boolean;
     venueOwners: UserDTO[];
@@ -64,9 +60,6 @@ export function VenueFormDialog({
     venueOwners,
     currentUserRole,
 }: VenueFormDialogProps) {
-    const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
-    const [imageFiles, setImageFiles] = useState<File[]>([]);
-
     const isEditing = !!venue;
     const formDefaultValues =
         isEditing && venue
@@ -84,43 +77,31 @@ export function VenueFormDialog({
         mode: "onChange",
     });
 
+    // Effect to reset form when dialog opens or venue changes
     useEffect(() => {
         if (isOpen) {
-            const resetValues =
+            const newDefaultValues =
                 isEditing && venue
                     ? {
                           name: venue.name,
                           location: venue.location,
                           venueOwnerId: venue.venueOwner?.publicId ?? undefined,
-                          image: undefined,
+                          image: undefined, // Image is handled by useFileUpload's initialFiles for display
+                          // and form.setValue by its onFilesChange for RHF state
                       }
-                    : defaultValues;
-            form.reset(resetValues);
-
-            const previewUrl = venue?.imagePath ?? null;
-            setInitialImageUrl(previewUrl);
+                    : defaultValues; // Use the global defaultValues for a new venue
+            form.reset(newDefaultValues);
         }
-    }, [isOpen, venue, form, isEditing]);
-
-    const handleFileValueChange = (files: File[]) => {
-        setImageFiles(files); // Update local state for FileUpload component
-        // Set the value (File[] or empty array) in the form.
-        // The resolver will validate this against the schema (which expects File[], transforms to File | undefined)
-        form.setValue("image", files, { shouldValidate: true });
-    };
+    }, [isOpen, venue, isEditing, form]); // Dependencies that trigger form reset
 
     const processSubmit = (data: VenueInput) => {
-        // Ensure venueOwnerId is correctly set to undefined if 'none' was selected
         const finalData = {
             ...data,
             venueOwnerId:
                 data.venueOwnerId === undefined ? undefined : data.venueOwnerId,
         };
-        onSubmit(finalData, imageFiles[0] ?? null);
+        onSubmit(finalData, data.image);
     };
-
-    // Use imageFiles state for FileUpload component value
-    const currentFiles = imageFiles;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -231,101 +212,218 @@ export function VenueFormDialog({
                         <FormField
                             control={form.control}
                             name="image"
-                            render={() => (
-                                <FormItem>
-                                    <FormLabel>Image (Optional)</FormLabel>
-                                    <FormControl>
-                                        <FileUpload
-                                            value={currentFiles} // Use local state for display
-                                            onValueChange={
-                                                handleFileValueChange
-                                            } // Updates local state and form state
-                                            maxFiles={1}
-                                            maxSize={10 * 1024 * 1024} // 10MB (sync with schema)
-                                            accept="image/jpeg, image/png, image/webp" // Sync with schema
-                                            disabled={isLoading}
-                                            className="relative rounded-lg border border-input bg-background"
-                                        >
-                                            <FileUploadDropzone className="border-dashed p-4">
-                                                <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
-                                                <p className="mb-1 text-sm text-muted-foreground">
-                                                    <span className="font-semibold">
-                                                        Click or drag image
-                                                    </span>{" "}
-                                                    to upload
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    JPG, PNG, WEBP (max 10MB)
-                                                </p>
-                                            </FileUploadDropzone>
-                                            <FileUploadList className="p-3">
-                                                {/* Display initial image */}
-                                                {currentFiles.length === 0 &&
-                                                    initialImageUrl && (
-                                                        <div className="relative flex items-center gap-2.5 rounded-md border p-2">
-                                                            {/* ... initial image display ... */}
-                                                            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                            render={({ field }) => {
+                                const maxSizeMB = 10;
+                                const maxSize = maxSizeMB * 1024 * 1024;
+
+                                const initialHookFiles: FileMetadata[] = [];
+                                if (
+                                    isEditing &&
+                                    venue?.imagePath &&
+                                    !field.value
+                                ) {
+                                    initialHookFiles.push({
+                                        id: `${venue.publicId}-initial`, // Fixed: Template literal
+                                        name:
+                                            venue.imagePath.split("/").pop() ||
+                                            "current_image.jpg",
+                                        url: venue.imagePath,
+                                        type: "image/existing", // Placeholder type
+                                        size: 0, // Size unknown for existing remote images
+                                    });
+                                }
+
+                                const [hookState, hookActions] = useFileUpload({
+                                    accept: "image/*",
+                                    maxSize,
+                                    maxFiles: 1,
+                                    multiple: false,
+                                    initialFiles: initialHookFiles,
+                                    onFilesChange: (uploadedFiles) => {
+                                        setTimeout(() => {
+                                            if (
+                                                uploadedFiles.length > 0 &&
+                                                uploadedFiles[0].file instanceof
+                                                    File
+                                            ) {
+                                                field.onChange(
+                                                    uploadedFiles[0]
+                                                        .file as File,
+                                                );
+                                            } else {
+                                                // If useFileUpload clears files (e.g. initial file removed),
+                                                // or if no file is selected.
+                                                field.onChange(undefined);
+                                            }
+                                        }, 0);
+                                    },
+                                });
+
+                                const {
+                                    files,
+                                    isDragging,
+                                    errors: uploadErrors,
+                                } = hookState;
+                                const {
+                                    handleDragEnter,
+                                    handleDragLeave,
+                                    handleDragOver,
+                                    handleDrop,
+                                    openFileDialog,
+                                    removeFile,
+                                    getInputProps,
+                                } = hookActions;
+
+                                const currentPreviewUrl =
+                                    files[0]?.preview || null;
+
+                                return (
+                                    <FormItem>
+                                        <FormLabel>Image (Optional)</FormLabel>
+                                        <FormControl>
+                                            <div className="flex flex-col gap-2">
+                                                <div className="relative">
+                                                    <div
+                                                        // biome-ignore lint/a11y/useSemanticElements: <explanation>
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onClick={openFileDialog}
+                                                        onKeyDown={(e) => {
+                                                            if (
+                                                                e.key ===
+                                                                    "Enter" ||
+                                                                e.key === " "
+                                                            )
+                                                                openFileDialog();
+                                                        }}
+                                                        onDragEnter={
+                                                            handleDragEnter
+                                                        }
+                                                        onDragLeave={
+                                                            handleDragLeave
+                                                        }
+                                                        onDragOver={
+                                                            handleDragOver
+                                                        }
+                                                        onDrop={handleDrop}
+                                                        data-dragging={
+                                                            isDragging ||
+                                                            undefined
+                                                        }
+                                                        className={cn(
+                                                            "border-input hover:bg-accent/50 data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50",
+                                                            "relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed p-4 transition-colors",
+                                                            (isLoading ||
+                                                                field.disabled) &&
+                                                                "pointer-events-none opacity-50",
+                                                            currentPreviewUrl &&
+                                                                "has-[img]:border-none",
+                                                        )}
+                                                        aria-disabled={
+                                                            isLoading ||
+                                                            field.disabled
+                                                        }
+                                                    >
+                                                        <input
+                                                            {...getInputProps({
+                                                                disabled:
+                                                                    isLoading ||
+                                                                    field.disabled,
+                                                            })}
+                                                            className="sr-only"
+                                                            aria-label="Upload venue image"
+                                                        />
+                                                        {currentPreviewUrl ? (
+                                                            <div className="absolute inset-0">
                                                                 <img
                                                                     src={
-                                                                        initialImageUrl
+                                                                        currentPreviewUrl
                                                                     }
-                                                                    alt="Current venue"
-                                                                    className="size-full rounded object-cover"
-                                                                    onError={(
-                                                                        e,
-                                                                    ) => {
-                                                                        e.currentTarget.src =
-                                                                            "/placeholder.svg"; // Fallback image
-                                                                    }}
+                                                                    alt={
+                                                                        files[0]
+                                                                            ?.file
+                                                                            ?.name ||
+                                                                        "Uploaded image"
+                                                                    }
+                                                                    className="size-full object-cover"
                                                                 />
                                                             </div>
-                                                            <div className="flex min-w-0 flex-1 flex-col">
-                                                                <span className="truncate text-sm font-medium text-muted-foreground">
-                                                                    Current
-                                                                    Image
-                                                                </span>
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    Will be
-                                                                    replaced if
-                                                                    new image is
-                                                                    selected
-                                                                </span>
+                                                        ) : (
+                                                            <div className="flex flex-col items-center justify-center px-4 py-3 text-center">
+                                                                <div
+                                                                    className="bg-background mb-2 flex size-11 shrink-0 items-center justify-center rounded-full border"
+                                                                    aria-hidden="true"
+                                                                >
+                                                                    <ImageUpIcon className="size-4 opacity-60" />
+                                                                </div>
+                                                                <p className="mb-1.5 text-sm font-medium">
+                                                                    Drop your
+                                                                    image here
+                                                                    or click to
+                                                                    browse
+                                                                </p>
+                                                                <p className="text-muted-foreground text-xs">
+                                                                    Max size:{" "}
+                                                                    {maxSizeMB}
+                                                                    MB.
+                                                                    Accepted:
+                                                                    image/*
+                                                                </p>
                                                             </div>
-                                                        </div>
-                                                    )}
-                                                {/* Display selected file */}
-                                                {currentFiles.map((file) => (
-                                                    <FileUploadItem
-                                                        key={file.name}
-                                                        value={file}
-                                                        className="p-2"
-                                                    >
-                                                        <FileUploadItemPreview />
-                                                        <FileUploadItemMetadata />
-                                                        <FileUploadItemDelete
-                                                            asChild
-                                                        >
+                                                        )}
+                                                    </div>
+                                                    {currentPreviewUrl && (
+                                                        <div className="absolute top-4 right-4">
                                                             <Button
                                                                 type="button"
+                                                                variant="destructive"
                                                                 size="icon"
-                                                                variant="ghost"
-                                                                className="size-7"
+                                                                className="z-50 flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:ring-[3px] hover:text-white"
+                                                                onClick={(
+                                                                    e,
+                                                                ) => {
+                                                                    e.stopPropagation();
+                                                                    removeFile(
+                                                                        files[0]
+                                                                            ?.id,
+                                                                    );
+                                                                    // Also ensure RHF field is cleared
+                                                                    field.onChange(
+                                                                        undefined,
+                                                                    );
+                                                                }}
+                                                                aria-label="Remove image"
                                                                 disabled={
-                                                                    isLoading
+                                                                    isLoading ||
+                                                                    field.disabled
                                                                 }
                                                             >
-                                                                <X className="size-4" />
+                                                                <XIcon
+                                                                    className="size-4"
+                                                                    aria-hidden="true"
+                                                                />
                                                             </Button>
-                                                        </FileUploadItemDelete>
-                                                    </FileUploadItem>
-                                                ))}
-                                            </FileUploadList>
-                                        </FileUpload>
-                                    </FormControl>
-                                    {/* Display validation error from react-hook-form */}
-                                    <FormMessage />
-                                </FormItem>
-                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {uploadErrors.length > 0 && (
+                                                    <div
+                                                        className="text-destructive flex items-center gap-1 text-xs"
+                                                        role="alert"
+                                                    >
+                                                        <AlertCircleIcon className="size-3 shrink-0" />
+                                                        <span>
+                                                            {uploadErrors[0]}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                );
+                            }}
                         />
 
                         {/* Display general form error from backend */}

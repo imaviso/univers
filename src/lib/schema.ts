@@ -147,26 +147,12 @@ export const eventSchema = v.pipe(
         startTime: v.date("Start date is required"),
         endTime: v.date("End date is required"),
         approvedLetter: v.pipe(
-            v.array(
-                v.pipe(
-                    v.instance(File, "Each item must be a file."),
-                    v.mimeType(
-                        [
-                            "application/pdf",
-                            "image/jpeg",
-                            "image/png",
-                            "image/webp",
-                        ],
-                        "Invalid file type. Please select a PDF or image.",
-                    ),
-                    v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."), // Validation 2 for the element
-                ),
-                "Approved letter must be a list of files.", // Message for the array schema itself
+            v.instance(File, "Approved letter (image) is required."),
+            v.mimeType(
+                ["image/jpeg", "image/png", "image/webp"],
+                "Invalid file type. Please select a JPG, PNG, or WEBP image.",
             ),
-            // Validations/transformations on the array as a whole
-            v.check((arr) => arr.length > 0, "Approved letter is required."),
-            v.check((arr) => arr.length <= 1, "Only one file allowed."),
-            v.transform((arr) => arr[0]), // Transform File[] to single File
+            v.maxSize(1024 * 1024 * 5, "Image file too large (max 5MB)."),
         ),
     }),
     v.forward(
@@ -211,24 +197,12 @@ export const editEventSchema = v.pipe(
         endTime: v.optional(v.date()),
         approvedLetter: v.optional(
             v.pipe(
-                v.array(
-                    v.pipe(
-                        v.instance(File, "Each item must be a file."),
-                        v.mimeType(
-                            [
-                                "application/pdf",
-                                "image/jpeg",
-                                "image/png",
-                                "image/webp",
-                            ],
-                            "Invalid file type. Please select a PDF or image.",
-                        ),
-                        v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."),
-                    ),
-                    "Approved letter must be a list of files.",
+                v.instance(File, "Approved letter (image) is required."),
+                v.mimeType(
+                    ["image/jpeg", "image/png", "image/webp"],
+                    "Invalid file type. Please select a JPG, PNG, or WEBP image.",
                 ),
-                v.check((arr) => arr.length <= 1, "Only one file allowed."),
-                v.transform((arr) => (arr.length > 0 ? arr[0] : undefined)),
+                v.maxSize(1024 * 1024 * 5, "Image file too large (max 5MB)."),
             ),
         ),
     }),
@@ -486,19 +460,12 @@ export const venueSchema = v.object({
     venueOwnerId: v.optional(v.pipe(v.string())),
     image: v.optional(
         v.pipe(
-            v.array(
-                v.pipe(
-                    v.instance(File, "Each item must be a file."),
-                    v.mimeType(
-                        ["image/jpeg", "image/png", "image/webp"],
-                        "Invalid file type. Please select a JPG, PNG, or WEBP.",
-                    ),
-                    v.maxSize(1024 * 1024 * 10, "File too large (max 10MB)."),
-                ),
-                "Image must be a list of files.",
+            v.instance(File, "Image must be a file."),
+            v.mimeType(
+                ["image/jpeg", "image/png", "image/webp"],
+                "Invalid file type. Please select a JPG, PNG, or WEBP.",
             ),
-            v.check((arr) => arr.length <= 1, "Only one file allowed."),
-            v.transform((arr) => (arr.length > 0 ? arr[0] : undefined)),
+            v.maxSize(1024 * 1024 * 10, "File too large (max 10MB)."),
         ),
     ),
 });
