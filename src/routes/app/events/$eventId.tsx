@@ -65,6 +65,7 @@ import {
     eventApprovalsQueryOptions,
     eventByIdQueryOptions,
     eventsQueryKeys,
+    useCancelEquipmentReservationMutation,
     useCreateEquipmentReservationMutation,
     venuesQueryOptions,
 } from "@/lib/query";
@@ -344,6 +345,12 @@ export function EventDetailsPage() {
         useState(false);
     const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
     const [rejectionRemarks, setRejectionRemarks] = useState("");
+    const [
+        isCancelEquipmentReservationDialogOpen,
+        setIsCancelEquipmentReservationDialogOpen,
+    ] = useState(false);
+    const [equipmentReservationToCancelId, setEquipmentReservationToCancelId] =
+        useState<string | null>(null);
 
     const venueMap1 = useMemo(() => {
         const map = new Map<string, VenueDTO>();
@@ -446,6 +453,10 @@ export function EventDetailsPage() {
 
     const canEditEvent =
         isSuperAdmin || (isOrganizer && event.status === "PENDING");
+
+    const canUserModifyEquipmentReservation =
+        isOrganizer &&
+        (event.status === "PENDING" || event.status === "APPROVED");
 
     const approveMutation = useMutation({
         mutationFn: approveEvent,
@@ -812,6 +823,25 @@ export function EventDetailsPage() {
     // Placeholder handler for edit (e.g., navigate to an edit page)
     const handleEditClick = () => {
         setIsEditModalOpen(true);
+    };
+
+    // Use the existing cancel equipment reservation mutation
+    const cancelEquipmentReservationMutationHook =
+        useCancelEquipmentReservationMutation();
+
+    const handleCancelEquipmentReservationClick = (reservationId: string) => {
+        setEquipmentReservationToCancelId(reservationId);
+        setIsCancelEquipmentReservationDialogOpen(true);
+    };
+
+    const handleConfirmCancelEquipmentReservation = () => {
+        if (equipmentReservationToCancelId && event?.publicId) {
+            // Use the imported hook's mutate function
+            cancelEquipmentReservationMutationHook.mutate({
+                reservationId: equipmentReservationToCancelId,
+                eventId: event.publicId, // Pass the current event's publicId
+            });
+        }
     };
 
     let dateDisplayString = "Date not available";
@@ -1458,6 +1488,11 @@ export function EventDetailsPage() {
                                                 <TableHead>Equipment</TableHead>
                                                 <TableHead>Quantity</TableHead>
                                                 <TableHead>Status</TableHead>
+                                                {canUserModifyEquipmentReservation && (
+                                                    <TableHead className="text-right">
+                                                        Actions
+                                                    </TableHead>
+                                                )}
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -1492,7 +1527,30 @@ export function EventDetailsPage() {
                                                                         .toLowerCase()}
                                                             </Badge>
                                                         </TableCell>
-                                                        {/* Add more cells if needed */}
+                                                        {canUserModifyEquipmentReservation && (
+                                                            <TableCell className="text-right">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() =>
+                                                                        handleCancelEquipmentReservationClick(
+                                                                            reservation.publicId,
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        cancelEquipmentReservationMutationHook.isPending &&
+                                                                        equipmentReservationToCancelId ===
+                                                                            reservation.publicId
+                                                                    }
+                                                                >
+                                                                    <XCircle className="h-4 w-4 text-destructive" />
+                                                                    <span className="sr-only">
+                                                                        Cancel
+                                                                        Reservation
+                                                                    </span>
+                                                                </Button>
+                                                            </TableCell>
+                                                        )}
                                                     </TableRow>
                                                 ),
                                             )}
@@ -1651,6 +1709,15 @@ export function EventDetailsPage() {
                     // Indicate that the event is pre-selected
                 />
             )}
+            {/* Confirmation Dialog for Cancelling Equipment Reservation */}
+            <DeleteConfirmDialog
+                isOpen={isCancelEquipmentReservationDialogOpen}
+                onClose={() => setIsCancelEquipmentReservationDialogOpen(false)}
+                onConfirm={handleConfirmCancelEquipmentReservation}
+                title="Cancel Equipment Reservation"
+                description="Are you sure you want to cancel this equipment reservation? This action cannot be undone."
+                isLoading={cancelEquipmentReservationMutationHook.isPending}
+            />
         </div>
     );
 }

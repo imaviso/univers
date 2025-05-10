@@ -663,10 +663,71 @@ export const useRejectEquipmentReservationMutation = () => {
 export const useCancelEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: cancelEquipmentReservation,
-        onSuccess: (_message, reservationId) => {
+        mutationFn: (variables: { reservationId: string; eventId: string }) =>
+            cancelEquipmentReservation(variables.reservationId),
+        onMutate: async (variables: {
+            reservationId: string;
+            eventId: string;
+        }) => {
+            const { reservationId, eventId } = variables;
+            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+            await queryClient.cancelQueries({
+                queryKey: equipmentReservationKeys.byEvent(eventId),
+            });
+
+            // Snapshot the previous value
+            const previousReservations = queryClient.getQueryData<
+                EquipmentReservationDTO[]
+            >(equipmentReservationKeys.byEvent(eventId));
+
+            // Optimistically update to the new value
+            if (previousReservations) {
+                queryClient.setQueryData<EquipmentReservationDTO[]>(
+                    equipmentReservationKeys.byEvent(eventId),
+                    previousReservations.filter(
+                        (reservation) => reservation.publicId !== reservationId,
+                    ),
+                );
+            }
+
+            // Return a context object with the snapshotted value
+            return { previousReservations, eventId };
+        },
+        onError: (
+            err,
+            variables,
+            context?: {
+                previousReservations?: EquipmentReservationDTO[];
+                eventId?: string;
+            },
+        ) => {
+            // Rollback to the previous value if mutation fails
+            if (context?.previousReservations && context?.eventId) {
+                queryClient.setQueryData(
+                    equipmentReservationKeys.byEvent(context.eventId),
+                    context.previousReservations,
+                );
+            }
+            // Consider showing an error toast here if not handled by the component
+        },
+        onSuccess: (data, variables) => {
+            // `data` is the result of `cancelEquipmentReservation`
+            // `variables` is { reservationId, eventId }
+            // Invalidate related queries to ensure data consistency
+            // The specific event's list is already optimistically updated,
+            // but invalidating ensures it refetches if needed, or if other views depend on it.
             queryClient.invalidateQueries({
-                queryKey: equipmentReservationKeys.detail(reservationId),
+                queryKey: equipmentReservationKeys.byEvent(variables.eventId),
+            });
+        },
+        onSettled: (data, error, variables) => {
+            // This function runs after the mutation is either successful or errors.
+            // Good place for invalidations that should happen regardless of outcome,
+            // or to ensure specific details are fresh.
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.detail(
+                    variables.reservationId,
+                ),
             });
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.lists(),
@@ -676,6 +737,11 @@ export const useCancelEquipmentReservationMutation = () => {
             });
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.own(),
+            });
+            // Also ensure the byEvent list is refetched to be certain it's up-to-date,
+            // especially if the optimistic update logic might have edge cases or server modifies data further.
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.byEvent(variables.eventId),
             });
         },
     });
