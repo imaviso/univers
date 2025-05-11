@@ -178,14 +178,15 @@ function EquipmentInventory() {
     });
 
     const deleteMutation = useMutation<
-        void, // Return type of mutationFn
-        Error, // Error type
-        { equipmentId: string; userId: string } // Variables type
+        void,
+        Error,
+        { equipmentId: string; userId: string }
     >({
-        mutationFn: ({ equipmentId, userId }) =>
-            deleteEquipment(equipmentId, userId), // Destructure variables
+        mutationFn: async ({ equipmentId, userId }) => {
+            await deleteEquipment(equipmentId, userId);
+            return Promise.resolve(undefined); // Explicitly map to Promise<void>
+        },
         onSuccess: (_, variables) => {
-            // variables contains { equipmentId, userId }
             toast.success("Equipment deleted successfully.");
             queryClient.invalidateQueries({
                 queryKey: equipmentsQueryOptions(currentUser).queryKey, // Invalidate based on user
@@ -231,33 +232,53 @@ function EquipmentInventory() {
     };
 
     // Updated submit handler from dialog
-    const handleFormSubmit = (
-        data: EquipmentDTOInput,
-        imageFile: File | null,
-    ) => {
+    const handleFormSubmit = (data: EquipmentDTOInput) => {
         if (!currentUser) {
             toast.error("User not found. Cannot submit form.");
             return;
         }
 
+        const imageFile = data.image instanceof File ? data.image : null;
+
         if (editingEquipment) {
             // Edit existing equipment
             editMutation.mutate({
                 equipmentId: editingEquipment.publicId,
-                userId: currentUser.publicId, // Pass current user's ID
-                equipmentData: data, // Pass data including optional ownerId
-                imageFile: imageFile, // Pass optional image file
+                userId: currentUser.publicId,
+                equipmentData: {
+                    // Pass data excluding the image, if API expects it separately
+                    name: data.name,
+                    brand: data.brand,
+                    availability: data.availability,
+                    quantity: data.quantity,
+                    status: data.status,
+                    ownerId: data.ownerId,
+                },
+                imageFile: imageFile,
             });
         } else {
             // Add new equipment
+            // The check for image presence for new items is now handled inside EquipmentFormDialog or by schema.
+            // However, it's good to ensure it here before API call if needed,
+            // or rely on the API to handle it if data.image is undefined.
+            // Forcing a check here as per original logic for add:
             if (!imageFile) {
-                // Image required for add
                 toast.error("Image file is required to add new equipment.");
+                // Optionally, set form error back if possible, though toast is immediate.
+                // Form.setError("image", {message: "Image file is required"}) // This would need access to form instance
                 return;
             }
             addMutation.mutate({
-                userId: currentUser.publicId, // Pass current user's ID
-                equipmentData: data, // Pass data including optional ownerId
+                userId: currentUser.publicId,
+                equipmentData: {
+                    // Pass data excluding the image, if API expects it separately
+                    name: data.name,
+                    brand: data.brand,
+                    availability: data.availability,
+                    quantity: data.quantity,
+                    status: data.status,
+                    ownerId: data.ownerId,
+                },
                 imageFile: imageFile,
             });
         }
@@ -270,31 +291,22 @@ function EquipmentInventory() {
 
     // Calculate stats (memoized)
     const stats = useMemo(() => {
-        // Add a safeguard: Check if equipment is actually an array before reducing
         if (!Array.isArray(equipment)) {
-            // Return default stats if equipment isn't ready
             return {
                 total: 0,
                 available: 0,
                 maintenance: 0,
-                pending: 0,
                 defect: 0,
                 needReplacement: 0,
             };
         }
 
-        // Now it's safe to call reduce
         const counts = equipment.reduce(
             (acc, item) => {
                 acc.total++;
                 switch (item.status) {
-                    case "APPROVED": // Assuming APPROVED means available
                     case "NEW":
-                        // Ensure 'availability' property exists and is checked correctly
                         if (item.availability) acc.available++;
-                        break;
-                    case "PENDING":
-                        acc.pending++;
                         break;
                     case "MAINTENANCE":
                         acc.maintenance++;
@@ -305,9 +317,6 @@ function EquipmentInventory() {
                     case "NEED_REPLACEMENT":
                         acc.needReplacement++;
                         break;
-                    case "CANCELED":
-                        // Decide if canceled counts towards total or a separate stat
-                        break;
                 }
                 return acc;
             },
@@ -315,28 +324,19 @@ function EquipmentInventory() {
                 total: 0,
                 available: 0,
                 maintenance: 0,
-                pending: 0,
                 defect: 0,
                 needReplacement: 0,
             },
         );
         return counts;
-    }, [equipment]); // De
+    }, [equipment]);
 
     // Status badge styling
     const getStatusBadge = useCallback((status: Equipment["status"]) => {
-        // ... (badge logic remains the same) ...
         switch (status) {
-            case "APPROVED":
             case "NEW":
                 return (
                     <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20 capitalize">
-                        {status.toLowerCase()}
-                    </Badge>
-                );
-            case "PENDING":
-                return (
-                    <Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 capitalize">
                         {status.toLowerCase()}
                     </Badge>
                 );
@@ -348,21 +348,21 @@ function EquipmentInventory() {
                 );
             case "DEFECT":
             case "NEED_REPLACEMENT":
-            case "CANCELED":
                 return (
                     <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20 capitalize">
                         {status.replace("_", " ").toLowerCase()}
                     </Badge>
                 );
-            default:
-                // This case should be unreachable given the type definition
+            default: {
+                const exhaustiveCheck: never = status;
                 return (
                     <Badge variant="outline" className="capitalize">
-                        unknown
+                        {exhaustiveCheck}
                     </Badge>
                 );
+            }
         }
-    }, []); // Empty dependency array as it doesn't depend on component scope
+    }, []);
 
     // DataTable columns definition
     const columns: ColumnDef<Equipment>[] = useMemo(

@@ -68,14 +68,7 @@ export type Equipment = {
     quantity: number;
     equipmentOwner: UserDTO;
     imagePath: string;
-    status:
-        | "APPROVED"
-        | "PENDING"
-        | "CANCELED"
-        | "DEFECT"
-        | "MAINTENANCE"
-        | "NEED_REPLACEMENT"
-        | "NEW";
+    status: "DEFECT" | "MAINTENANCE" | "NEED_REPLACEMENT" | "NEW";
     createdAt: string;
     updatedAt: string;
 };
