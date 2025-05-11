@@ -16,7 +16,6 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input"; // Keep Input
-import { Label } from "@/components/ui/label"; // Keep Label
 import {
     Select,
     SelectContent,
@@ -24,26 +23,20 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    type EquipmentDTOInput,
-    ImageSchema,
-    equipmentDataSchema,
-} from "@/lib/schema";
+import { type FileMetadata, useFileUpload } from "@/hooks/use-file-upload";
+import { type EquipmentDTOInput, equipmentDataSchema } from "@/lib/schema";
 import { type Equipment, STATUS_EQUIPMENT, type UserDTO } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { UploadCloud, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import * as v from "valibot";
 import {
-    FileUpload,
-    FileUploadDropzone,
-    FileUploadItem,
-    FileUploadItemDelete,
-    FileUploadItemMetadata,
-    FileUploadItemPreview,
-    FileUploadList,
-} from "../ui/file-upload";
+    AlertCircleIcon,
+    Edit,
+    ImageUpIcon,
+    Loader2,
+    XIcon as X,
+} from "lucide-react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
 
 const defaultValues: EquipmentDTOInput = {
     name: "",
@@ -52,13 +45,14 @@ const defaultValues: EquipmentDTOInput = {
     quantity: 1,
     status: "NEW",
     ownerId: undefined,
+    image: undefined,
 };
 
 interface EquipmentFormDialogProps {
     isOpen: boolean;
     onClose: () => void;
     equipment?: Equipment;
-    onSubmit: (data: EquipmentDTOInput, imageFile: File | null) => void;
+    onSubmit: (data: EquipmentDTOInput) => void;
     isMutating: boolean;
     currentUserRole: UserDTO["role"];
     equipmentOwners: UserDTO[];
@@ -73,13 +67,9 @@ export function EquipmentFormDialog({
     currentUserRole,
     equipmentOwners,
 }: EquipmentFormDialogProps) {
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imageError, setImageError] = useState<string | null>(null);
-    const [initialImageUrl, setInitialImageUrl] = useState<string | null>(null);
-
     const isSuperAdmin = currentUserRole === "SUPER_ADMIN";
     const isEditing = !!equipment;
-    const isEquipmentOwner = currentUserRole === "EQUIPMENT_OWNER";
+
     const formDefaultValues = equipment
         ? {
               name: equipment.name,
@@ -88,6 +78,7 @@ export function EquipmentFormDialog({
               quantity: equipment.quantity,
               status: equipment.status,
               ownerId: equipment.equipmentOwner?.publicId ?? undefined,
+              image: undefined,
           }
         : defaultValues;
 
@@ -97,54 +88,87 @@ export function EquipmentFormDialog({
         mode: "onChange",
     });
 
+    // Initialize useFileUpload hook
+    const initialHookFiles: FileMetadata[] = [];
+    if (isEditing && equipment?.imagePath && !form.getValues("image")) {
+        initialHookFiles.push({
+            id: `${equipment.publicId}-initial`,
+            name: equipment.imagePath.split("/").pop() || "current_image.jpg",
+            url: equipment.imagePath,
+            type: "image/existing",
+            size: 0,
+        });
+    }
+
+    const [hookState, hookActions] = useFileUpload({
+        accept: "image/jpeg, image/png, image/webp",
+        maxSize: 5 * 1024 * 1024, // 5MB
+        maxFiles: 1,
+        multiple: false,
+        initialFiles: initialHookFiles,
+        onFilesChange: (uploadedFiles) => {
+            setTimeout(() => {
+                // setTimeout to avoid react batching issues with RHF
+                if (
+                    uploadedFiles.length > 0 &&
+                    uploadedFiles[0].file instanceof File
+                ) {
+                    form.setValue("image", uploadedFiles[0].file as File, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                    });
+                } else {
+                    form.setValue("image", undefined, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                    });
+                }
+            }, 0);
+        },
+    });
+
+    const {
+        files: uploadedFiles,
+        isDragging,
+        errors: uploadErrors,
+    } = hookState;
+    const {
+        handleDragEnter,
+        handleDragLeave,
+        handleDragOver,
+        handleDrop,
+        openFileDialog,
+        removeFile,
+        getInputProps,
+    } = hookActions;
+
     useEffect(() => {
         if (isOpen) {
-            form.reset(
-                equipment
-                    ? {
-                          name: equipment.name,
-                          brand: equipment.brand,
-                          availability: equipment.availability,
-                          quantity: equipment.quantity,
-                          status: equipment.status,
-                          ownerId: equipment.equipmentOwner?.publicId,
-                      }
-                    : defaultValues,
-            );
-            // Reset image state
-            setImageFile(null);
-            setImageError(null);
-            // Set initial image URL for preview if editing
-            const previewUrl = equipment?.imagePath;
+            const newDefaultValues = equipment
+                ? {
+                      name: equipment.name,
+                      brand: equipment.brand,
+                      availability: equipment.availability,
+                      quantity: equipment.quantity,
+                      status: equipment.status,
+                      ownerId: equipment.equipmentOwner?.publicId ?? undefined,
+                      image: undefined,
+                  }
+                : defaultValues;
+            form.reset(newDefaultValues);
+            form.setValue("image", undefined, {
+                shouldValidate: true,
+                shouldDirty: false,
+            });
         }
     }, [isOpen, equipment, form]);
 
-    const handleFileValueChange = (files: File[]) => {
-        const file = files[0] || null;
-        setImageError(null);
-
-        if (file) {
-            const validationResult = v.safeParse(ImageSchema, file);
-            if (validationResult.success) {
-                setImageFile(file);
-            } else {
-                setImageError(
-                    v.flatten(validationResult.issues).root?.[0] ??
-                        "Invalid image file.",
-                );
-                setImageFile(null);
-            }
-        } else {
-            setImageFile(null);
-        }
-    };
-
     const processSubmit = (data: EquipmentDTOInput) => {
-        setImageError(null); // Reset image error
-
         // Validate image presence for new equipment
-        if (!isEditing && !imageFile) {
-            setImageError("Image file is required.");
+        if (!isEditing && !data.image) {
+            form.setError("image", {
+                message: "Image file is required for new equipment.",
+            });
             return;
         }
 
@@ -156,25 +180,15 @@ export function EquipmentFormDialog({
             return;
         }
 
-        // Validate image file again (optional safeguard)
-        if (imageFile) {
-            const validationResult = v.safeParse(ImageSchema, imageFile);
-            if (!validationResult.success) {
-                setImageError(
-                    v.flatten(validationResult.issues).root?.[0] ??
-                        "Invalid image file.",
-                );
-                return;
-            }
-        }
-
-        // NOTE: The API call (`addEquipment`/`editEquipment`) now handles the ownerId nesting.
-        // We pass the `data` object as is, which includes `ownerId` if set.
-        onSubmit(data, imageFile);
+        onSubmit(data);
     };
 
-    // Determine the files array for FileUpload based on state
-    const currentFiles = imageFile ? [imageFile] : [];
+    const currentPreviewUrl =
+        uploadedFiles[0]?.preview ||
+        (isEditing && equipment?.imagePath && !uploadedFiles[0]?.file
+            ? equipment.imagePath
+            : null);
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[600px] overflow-auto max-h-[90vh]">
@@ -197,7 +211,7 @@ export function EquipmentFormDialog({
                                 name="ownerId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Equipment Owner *</FormLabel>
+                                        <FormLabel>Equipment Owner</FormLabel>
                                         <Select
                                             onValueChange={(value) =>
                                                 field.onChange(value)
@@ -378,88 +392,188 @@ export function EquipmentFormDialog({
                             )}
                         />
 
-                        {/* Image Upload using FileUpload */}
-                        <div className="grid gap-2">
-                            <Label>
-                                Image {isEditing ? "(Optional)" : "*"}
-                            </Label>
-                            <FileUpload
-                                value={currentFiles}
-                                onValueChange={handleFileValueChange}
-                                maxFiles={1}
-                                maxSize={5 * 1024 * 1024} // 5MB
-                                accept="image/jpeg, image/png, image/webp"
-                                disabled={isMutating}
-                                className="relative rounded-lg border border-input bg-background"
-                            >
-                                <FileUploadDropzone className="border-dashed p-4">
-                                    <UploadCloud className="mb-2 h-8 w-8 text-muted-foreground" />
-                                    <p className="mb-1 text-sm text-muted-foreground">
-                                        <span className="font-semibold">
-                                            Click or drag image
-                                        </span>{" "}
-                                        to upload
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        JPG, PNG, WEBP (max 5MB)
-                                    </p>
-                                </FileUploadDropzone>
-                                <FileUploadList className="p-3">
-                                    {/* Display initial image if editing and no new file selected */}
-                                    {!imageFile && initialImageUrl && (
-                                        <div className="relative flex items-center gap-2.5 rounded-md border p-2">
-                                            <div className="relative flex size-10 shrink-0 items-center justify-center rounded-md bg-muted">
-                                                <img
-                                                    src={initialImageUrl}
-                                                    alt="Current equipment"
-                                                    className="size-full rounded object-cover"
-                                                    onError={(e) => {
-                                                        e.currentTarget.src =
-                                                            "/placeholder.svg"; // Fallback image
+                        {/* Image Upload using useFileUpload */}
+                        <FormField
+                            control={form.control}
+                            name="image"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Image</FormLabel>
+                                    <FormControl>
+                                        <div className="flex flex-col gap-2">
+                                            <div className="relative">
+                                                <div
+                                                    // biome-ignore lint/a11y/useSemanticElements: <yes>
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={openFileDialog}
+                                                    onKeyDown={(e) => {
+                                                        if (
+                                                            e.key === "Enter" ||
+                                                            e.key === " "
+                                                        )
+                                                            openFileDialog();
                                                     }}
-                                                />
-                                            </div>
-                                            <div className="flex min-w-0 flex-1 flex-col">
-                                                <span className="truncate text-sm font-medium text-muted-foreground">
-                                                    Current Image
-                                                </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    Will be replaced if new
-                                                    image is selected
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {/* Display selected file */}
-                                    {currentFiles.map((file) => (
-                                        <FileUploadItem
-                                            key={file.name}
-                                            value={file}
-                                            className="p-2"
-                                        >
-                                            <FileUploadItemPreview />
-                                            <FileUploadItemMetadata />
-                                            <FileUploadItemDelete asChild>
-                                                <Button
-                                                    type="button"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    className="size-7"
-                                                    disabled={isMutating}
+                                                    onDragEnter={
+                                                        handleDragEnter
+                                                    }
+                                                    onDragLeave={
+                                                        handleDragLeave
+                                                    }
+                                                    onDragOver={handleDragOver}
+                                                    onDrop={handleDrop}
+                                                    data-dragging={
+                                                        isDragging || undefined
+                                                    }
+                                                    className={cn(
+                                                        "border-input hover:bg-accent/50 data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50",
+                                                        "relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed p-4 transition-colors",
+                                                        (isMutating ||
+                                                            field.disabled) &&
+                                                            "pointer-events-none opacity-50",
+                                                        currentPreviewUrl &&
+                                                            "has-[img]:border-none",
+                                                    )}
+                                                    aria-disabled={
+                                                        isMutating ||
+                                                        field.disabled
+                                                    }
                                                 >
-                                                    <X className="size-4" />
-                                                </Button>
-                                            </FileUploadItemDelete>
-                                        </FileUploadItem>
-                                    ))}
-                                </FileUploadList>
-                            </FileUpload>
-                            {imageError && (
-                                <p className="text-sm text-destructive">
-                                    {imageError}
-                                </p>
+                                                    <input
+                                                        {...getInputProps({
+                                                            disabled:
+                                                                isMutating ||
+                                                                field.disabled,
+                                                        })}
+                                                        className="sr-only"
+                                                        aria-label="Upload equipment image"
+                                                    />
+                                                    {currentPreviewUrl ? (
+                                                        <div className="absolute inset-0">
+                                                            <img
+                                                                src={
+                                                                    currentPreviewUrl
+                                                                }
+                                                                alt={
+                                                                    uploadedFiles[0]
+                                                                        ?.file
+                                                                        ?.name ||
+                                                                    "Uploaded image"
+                                                                }
+                                                                className="size-full object-cover"
+                                                                onError={(
+                                                                    e,
+                                                                ) => {
+                                                                    e.currentTarget.src =
+                                                                        "/placeholder.svg";
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex flex-col items-center justify-center px-4 py-3 text-center">
+                                                            <div
+                                                                className="bg-background mb-2 flex size-11 shrink-0 items-center justify-center rounded-full border"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <ImageUpIcon className="size-4 opacity-60" />
+                                                            </div>
+                                                            <p className="mb-1.5 text-sm font-medium">
+                                                                Drop your image
+                                                                here or click to
+                                                                browse
+                                                            </p>
+                                                            <p className="text-muted-foreground text-xs">
+                                                                Max size: 5MB.
+                                                                Accepted: JPG,
+                                                                PNG, WEBP
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {currentPreviewUrl && (
+                                                    <div className="absolute top-4 right-4">
+                                                        {isEditing &&
+                                                        equipment?.imagePath &&
+                                                        !uploadedFiles[0]
+                                                            ?.file ? (
+                                                            <Button
+                                                                type="button"
+                                                                variant="secondary"
+                                                                size="icon"
+                                                                className="z-50 flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:ring-[3px] hover:text-white"
+                                                                onClick={(
+                                                                    e,
+                                                                ) => {
+                                                                    e.stopPropagation();
+                                                                    openFileDialog();
+                                                                }}
+                                                                aria-label="Replace image"
+                                                                disabled={
+                                                                    isMutating ||
+                                                                    field.disabled
+                                                                }
+                                                            >
+                                                                <Edit
+                                                                    className="size-4"
+                                                                    aria-hidden="true"
+                                                                />
+                                                            </Button>
+                                                        ) : uploadedFiles[0]
+                                                              ?.file ? (
+                                                            <Button
+                                                                type="button"
+                                                                variant="destructive"
+                                                                size="icon"
+                                                                className="z-50 flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:ring-[3px] hover:text-white"
+                                                                onClick={(
+                                                                    e,
+                                                                ) => {
+                                                                    e.stopPropagation();
+                                                                    hookActions.removeFile(
+                                                                        uploadedFiles[0]
+                                                                            ?.id,
+                                                                    );
+                                                                    form.setValue(
+                                                                        "image",
+                                                                        undefined,
+                                                                        {
+                                                                            shouldValidate: true,
+                                                                            shouldDirty: true,
+                                                                        },
+                                                                    );
+                                                                }}
+                                                                aria-label="Remove selected image"
+                                                                disabled={
+                                                                    isMutating ||
+                                                                    field.disabled
+                                                                }
+                                                            >
+                                                                <X
+                                                                    className="size-4"
+                                                                    aria-hidden="true"
+                                                                />
+                                                            </Button>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {uploadErrors.length > 0 && (
+                                                <div
+                                                    className="text-destructive flex items-center gap-1 text-xs"
+                                                    role="alert"
+                                                >
+                                                    <AlertCircleIcon className="size-3 shrink-0" />
+                                                    <span>
+                                                        {uploadErrors[0]}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
                             )}
-                        </div>
+                        />
 
                         {form.formState.errors.root?.serverError && (
                             <p className="text-sm text-destructive text-center">
@@ -483,20 +597,24 @@ export function EquipmentFormDialog({
                         form="equipment-form"
                         disabled={
                             isMutating ||
-                            !form.formState.isValid || // Check basic form validity
-                            (!isEditing && !imageFile) || // Image required for new
-                            !!imageError || // Disable if image validation error exists
-                            // Disable if SUPER_ADMIN is adding and hasn't selected owner
+                            !form.formState.isValid ||
+                            (!isEditing && !form.getValues("image")) ||
+                            uploadErrors.length > 0 ||
                             (isSuperAdmin &&
                                 !isEditing &&
                                 !form.getValues("ownerId"))
                         }
                     >
-                        {isMutating
-                            ? "Saving..."
-                            : isEditing
-                              ? "Save Changes"
-                              : "Add Equipment"}
+                        {isMutating ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                                Saving...
+                            </>
+                        ) : isEditing ? (
+                            "Save Changes"
+                        ) : (
+                            "Add Equipment"
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>

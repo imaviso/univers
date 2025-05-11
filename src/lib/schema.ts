@@ -499,29 +499,26 @@ export const setNewPasswordSchema = v.pipe(
 );
 export type SetNewPasswordInput = v.InferInput<typeof setNewPasswordSchema>;
 
-export const EquipmentStatusSchema = v.picklist([
-    "APPROVED",
-    "PENDING",
-    "CANCELED",
-    "DEFECT",
-    "MAINTENANCE",
-    "NEED_REPLACEMENT",
-    "NEW",
-]);
+export const EquipmentStatusSchema = v.picklist(
+    ["NEW", "DEFECT", "MAINTENANCE", "NEED_REPLACEMENT"],
+    "Invalid equipment status",
+);
 
 export type EquipmentStatus = v.InferInput<typeof EquipmentStatusSchema>;
 
 export const equipmentDataSchema = v.object({
-    name: v.pipe(v.string(), v.nonEmpty("Equipment name is required.")),
-    brand: v.pipe(v.string(), v.nonEmpty("Brand is required.")),
-    availability: v.boolean("Availability must be true or false."),
+    name: v.pipe(v.string(), v.nonEmpty("Equipment Name is required")),
+    brand: v.pipe(v.string(), v.nonEmpty("Brand is required")),
+    availability: v.boolean("Availability is required"),
     quantity: v.pipe(
-        v.number("Quantity must be a number."),
-        v.integer("Quantity must be a whole number."),
-        v.minValue(0, "Quantity cannot be negative."),
+        v.number("Quantity must be a number"),
+        v.minValue(0, "Quantity cannot be negative"),
     ),
-    status: v.pipe(EquipmentStatusSchema, v.nonEmpty("Status is required.")),
-    ownerId: v.optional(v.pipe(v.string("Owner ID must be a string."))),
+    status: EquipmentStatusSchema,
+    ownerId: v.optional(
+        v.pipe(v.string(), v.uuid("Owner ID must be a valid UUID")),
+    ), // For SUPER_ADMIN to assign owner
+    image: v.optional(ImageSchema), // Add optional image field
 });
 
 export type EquipmentDTOInput = v.InferInput<typeof equipmentDataSchema>;
