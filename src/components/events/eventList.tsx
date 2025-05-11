@@ -16,8 +16,7 @@ import {
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
 import type { EventDTO, VenueDTO } from "@/lib/types"; // Ensure Venue is imported if not already
-import type { Event as AppEvent } from "@/lib/types"; // Import the simpler Event type as AppEvent
-import { formatDateRange, getInitials } from "@/lib/utils";
+import { formatDateRange, getInitials, getStatusColor } from "@/lib/utils";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
@@ -25,33 +24,31 @@ import { useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 // Helper function to map AppEvent to EventDTO, providing defaults for missing fields
-const mapEventToEventDTO = (event: AppEvent): EventDTO => {
+const mapEventToEventDTO = (event: EventDTO): EventDTO => {
+    // Assuming AppEvent might be missing some EventDTO fields or has different field names.
+    // Adjust this based on the actual structure of AppEvent vs EventDTO.
+    // Ensure all fields required by EventDTO are present.
     return {
-        ...event,
-        approvals: [], // Default missing field
-        cancellationReason: null, // Default missing field
-        createdAt: "", // Default missing field (Ideally, this should exist in Event type)
-        updatedAt: "", // Default missing field (Ideally, this should exist in Event type)
+        // Fields assumed to be common or directly from AppEvent
+        publicId: event.publicId,
+        eventName: event.eventName,
+        eventType: event.eventType,
+        startTime: event.startTime, // Assumed to be ISO string from backend Instant
+        endTime: event.endTime, // Assumed to be ISO string from backend Instant
+        status: event.status,
+        organizer: event.organizer,
+        eventVenue: event.eventVenue,
+        department: event.department,
+        approvedLetterUrl: event.approvedLetterUrl ?? null,
+        createdAt: event.createdAt,
+        updatedAt: event.updatedAt,
+        imageUrl: event.imageUrl,
+        approvals: Array.isArray(event.approvals) ? event.approvals : [],
+        cancellationReason:
+            typeof event.cancellationReason === "string"
+                ? event.cancellationReason
+                : null,
     };
-};
-
-const getStatusColor = (status: string | undefined) => {
-    switch (
-        status?.toUpperCase() // Use uppercase for case-insensitivity
-    ) {
-        case "PENDING":
-            return "bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20";
-        case "APPROVED":
-            return "bg-green-500/10 text-green-600 hover:bg-green-500/20";
-        case "REJECTED":
-            return "bg-red-500/10 text-red-600 hover:bg-red-500/20";
-        case "COMPLETED":
-            return "bg-purple-500/10 text-purple-600 hover:bg-purple-500/20";
-        case "CANCELED":
-            return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20";
-        default:
-            return "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20";
-    }
 };
 
 // Helper component for rendering a single event card
@@ -70,8 +67,8 @@ function EventCard({
         typeof event.startTime === "string" &&
         typeof event.endTime === "string"
     ) {
-        const startDate = new Date(`${event.startTime}Z`);
-        const endDate = new Date(`${event.endTime}Z`);
+        const startDate = new Date(event.startTime);
+        const endDate = new Date(event.endTime);
 
         if (
             !Number.isNaN(startDate.getTime()) &&
@@ -276,7 +273,7 @@ export function EventList({
                     {noEventsMessage}
                 </div>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pt-4">
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pt-4">
                     {eventsToDisplay.map((event) => (
                         <EventCard
                             key={`${activeTab}-${event.publicId}`}

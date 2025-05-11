@@ -1,5 +1,5 @@
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Calendar, type CalendarProps } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import {
     Popover,
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { parseDate } from "chrono-node";
 import { Calendar as CalendarIcon } from "lucide-react";
 import React from "react";
+import type { DayPickerSingleProps } from "react-day-picker";
 import { Scroller } from "./scroller";
 
 /* -------------------------------------------------------------------------- */
@@ -546,14 +547,23 @@ const NaturalLanguageInput = React.forwardRef<
 
 NaturalLanguageInput.displayName = "NaturalLanguageInput";
 
-type DateTimeLocalInputProps = {
+// Type for DateTimeLocalInputProps, using DayPickerSingleProps for Calendar
+// This assumes your Calendar component underneath is compatible with react-day-picker's single mode props
+interface DateTimeLocalInputProps
+    extends Omit<
+        DayPickerSingleProps,
+        "mode" | "selected" | "onSelect" | "disabled"
+    > {
+    className?: string;
     disabled?: boolean | ((date: Date) => boolean);
-} & CalendarProps;
+    // className might be passed to the PopoverTrigger or Calendar, clarify if needed for specific targeting
+    // For now, assuming className is for the root or a primary element if DayPickerSingleProps doesn't cover it.
+}
 
 const DateTimeLocalInput = ({
-    className,
+    className, // className from props can be used on the Button or Calendar as needed
     disabled,
-    ...props
+    ...props // Spread remaining DayPickerSingleProps (like initialFocus, locale etc.) to Calendar
 }: DateTimeLocalInputProps) => {
     const { value, onValueChange, Time } = useSmartDateInput();
 
@@ -564,15 +574,41 @@ const DateTimeLocalInput = ({
             if (typeof disabled === "function" && disabled(selectedDate))
                 return;
 
-            const parsedDateTime = parseDateTime(selectedDate);
+            // Create a new Date object from selectedDate to avoid mutating the original DayPicker state
+            const newSelectedDate = new Date(selectedDate.getTime());
 
-            if (parsedDateTime) {
-                parsedDateTime.setHours(
-                    Number.parseInt(Time.split(":")[0]),
-                    Number.parseInt(Time.split(":")[1]),
-                );
-                onValueChange(parsedDateTime);
+            let hours = newSelectedDate.getHours(); // Default to selected date's hours
+            let minutes = newSelectedDate.getMinutes(); // Default to selected date's minutes
+
+            if (Time?.includes(":") && Time?.includes(" ")) {
+                const timeParts = Time.split(":");
+                const hourMinutePart = timeParts[0]; // e.g., "5"
+                const minuteAndPeriodPart = timeParts[1]; // e.g., "00 PM"
+
+                const parsedHourStr = hourMinutePart;
+                const minuteStr = minuteAndPeriodPart.substring(0, 2); // "00"
+                const period = minuteAndPeriodPart
+                    .substring(3, 5)
+                    .toUpperCase(); // "PM"
+
+                let h = Number.parseInt(parsedHourStr);
+                const m = Number.parseInt(minuteStr);
+
+                if (!Number.isNaN(h) && !Number.isNaN(m)) {
+                    if (period === "PM" && h < 12) {
+                        h += 12;
+                    }
+                    if (period === "AM" && h === 12) {
+                        // 12 AM is 00 hours
+                        h = 0;
+                    }
+                    hours = h;
+                    minutes = m;
+                }
             }
+
+            newSelectedDate.setHours(hours, minutes, 0, 0); // Set seconds and ms to 0 for consistency
+            onValueChange(newSelectedDate);
         },
         [disabled, Time, onValueChange],
     );
@@ -600,9 +636,9 @@ const DateTimeLocalInput = ({
                         {...props}
                         id={"calendar"}
                         className={cn(
-                            "peer flex justify-end",
+                            "peer flex justify-end", // Use passed className here for the Calendar itself if desired
                             inputBase,
-                            className,
+                            className, // Or apply className to PopoverTrigger Button if more appropriate
                         )}
                         mode="single"
                         selected={value}

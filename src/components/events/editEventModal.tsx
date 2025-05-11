@@ -88,7 +88,6 @@ export function EditEventModal({
     const [, setCurrentLetterFilename] = useState<string | null>(null);
 
     const form = useForm<EditEventInput>({
-        // @ts-ignore
         resolver: valibotResolver(editEventSchema),
         defaultValues: {
             eventName: "",
@@ -97,15 +96,25 @@ export function EditEventModal({
             departmentPublicId: undefined,
             startTime: undefined,
             endTime: undefined,
-            approvedLetter: [],
+            approvedLetter: undefined,
         },
         mode: "onChange",
     });
 
     useEffect(() => {
         if (isOpen && event) {
-            const startDate = new Date(`${event.startTime}Z`);
-            const endDate = new Date(`${event.endTime}Z`);
+            const parseAndValidateDate = (
+                dateString: string | null | undefined,
+            ): Date | undefined => {
+                if (!dateString) return undefined;
+                const date = new Date(`${dateString}Z`);
+                return date instanceof Date && !Number.isNaN(date.getTime())
+                    ? date
+                    : undefined;
+            };
+
+            const startDate = parseAndValidateDate(event.startTime);
+            const endDate = parseAndValidateDate(event.endTime);
 
             form.reset({
                 eventName: event.eventName,
@@ -114,6 +123,7 @@ export function EditEventModal({
                 departmentPublicId: event.department.publicId,
                 startTime: startDate,
                 endTime: endDate,
+                approvedLetter: undefined,
             });
         } else if (!isOpen) {
             form.reset({
@@ -440,9 +450,23 @@ export function EditEventModal({
                                             <FormControl>
                                                 <SmartDatetimeInput
                                                     value={field.value}
-                                                    onValueChange={
-                                                        field.onChange
-                                                    }
+                                                    onValueChange={(date) => {
+                                                        if (
+                                                            date instanceof
+                                                                Date &&
+                                                            Number.isNaN(
+                                                                date.getTime(),
+                                                            )
+                                                        ) {
+                                                            field.onChange(
+                                                                undefined,
+                                                            );
+                                                        } else {
+                                                            field.onChange(
+                                                                date,
+                                                            );
+                                                        }
+                                                    }}
                                                     disabled={(date) =>
                                                         date <
                                                             startOfDay(
@@ -472,9 +496,23 @@ export function EditEventModal({
                                             <FormControl>
                                                 <SmartDatetimeInput
                                                     value={field.value}
-                                                    onValueChange={
-                                                        field.onChange
-                                                    }
+                                                    onValueChange={(date) => {
+                                                        if (
+                                                            date instanceof
+                                                                Date &&
+                                                            Number.isNaN(
+                                                                date.getTime(),
+                                                            )
+                                                        ) {
+                                                            field.onChange(
+                                                                undefined,
+                                                            );
+                                                        } else {
+                                                            field.onChange(
+                                                                date,
+                                                            );
+                                                        }
+                                                    }}
                                                     disabled={(date) =>
                                                         date <
                                                             startOfDay(
@@ -502,12 +540,21 @@ export function EditEventModal({
                                             </FormLabel>
                                             <FormControl>
                                                 <FileUpload
-                                                    value={field.value} // Expects File[]
-                                                    onValueChange={
-                                                        field.onChange
-                                                    } // Provides File[]
+                                                    value={
+                                                        field.value
+                                                            ? [field.value]
+                                                            : []
+                                                    }
+                                                    onValueChange={(
+                                                        files: File[],
+                                                    ) => {
+                                                        field.onChange(
+                                                            files[0] ||
+                                                                undefined,
+                                                        );
+                                                    }}
                                                     maxFiles={1}
-                                                    maxSize={5 * 1024 * 1024} // 5MB
+                                                    maxSize={5 * 1024 * 1024}
                                                     accept=".pdf, image/*"
                                                     disabled={
                                                         updateEventMutation.isPending
@@ -529,34 +576,33 @@ export function EditEventModal({
                                                         </p>
                                                     </FileUploadDropzone>
                                                     <FileUploadList className="p-3">
-                                                        {field.value?.map(
-                                                            (file) => (
-                                                                <FileUploadItem
-                                                                    key={
-                                                                        file.name
-                                                                    }
-                                                                    value={file}
-                                                                    className="p-2"
+                                                        {(field.value
+                                                            ? [field.value]
+                                                            : []
+                                                        ).map((file) => (
+                                                            <FileUploadItem
+                                                                key={file.name}
+                                                                value={file}
+                                                                className="p-2"
+                                                            >
+                                                                <FileUploadItemPreview>
+                                                                    {/* Default preview handles images/file icons */}
+                                                                </FileUploadItemPreview>
+                                                                <FileUploadItemMetadata />
+                                                                <FileUploadItemDelete
+                                                                    asChild
                                                                 >
-                                                                    <FileUploadItemPreview>
-                                                                        {/* Default preview handles images/file icons */}
-                                                                    </FileUploadItemPreview>
-                                                                    <FileUploadItemMetadata />
-                                                                    <FileUploadItemDelete
-                                                                        asChild
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="size-7"
                                                                     >
-                                                                        <Button
-                                                                            type="button"
-                                                                            size="icon"
-                                                                            variant="ghost"
-                                                                            className="size-7"
-                                                                        >
-                                                                            <X className="size-4" />
-                                                                        </Button>
-                                                                    </FileUploadItemDelete>
-                                                                </FileUploadItem>
-                                                            ),
-                                                        )}
+                                                                        <X className="size-4" />
+                                                                    </Button>
+                                                                </FileUploadItemDelete>
+                                                            </FileUploadItem>
+                                                        ))}
                                                     </FileUploadList>
                                                 </FileUpload>
                                             </FormControl>
