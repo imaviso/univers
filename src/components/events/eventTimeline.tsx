@@ -90,7 +90,7 @@ export function EventTimeline() {
                 );
                 return acc; // Skip this event
             }
-            const startDate = new Date(`${event.startTime}Z`);
+            const startDate = new Date(event.startTime);
             if (Number.isNaN(startDate.getTime())) {
                 console.warn(
                     `Event ${event.publicId} failed to parse startTime: ${event.startTime}`,
@@ -115,12 +115,8 @@ export function EventTimeline() {
             // Sort events within the month group by start time
             acc[groupId].events.sort((a: Event, b: Event) => {
                 // Use Event type for sorting
-                const timeA = a.startTime
-                    ? new Date(`${a.startTime}Z`).getTime()
-                    : 0;
-                const timeB = b.startTime
-                    ? new Date(`${b.startTime}Z`).getTime()
-                    : 0;
+                const timeA = a.startTime ? new Date(a.startTime).getTime() : 0;
+                const timeB = b.startTime ? new Date(b.startTime).getTime() : 0;
                 // Handle potential NaN during sorting
                 if (Number.isNaN(timeA) && Number.isNaN(timeB)) return 0;
                 if (Number.isNaN(timeA)) return 1; // Put invalid dates last
@@ -183,11 +179,9 @@ export function EventTimeline() {
                                         typeof event.endTime === "string"
                                     ) {
                                         const startDate = new Date(
-                                            `${event.startTime}Z`,
+                                            event.startTime,
                                         );
-                                        const endDate = new Date(
-                                            `${event.endTime}Z`,
-                                        );
+                                        const endDate = new Date(event.endTime);
                                         if (
                                             !Number.isNaN(
                                                 startDate.getTime(),

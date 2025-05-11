@@ -849,8 +849,8 @@ export function EventDetailsPage() {
         typeof event.startTime === "string" &&
         typeof event.endTime === "string"
     ) {
-        const startDate = new Date(`${event.startTime}Z`);
-        const endDate = new Date(`${event.endTime}Z`);
+        const startDate = new Date(event.startTime);
+        const endDate = new Date(event.endTime);
         if (
             !Number.isNaN(startDate.getTime()) &&
             !Number.isNaN(endDate.getTime())

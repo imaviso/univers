@@ -82,6 +82,8 @@ export const getStatusColor = (status: string | undefined) => {
             return "bg-red-500/10 text-red-600";
         case "COMPLETED":
             return "bg-purple-500/10 text-purple-600";
+        case "ONGOING":
+            return "bg-blue-500/10 text-blue-600";
         default:
             return "bg-gray-500/10 text-gray-500";
     }

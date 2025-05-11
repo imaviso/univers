@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getOngoingAndApprovedEventsByVenue } from "@/lib/api";
 import { eventsQueryKeys, venuesQueryOptions } from "@/lib/query";
 import type { Event as AppEvent, VenueDTO } from "@/lib/types";
-import { formatDateRange, getStatusBadgeClass } from "@/lib/utils";
+import { formatDateRange, getStatusColor } from "@/lib/utils";
 import {
     Link,
     createFileRoute,
@@ -265,21 +265,20 @@ export function VenueDetails() {
                                                                     }
                                                                 </CardTitle>
                                                                 <Badge
-                                                                    className={getStatusBadgeClass(
-                                                                        event.status,
-                                                                    )}
-                                                                    variant={
-                                                                        event.status?.toLowerCase() ===
-                                                                            "approved" ||
-                                                                        event.status?.toLowerCase() ===
-                                                                            "ongoing"
-                                                                            ? "default"
-                                                                            : "secondary"
-                                                                    }
+                                                                    className={`${getStatusColor(event.status)}`}
                                                                 >
-                                                                    {
-                                                                        event.status
-                                                                    }
+                                                                    {event.status
+                                                                        ? event.status
+                                                                              .charAt(
+                                                                                  0,
+                                                                              )
+                                                                              .toUpperCase() +
+                                                                          event.status
+                                                                              .slice(
+                                                                                  1,
+                                                                              )
+                                                                              .toLowerCase()
+                                                                        : "Unknown"}
                                                                 </Badge>
                                                             </div>
                                                         </CardHeader>
