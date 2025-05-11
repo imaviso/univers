@@ -78,8 +78,8 @@ function UsersComponent() {
                 err instanceof Error ? err.message : "Failed to create user";
             toast.error(errorMessage);
         },
-        onSuccess: (data) => {
-            toast.success(data || "User created successfully");
+        onSuccess: () => {
+            toast.success("User created successfully");
             setIsAddUserOpen(false);
         },
         onSettled: () => {

@@ -40,11 +40,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { approveEvent, rejectEvent } from "@/lib/api";
 import { allNavigation } from "@/lib/navigation";
 import {
-    allVenueOwnerReservationsQueryOptions,
     eventsQueryKeys,
+    pendingVenueOwnerEventsQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
-import type { VenueReservationDTO } from "@/lib/types";
+import type { EventApprovalDTO, EventDTO } from "@/lib/types";
 import { getStatusBadgeClass } from "@/lib/utils";
 import {
     useMutation,
@@ -108,8 +108,7 @@ export const Route = createFileRoute("/app/venue-approval/approval")({
     },
     loader: ({ context: { queryClient } }) => {
         return Promise.all([
-            queryClient.ensureQueryData(allVenueOwnerReservationsQueryOptions),
-            queryClient.ensureQueryData(venuesQueryOptions),
+            queryClient.ensureQueryData(pendingVenueOwnerEventsQueryOptions),
         ]);
     },
 });
@@ -117,7 +116,6 @@ export const Route = createFileRoute("/app/venue-approval/approval")({
 type ViewMode = "all" | "pending" | "approved" | "rejected";
 
 type SingleActionInfo = {
-    reservationId: string | null;
     eventId: string | null;
     type: "approve" | "reject" | null;
 };
@@ -128,8 +126,8 @@ export function VenueReservationApproval() {
     const currentUserId = context.authState?.publicId;
     const queryClient = useQueryClient();
 
-    const { data: fetchedReservations } = useSuspenseQuery(
-        allVenueOwnerReservationsQueryOptions,
+    const { data: fetchedEvents } = useSuspenseQuery(
+        pendingVenueOwnerEventsQueryOptions,
     );
     const { data: venues } = useSuspenseQuery(venuesQueryOptions);
 
@@ -146,7 +144,6 @@ export function VenueReservationApproval() {
     );
 
     const [singleActionInfo, setSingleActionInfo] = useState<SingleActionInfo>({
-        reservationId: null,
         eventId: null,
         type: null,
     });
@@ -161,12 +158,12 @@ export function VenueReservationApproval() {
     const approveEventMutation = useMutation({
         mutationFn: approveEvent,
         onSuccess: (
-            message,
+            _message,
             variables: { eventId: string; remarks: string },
         ) => {
-            toast.success(message || "Event approved successfully.");
+            toast.success("Event approved successfully.");
             queryClient.invalidateQueries({
-                queryKey: allVenueOwnerReservationsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
             });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.detail(variables.eventId),
@@ -184,27 +181,24 @@ export function VenueReservationApproval() {
                 queryKey: eventsQueryKeys.pending(),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pendingVenueOwner(),
-            });
-            queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.pendingDeptHead(),
             });
             queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
         },
-        onError: (error) => {
-            toast.error(error.message || "Failed to approve event.");
+        onError: () => {
+            toast.error("Failed to approve event.");
         },
     });
 
     const rejectEventMutation = useMutation({
         mutationFn: rejectEvent,
         onSuccess: (
-            message,
+            _message,
             variables: { eventId: string; remarks: string },
         ) => {
-            toast.success(message || "Event rejected successfully.");
+            toast.success("Event rejected successfully.");
             queryClient.invalidateQueries({
-                queryKey: allVenueOwnerReservationsQueryOptions.queryKey,
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
             });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.detail(variables.eventId),
@@ -222,44 +216,37 @@ export function VenueReservationApproval() {
                 queryKey: eventsQueryKeys.pending(),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pendingVenueOwner(),
-            });
-            queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.pendingDeptHead(),
             });
             queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
         },
-        onError: (error) => {
-            toast.error(error.message || "Failed to reject event.");
+        onError: () => {
+            toast.error("Failed to reject event.");
         },
     });
 
-    const preFilteredReservations = useMemo(() => {
-        return (fetchedReservations ?? []).filter(
-            (reservation: VenueReservationDTO) => {
-                const matchesStatus = statusFilter
-                    ? reservation.status.toLowerCase() ===
-                      statusFilter.toLowerCase()
-                    : true;
-                const matchesVenue = venueFilter
-                    ? reservation.venue.publicId === venueFilter
-                    : true;
-                const matchesViewMode =
-                    viewMode === "all"
-                        ? true
-                        : viewMode === "pending"
-                          ? reservation.status.toLowerCase() === "pending"
-                          : viewMode === "approved"
-                            ? reservation.status.toLowerCase() === "approved"
-                            : viewMode === "rejected"
-                              ? reservation.status.toLowerCase() ===
-                                    "rejected" ||
-                                reservation.status.toLowerCase() === "cancelled"
-                              : true;
-                return matchesStatus && matchesVenue && matchesViewMode;
-            },
-        );
-    }, [fetchedReservations, statusFilter, venueFilter, viewMode]);
+    const preFilteredEvents = useMemo(() => {
+        return (fetchedEvents ?? []).filter((event: EventDTO) => {
+            const matchesStatus = statusFilter
+                ? event.status.toLowerCase() === statusFilter.toLowerCase()
+                : true;
+            const matchesVenue = venueFilter
+                ? event.eventVenue.publicId === venueFilter
+                : true;
+            const matchesViewMode =
+                viewMode === "all"
+                    ? true
+                    : viewMode === "pending"
+                      ? event.status.toLowerCase() === "pending"
+                      : viewMode === "approved"
+                        ? event.status.toLowerCase() === "approved"
+                        : viewMode === "rejected"
+                          ? event.status.toLowerCase() === "rejected" ||
+                            event.status.toLowerCase() === "cancelled"
+                          : true;
+            return matchesStatus && matchesVenue && matchesViewMode;
+        });
+    }, [fetchedEvents, statusFilter, venueFilter, viewMode]);
 
     const handleViewDetails = React.useCallback(
         (eventId: string) => {
@@ -275,40 +262,32 @@ export function VenueReservationApproval() {
         [navigate],
     );
 
-    const openSingleApproveDialog = React.useCallback(
-        (reservation: VenueReservationDTO) => {
-            if (!reservation.event?.publicId) {
-                toast.error("Event ID is missing for this reservation.");
-                return;
-            }
-            setSingleActionInfo({
-                reservationId: reservation.publicId,
-                eventId: reservation.event.publicId,
-                type: "approve",
-            });
-            setSingleActionRemarks("");
-        },
-        [],
-    );
+    const openSingleApproveDialog = React.useCallback((event: EventDTO) => {
+        if (!event.publicId) {
+            toast.error("Event ID is missing for this event.");
+            return;
+        }
+        setSingleActionInfo({
+            eventId: event.publicId,
+            type: "approve",
+        });
+        setSingleActionRemarks("");
+    }, []);
 
-    const openSingleRejectDialog = React.useCallback(
-        (reservation: VenueReservationDTO) => {
-            if (!reservation.event?.publicId) {
-                toast.error("Event ID is missing for this reservation.");
-                return;
-            }
-            setSingleActionInfo({
-                reservationId: reservation.publicId,
-                eventId: reservation.event.publicId,
-                type: "reject",
-            });
-            setSingleActionRemarks("");
-        },
-        [],
-    );
+    const openSingleRejectDialog = React.useCallback((event: EventDTO) => {
+        if (!event.publicId) {
+            toast.error("Event ID is missing for this event.");
+            return;
+        }
+        setSingleActionInfo({
+            eventId: event.publicId,
+            type: "reject",
+        });
+        setSingleActionRemarks("");
+    }, []);
 
     const closeSingleActionDialog = () => {
-        setSingleActionInfo({ reservationId: null, eventId: null, type: null });
+        setSingleActionInfo({ eventId: null, type: null });
         setSingleActionRemarks("");
     };
 
@@ -325,13 +304,13 @@ export function VenueReservationApproval() {
             remarks: singleActionRemarks,
         };
         approveEventMutation.mutate(payload, {
-            onSuccess: (message) => {
-                toast.success(message || "Event approved.");
+            onSuccess: () => {
+                toast.success("Event approved.");
                 setRowSelection({});
                 closeSingleActionDialog();
             },
-            onError: (error) => {
-                toast.error(error.message || "Failed to approve event.");
+            onError: () => {
+                toast.error("Failed to approve event.");
             },
         });
     };
@@ -353,13 +332,13 @@ export function VenueReservationApproval() {
             remarks: singleActionRemarks,
         };
         rejectEventMutation.mutate(payload, {
-            onSuccess: (message) => {
-                toast.success(message || "Event rejected.");
+            onSuccess: () => {
+                toast.success("Event rejected.");
                 setRowSelection({});
                 closeSingleActionDialog();
             },
-            onError: (error) => {
-                toast.error(error.message || "Failed to reject event.");
+            onError: () => {
+                toast.error("Failed to reject event.");
             },
         });
     };
@@ -368,23 +347,26 @@ export function VenueReservationApproval() {
         const selectedRows = table.getFilteredSelectedRowModel().rows;
         const eligibleEventPayloads = selectedRows
             .filter((row) => {
-                const reservation = row.original;
-                const isPending = reservation.status === "PENDING";
-                const hasCurrentUserActedOnReservation =
-                    currentUserId != null &&
-                    reservation.approvals?.some(
-                        (approval) =>
+                const event = row.original;
+                const isPending = event.status === "PENDING";
+                const isVenueOwner =
+                    currentUserId &&
+                    event.eventVenue?.venueOwner?.publicId === currentUserId;
+                const hasCurrentUserActedOnEvent =
+                    isVenueOwner &&
+                    event.approvals?.some(
+                        (approval: EventApprovalDTO) =>
                             approval.signedByUser.publicId === currentUserId,
                     );
                 return (
                     isPending &&
-                    !hasCurrentUserActedOnReservation &&
-                    reservation.event &&
-                    reservation.event.publicId
+                    isVenueOwner &&
+                    !hasCurrentUserActedOnEvent &&
+                    event.publicId
                 );
             })
             .map((row) => {
-                const eventId = row.original.event?.publicId;
+                const eventId = row.original.publicId;
                 if (!eventId) return null;
                 return {
                     eventId: eventId,
@@ -397,7 +379,7 @@ export function VenueReservationApproval() {
             );
 
         if (eligibleEventPayloads.length === 0) {
-            toast.info("No eligible reservations selected for event approval.");
+            toast.info("No eligible events selected for event approval.");
             setIsBulkApproveDialogOpen(false);
             setBulkApproveRemarks("");
             return;
@@ -408,7 +390,7 @@ export function VenueReservationApproval() {
         );
 
         toast.promise(Promise.all(promises), {
-            loading: `Approving events for ${eligibleEventPayloads.length} reservation(s)...`,
+            loading: `Approving ${eligibleEventPayloads.length} event(s)...`,
             success: (messages: string[]) => {
                 setRowSelection({});
                 setIsBulkApproveDialogOpen(false);
@@ -431,23 +413,26 @@ export function VenueReservationApproval() {
 
         const eligibleEventPayloads = selectedRows
             .filter((row) => {
-                const reservation = row.original;
-                const isPending = reservation.status === "PENDING";
-                const hasCurrentUserActedOnReservation =
-                    currentUserId != null &&
-                    reservation.approvals?.some(
-                        (approval) =>
+                const event = row.original;
+                const isPending = event.status === "PENDING";
+                const isVenueOwner =
+                    currentUserId &&
+                    event.eventVenue?.venueOwner?.publicId === currentUserId;
+                const hasCurrentUserActedOnEvent =
+                    isVenueOwner &&
+                    event.approvals?.some(
+                        (approval: EventApprovalDTO) =>
                             approval.signedByUser.publicId === currentUserId,
                     );
                 return (
                     isPending &&
-                    !hasCurrentUserActedOnReservation &&
-                    reservation.event &&
-                    reservation.event.publicId
+                    isVenueOwner &&
+                    !hasCurrentUserActedOnEvent &&
+                    event.publicId
                 );
             })
             .map((row) => {
-                const eventId = row.original.event?.publicId;
+                const eventId = row.original.publicId;
                 if (!eventId) return null;
                 return {
                     eventId: eventId,
@@ -460,9 +445,7 @@ export function VenueReservationApproval() {
             );
 
         if (eligibleEventPayloads.length === 0) {
-            toast.info(
-                "No eligible reservations selected for event rejection.",
-            );
+            toast.info("No eligible events selected for event rejection.");
             setIsBulkRejectDialogOpen(false);
             setBulkRejectionRemarks("");
             return;
@@ -473,7 +456,7 @@ export function VenueReservationApproval() {
         );
 
         toast.promise(Promise.all(promises), {
-            loading: `Rejecting events for ${eligibleEventPayloads.length} reservation(s)...`,
+            loading: `Rejecting ${eligibleEventPayloads.length} event(s)...`,
             success: (messages: string[]) => {
                 setRowSelection({});
                 setIsBulkRejectDialogOpen(false);
@@ -486,7 +469,7 @@ export function VenueReservationApproval() {
         });
     };
 
-    const columns = useMemo<ColumnDef<VenueReservationDTO>[]>(
+    const columns = useMemo<ColumnDef<EventDTO>[]>(
         () => [
             {
                 id: "select",
@@ -529,18 +512,16 @@ export function VenueReservationApproval() {
                     </Button>
                 ),
                 cell: ({ row }) => {
-                    const reservation = row.original;
+                    const event = row.original;
                     return (
                         <Button
                             variant="link"
                             className="p-0 h-auto font-medium"
                             onClick={() =>
-                                handleNavigateToVenue(
-                                    reservation.venue.publicId,
-                                )
+                                handleNavigateToVenue(event.eventVenue.publicId)
                             }
                         >
-                            {reservation.venue.name}
+                            {event.eventVenue.name}
                         </Button>
                     );
                 },
@@ -565,9 +546,9 @@ export function VenueReservationApproval() {
             {
                 id: "requesterName",
                 accessorFn: (row) =>
-                    `${row.requestingUser?.firstName ?? ""} ${row.requestingUser?.lastName ?? ""}`.trim() ||
+                    `${row.organizer?.firstName ?? ""} ${row.organizer?.lastName ?? ""}`.trim() ||
                     "N/A",
-                header: "Requester",
+                header: "Organizer",
             },
             {
                 accessorKey: "status",
@@ -582,21 +563,34 @@ export function VenueReservationApproval() {
                 id: "yourAction",
                 header: "Your Action",
                 cell: ({ row }) => {
-                    const reservation = row.original;
-                    const currentUserApproval =
-                        currentUserId != null
-                            ? reservation.approvals?.find(
-                                  (approval) =>
-                                      approval.signedByUser.publicId ===
-                                      currentUserId,
-                              )
-                            : undefined;
+                    const event = row.original;
+                    const isVenueOwner =
+                        currentUserId &&
+                        event.eventVenue?.venueOwner?.publicId ===
+                            currentUserId;
 
-                    if (!currentUserApproval) {
+                    let currentUserEventApproval: EventApprovalDTO | undefined =
+                        undefined;
+                    if (isVenueOwner) {
+                        currentUserEventApproval = event.approvals?.find(
+                            (approval: EventApprovalDTO) =>
+                                approval.signedByUser.publicId ===
+                                currentUserId,
+                        );
+                    }
+
+                    if (!isVenueOwner) {
+                        return (
+                            <span className="text-muted-foreground">
+                                Not Venue Owner
+                            </span>
+                        );
+                    }
+                    if (!currentUserEventApproval) {
                         return <span className="text-muted-foreground">-</span>;
                     }
 
-                    if (currentUserApproval.status === "APPROVED") {
+                    if (currentUserEventApproval.status === "APPROVED") {
                         return (
                             <div className="flex items-center justify-center text-green-600">
                                 <Check className="h-4 w-4" />
@@ -605,7 +599,7 @@ export function VenueReservationApproval() {
                         );
                     }
 
-                    if (currentUserApproval.status === "REJECTED") {
+                    if (currentUserEventApproval.status === "REJECTED") {
                         return (
                             <div className="flex items-center justify-center text-red-600">
                                 <XCircle className="h-4 w-4" />
@@ -638,19 +632,24 @@ export function VenueReservationApproval() {
                 id: "actions",
                 header: () => <div className="text-center">Actions</div>,
                 cell: ({ row }) => {
-                    const reservation = row.original;
-                    const isPending = reservation.status === "PENDING";
-                    const currentUserApproval =
-                        currentUserId != null
-                            ? reservation.approvals?.find(
-                                  (approval) =>
-                                      approval.signedByUser.publicId ===
-                                      currentUserId,
-                              )
-                            : undefined;
-                    const hasCurrentUserActed = !!currentUserApproval;
+                    const event = row.original;
+                    const isPending = event.status === "PENDING";
+                    const isVenueOwner =
+                        currentUserId &&
+                        event.eventVenue?.venueOwner?.publicId ===
+                            currentUserId;
+                    let currentUserEventApproval: EventApprovalDTO | undefined =
+                        undefined;
+                    if (isVenueOwner) {
+                        currentUserEventApproval = event.approvals?.find(
+                            (approval: EventApprovalDTO) =>
+                                approval.signedByUser.publicId ===
+                                currentUserId,
+                        );
+                    }
+                    const hasCurrentUserActed = !!currentUserEventApproval;
                     const showApprovalActions =
-                        isPending && !hasCurrentUserActed;
+                        isPending && isVenueOwner && !hasCurrentUserActed;
 
                     return (
                         <div className="text-center">
@@ -670,21 +669,16 @@ export function VenueReservationApproval() {
                                     </DropdownMenuLabel>
                                     <DropdownMenuItem
                                         onClick={() => {
-                                            if (reservation.event !== null) {
-                                                handleViewDetails(
-                                                    reservation.event.publicId,
-                                                );
-                                            }
+                                            handleViewDetails(event.publicId);
                                         }}
-                                        disabled={reservation.event === null}
                                     >
                                         <Eye className="mr-2 h-4 w-4" />
-                                        View Details
+                                        View Event Details
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         onClick={() =>
                                             handleNavigateToVenue(
-                                                reservation.venue.publicId,
+                                                event.eventVenue.publicId,
                                             )
                                         }
                                     >
@@ -697,7 +691,7 @@ export function VenueReservationApproval() {
                                             <DropdownMenuItem
                                                 onClick={() =>
                                                     openSingleApproveDialog(
-                                                        reservation,
+                                                        event,
                                                     )
                                                 }
                                                 disabled={
@@ -711,7 +705,7 @@ export function VenueReservationApproval() {
                                             <DropdownMenuItem
                                                 onClick={() =>
                                                     openSingleRejectDialog(
-                                                        reservation,
+                                                        event,
                                                     )
                                                 }
                                                 disabled={
@@ -732,15 +726,15 @@ export function VenueReservationApproval() {
                                                 disabled
                                                 className="text-muted-foreground italic"
                                             >
-                                                {currentUserApproval?.status ===
+                                                {currentUserEventApproval?.status ===
                                                 "APPROVED" ? (
                                                     <Check className="mr-2 h-4 w-4 text-green-600" />
                                                 ) : (
                                                     <XCircle className="mr-2 h-4 w-4 text-red-600" />
                                                 )}
                                                 You have already{" "}
-                                                {currentUserApproval?.status.toLowerCase()}{" "}
-                                                this
+                                                {currentUserEventApproval?.status.toLowerCase()}{" "}
+                                                this event approval
                                             </DropdownMenuItem>
                                         </>
                                     )}
@@ -765,7 +759,7 @@ export function VenueReservationApproval() {
     );
 
     const table = useReactTable({
-        data: preFilteredReservations,
+        data: preFilteredEvents,
         columns,
         state: {
             sorting,
@@ -786,36 +780,39 @@ export function VenueReservationApproval() {
     });
 
     const stats = useMemo(() => {
-        const allReservations = fetchedReservations ?? [];
+        const allEvents = fetchedEvents ?? [];
         return {
-            total: allReservations.length,
-            pending: allReservations.filter(
+            total: allEvents.length,
+            pending: allEvents.filter(
                 (r) => r.status.toLowerCase() === "pending",
             ).length,
-            approved: allReservations.filter(
+            approved: allEvents.filter(
                 (r) => r.status.toLowerCase() === "approved",
             ).length,
-            rejected: allReservations.filter(
+            rejected: allEvents.filter(
                 (r) =>
                     r.status.toLowerCase() === "rejected" ||
                     r.status.toLowerCase() === "cancelled",
             ).length,
         };
-    }, [fetchedReservations]);
+    }, [fetchedEvents]);
 
     const numSelected = table.getFilteredSelectedRowModel().rows.length;
     const numEligibleSelected = table
         .getFilteredSelectedRowModel()
         .rows.filter((row) => {
-            const reservation = row.original;
-            const isPending = reservation.status === "PENDING";
+            const event = row.original;
+            const isPending = event.status === "PENDING";
+            const isVenueOwner =
+                currentUserId &&
+                event.eventVenue?.venueOwner?.publicId === currentUserId;
             const hasCurrentUserActed =
-                currentUserId != null &&
-                reservation.approvals?.some(
-                    (approval) =>
+                isVenueOwner &&
+                event.approvals?.some(
+                    (approval: EventApprovalDTO) =>
                         approval.signedByUser.publicId === currentUserId,
                 );
-            return isPending && !hasCurrentUserActed;
+            return isPending && isVenueOwner && !hasCurrentUserActed;
         }).length;
 
     return (
@@ -823,14 +820,14 @@ export function VenueReservationApproval() {
             <div className="flex flex-col flex-1 overflow-hidden">
                 <header className="flex items-center justify-between border-b px-6 py-3.5">
                     <h1 className="text-xl font-semibold">
-                        Venue Reservation Approval
+                        Venue Event Approval
                     </h1>
                     <div className="flex items-center gap-2">
                         <div className="relative">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 type="search"
-                                placeholder="Search reservations..."
+                                placeholder="Search events..."
                                 className="w-64 pl-8"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -846,7 +843,7 @@ export function VenueReservationApproval() {
                     >
                         <CardHeader>
                             <CardTitle className="text-sm font-medium">
-                                Total Reservations
+                                Total Events for Approval
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -926,7 +923,8 @@ export function VenueReservationApproval() {
                         {numEligibleSelected > 0 && (
                             <div className="flex items-center gap-2 border-l pl-2 ml-2">
                                 <span className="text-sm text-muted-foreground">
-                                    {numEligibleSelected} eligible selected
+                                    {numEligibleSelected} eligible event(s)
+                                    selected
                                 </span>
                                 <Button
                                     variant="outline"
@@ -1091,8 +1089,8 @@ export function VenueReservationApproval() {
                                             className="h-24 text-center"
                                         >
                                             {searchQuery
-                                                ? `No reservations match your search query "${searchQuery}".`
-                                                : "No reservations found for the selected filters."}
+                                                ? `No events match your search query "${searchQuery}".`
+                                                : "No events found for the selected filters."}
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -1135,13 +1133,13 @@ export function VenueReservationApproval() {
                     <DialogHeader>
                         <DialogTitle>
                             {singleActionInfo.type === "approve"
-                                ? "Approve Reservation"
-                                : "Reject Reservation"}
+                                ? "Approve Event"
+                                : "Reject Event"}
                         </DialogTitle>
                         <DialogDescription>
                             {singleActionInfo.type === "approve"
-                                ? "You can optionally add remarks for this approval."
-                                : "Please provide a reason for rejection. This note will be recorded."}
+                                ? "You can optionally add remarks for this event approval."
+                                : "Please provide a reason for rejection. This note will be recorded for the event."}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -1203,11 +1201,11 @@ export function VenueReservationApproval() {
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Approve Selected Reservations</DialogTitle>
+                        <DialogTitle>Approve Selected Events</DialogTitle>
                         <DialogDescription>
                             Optionally add remarks for approving the selected{" "}
-                            {numEligibleSelected} eligible reservation(s). This
-                            note will be recorded for all of them.
+                            {numEligibleSelected} eligible event(s). This note
+                            will be recorded for all of them.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -1252,11 +1250,11 @@ export function VenueReservationApproval() {
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Reject Selected Reservations</DialogTitle>
+                        <DialogTitle>Reject Selected Events</DialogTitle>
                         <DialogDescription>
                             Provide a reason for rejecting the selected{" "}
-                            {numEligibleSelected} eligible reservation(s). This
-                            note will be recorded for all of them.
+                            {numEligibleSelected} eligible event(s). This note
+                            will be recorded for all of them.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">

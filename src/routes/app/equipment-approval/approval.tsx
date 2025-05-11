@@ -197,13 +197,13 @@ export function EquipmentReservationApproval() {
                 remarks: singleActionRemarks,
             },
             {
-                onSuccess: (message) => {
-                    toast.success(message || "Reservation approved.");
+                onSuccess: () => {
+                    toast.success("Reservation approved.");
                     setRowSelection({});
                     closeSingleActionDialog();
                 },
-                onError: (error) => {
-                    toast.error(error.message || "Failed to approve.");
+                onError: () => {
+                    toast.error("Failed to approve.");
                 },
             },
         );
@@ -223,13 +223,13 @@ export function EquipmentReservationApproval() {
                 remarks: singleActionRemarks,
             },
             {
-                onSuccess: (message) => {
-                    toast.success(message || "Reservation rejected.");
+                onSuccess: () => {
+                    toast.success("Reservation rejected.");
                     setRowSelection({});
                     closeSingleActionDialog();
                 },
-                onError: (error) => {
-                    toast.error(error.message || "Failed to reject.");
+                onError: () => {
+                    toast.error("Failed to reject.");
                 },
             },
         );

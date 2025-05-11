@@ -1,4 +1,5 @@
-import type { UserDTO, UserType } from "@/lib/types";
+import { handleApiResponse } from "@/lib/api";
+import type { UserDTO } from "@/lib/types";
 export const API_BASE_URL = "http://localhost:8080"; // Backend API URL
 
 export const userSignIn = async (email: string, password: string) => {
@@ -14,25 +15,12 @@ export const userSignIn = async (email: string, password: string) => {
                 password: password,
             }),
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Error! Status: ${response.status}`;
-
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage =
-                    errorData.message || errorData.error || errorMessage;
-            } catch {
-                errorMessage = errorText || errorMessage;
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return await response.json();
+        const data = await handleApiResponse<{
+            token: string;
+            tokenType: string;
+        }>(response, true);
+        return data;
     } catch (error) {
-        // Re-throw the error with the specific message
         throw error instanceof Error
             ? error
             : new Error("An unexpected error occurred during signin");
@@ -66,25 +54,9 @@ export const userSignUp = async (
                 password: password,
             }),
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Error! Status: ${response.status}`;
-
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage =
-                    errorData.message || errorData.error || errorMessage;
-            } catch {
-                errorMessage = errorText || errorMessage;
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return await response.text();
+        const data = await handleApiResponse<string>(response, false);
+        return data || "Registration successful";
     } catch (error) {
-        // Re-throw the error with the specific message
         throw error instanceof Error
             ? error
             : new Error("An unexpected error occurred during signup");
@@ -100,25 +72,9 @@ export const userSignOut = async () => {
             },
             credentials: "include",
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Error! Status: ${response.status}`;
-
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage =
-                    errorData.message || errorData.error || errorMessage;
-            } catch {
-                errorMessage = errorText || errorMessage;
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return await response.text();
+        const data = await handleApiResponse<string>(response, false);
+        return data || "Logout successful";
     } catch (error) {
-        // Re-throw the error with the specific message
         throw error instanceof Error
             ? error
             : new Error("An unexpected error occurred during signout");
@@ -134,30 +90,14 @@ export const getCurrentUser = async (): Promise<UserDTO | null> => {
             },
             credentials: "include",
         });
-
         if (!response.ok) {
             if (response.status === 401 || response.status === 403) {
                 return null;
             }
-
-            const errorText = await response.text();
-            let errorMessage = `Error! Status: ${response.status}`;
-
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage =
-                    errorData.message || errorData.error || errorMessage;
-            } catch {
-                errorMessage = errorText || errorMessage;
-            }
-
-            throw new Error(errorMessage);
         }
-
-        const userData = await response.json();
-        return userData as UserType; // Type assertion to User
+        const data = await handleApiResponse<UserDTO>(response, true);
+        return data || null;
     } catch (error) {
-        console.error("Error fetching user:", error);
         return null;
     }
 };
@@ -174,25 +114,9 @@ export const verifyOTP = async (email: string, code: string) => {
                 verification_code: code,
             }),
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Error! Status: ${response.status}`;
-
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage =
-                    errorData.message || errorData.error || errorMessage;
-            } catch {
-                errorMessage = errorText || errorMessage;
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return await response.text();
+        const data = await handleApiResponse<string>(response, false);
+        return data || "Verification successful";
     } catch (error) {
-        // Re-throw the error with the specific message
         throw error instanceof Error
             ? error
             : new Error("An unexpected error occurred during verification");
@@ -206,32 +130,14 @@ export const userResendVerificationCode = async (email: string) => {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                email: email,
-            }),
+            body: JSON.stringify({ email }),
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Error! Status: ${response.status}`;
-
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage =
-                    errorData.message || errorData.error || errorMessage;
-            } catch {
-                errorMessage = errorText || errorMessage;
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return await response.text();
+        const data = await handleApiResponse<string>(response, false);
+        return data || "Verification code resent";
     } catch (error) {
-        // Re-throw the error with the specific message
         throw error instanceof Error
             ? error
-            : new Error("An unexpected error occurred during resending code");
+            : new Error("An unexpected error occurred during resend");
     }
 };
 
@@ -242,29 +148,11 @@ export const userForgotPassword = async (email: string) => {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                email: email,
-            }),
+            body: JSON.stringify({ email }),
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Error! Status: ${response.status}`;
-
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage =
-                    errorData.message || errorData.error || errorMessage;
-            } catch {
-                errorMessage = errorText || errorMessage;
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return await response.text();
+        const data = await handleApiResponse<string>(response, false);
+        return data || "Password reset email sent";
     } catch (error) {
-        // Re-throw the error with the specific message
         throw error instanceof Error
             ? error
             : new Error("An unexpected error occurred during forgot password");
@@ -281,34 +169,15 @@ export const userResetVerificationCode = async (
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                email: email,
-                verificationCode: code,
-            }),
+            body: JSON.stringify({ email, code }),
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Error! Status: ${response.status}`;
-
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage =
-                    errorData.message || errorData.error || errorMessage;
-            } catch {
-                errorMessage = errorText || errorMessage;
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return await response.text();
+        const data = await handleApiResponse<string>(response, false);
+        return data || "Reset code verified";
     } catch (error) {
-        // Re-throw the error with the specific message
         throw error instanceof Error
             ? error
             : new Error(
-                  "An unexpected error occurred during reset verification code",
+                  "An unexpected error occurred during reset code verification",
               );
     }
 };
@@ -324,33 +193,13 @@ export const userResetPassword = async (
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-                email: email,
-                verificationCode: code,
-                newPassword: password,
-            }),
+            body: JSON.stringify({ email, code, password }),
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Error! Status: ${response.status}`;
-
-            try {
-                const errorData = JSON.parse(errorText);
-                errorMessage =
-                    errorData.message || errorData.error || errorMessage;
-            } catch {
-                errorMessage = errorText || errorMessage;
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return await response.text();
+        const data = await handleApiResponse<string>(response, false);
+        return data || "Password reset successful";
     } catch (error) {
-        // Re-throw the error with the specific message
         throw error instanceof Error
             ? error
-            : new Error("An unexpected error occurred during reset password");
+            : new Error("An unexpected error occurred during password reset");
     }
 };

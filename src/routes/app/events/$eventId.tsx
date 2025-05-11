@@ -460,8 +460,8 @@ export function EventDetailsPage() {
 
     const approveMutation = useMutation({
         mutationFn: approveEvent,
-        onSuccess: (message) => {
-            toast.success(message || "Event approved successfully.");
+        onSuccess: () => {
+            toast.success("Event approved successfully.");
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.approvals(event.publicId),
             });
@@ -498,8 +498,8 @@ export function EventDetailsPage() {
 
     const rejectEventMutation = useMutation({
         mutationFn: rejectEvent,
-        onSuccess: (message) => {
-            toast.success(message || "Event rejected successfully.");
+        onSuccess: () => {
+            toast.success("Event rejected successfully.");
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.approvals(event.publicId),
             });
@@ -532,8 +532,8 @@ export function EventDetailsPage() {
 
     const cancelEventMutation = useMutation({
         mutationFn: cancelEvent,
-        onSuccess: (message) => {
-            toast.success(message || "Event canceled successfully.");
+        onSuccess: () => {
+            toast.success("Event canceled successfully.");
             // Invalidate event details and list
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.detail(event.publicId),
@@ -739,8 +739,8 @@ export function EventDetailsPage() {
                 queryKey: eventsQueryKeys.approvals(variables.eventId),
             });
         },
-        onSuccess: (message) => {
-            toast.success(message || "Event updated successfully.");
+        onSuccess: () => {
+            toast.success("Event updated successfully.");
             setIsEditModalOpen(false);
         },
     });
@@ -748,8 +748,8 @@ export function EventDetailsPage() {
     // Using cancelEvent for delete action for now as per original code
     const deleteEventMutation = useMutation({
         mutationFn: deleteEvent,
-        onSuccess: (message) => {
-            toast.success(message || "Event deleted successfully."); // Changed message for clarity
+        onSuccess: () => {
+            toast.success("Event deleted successfully."); // Changed message for clarity
             // Invalidate relevant lists
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.lists(),

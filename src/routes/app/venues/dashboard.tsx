@@ -24,7 +24,6 @@ import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
 import {
     departmentsQueryOptions,
     ownEventsQueryOptions,
-    ownReservationsQueryOptions,
     usersQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
@@ -40,6 +39,7 @@ import {
 import { format } from "date-fns";
 import {
     Building,
+    CalendarDays,
     Edit,
     Eye,
     HelpCircle,
@@ -60,7 +60,6 @@ export const Route = createFileRoute("/app/venues/dashboard")({
         queryClient.ensureQueryData(venuesQueryOptions);
         queryClient.ensureQueryData(ownEventsQueryOptions);
         queryClient.ensureQueryData(departmentsQueryOptions);
-        queryClient.ensureQueryData(ownReservationsQueryOptions);
     },
 });
 
@@ -76,22 +75,21 @@ export function VenueManagement() {
     const [editingVenue, setEditingVenue] = useState<VenueDTO | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [venueToDelete, setVenueToDelete] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
+    const [viewMode, setViewMode] = useState<"table" | "grid" | "events">(
         role === "SUPER_ADMIN" || role === "VENUE_OWNER" ? "table" : "grid",
     );
-    const [activeVenueReservationTab, setActiveVenueReservationTab] =
-        useState("all"); // State for venue reservation tabs
+    const [activeEventTab, setActiveEventTab] = useState("all");
 
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: users = [] } = useQuery({
         ...usersQueryOptions,
         enabled: role === "SUPER_ADMIN",
     });
-    const { data: ownReservations = [], isLoading: isLoadingOwnReservations } =
-        useQuery({
-            ...ownReservationsQueryOptions,
-            enabled: viewMode === "reservations",
-        });
+
+    const { data: ownEvents = [], isLoading: isLoadingOwnEvents } = useQuery({
+        ...ownEventsQueryOptions,
+        enabled: viewMode === "events" && role !== "SUPER_ADMIN",
+    });
 
     const venueOwners =
         role === "SUPER_ADMIN"
@@ -108,8 +106,8 @@ export function VenueManagement() {
             });
             setIsAddVenueOpen(false);
         },
-        onError: (error) => {
-            toast.error(`Failed to create venue: ${error.message}`);
+        onError: () => {
+            toast.error("Failed to create venue.");
         },
     });
 
@@ -123,23 +121,23 @@ export function VenueManagement() {
             setIsAddVenueOpen(false);
             setEditingVenue(null);
         },
-        onError: (error) => {
-            toast.error(`Failed to update venue: ${error.message}`);
+        onError: () => {
+            toast.error("Failed to update venue.");
         },
     });
 
     const deleteVenueMutation = useMutation({
         mutationFn: deleteVenue,
-        onSuccess: (message, _venueId) => {
-            toast.success(message || "Venue deleted successfully.");
+        onSuccess: () => {
+            toast.success("Venue deleted successfully.");
             queryClient.invalidateQueries({
                 queryKey: venuesQueryOptions.queryKey,
             });
             setIsDeleteDialogOpen(false);
             setVenueToDelete(null);
         },
-        onError: (error) => {
-            toast.error(`Failed to delete venue: ${error.message}`);
+        onError: () => {
+            toast.error("Failed to delete venue.");
             setIsDeleteDialogOpen(false);
             setVenueToDelete(null);
         },
@@ -214,6 +212,15 @@ export function VenueManagement() {
                 .includes(searchQuery.toLowerCase()),
     );
 
+    // Filter user's own events for the "My Events" tab
+    const filteredOwnEvents = useMemo(() => {
+        if (!ownEvents) return [];
+        return ownEvents.filter((event) => {
+            if (activeEventTab === "all") return true;
+            return event.status.toLowerCase() === activeEventTab.toLowerCase();
+        });
+    }, [ownEvents, activeEventTab]);
+
     // Stats
     const stats = {
         total: baseVenuesToDisplay.length,
@@ -229,18 +236,6 @@ export function VenueManagement() {
                 ? venues.filter((venue) => !venue.venueOwner).length
                 : 0,
     };
-
-    // Filtered venue reservations based on active tab
-    const filteredVenueReservations = useMemo(() => {
-        if (activeVenueReservationTab === "all" || !ownReservations) {
-            return ownReservations ?? [];
-        }
-        return ownReservations.filter(
-            (res) =>
-                res.status.toLowerCase() ===
-                activeVenueReservationTab.toLowerCase(),
-        );
-    }, [ownReservations, activeVenueReservationTab]);
 
     // --- Render Logic ---
     const isMutating =
@@ -345,7 +340,7 @@ export function VenueManagement() {
                             value={viewMode}
                             onValueChange={(value) =>
                                 setViewMode(
-                                    value as "table" | "grid" | "reservations",
+                                    value as "table" | "grid" | "events",
                                 )
                             }
                         >
@@ -362,9 +357,9 @@ export function VenueManagement() {
                                         ? "Grid"
                                         : "Venues"}
                                 </TabsTrigger>
-                                {/* Separate tab for user's reservations */}
+                                {/* Separate tab for user's events */}
                                 {role !== "SUPER_ADMIN" && (
-                                    <TabsTrigger value="reservations">
+                                    <TabsTrigger value="events">
                                         My Reservations
                                     </TabsTrigger>
                                 )}
@@ -734,11 +729,11 @@ export function VenueManagement() {
                         </div>
                     )}
 
-                    {viewMode === "reservations" && (
+                    {viewMode === "events" && (
                         <div>
                             <Tabs
-                                value={activeVenueReservationTab}
-                                onValueChange={setActiveVenueReservationTab}
+                                value={activeEventTab}
+                                onValueChange={setActiveEventTab}
                                 className="w-full mb-4"
                             >
                                 <TabsList className="text-foreground h-auto gap-2 rounded-none border-b bg-transparent px-0 py-1">
@@ -760,26 +755,28 @@ export function VenueManagement() {
                                 </TabsList>
                             </Tabs>
 
-                            {isLoadingOwnReservations ? (
+                            {isLoadingOwnEvents ? (
                                 <p className="text-muted-foreground">
-                                    Loading reservations...
+                                    Loading events...
                                 </p>
-                            ) : filteredVenueReservations.length > 0 ? (
+                            ) : filteredOwnEvents.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {filteredVenueReservations.map((res) => (
+                                    {filteredOwnEvents.map((event) => (
                                         <Card
-                                            key={res.publicId}
+                                            key={event.publicId}
                                             className="overflow-hidden flex flex-col group"
                                         >
                                             <div className="aspect-video w-full overflow-hidden relative">
                                                 <img
                                                     src={
-                                                        res.venue.imagePath ??
+                                                        event.imageUrl ??
+                                                        event.eventVenue
+                                                            .imagePath ??
                                                         "/placeholder.svg"
                                                     }
                                                     alt={
-                                                        res.venue.name ??
-                                                        "Venue image"
+                                                        event.eventName ??
+                                                        "Event image"
                                                     }
                                                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                                     onError={(e) => {
@@ -789,44 +786,67 @@ export function VenueManagement() {
                                                     loading="lazy"
                                                 />
                                             </div>
-                                            <CardHeader className="pb-2 pt-4 px-4">
+                                            <CardHeader className="pb-2 pt-4 px-4 flex flex-row justify-between items-center">
                                                 <CardTitle
                                                     className="text-base font-semibold truncate"
                                                     title={
-                                                        res.venue.name ??
+                                                        event.eventName ??
                                                         undefined
                                                     }
                                                 >
-                                                    {res.venue.name ?? "N/A"}
+                                                    {event.eventName ?? "N/A"}
                                                 </CardTitle>
+                                                <Badge
+                                                    className={getStatusBadgeClass(
+                                                        event.status,
+                                                    )}
+                                                >
+                                                    {event.status}
+                                                </Badge>
                                             </CardHeader>
                                             <CardContent className="text-sm text-muted-foreground flex-grow px-4 pb-3 space-y-1.5">
-                                                <div>
-                                                    <strong>Event:</strong>{" "}
-                                                    {res.event?.eventName ??
-                                                        "N/A"}
-                                                </div>
-                                                <div>
-                                                    <strong>Starts:</strong>{" "}
-                                                    {formatDateTime(
-                                                        res.startTime,
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <strong>Ends:</strong>{" "}
-                                                    {formatDateTime(
-                                                        res.endTime,
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <strong>Status:</strong>{" "}
-                                                    <Badge
-                                                        className={getStatusBadgeClass(
-                                                            res.status,
-                                                        )}
+                                                <div className="flex items-start gap-1.5">
+                                                    <Building className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                                    <span
+                                                        className="line-clamp-2"
+                                                        title={
+                                                            event.eventVenue
+                                                                .name
+                                                        }
                                                     >
-                                                        {res.status}
-                                                    </Badge>
+                                                        {event.eventVenue.name}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start gap-1.5">
+                                                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                                    <span
+                                                        className="line-clamp-2"
+                                                        title={
+                                                            event.eventVenue
+                                                                .location
+                                                        }
+                                                    >
+                                                        {
+                                                            event.eventVenue
+                                                                .location
+                                                        }
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start gap-1.5">
+                                                    <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                                    <span>
+                                                        {formatDateTime(
+                                                            event.startTime,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start gap-1.5">
+                                                    <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0 opacity-0" />
+                                                    <span>
+                                                        {formatDateTime(
+                                                            event.endTime,
+                                                        )}
+                                                    </span>
                                                 </div>
                                             </CardContent>
                                             <div className="p-4 pt-0 border-t mt-auto">
@@ -836,7 +856,7 @@ export function VenueManagement() {
                                                     className="w-full"
                                                     onClick={() =>
                                                         navigate({
-                                                            to: `/app/events/${res.event?.publicId}`,
+                                                            to: `/app/events/${event.publicId}`,
                                                         })
                                                     }
                                                 >
@@ -849,10 +869,10 @@ export function VenueManagement() {
                             ) : (
                                 <div className="text-center text-muted-foreground py-8 border rounded-md bg-muted/20">
                                     You have no{" "}
-                                    {activeVenueReservationTab !== "all"
-                                        ? activeVenueReservationTab
+                                    {activeEventTab !== "all"
+                                        ? activeEventTab
                                         : ""}{" "}
-                                    venue reservations.
+                                    events.
                                 </div>
                             )}
                         </div>

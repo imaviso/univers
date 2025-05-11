@@ -8,7 +8,6 @@ import {
     eventsQueryKeys,
     notificationsQueryKeys,
     useCurrentUser,
-    venueReservationKeys,
 } from "@/lib/query";
 import { Client, type IMessage } from "@stomp/stompjs";
 import { useRouteContext } from "@tanstack/react-router";
@@ -103,24 +102,6 @@ export function useWebSocketNotifications() {
 
                             // Invalidate specific lists based on the original trigger type
                             if (
-                                entityType === "VENUE_RESERVATION" ||
-                                entityType === "VENUE_RESERVATION_REQUEST"
-                            ) {
-                                // Invalidate venue reservation lists (cannot invalidate detail without reservation ID)
-                                queryClient.invalidateQueries({
-                                    queryKey: venueReservationKeys.lists(),
-                                });
-                                queryClient.invalidateQueries({
-                                    queryKey: venueReservationKeys.own(),
-                                });
-                                queryClient.invalidateQueries({
-                                    queryKey: venueReservationKeys.pending(),
-                                });
-                                queryClient.invalidateQueries({
-                                    queryKey:
-                                        venueReservationKeys.pendingVenueOwner(),
-                                });
-                            } else if (
                                 entityType === "EQUIPMENT_RESERVATION" ||
                                 entityType === "EQUIPMENT_RESERVATION_REQUEST"
                             ) {

@@ -41,16 +41,12 @@ export const Route = createFileRoute("/app/equipment-approval/$approvalId")({
     component: EquipmentReservationDetails,
     // Loader now uses TanStack Query's prefetching/suspense capabilities
     loader: async ({ params: { approvalId }, context: { queryClient } }) => {
-        const id = Number(approvalId);
-        if (Number.isNaN(id)) {
-            throw new Error("Invalid Reservation ID");
-        }
         // Ensure data is fetched or being fetched
         await queryClient.ensureQueryData(
-            equipmentReservationByIdQueryOptions(id),
+            equipmentReservationByIdQueryOptions(approvalId),
         );
         await queryClient.ensureQueryData(
-            equipmentReservationApprovalsQueryOptions(id),
+            equipmentReservationApprovalsQueryOptions(approvalId),
         );
         // No need to return data, useSuspenseQueries will get it
     },
@@ -65,7 +61,7 @@ export function EquipmentReservationDetails() {
     const onBack = () => router.history.back();
 
     const { approvalId } = Route.useParams();
-    const reservationId = Number(approvalId);
+    const reservationId = approvalId;
     const { data: currentUser } = useCurrentUser(); // Get current user
 
     // Fetch data using TanStack Query
@@ -88,16 +84,13 @@ export function EquipmentReservationDetails() {
     const handleApproveReservation = () => {
         // Remarks can be added optionally for approval if needed, but API takes empty string
         approveMutation.mutate(
-            { reservationId: reservation.id, remarks: "" },
+            { reservationId: reservation.publicId, remarks: "" },
             {
                 onSuccess: (message) => {
-                    toast.success(message || "Reservation approved.");
-                    // No need to manually update state, query invalidation handles it
+                    toast.success("Reservation approved.");
                 },
                 onError: (error) => {
-                    toast.error(
-                        error.message || "Failed to approve reservation.",
-                    );
+                    toast.error("Failed to approve reservation.");
                 },
             },
         );
@@ -110,18 +103,16 @@ export function EquipmentReservationDetails() {
         }
 
         rejectMutation.mutate(
-            { reservationId: reservation.id, remarks: rejectionRemarks },
+            { reservationId: reservation.publicId, remarks: rejectionRemarks },
             {
                 onSuccess: (message) => {
-                    toast.success(message || "Reservation rejected.");
+                    toast.success("Reservation rejected.");
                     setIsRejectionDialogOpen(false);
                     setRejectionRemarks("");
                     // No need to manually update state
                 },
                 onError: (error) => {
-                    toast.error(
-                        error.message || "Failed to reject reservation.",
-                    );
+                    toast.error("Failed to reject reservation.");
                 },
             },
         );
@@ -150,7 +141,7 @@ export function EquipmentReservationDetails() {
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <h1 className="text-xl font-semibold truncate">
-                            Equipment Reservation: {reservation.equipmentName}
+                            Equipment Reservation: {reservation.equipment.name}
                         </h1>
                         <Badge
                             className={getStatusBadgeClass(reservation.status)}
@@ -201,13 +192,13 @@ export function EquipmentReservationDetails() {
                                     <h3 className="font-medium text-muted-foreground">
                                         Event
                                     </h3>
-                                    <p>{reservation.eventName}</p>
+                                    <p>{reservation.event.eventName}</p>
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-muted-foreground">
                                         Equipment
                                     </h3>
-                                    <p>{reservation.equipmentName}</p>
+                                    <p>{reservation.equipment.name}</p>
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-muted-foreground">
@@ -254,7 +245,7 @@ export function EquipmentReservationDetails() {
                                     <h3 className="font-medium text-muted-foreground">
                                         Department
                                     </h3>
-                                    <p>{reservation.departmentName}</p>
+                                    <p>{reservation.department.name}</p>
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-muted-foreground">
@@ -264,7 +255,7 @@ export function EquipmentReservationDetails() {
                                         {formatDateTime(reservation.createdAt)}
                                     </p>
                                 </div>
-                                {reservation.reservationLetterUrl && (
+                                {reservation.event.approvedLetterUrl && (
                                     <div className="md:col-span-3">
                                         <h3 className="font-medium text-muted-foreground">
                                             Reservation Letter
@@ -276,7 +267,8 @@ export function EquipmentReservationDetails() {
                                         >
                                             <a
                                                 href={
-                                                    reservation.reservationLetterUrl
+                                                    reservation.event
+                                                        .approvedLetterUrl
                                                 }
                                                 target="_blank"
                                                 rel="noopener noreferrer"
@@ -320,9 +312,20 @@ export function EquipmentReservationDetails() {
                                             </TableHeader>
                                             <TableBody>
                                                 {approvals.map((approval) => (
-                                                    <TableRow key={approval.id}>
+                                                    <TableRow
+                                                        key={approval.publicId}
+                                                    >
                                                         <TableCell>
-                                                            {approval.signedBy}
+                                                            {
+                                                                approval
+                                                                    .signedByUser
+                                                                    ?.firstName
+                                                            }
+                                                            {
+                                                                approval
+                                                                    .signedByUser
+                                                                    ?.lastName
+                                                            }
                                                         </TableCell>
                                                         <TableCell>
                                                             {formatRole(
@@ -381,11 +384,12 @@ export function EquipmentReservationDetails() {
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <h3 className="text-sm font-medium">
-                                Equipment: {reservation.equipmentName} (Qty:{" "}
+                                Equipment: {reservation.equipment.name} (Qty:{" "}
                                 {reservation.quantity})
                             </h3>
                             <p className="text-sm text-muted-foreground">
-                                Event: {reservation.eventName} | Requester:{" "}
+                                Event: {reservation.event.eventName} |
+                                Requester:{" "}
                                 {reservation.requestingUser?.firstName}{" "}
                                 {reservation.requestingUser?.lastName}
                             </p>

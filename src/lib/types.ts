@@ -310,3 +310,14 @@ export type AUTHORIZED_ROLES =
     | "SSD"
     | "FAO"
     | "DEPT_HEAD";
+
+export interface ApiResponse<T> {
+    success: boolean;
+    message?: string;
+    data?: T;
+    error?: {
+        code: number;
+        message: string;
+        details?: string;
+    };
+}

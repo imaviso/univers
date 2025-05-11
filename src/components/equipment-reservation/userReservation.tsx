@@ -60,16 +60,16 @@ export default function UserReservations() {
 
     const handleCancel = () => {
         if (!selectedReservation) return;
-
-        cancelMutation.mutate(selectedReservation.publicId, {
-            onSuccess: (message) => {
-                toast.success(message || "Reservation cancelled successfully.");
+        // @ts-ignore
+        cancelMutation.mutate(selectedReservation, {
+            onSuccess: () => {
+                toast.success("Reservation cancelled successfully.");
                 setShowCancelDialog(false);
                 setSelectedReservation(null);
                 // Query invalidation happens automatically via the mutation hook
             },
-            onError: (error) => {
-                toast.error(error.message || "Failed to cancel reservation.");
+            onError: () => {
+                toast.error("Failed to cancel reservation.");
                 setShowCancelDialog(false);
             },
         });
@@ -271,9 +271,7 @@ export default function UserReservations() {
                                                         );
                                                     }}
                                                     disabled={
-                                                        cancelMutation.isPending &&
-                                                        cancelMutation.variables ===
-                                                            reservation.publicId
+                                                        cancelMutation.isPending
                                                     }
                                                 >
                                                     Cancel
