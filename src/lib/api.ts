@@ -8,7 +8,6 @@ import type {
 } from "./schema";
 import type {
     CreateEquipmentReservationInput,
-    CreateVenueReservationInput,
     DepartmentDTO,
     Equipment,
     EquipmentActionInput,
@@ -18,81 +17,98 @@ import type {
     EventApprovalDTO,
     EventDTO,
     EventDTOPayload,
-    ReservationActionInput,
     UserDTO,
     UserRole,
-    VenueApprovalDTO,
     VenueDTO,
-    VenueReservationDTO,
 } from "./types";
 
-// ... other imports ...
-
-// Helper function to handle response and potential errors
-async function handleApiResponse(response: Response, expectJson = true) {
+export async function handleApiResponse<T>(
+    response: Response,
+    expectJson = true,
+): Promise<T> {
     if (!response.ok) {
         const errorText = await response.text();
         let errorMessage = `Error! Status: ${response.status}`;
         try {
             const errorData = JSON.parse(errorText);
-            errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch {
-            // If parsing fails, use the raw text or the status message
-            errorMessage = errorText || errorMessage;
-        }
-        if (
-            errorMessage.includes("Email already in use") ||
-            errorMessage.includes("Department already exists") ||
-            errorMessage.includes("Department does not exist") ||
-            errorMessage.includes("Invalid department head") ||
-            errorMessage.includes("User not found") ||
-            errorMessage.includes("Invalid department Id") ||
-            errorMessage.includes("User does not exist")
-        ) {
+            let potentialMessage: string | undefined;
+
+            if (errorData && typeof errorData === "object") {
+                if (errorData.error && typeof errorData.error === "object") {
+                    // Backend ApiResponse.error structure
+                    potentialMessage =
+                        errorData.error.message || errorData.error.details;
+                } else if (
+                    errorData.message &&
+                    typeof errorData.message === "string"
+                ) {
+                    // Simpler JSON error { message: "..." } or ApiResponse itself
+                    potentialMessage = errorData.message;
+                }
+
+                if (potentialMessage) {
+                    try {
+                        // Check if the potentialMessage is itself a stringified JSON
+                        const nestedErrorData = JSON.parse(potentialMessage);
+                        if (
+                            nestedErrorData &&
+                            typeof nestedErrorData === "object" &&
+                            nestedErrorData.message &&
+                            typeof nestedErrorData.message === "string"
+                        ) {
+                            errorMessage = nestedErrorData.message; // Use nested message
+                        } else {
+                            errorMessage = potentialMessage; // Use as is if not further parsable or no nested message
+                        }
+                    } catch (e) {
+                        // potentialMessage was not a stringified JSON, use it directly
+                        errorMessage = potentialMessage;
+                    }
+                } else if (errorText) {
+                    errorMessage = errorText; // Fallback to raw error text if no clear message structure
+                }
+            } else if (errorText) {
+                errorMessage = errorText; // errorData was not an object, use raw text
+            }
+        } catch (e) {
+            // errorText wasn't valid JSON, or another parsing error occurred
+            errorMessage = errorText || `Server error: ${response.status}`;
         }
         throw new Error(errorMessage);
     }
 
     if (response.status === 204) {
-        return expectJson ? null : "";
-    }
-
-    if (response.status === 204 && expectJson) {
-        return [];
-    }
-
-    if (response.status === 204 && !expectJson) {
-        return null;
+        if (expectJson) {
+            return [] as unknown as T; // Return empty array for list types
+        }
+        return "" as unknown as T;
     }
 
     if (!expectJson) {
-        return await response.text();
+        return (await response.text()) as unknown as T;
     }
 
     try {
         const contentType = response.headers.get("content-type");
         if (contentType?.includes("application/json")) {
-            // Clone the response to read the text first, in case json() fails on empty valid response
             const responseClone = response.clone();
             const text = await responseClone.text();
             if (!text) {
-                // Handle cases where 200 OK might have an empty body but valid JSON (e.g., empty array/object represented as "")
-                // Depending on API contract, might return [], {}, null, or undefined
-                return null; // Or adjust as needed
+                return [] as unknown as T; // Return empty array for list types
             }
-            return await response.json(); // Parse the original response
+            const data = await response.json();
+            if (data && typeof data === "object" && "data" in data) {
+                // Handle ApiResponse format
+                return data.data as T;
+            }
+            return data as T;
         }
-        // If not JSON, but expected JSON, treat as error or return text?
-        // For now, let's assume if expectJson is true, it should be JSON.
-        // If API might return non-JSON on success, adjust logic.
-        // This code is reached only if contentType is not application/json
         console.warn(
             "Expected JSON response but received content-type:",
             contentType,
         );
-        return await response.text(); // Fallback to text if content-type is wrong
+        return (await response.text()) as unknown as T;
     } catch (error) {
-        // Catch JSON parsing errors specifically
         if (
             error instanceof SyntaxError &&
             error.message.includes("Unexpected end of JSON input")
@@ -100,25 +116,21 @@ async function handleApiResponse(response: Response, expectJson = true) {
             console.error(
                 "API Error: Received empty or invalid JSON body despite success status.",
             );
-            // Return a sensible default based on expectation, e.g., empty array for lists
-            // This depends heavily on what the calling code expects on empty success
-            return null; // Or [], {}, null etc.
+            return [] as unknown as T; // Return empty array for list types
         }
-        // Re-throw other errors
         throw error;
     }
 }
 
-export const getAllUsers = async () => {
+export const getAllUsers = async (): Promise<UserDTO[]> => {
     try {
         const response = await fetch(`${API_BASE_URL}/admin/users`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        // Expect JSON, potentially an array. Handle empty success.
-        const data = await handleApiResponse(response, true);
-        return data ?? []; // Default to empty array if undefined/null
+        const data = await handleApiResponse<UserDTO[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -140,7 +152,7 @@ type UpdateProfileInput = {
 
 export const updateProfile = async ({
     userId,
-    data,
+    data: profileData,
     imageFile,
 }: UpdateProfileInput): Promise<string> => {
     try {
@@ -148,16 +160,16 @@ export const updateProfile = async ({
         const userDtoPayload: Partial<UserDTO> & {
             departmentPublicId?: string;
         } = {};
-        if (data.firstName !== undefined)
-            userDtoPayload.firstName = data.firstName;
-        if (data.lastName !== undefined)
-            userDtoPayload.lastName = data.lastName;
-        if (data.phoneNumber !== undefined)
-            userDtoPayload.phoneNumber = data.phoneNumber;
-        if (data.idNumber !== undefined)
-            userDtoPayload.idNumber = data.idNumber;
-        if (data.departmentPublicId !== undefined) {
-            userDtoPayload.departmentPublicId = data.departmentPublicId;
+        if (profileData.firstName !== undefined)
+            userDtoPayload.firstName = profileData.firstName;
+        if (profileData.lastName !== undefined)
+            userDtoPayload.lastName = profileData.lastName;
+        if (profileData.phoneNumber !== undefined)
+            userDtoPayload.phoneNumber = profileData.phoneNumber;
+        if (profileData.idNumber !== undefined)
+            userDtoPayload.idNumber = profileData.idNumber;
+        if (profileData.departmentPublicId !== undefined) {
+            userDtoPayload.departmentPublicId = profileData.departmentPublicId;
         }
         formData.append(
             "userDTO",
@@ -173,7 +185,8 @@ export const updateProfile = async ({
             credentials: "include",
             body: formData,
         });
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Profile updated successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -192,7 +205,9 @@ type CreateUserInputFEWithDepartment = CreateUserInputFE & {
     departmentPublicId: string;
 };
 
-export const createUser = async (userData: CreateUserInputFEWithDepartment) => {
+export const createUser = async (
+    userData: CreateUserInputFEWithDepartment,
+): Promise<string> => {
     try {
         const response = await fetch(`${API_BASE_URL}/admin/users`, {
             method: "POST",
@@ -200,8 +215,8 @@ export const createUser = async (userData: CreateUserInputFEWithDepartment) => {
             body: JSON.stringify(userData),
             credentials: "include",
         });
-        // Assuming backend returns text confirmation on success
-        return await handleApiResponse(response, false);
+        const data = await handleApiResponse<string>(response, false);
+        return data || "User created successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -256,7 +271,8 @@ export const updateUser = async ({
             credentials: "include",
             body: formData,
         });
-        return await handleApiResponse(response, false);
+        const data = await handleApiResponse<string>(response, false);
+        return data || "User updated successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -264,13 +280,14 @@ export const updateUser = async ({
     }
 };
 
-export const deactivateUser = async (userId: string) => {
+export const deactivateUser = async (userId: string): Promise<string> => {
     try {
         const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
             method: "DELETE",
             credentials: "include",
         });
-        return await handleApiResponse(response, false);
+        const data = await handleApiResponse<string>(response, false);
+        return data || "User deactivated successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -280,13 +297,14 @@ export const deactivateUser = async (userId: string) => {
     }
 };
 
-export const activateUser = async (userId: string) => {
+export const activateUser = async (userId: string): Promise<string> => {
     try {
         const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
             method: "POST",
             credentials: "include",
         });
-        return await handleApiResponse(response, false);
+        const data = await handleApiResponse<string>(response, false);
+        return data || "User activated successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -301,9 +319,8 @@ export const getAllVenues = async (): Promise<VenueDTO[]> => {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        // Expect JSON array, handle empty success (200 OK with [] or 204)
-        const data = await handleApiResponse(response, true);
-        return data ?? []; // Default to empty array
+        const data = await handleApiResponse<VenueDTO[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -318,8 +335,8 @@ export const getAllEvents = async (): Promise<Event[]> => {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<Event[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -334,8 +351,8 @@ export const getEventById = async (eventId: string): Promise<EventDTO> => {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        const data = await handleApiResponse(response, true);
-        return data ?? ({} as EventDTO);
+        const data = await handleApiResponse<EventDTO>(response, true);
+        return data || ({} as EventDTO);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -365,7 +382,8 @@ export const createEvent = async (
             credentials: "include",
             body: formData,
         });
-        return await handleApiResponse(response, true);
+        const responseData = await handleApiResponse<EventDTO>(response, true);
+        return responseData || ({} as EventDTO);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -411,7 +429,8 @@ export const updateEvent = async ({
             body: formData,
         });
 
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Event updated successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -435,7 +454,8 @@ export const cancelEvent = async (
             credentials: "include",
         });
 
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Event cancelled successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -451,7 +471,8 @@ export const deleteEvent = async (eventId: string): Promise<string> => {
             method: "DELETE",
             credentials: "include",
         });
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Event deleted successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -481,7 +502,8 @@ export const approveEvent = async ({
             credentials: "include",
             body: JSON.stringify(payload),
         });
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Event approved successfully";
     } catch (error) {
         if (error instanceof Error) {
             throw error;
@@ -504,8 +526,11 @@ export const getAllApprovalsOfEvent = async (
                 credentials: "include",
             },
         );
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<EventApprovalDTO[]>(
+            response,
+            true,
+        );
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -522,8 +547,8 @@ export const getOwnEvents = async (): Promise<Event[]> => {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<Event[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -540,8 +565,8 @@ export const getApprovedEvents = async (): Promise<Event[]> => {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<Event[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -551,7 +576,7 @@ export const getApprovedEvents = async (): Promise<Event[]> => {
     }
 };
 
-export const getPendingVenueOwnerEvents = async (): Promise<Event[]> => {
+export const getPendingVenueOwnerEvents = async (): Promise<EventDTO[]> => {
     try {
         const response = await fetch(
             `${API_BASE_URL}/events/pending/venue-owner`,
@@ -561,8 +586,8 @@ export const getPendingVenueOwnerEvents = async (): Promise<Event[]> => {
                 credentials: "include",
             },
         );
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<EventDTO[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -582,8 +607,8 @@ export const getPendingDeptHeadEvents = async (): Promise<Event[]> => {
                 credentials: "include",
             },
         );
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<Event[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -621,7 +646,8 @@ export const createVenue = async ({
             credentials: "include",
             body: formData,
         });
-        return await handleApiResponse(response, true);
+        const responseData = await handleApiResponse<VenueDTO>(response, true);
+        return responseData || ({} as VenueDTO);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -664,7 +690,8 @@ export const updateVenue = async ({
                 body: formData,
             },
         );
-        return await handleApiResponse(response, true);
+        const responseData = await handleApiResponse<VenueDTO>(response, true);
+        return responseData || ({} as VenueDTO);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -674,7 +701,7 @@ export const updateVenue = async ({
     }
 };
 
-export const deleteVenue = async (venueId: string): Promise<string | null> => {
+export const deleteVenue = async (venueId: string): Promise<string> => {
     try {
         const response = await fetch(
             `${API_BASE_URL}/admin/venues/${venueId}`,
@@ -683,7 +710,8 @@ export const deleteVenue = async (venueId: string): Promise<string | null> => {
                 credentials: "include",
             },
         );
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Venue deleted successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -700,8 +728,8 @@ export const getAllEquipmentsAdmin = async (): Promise<Equipment[]> => {
             method: "GET",
             credentials: "include",
         });
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<Equipment[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -723,8 +751,11 @@ export const getEquipmentReservationsByEventId = async (
                 credentials: "include",
             },
         );
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<EquipmentReservationDTO[]>(
+            response,
+            true,
+        );
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -744,8 +775,8 @@ export const getAllEquipmentsByOwner = async (
             method: "GET",
             credentials: "include",
         });
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<Equipment[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -804,7 +835,8 @@ export const addEquipment = async ({
             credentials: "include",
             body: formData,
         });
-        return await handleApiResponse(response, true);
+        const responseData = await handleApiResponse<Equipment>(response, true);
+        return responseData || ({} as Equipment);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -867,7 +899,8 @@ export const editEquipment = async ({
             credentials: "include",
             body: formData,
         });
-        return await handleApiResponse(response, true);
+        const responseData = await handleApiResponse<Equipment>(response, true);
+        return responseData || ({} as Equipment);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -880,7 +913,7 @@ export const editEquipment = async ({
 export const deleteEquipment = async (
     equipmentId: string,
     userId: string,
-): Promise<void> => {
+): Promise<string> => {
     try {
         const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`);
         url.searchParams.append("userId", userId);
@@ -889,7 +922,8 @@ export const deleteEquipment = async (
             method: "DELETE",
             credentials: "include",
         });
-        await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Equipment deleted successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -906,9 +940,8 @@ export const getAllDepartments = async (): Promise<DepartmentDTO[]> => {
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        const data: DepartmentDTO[] =
-            (await handleApiResponse(response, true)) ?? [];
-        return data.map((dept) => ({
+        const data = await handleApiResponse<DepartmentDTO[]>(response, true);
+        return (data || []).map((dept: DepartmentDTO) => ({
             publicId: dept.publicId,
             name: dept.name,
             description: dept.description,
@@ -942,7 +975,8 @@ export const addDepartment = async (
             credentials: "include",
             body: JSON.stringify(payload),
         });
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Department added successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -976,7 +1010,8 @@ export const updateDepartment = async (
                 body: JSON.stringify(payload),
             },
         );
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Department updated successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -999,7 +1034,8 @@ export const assignDepartmentHead = async (
             },
         );
 
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Department head assigned successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1011,7 +1047,7 @@ export const assignDepartmentHead = async (
 
 export const deleteDepartment = async (
     departmentId: string,
-): Promise<string | null> => {
+): Promise<string> => {
     try {
         const response = await fetch(
             `${API_BASE_URL}/admin/department/${departmentId}`,
@@ -1021,7 +1057,8 @@ export const deleteDepartment = async (
             },
         );
 
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Department deleted successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1044,7 +1081,19 @@ export const getNotifications = async (
             credentials: "include",
         },
     );
-    return handleApiResponse(response);
+    const responseData = await handleApiResponse<Page<NotificationDTO>>(
+        response,
+        true,
+    );
+    return (
+        responseData || {
+            content: [],
+            totalElements: 0,
+            totalPages: 0,
+            size: 0,
+            number: 0,
+        }
+    );
 };
 
 // GET /notifications/count-unread
@@ -1054,7 +1103,11 @@ export const getUnreadNotificationCount = async (): Promise<{
     const response = await fetch(`${NOTIFICATIONS_BASE_URL}/count-unread`, {
         credentials: "include",
     });
-    return handleApiResponse(response);
+    const responseData = await handleApiResponse<{ unreadCount: number }>(
+        response,
+        true,
+    );
+    return responseData || { unreadCount: 0 };
 };
 
 // PATCH /notifications/read
@@ -1071,7 +1124,7 @@ export const markNotificationsRead = async (
             credentials: "include",
             body: JSON.stringify(notificationPublicIds),
         });
-        await handleApiResponse(response, false);
+        await handleApiResponse<void>(response, false);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1088,7 +1141,7 @@ export const markAllNotificationsRead = async (): Promise<void> => {
             method: "PATCH",
             credentials: "include",
         });
-        await handleApiResponse(response, false);
+        await handleApiResponse<void>(response, false);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1112,7 +1165,7 @@ export const deleteNotifications = async (
             credentials: "include",
             body: JSON.stringify(notificationPublicIds),
         });
-        await handleApiResponse(response, false);
+        await handleApiResponse<void>(response, false);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1129,267 +1182,12 @@ export const deleteAllNotifications = async (): Promise<void> => {
             method: "DELETE",
             credentials: "include",
         });
-        await handleApiResponse(response, false);
+        await handleApiResponse<void>(response, false);
     } catch (error) {
         throw error instanceof Error
             ? error
             : new Error(
                   "An unexpected error occurred while deleting all notifications.",
-              );
-    }
-};
-
-const VENUE_RESERVATIONS_BASE_URL = `${API_BASE_URL}/venue-reservations`;
-
-export const createVenueReservation = async (
-    reservationInput: CreateVenueReservationInput,
-): Promise<VenueReservationDTO> => {
-    const formData = new FormData();
-    formData.append(
-        "reservation",
-        new Blob([JSON.stringify(reservationInput)], {
-            type: "application/json",
-        }),
-    );
-
-    try {
-        const response = await fetch(VENUE_RESERVATIONS_BASE_URL, {
-            method: "POST",
-            credentials: "include",
-            body: formData,
-        });
-        return await handleApiResponse(response);
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred creating the reservation.",
-              );
-    }
-};
-
-export const getAllReservations = async (): Promise<VenueReservationDTO[]> => {
-    try {
-        const response = await fetch(VENUE_RESERVATIONS_BASE_URL, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
-        const data = await handleApiResponse(response, true); // Allow empty array
-        return data ?? [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred fetching all reservations.",
-              );
-    }
-};
-
-export const getOwnReservations = async (): Promise<VenueReservationDTO[]> => {
-    try {
-        const response = await fetch(`${VENUE_RESERVATIONS_BASE_URL}/me`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred fetching your reservations.",
-              );
-    }
-};
-
-export const getReservationById = async (
-    reservationId: string,
-): Promise<VenueReservationDTO> => {
-    try {
-        const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}`,
-            {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-            },
-        );
-        return await handleApiResponse(response);
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  `An unexpected error occurred fetching reservation ${reservationId}.`,
-              );
-    }
-};
-
-export const approveReservation = async ({
-    reservationPublicId,
-    remarks,
-}: ReservationActionInput): Promise<string> => {
-    try {
-        const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/${reservationPublicId}/approve`,
-            {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ remarks: remarks ?? "" }),
-            },
-        );
-        // Expecting text response
-        return await handleApiResponse(response, false);
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  `An unexpected error occurred approving reservation ${reservationPublicId}.`,
-              );
-    }
-};
-
-export const rejectReservation = async ({
-    reservationPublicId,
-    remarks,
-}: ReservationActionInput): Promise<string> => {
-    if (!remarks || remarks.trim() === "") {
-        throw new Error("Rejection remarks are required.");
-    }
-    try {
-        const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/${reservationPublicId}/reject`,
-            {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ remarks }),
-            },
-        );
-        // Expecting text response
-        return await handleApiResponse(response, false);
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  `An unexpected error occurred rejecting reservation ${reservationPublicId}.`,
-              );
-    }
-};
-
-export const cancelReservation = async (
-    reservationId: string,
-): Promise<string> => {
-    try {
-        const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}/cancel`,
-            {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-            },
-        );
-        // Expecting text response
-        return await handleApiResponse(response, false);
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  `An unexpected error occurred cancelling reservation ${reservationId}.`,
-              );
-    }
-};
-
-export const deleteReservation = async (
-    reservationId: string,
-): Promise<string> => {
-    try {
-        const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}`,
-            {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-            },
-        );
-        // Expecting text response
-        return await handleApiResponse(response, false);
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  `An unexpected error occurred deleting reservation ${reservationId}.`,
-              );
-    }
-};
-
-export const getApprovalsForReservation = async (
-    reservationId: string,
-): Promise<VenueApprovalDTO[]> => {
-    try {
-        const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/${reservationId}/approvals`,
-            {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-            },
-        );
-        const data = await handleApiResponse(response, true); // Allow empty array
-        return data ?? [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  `An unexpected error occurred fetching approvals for reservation ${reservationId}.`,
-              );
-    }
-};
-
-export const getPendingVenueOwnerReservations = async (): Promise<
-    VenueReservationDTO[]
-> => {
-    try {
-        const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/pending/venue-owner`,
-            {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-            },
-        );
-        const data = await handleApiResponse(response, true); // Allow empty array
-        return data ?? [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred fetching pending venue owner reservations.",
-              );
-    }
-};
-
-export const getAllVenueOwnerReservations = async (): Promise<
-    VenueReservationDTO[]
-> => {
-    try {
-        const response = await fetch(
-            `${VENUE_RESERVATIONS_BASE_URL}/all/venue-owner`,
-            {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-            },
-        );
-        const data = await handleApiResponse(response, true); // Allow empty array
-        return data ?? [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred fetching all venue owner reservations.",
               );
     }
 };
@@ -1413,7 +1211,11 @@ export const createEquipmentReservation = async (
             credentials: "include",
             body: formData,
         });
-        return await handleApiResponse(response, true);
+        const responseData = await handleApiResponse<EquipmentReservationDTO>(
+            response,
+            true,
+        );
+        return responseData || ({} as EquipmentReservationDTO);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1433,8 +1235,11 @@ export const getOwnEquipmentReservations = async (): Promise<
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<EquipmentReservationDTO[]>(
+            response,
+            true,
+        );
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1454,8 +1259,11 @@ export const getAllEquipmentReservations = async (): Promise<
             headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<EquipmentReservationDTO[]>(
+            response,
+            true,
+        );
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1478,7 +1286,11 @@ export const getEquipmentReservationById = async (
                 credentials: "include",
             },
         );
-        return await handleApiResponse(response, true);
+        const responseData = await handleApiResponse<EquipmentReservationDTO>(
+            response,
+            true,
+        );
+        return responseData || ({} as EquipmentReservationDTO);
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1504,8 +1316,8 @@ export const approveEquipmentReservation = async ({
                 body: JSON.stringify(payload),
             },
         );
-        // Expects text response
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Equipment reservation approved successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1534,8 +1346,8 @@ export const rejectEquipmentReservation = async ({
                 body: JSON.stringify(payload),
             },
         );
-        // Expects text response
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Equipment reservation rejected successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1557,8 +1369,8 @@ export const cancelEquipmentReservation = async (
                 credentials: "include",
             },
         );
-        // Expects text response
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Equipment reservation cancelled successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1581,7 +1393,8 @@ export const deleteEquipmentReservation = async (
             },
         );
         // Expects text response
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Equipment reservation deleted successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1604,8 +1417,11 @@ export const getApprovalsForEquipmentReservation = async (
                 credentials: "include",
             },
         );
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<EquipmentApprovalDTO[]>(
+            response,
+            true,
+        );
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1628,8 +1444,11 @@ export const getPendingEquipmentOwnerReservations = async (): Promise<
                 credentials: "include",
             },
         );
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<EquipmentReservationDTO[]>(
+            response,
+            true,
+        );
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1652,8 +1471,11 @@ export const getAllEquipmentOwnerReservations = async (): Promise<
                 credentials: "include",
             },
         );
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<EquipmentReservationDTO[]>(
+            response,
+            true,
+        );
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1677,7 +1499,8 @@ export const rejectEvent = async (data: {
                 credentials: "include",
             },
         );
-        return await handleApiResponse(response, false);
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "Event rejected successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1699,8 +1522,8 @@ export const getApprovedEventsByVenue = async (
                 credentials: "include",
             },
         );
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<Event[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1722,8 +1545,8 @@ export const getOngoingAndApprovedEventsByVenue = async (
                 credentials: "include",
             },
         );
-        const data = await handleApiResponse(response, true);
-        return data ?? [];
+        const data = await handleApiResponse<Event[]>(response, true);
+        return data || [];
     } catch (error) {
         throw error instanceof Error
             ? error

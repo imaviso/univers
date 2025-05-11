@@ -312,9 +312,9 @@ export function AccountSettings() {
                 `Failed to update profile: ${err instanceof Error ? err.message : "Unknown error"}`,
             );
         },
-        onSuccess: (message) => {
+        onSuccess: () => {
             // Backend returns a success message string
-            toast.success(message || "Profile updated successfully");
+            toast.success("Profile updated successfully");
             // Reset avatar file state after successful upload
             setProfileForm((prev) => ({
                 ...prev,

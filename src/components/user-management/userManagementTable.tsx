@@ -193,8 +193,8 @@ export function UserDataTable() {
                 err instanceof Error ? err.message : "Failed to update user";
             toast.error(errorMessage);
         },
-        onSuccess: (data) => {
-            toast.success(data || "User updated successfully");
+        onSuccess: () => {
+            toast.success("User updated successfully");
             setEditDialogOpen(false);
             setSelectedUser(null);
         },
@@ -244,8 +244,8 @@ export function UserDataTable() {
                     : "Failed to deactivate user";
             toast.error(errorMessage);
         },
-        onSuccess: (data) => {
-            toast.success(data || "User deactivated successfully");
+        onSuccess: () => {
+            toast.success("User deactivated successfully");
             setDeleteDialogOpen(false);
             setSelectedUser(null);
         },
@@ -291,8 +291,8 @@ export function UserDataTable() {
                 err instanceof Error ? err.message : "Failed to activate user";
             toast.error(errorMessage);
         },
-        onSuccess: (data) => {
-            toast.success(data || "User activated successfully");
+        onSuccess: () => {
+            toast.success("User activated successfully");
             setActivateDialogOpen(false);
             setSelectedUser(null);
         },
