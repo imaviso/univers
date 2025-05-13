@@ -5,11 +5,14 @@ import { EventTimeline } from "@/components/events/eventTimeline";
 import { Button } from "@/components/ui/button"; // Added Button import
 import {
     DropdownMenu,
+    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuRadioGroup,
     DropdownMenuRadioItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"; // Added Dropdown imports
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 import { useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import useCurrentUser
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -50,6 +53,9 @@ function Events() {
     );
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [eventStatusFilter, setEventStatusFilter] = useState<string>("ALL"); // Added state for status filter, default to ALL
+    const [sortBy, setSortBy] = useState<string>("recency"); // Added state for sort order, default to recency
+    const [dateRangeFilter, setDateRangeFilter] = useState<string>("allTime"); // Added state for date range filter, default to All Time
+    const [displayView, setDisplayView] = useState<"list" | "card">("card"); // State for display view
 
     const isAuthorized =
         currentUser?.role === "SUPER_ADMIN" ||
@@ -63,7 +69,7 @@ function Events() {
         currentUser?.role === "VENUE_OWNER";
 
     return (
-        <div className="bg-background">
+        <div className="bg-background flex flex-col overflow-hidden h-full">
             {/* Use Tabs only if SUPER_ADMIN and view is list, otherwise just render content */}
             {isAuthorized && view === "list" ? (
                 <Tabs
@@ -86,7 +92,7 @@ function Events() {
                                             : "text-muted-foreground hover:bg-muted"
                                     }`}
                                 >
-                                    List
+                                    Overview
                                 </button>
                                 {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
                                 <button
@@ -99,158 +105,48 @@ function Events() {
                         </div>
                         <div className="flex items-center gap-4">
                             {/* Status Filter Dropdown - only for list view */}
-                            {/* Condition for isAuthorized is handled by the parent conditional rendering of this header block */}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className="ml-auto"
-                                    >
-                                        <ListFilter className="mr-2 h-4 w-4" />
-                                        Filter (
-                                        {eventStatusFilter === "ALL"
-                                            ? "All"
-                                            : eventStatusFilter
-                                                  .charAt(0)
-                                                  .toUpperCase() +
-                                              eventStatusFilter
-                                                  .slice(1)
-                                                  .toLowerCase()}
-                                        )
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuRadioGroup
-                                        value={eventStatusFilter}
-                                        onValueChange={setEventStatusFilter}
-                                    >
-                                        <DropdownMenuRadioItem value="ALL">
-                                            All
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value={EventStatus.PENDING}
-                                        >
-                                            {EventStatus.PENDING}
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value={EventStatus.APPROVED}
-                                        >
-                                            {EventStatus.APPROVED}
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value={EventStatus.ONGOING}
-                                        >
-                                            {EventStatus.ONGOING}
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value={EventStatus.COMPLETED}
-                                        >
-                                            {EventStatus.COMPLETED}
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value={EventStatus.REJECTED}
-                                        >
-                                            {EventStatus.REJECTED}
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value={EventStatus.CANCELED}
-                                        >
-                                            {EventStatus.CANCELED}
-                                        </DropdownMenuRadioItem>
-                                    </DropdownMenuRadioGroup>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-
-                            {/* TabsList only shown for these authorized roles in list view */}
-                            <TabsList className="grid grid-cols-2">
-                                <TabsTrigger value="all">Events</TabsTrigger>
-                                <TabsTrigger value="mine">
-                                    My Events
-                                </TabsTrigger>
-                            </TabsList>
-                            <CreateEventButton
-                                onClick={() => setIsModalOpen(true)}
-                            />
-                        </div>
-                    </header>
-
-                    <main className="flex-1 overflow-auto pl-6 pr-6">
-                        {/* Both TabsContent rendered for SUPER_ADMIN */}
-                        <TabsContent value="all" className="mt-0">
-                            <EventList
-                                activeTab="all"
-                                eventStatusFilter={eventStatusFilter}
-                            />
-                        </TabsContent>
-                        <TabsContent value="mine" className="mt-0">
-                            <EventList
-                                activeTab="mine"
-                                eventStatusFilter={eventStatusFilter}
-                            />
-                        </TabsContent>
-                    </main>
-                </Tabs>
-            ) : (
-                // Non-SUPER_ADMIN or timeline view structure
-                <div className="flex flex-col flex-1 overflow-hidden">
-                    <header className="flex items-center justify-between border-b px-6 py-4">
-                        <div className="flex items-center gap-4">
-                            <h1 className="text-xl font-semibold">Events</h1>
-                            {/* View switcher still available */}
-                            <div className="flex items-center gap-2">
-                                {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
-                                <button
-                                    onClick={() => setView("list")}
-                                    className={`px-3 py-1 text-sm rounded-md ${
-                                        view === "list"
-                                            ? "bg-primary/10 text-primary"
-                                            : "text-muted-foreground hover:bg-muted"
-                                    }`}
-                                >
-                                    List
-                                </button>
-                                {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
-                                <button
-                                    onClick={() => setView("timeline")}
-                                    className={`px-3 py-1 text-sm rounded-md ${
-                                        view === "timeline"
-                                            ? "bg-primary/10 text-primary"
-                                            : "text-muted-foreground hover:bg-muted"
-                                    }`}
-                                >
-                                    Timeline
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            {/* Status Filter Dropdown for non-authorized users in list view */}
                             {view === "list" && (
                                 <DropdownMenu>
+                                    {" "}
+                                    {/* Only show filter dropdown in list view */}
                                     <DropdownMenuTrigger asChild>
                                         <Button
                                             variant="outline"
                                             className="ml-auto"
                                         >
                                             <ListFilter className="mr-2 h-4 w-4" />
-                                            Filter (
-                                            {eventStatusFilter === "ALL"
-                                                ? "All"
-                                                : eventStatusFilter
-                                                      .charAt(0)
-                                                      .toUpperCase() +
-                                                  eventStatusFilter
-                                                      .slice(1)
-                                                      .toLowerCase()}
-                                            )
+                                            Display
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuRadioGroup
+                                            value={displayView}
+                                            onValueChange={(value) =>
+                                                setDisplayView(
+                                                    value as "list" | "card",
+                                                )
+                                            }
+                                        >
+                                            <Label className="px-2 py-1.5 text-sm font-semibold">
+                                                View As
+                                            </Label>
+                                            <DropdownMenuRadioItem value="card">
+                                                Card View
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="list">
+                                                List View
+                                            </DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuRadioGroup
                                             value={eventStatusFilter}
                                             onValueChange={setEventStatusFilter}
                                         >
+                                            <Label className="px-2 py-1.5 text-sm font-semibold">
+                                                Status
+                                            </Label>
                                             <DropdownMenuRadioItem value="ALL">
-                                                All
+                                                All Statuses
                                             </DropdownMenuRadioItem>
                                             <DropdownMenuRadioItem
                                                 value={EventStatus.PENDING}
@@ -283,6 +179,264 @@ function Events() {
                                                 {EventStatus.CANCELED}
                                             </DropdownMenuRadioItem>
                                         </DropdownMenuRadioGroup>
+                                        <DropdownMenuSeparator />
+                                        <Label className="px-2 py-1.5 text-sm font-semibold">
+                                            Sort
+                                        </Label>
+                                        <DropdownMenuCheckboxItem
+                                            checked={sortBy === "recency"}
+                                            onCheckedChange={(checked) => {
+                                                setSortBy(
+                                                    checked
+                                                        ? "recency"
+                                                        : "default",
+                                                ); // Toggle between recency and default
+                                            }}
+                                        >
+                                            Most Recent
+                                        </DropdownMenuCheckboxItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+
+                            {/* Date Range Filter Dropdown - always shown if view is list */}
+                            {view === "list" && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline">
+                                            Date:{" "}
+                                            {dateRangeFilter === "allTime"
+                                                ? "All Time"
+                                                : dateRangeFilter === "pastDay"
+                                                  ? "Past Day"
+                                                  : dateRangeFilter ===
+                                                      "pastWeek"
+                                                    ? "Past Week"
+                                                    : dateRangeFilter ===
+                                                        "pastMonth"
+                                                      ? "Past Month"
+                                                      : "All Time"}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuRadioGroup
+                                            value={dateRangeFilter}
+                                            onValueChange={setDateRangeFilter}
+                                        >
+                                            <DropdownMenuRadioItem value="allTime">
+                                                All Time
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="pastDay">
+                                                Past Day
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="pastWeek">
+                                                Past Week
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="pastMonth">
+                                                Past Month
+                                            </DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+
+                            {/* TabsList only shown for these authorized roles in list view */}
+                            <TabsList className="grid grid-cols-2">
+                                <TabsTrigger value="all">Events</TabsTrigger>
+                                <TabsTrigger value="mine">
+                                    My Events
+                                </TabsTrigger>
+                            </TabsList>
+                            <CreateEventButton
+                                onClick={() => setIsModalOpen(true)}
+                            />
+                        </div>
+                    </header>
+
+                    <main className="flex-1 pl-6 pr-6 overflow-hidden">
+                        {/* Both TabsContent rendered for SUPER_ADMIN */}
+                        <TabsContent value="all" className="mt-0 h-full">
+                            <EventList
+                                activeTab="all"
+                                eventStatusFilter={eventStatusFilter}
+                                sortBy={sortBy}
+                                dateRangeFilter={dateRangeFilter}
+                                displayView={displayView}
+                            />
+                        </TabsContent>
+                        <TabsContent value="mine" className="mt-0 h-full">
+                            <EventList
+                                activeTab="mine"
+                                eventStatusFilter={eventStatusFilter}
+                                sortBy={sortBy}
+                                dateRangeFilter={dateRangeFilter}
+                                displayView={displayView}
+                            />
+                        </TabsContent>
+                    </main>
+                </Tabs>
+            ) : (
+                // Non-SUPER_ADMIN or timeline view structure
+                <div className="flex flex-col flex-1 overflow-hidden">
+                    <header className="flex items-center justify-between border-b px-6 py-4">
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-xl font-semibold">Events</h1>
+                            {/* View switcher still available */}
+                            <div className="flex items-center gap-2">
+                                {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
+                                <button
+                                    onClick={() => setView("list")}
+                                    className={`px-3 py-1 text-sm rounded-md ${
+                                        view === "list"
+                                            ? "bg-primary/10 text-primary"
+                                            : "text-muted-foreground hover:bg-muted"
+                                    }`}
+                                >
+                                    Overview
+                                </button>
+                                {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
+                                <button
+                                    onClick={() => setView("timeline")}
+                                    className={`px-3 py-1 text-sm rounded-md ${
+                                        view === "timeline"
+                                            ? "bg-primary/10 text-primary"
+                                            : "text-muted-foreground hover:bg-muted"
+                                    }`}
+                                >
+                                    Timeline
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            {/* Status Filter Dropdown for non-authorized users in list view */}
+                            {view === "list" && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="ml-auto"
+                                        >
+                                            <ListFilter className="mr-2 h-4 w-4" />
+                                            Display
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuRadioGroup
+                                            value={displayView}
+                                            onValueChange={(value) =>
+                                                setDisplayView(
+                                                    value as "list" | "card",
+                                                )
+                                            }
+                                        >
+                                            <Label className="px-2 py-1.5 text-sm font-semibold">
+                                                View As
+                                            </Label>
+                                            <DropdownMenuRadioItem value="card">
+                                                Card View
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="list">
+                                                List View
+                                            </DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuRadioGroup
+                                            value={eventStatusFilter}
+                                            onValueChange={setEventStatusFilter}
+                                        >
+                                            <Label className="px-2 py-1.5 text-sm font-semibold">
+                                                Status
+                                            </Label>
+                                            <DropdownMenuRadioItem value="ALL">
+                                                All Statuses
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.PENDING}
+                                            >
+                                                {EventStatus.PENDING}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.APPROVED}
+                                            >
+                                                {EventStatus.APPROVED}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.ONGOING}
+                                            >
+                                                {EventStatus.ONGOING}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.COMPLETED}
+                                            >
+                                                {EventStatus.COMPLETED}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.REJECTED}
+                                            >
+                                                {EventStatus.REJECTED}
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem
+                                                value={EventStatus.CANCELED}
+                                            >
+                                                {EventStatus.CANCELED}
+                                            </DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                        <DropdownMenuSeparator />
+                                        <Label className="px-2 py-1.5 text-sm font-semibold">
+                                            Sort
+                                        </Label>
+                                        <DropdownMenuCheckboxItem
+                                            checked={sortBy === "recency"}
+                                            onCheckedChange={(checked) => {
+                                                setSortBy(
+                                                    checked
+                                                        ? "recency"
+                                                        : "default",
+                                                ); // Toggle between recency and default
+                                            }}
+                                        >
+                                            Most Recent
+                                        </DropdownMenuCheckboxItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                            {/* Date Range Filter Dropdown - always shown if view is list */}
+                            {view === "list" && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline">
+                                            Date:{" "}
+                                            {dateRangeFilter === "allTime"
+                                                ? "All Time"
+                                                : dateRangeFilter === "pastDay"
+                                                  ? "Past Day"
+                                                  : dateRangeFilter ===
+                                                      "pastWeek"
+                                                    ? "Past Week"
+                                                    : dateRangeFilter ===
+                                                        "pastMonth"
+                                                      ? "Past Month"
+                                                      : "All Time"}
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuRadioGroup
+                                            value={dateRangeFilter}
+                                            onValueChange={setDateRangeFilter}
+                                        >
+                                            <DropdownMenuRadioItem value="allTime">
+                                                All Time
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="pastDay">
+                                                Past Day
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="pastWeek">
+                                                Past Week
+                                            </DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="pastMonth">
+                                                Past Month
+                                            </DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             )}
@@ -291,13 +445,16 @@ function Events() {
                             />
                         </div>
                     </header>
-                    <main className="flex-1 overflow-auto p-6">
+                    <main className="flex-1 p-6 overflow-hidden">
                         {/* Conditionally render based on view */}
                         {view === "list" ? (
                             // Non-SUPER_ADMIN only sees 'mine'
                             <EventList
                                 activeTab="mine"
                                 eventStatusFilter={eventStatusFilter}
+                                sortBy={sortBy}
+                                dateRangeFilter={dateRangeFilter}
+                                displayView={displayView}
                             />
                         ) : (
                             <EventTimeline />

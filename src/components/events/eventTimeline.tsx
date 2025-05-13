@@ -5,6 +5,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
 import {
     allEventsQueryOptions,
     approvedEventsQueryOptions,
@@ -148,155 +149,164 @@ export function EventTimeline() {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Event Timeline</h2>
-            </div>
-
-            {timelineData.length === 0 ? (
-                <div className="text-center text-muted-foreground py-10">
-                    No events found for the timeline.
+        <ScrollArea className="h-[90vh] w-full">
+            <div className="space-y-6 p-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">Event Timeline</h2>
                 </div>
-            ) : (
-                <div className="space-y-8">
-                    {timelineData.map((monthGroup) => (
-                        <div key={monthGroup.id} className="space-y-4">
-                            <h3 className="text-lg font-medium">
-                                {monthGroup.month} {monthGroup.year}
-                            </h3>
-                            <div className="space-y-4">
-                                {monthGroup.events.map((event) => {
-                                    // Get organizer name directly
-                                    const organizerName = event.organizer
-                                        ? `${event.organizer.firstName} ${event.organizer.lastName}`
-                                        : "Unknown Organizer";
 
-                                    // Format date range
-                                    let dateDisplayString =
-                                        "Date not available";
-                                    if (
-                                        typeof event.startTime === "string" &&
-                                        typeof event.endTime === "string"
-                                    ) {
-                                        const startDate = new Date(
-                                            event.startTime,
-                                        );
-                                        const endDate = new Date(event.endTime);
+                {timelineData.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-10">
+                        No events found for the timeline.
+                    </div>
+                ) : (
+                    <div className="space-y-8">
+                        {timelineData.map((monthGroup) => (
+                            <div key={monthGroup.id} className="space-y-4">
+                                <h3 className="text-lg font-medium">
+                                    {monthGroup.month} {monthGroup.year}
+                                </h3>
+                                <div className="space-y-4">
+                                    {monthGroup.events.map((event) => {
+                                        // Get organizer name directly
+                                        const organizerName = event.organizer
+                                            ? `${event.organizer.firstName} ${event.organizer.lastName}`
+                                            : "Unknown Organizer";
+
+                                        // Format date range
+                                        let dateDisplayString =
+                                            "Date not available";
                                         if (
-                                            !Number.isNaN(
-                                                startDate.getTime(),
-                                            ) &&
-                                            !Number.isNaN(endDate.getTime())
+                                            typeof event.startTime ===
+                                                "string" &&
+                                            typeof event.endTime === "string"
                                         ) {
-                                            dateDisplayString = formatDateRange(
-                                                startDate,
-                                                endDate,
+                                            const startDate = new Date(
+                                                event.startTime,
                                             );
-                                        } else {
-                                            dateDisplayString =
-                                                "Invalid date format";
-                                        }
-                                    } else {
-                                        dateDisplayString = "Date missing";
-                                    }
-
-                                    return (
-                                        <Card
-                                            key={
-                                                event.publicId ??
-                                                `temp-${Math.random()}`
+                                            const endDate = new Date(
+                                                event.endTime,
+                                            );
+                                            if (
+                                                !Number.isNaN(
+                                                    startDate.getTime(),
+                                                ) &&
+                                                !Number.isNaN(endDate.getTime())
+                                            ) {
+                                                dateDisplayString =
+                                                    formatDateRange(
+                                                        startDate,
+                                                        endDate,
+                                                    );
+                                            } else {
+                                                dateDisplayString =
+                                                    "Invalid date format";
                                             }
-                                            className="overflow-hidden border-l-4"
-                                        >
-                                            <CardHeader>
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        {getStatusIcon(
-                                                            event.status,
-                                                        )}
-                                                        <h4 className="font-medium">
-                                                            {event.eventName}
-                                                        </h4>
+                                        } else {
+                                            dateDisplayString = "Date missing";
+                                        }
+
+                                        return (
+                                            <Card
+                                                key={
+                                                    event.publicId ??
+                                                    `temp-${Math.random()}`
+                                                }
+                                                className="overflow-hidden border-l-4"
+                                            >
+                                                <CardHeader>
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            {getStatusIcon(
+                                                                event.status,
+                                                            )}
+                                                            <h4 className="font-medium">
+                                                                {
+                                                                    event.eventName
+                                                                }
+                                                            </h4>
+                                                        </div>
+                                                        <Badge
+                                                            className={`${getStatusColor(event.status)}`}
+                                                        >
+                                                            {event.status
+                                                                ? event.status
+                                                                      .charAt(0)
+                                                                      .toUpperCase() +
+                                                                  event.status
+                                                                      .slice(1)
+                                                                      .toLowerCase()
+                                                                : "Unknown"}
+                                                        </Badge>
                                                     </div>
-                                                    <Badge
-                                                        className={`${getStatusColor(event.status)}`}
-                                                    >
-                                                        {event.status
-                                                            ? event.status
-                                                                  .charAt(0)
-                                                                  .toUpperCase() +
-                                                              event.status
-                                                                  .slice(1)
-                                                                  .toLowerCase()
-                                                            : "Unknown"}
-                                                    </Badge>
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent>
-                                                {/* Event Type */}
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                                                    <Tag className="h-4 w-4" />
-                                                    <span>
-                                                        {event.eventType ??
-                                                            "N/A"}
-                                                    </span>
-                                                </div>
-                                                {/* Date/Time */}
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                                                    <Clock className="h-4 w-4" />
-                                                    <span>
-                                                        {dateDisplayString}
-                                                    </span>
-                                                </div>
-                                                {/* Venue */}
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                                                    <MapPin className="h-4 w-4" />
-                                                    <span>
-                                                        {venueMap.get(
-                                                            event.eventVenue
-                                                                ?.publicId,
-                                                        ) ?? "Unknown Venue"}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <Avatar className="h-6 w-6">
-                                                            <AvatarFallback>
-                                                                {getInitials(
-                                                                    organizerName,
-                                                                )}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <span className="text-xs">
-                                                            {organizerName}
+                                                </CardHeader>
+                                                <CardContent>
+                                                    {/* Event Type */}
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                                                        <Tag className="h-4 w-4" />
+                                                        <span>
+                                                            {event.eventType ??
+                                                                "N/A"}
                                                         </span>
                                                     </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="flex items-center gap-2 text-sm font-normal"
-                                                        onClick={() =>
-                                                            handleNavigate(
-                                                                event.publicId,
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            typeof event.publicId !==
-                                                            "number"
-                                                        }
-                                                    >
-                                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                                    </Button>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    );
-                                })}
+                                                    {/* Date/Time */}
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                                                        <Clock className="h-4 w-4" />
+                                                        <span>
+                                                            {dateDisplayString}
+                                                        </span>
+                                                    </div>
+                                                    {/* Venue */}
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                                                        <MapPin className="h-4 w-4" />
+                                                        <span>
+                                                            {venueMap.get(
+                                                                event.eventVenue
+                                                                    ?.publicId,
+                                                            ) ??
+                                                                "Unknown Venue"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <Avatar className="h-6 w-6">
+                                                                <AvatarFallback>
+                                                                    {getInitials(
+                                                                        organizerName,
+                                                                    )}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <span className="text-xs">
+                                                                {organizerName}
+                                                            </span>
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="flex items-center gap-2 text-sm font-normal"
+                                                            onClick={() =>
+                                                                handleNavigate(
+                                                                    event.publicId,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                typeof event.publicId !==
+                                                                "number"
+                                                            }
+                                                        >
+                                                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                                        </Button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </ScrollArea>
     );
 }
