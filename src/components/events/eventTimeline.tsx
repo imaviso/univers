@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
 import {
-    allEventsQueryOptions,
-    approvedEventsQueryOptions,
+    timelineEventsByDateRangeQueryOptions, // Import new query option
     useCurrentUser, // Import hook to get current user
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
@@ -54,27 +53,27 @@ interface MonthGroup {
     events: Event[]; // Use the actual Event type
 }
 
-export function EventTimeline() {
+interface EventTimelineProps {
+    startDateISO?: string;
+    endDateISO?: string;
+}
+
+export function EventTimeline({
+    startDateISO,
+    endDateISO,
+}: EventTimelineProps) {
     const navigate = useNavigate();
-    const { data: currentUser } = useCurrentUser(); // Get current user
+    const { data: currentUser } = useCurrentUser();
 
     // Fetch venues data
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
 
-    // Fetch approved events (for non-admins)
-    const { data: approvedEvents = [] } = useSuspenseQuery(
-        approvedEventsQueryOptions,
-    );
-
-    // Fetch all events (only enabled for SUPER_ADMIN)
-    const { data: allEvents = [] } = useQuery({
-        ...allEventsQueryOptions,
-        enabled: currentUser?.role === "SUPER_ADMIN",
-    });
-
-    // Determine the source of events based on user role
-    const timelineEventsSource =
-        currentUser?.role === "SUPER_ADMIN" ? allEvents : approvedEvents;
+    // Fetch events using the new timelineEventsByDateRangeQueryOptions, now using props
+    const { data: timelineEventsSource = [], isLoading: isLoadingEvents } =
+        useQuery({
+            ...timelineEventsByDateRangeQueryOptions(startDateISO, endDateISO), // Use ISO dates from props
+            enabled: !!currentUser,
+        });
 
     // Create a map for quick venue lookup
     const venueMap = new Map(
@@ -83,7 +82,7 @@ export function EventTimeline() {
 
     // Group events by month and year using the selected source
     const groupedEvents = timelineEventsSource.reduce(
-        (acc, event: Event) => {
+        (acc: Record<string, MonthGroup>, event: Event) => {
             // Ensure startTime is valid before parsing
             if (typeof event.startTime !== "string") {
                 console.warn(
@@ -149,15 +148,19 @@ export function EventTimeline() {
     };
 
     return (
-        <ScrollArea className="h-[90vh] w-full">
+        <ScrollArea className="h-[calc(100vh-var(--header-height,0px)-var(--filter-bar-height,0px)-2rem)] w-full">
             <div className="space-y-6 p-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold">Event Timeline</h2>
                 </div>
 
-                {timelineData.length === 0 ? (
+                {isLoadingEvents ? (
                     <div className="text-center text-muted-foreground py-10">
-                        No events found for the timeline.
+                        Loading events...
+                    </div>
+                ) : timelineData.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-10">
+                        No events found for the selected date range.
                     </div>
                 ) : (
                     <div className="space-y-8">

@@ -24,6 +24,7 @@ import {
     getPendingDeptHeadEvents,
     getPendingEquipmentOwnerReservations,
     getPendingVenueOwnerEvents,
+    getTimelineEventsByDateRange,
     getUnreadNotificationCount,
     markAllNotificationsRead,
     markNotificationsRead,
@@ -561,7 +562,6 @@ export const useDeleteEquipmentReservationMutation = () => {
     });
 };
 
-// --- NEW Generic Event Search Query Option ---
 export const searchEventsQueryOptions = (
     scope: string,
     status?: string,
@@ -580,4 +580,14 @@ export const searchEventsQueryOptions = (
         ],
         queryFn: () => searchEvents(scope, status, sortBy, dateRange),
         staleTime: 1000 * 60 * 2,
+    });
+
+export const timelineEventsByDateRangeQueryOptions = (
+    startDate?: string,
+    endDate?: string,
+) =>
+    queryOptions<AppEvent[]>({
+        queryKey: ["events", "timelineByDate", { startDate, endDate }],
+        queryFn: () => getTimelineEventsByDateRange(startDate, endDate),
+        staleTime: 1000 * 60 * 2, // 2 minutes stale time
     });
