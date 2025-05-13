@@ -192,6 +192,10 @@ export type Event = {
     startTime: string;
     endTime: string;
     status: string;
+    createdAt?: string;
+    updatedAt?: string;
+    approvals?: EventApprovalDTO[] | null;
+    cancellationReason?: string | null;
 };
 
 export type EventApprovalDTO = {

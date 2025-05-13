@@ -15,16 +15,17 @@ import {
     useCurrentUser,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
-import type { EventDTO, VenueDTO } from "@/lib/types"; // Ensure Venue is imported if not already
+import type { Event, EventDTO, VenueDTO } from "@/lib/types"; // Ensure Venue is imported if not already, and add Event type
 import { formatDateRange, getInitials, getStatusColor } from "@/lib/utils";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react"; // Import React hooks
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 // Helper function to map AppEvent to EventDTO, providing defaults for missing fields
-const mapEventToEventDTO = (event: EventDTO): EventDTO => {
+const mapEventToEventDTO = (event: Event): EventDTO => {
     // Assuming AppEvent might be missing some EventDTO fields or has different field names.
     // Adjust this based on the actual structure of AppEvent vs EventDTO.
     // Ensure all fields required by EventDTO are present.
@@ -40,10 +41,10 @@ const mapEventToEventDTO = (event: EventDTO): EventDTO => {
         eventVenue: event.eventVenue,
         department: event.department,
         approvedLetterUrl: event.approvedLetterUrl ?? null,
-        createdAt: event.createdAt,
-        updatedAt: event.updatedAt,
+        createdAt: event.createdAt ?? new Date().toISOString(), // Provide default if missing
+        updatedAt: event.updatedAt ?? new Date().toISOString(), // Provide default if missing
         imageUrl: event.imageUrl,
-        approvals: Array.isArray(event.approvals) ? event.approvals : [],
+        approvals: Array.isArray(event.approvals) ? event.approvals : [], // Ensure it's an array
         cancellationReason:
             typeof event.cancellationReason === "string"
                 ? event.cancellationReason
@@ -194,10 +195,11 @@ export function EventList({
     );
 
     // Map raw data to EventDTO[]
-    const ownEvents = rawOwnEvents.map(mapEventToEventDTO);
-    const approvedEvents = rawApprovedEvents.map(mapEventToEventDTO);
-    const allEvents = (rawAllEvents ?? []).map(mapEventToEventDTO);
-    const pendingVenueOwnerEvents =
+    const ownEvents: EventDTO[] = rawOwnEvents.map(mapEventToEventDTO);
+    const approvedEvents: EventDTO[] =
+        rawApprovedEvents.map(mapEventToEventDTO);
+    const allEvents: EventDTO[] = (rawAllEvents ?? []).map(mapEventToEventDTO);
+    const pendingVenueOwnerEvents: EventDTO[] =
         rawPendingVenueOwnerEvents.map(mapEventToEventDTO);
 
     const handleNavigate = (eventId: string | undefined) => {
@@ -266,22 +268,118 @@ export function EventList({
             ? "No events found."
             : "You have not created any events yet.";
 
+    // --- Virtualization Setup ---
+    const parentRef = useRef<HTMLDivElement>(null);
+    const [lanes, setLanes] = useState(4);
+    const gap = 16; // Corresponds to gap-4
+    const minCardWidth = 300; // Minimum width before wrapping to fewer columns
+
+    // Effect to calculate lanes based on container width
+    useEffect(() => {
+        const parentElement = parentRef.current;
+        if (!parentElement) return;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                // Use contentBoxSize for more accurate width calculation, excluding padding
+                const parentWidth = entry.contentBoxSize[0]?.inlineSize;
+                if (parentWidth) {
+                    // Calculate how many columns fit
+                    const newLanes = Math.max(
+                        1,
+                        Math.floor((parentWidth + gap) / (minCardWidth + gap)),
+                    );
+                    setLanes(newLanes);
+                }
+            }
+        });
+
+        resizeObserver.observe(parentElement);
+
+        // Cleanup observer on component unmount
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []); // Rerun only on mount/unmount - gap and minCardWidth are constants
+
+    const virtualizer = useVirtualizer({
+        count: eventsToDisplay.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 300, // Initial estimate, measureElement will correct it
+        overscan: 5,
+        lanes: lanes, // Use dynamic lanes
+        gap: 0,
+        getItemKey: (index) => eventsToDisplay[index]?.publicId ?? index,
+        measureElement: (element) => {
+            // Ensure it's an HTMLElement before accessing offsetHeight
+            if (element instanceof HTMLElement) {
+                return element.offsetHeight;
+            }
+            return 0; // Default or fallback size
+        },
+    });
+
+    // Get virtual items
+    const virtualItems = virtualizer.getVirtualItems();
+
+    // Calculate item width based on current lanes and parent width
+    // This calculation needs to happen *inside* the component body to access parentRef.current
+    // But be careful as parentRef.current might not be available initially or during render
+    const parentWidth = parentRef.current?.clientWidth ?? 0;
+    // Subtract padding (p-4 => 1rem = 16px each side) from clientWidth
+    const containerWidth = parentWidth ? parentWidth - 2 * 16 : 0;
+    const itemWidth =
+        lanes > 0 && containerWidth > 0
+            ? (containerWidth - (lanes - 1) * gap) / lanes
+            : 0;
+
     return (
-        <div>
+        <div
+            ref={parentRef}
+            className="h-[85vh] overflow-y-auto overflow-x-hidden p-4 scrollbar-thin scrollbar-thumb-primary scrollbar-track-muted"
+            style={{ contain: "strict" }} // Optimization hint for browsers
+        >
             {eventsToDisplay.length === 0 ? (
                 <div className="text-center text-muted-foreground py-10">
                     {noEventsMessage}
                 </div>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pt-4">
-                    {eventsToDisplay.map((event) => (
-                        <EventCard
-                            key={`${activeTab}-${event.publicId}`}
-                            event={event}
-                            venueMap={venueMap}
-                            onNavigate={handleNavigate}
-                        />
-                    ))}
+                <div
+                    className="w-full relative" // Container for absolute positioned items
+                    style={{
+                        height: `${virtualizer.getTotalSize()}px`, // Set total height
+                    }}
+                >
+                    {virtualItems.map((virtualItem) => {
+                        const event = eventsToDisplay[virtualItem.index];
+                        if (!event || !event.publicId || itemWidth <= 0)
+                            return null; // Ensure event and itemWidth are valid
+
+                        const itemLeft = virtualItem.lane * (itemWidth + gap);
+
+                        return (
+                            <div
+                                key={virtualItem.key}
+                                ref={virtualizer.measureElement}
+                                data-index={virtualItem.index}
+                                style={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    width: `${itemWidth}px`,
+                                    height: `${virtualItem.size}px`,
+                                    transform: `translateY(${virtualItem.start}px) translateX(${itemLeft}px)`,
+                                    paddingBottom: `${gap}px`,
+                                }}
+                            >
+                                <EventCard
+                                    event={event}
+                                    venueMap={venueMap}
+                                    onNavigate={handleNavigate}
+                                />
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>

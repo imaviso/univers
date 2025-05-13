@@ -1,18 +1,13 @@
 import ErrorPage from "@/components/ErrorPage";
 import PendingPage from "@/components/PendingPage";
+import { EquipmentGrid } from "@/components/equipment-inventory/EquipmentGrid";
+import { EquipmentTable } from "@/components/equipment-inventory/EquipmentTable";
 import { EquipmentFormDialog } from "@/components/equipment-inventory/equipmentFormDialog";
 import UserReservations from "@/components/equipment-reservation/userReservation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DataTable } from "@/components/ui/data-table";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -23,6 +18,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { addEquipment, deleteEquipment, editEquipment } from "@/lib/api";
+import { filterFn } from "@/lib/filters";
 import { allNavigation } from "@/lib/navigation";
 import {
     equipmentsQueryOptions,
@@ -38,20 +34,29 @@ import {
     useNavigate,
     useRouteContext,
 } from "@tanstack/react-router";
-import type { ColumnDef, Row, RowSelectionState } from "@tanstack/react-table";
+import type {
+    CellContext, // Import CellContext if used in cell renderers
+    ColumnDef,
+    RowSelectionState,
+    TableMeta,
+} from "@tanstack/react-table";
 import {
     AlertTriangle,
+    Building,
     CheckCircle,
     Download,
     Edit,
     MoreHorizontal,
+    NotebookText,
     Package,
     Plus,
     Trash2,
+    UsersIcon,
     Wrench,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+
 export const Route = createFileRoute("/app/equipments")({
     beforeLoad: async ({ location, context }) => {
         const navigationItem = allNavigation.find((item) => {
@@ -90,10 +95,13 @@ export const Route = createFileRoute("/app/equipments")({
         context.queryClient.ensureQueryData(
             equipmentsQueryOptions(context.authState),
         );
-        // context.queryClient.ensureQueryData(venuesQueryOptions);
-        // context.queryClient.ensureQueryData(ownEventsQueryOptions);
     },
 });
+
+// Define a specific type for the table meta if needed
+interface EquipmentTableMeta extends TableMeta<Equipment> {
+    getStatusBadge: (status: Equipment["status"]) => React.ReactElement;
+}
 
 function EquipmentInventory() {
     const { queryClient } = useRouteContext({
@@ -127,9 +135,6 @@ function EquipmentInventory() {
     const { data: equipment = [] } = useSuspenseQuery(
         equipmentsQueryOptions(currentUser),
     );
-
-    /*    const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
-    const { data: events = [] } = useSuspenseQuery(ownEventsQueryOptions); */
 
     const { data: allUsers = [] } = useQuery({
         ...usersQueryOptions,
@@ -364,8 +369,8 @@ function EquipmentInventory() {
         }
     }, []);
 
-    // DataTable columns definition
-    const columns: ColumnDef<Equipment>[] = useMemo(
+    // --- Column Definitions ---
+    const columns = useMemo<ColumnDef<Equipment>[]>(
         () => [
             // Select column (only for roles that can manage)
             ...(isPrivilegedUser
@@ -416,11 +421,14 @@ function EquipmentInventory() {
             {
                 accessorKey: "name",
                 header: "Name",
-                cell: ({ row }) => {
+                meta: {
+                    type: "text",
+                    displayName: "Name",
+                    icon: NotebookText,
+                },
+                cell: ({ row }: CellContext<Equipment, unknown>) => {
                     const item = row.original;
-                    // Construct image URL - Assuming imagePath is just the filename
                     const imageUrl = item.imagePath;
-
                     return (
                         <div className="flex items-center gap-3">
                             <img
@@ -438,36 +446,87 @@ function EquipmentInventory() {
                         </div>
                     );
                 },
+                filterFn: filterFn("text"),
             },
             {
                 accessorKey: "brand",
                 header: "Brand",
+                meta: {
+                    type: "text",
+                    displayName: "Brand",
+                    icon: Building,
+                },
+                filterFn: filterFn("text"),
             },
             {
                 accessorKey: "quantity",
                 header: "Quantity",
+                meta: {
+                    type: "number",
+                    displayName: "Quantity",
+                    icon: Package,
+                },
+                filterFn: filterFn("number"),
             },
             {
                 accessorKey: "availability",
                 header: "Available",
-                cell: ({ row }) => (row.original.availability ? "Yes" : "No"),
+                cell: ({ row }: CellContext<Equipment, unknown>) =>
+                    row.original.availability ? "Yes" : "No",
+                meta: {
+                    type: "option",
+                    displayName: "Availability",
+                    icon: CheckCircle,
+                    options: [
+                        { value: "true", label: "Yes" },
+                        { value: "false", label: "No" },
+                    ],
+                    transformOptionFn: (value) => {
+                        const boolValue = value as boolean;
+                        return {
+                            value: String(boolValue),
+                            label: boolValue ? "Yes" : "No",
+                        };
+                    },
+                },
+                filterFn: filterFn("option"),
             },
             {
                 accessorKey: "status",
                 header: "Status",
-                cell: ({ row }) => getStatusBadge(row.original.status),
+                cell: ({ row }: CellContext<Equipment, unknown>) =>
+                    getStatusBadge(row.original.status),
+                meta: {
+                    type: "option",
+                    displayName: "Status",
+                    icon: Wrench,
+                    options: [
+                        { value: "NEW", label: "New" },
+                        { value: "MAINTENANCE", label: "Maintenance" },
+                        { value: "DEFECT", label: "Defect" },
+                        {
+                            value: "NEED_REPLACEMENT",
+                            label: "Need Replacement",
+                        },
+                    ],
+                },
+                filterFn: filterFn("option"),
             },
             // Owner column (visible only for SUPER_ADMIN)
             ...(role === "SUPER_ADMIN"
                 ? [
                       {
-                          // Access nested owner data
                           accessorFn: (row: Equipment) =>
                               row.equipmentOwner?.email ?? "N/A",
                           id: "ownerEmail",
                           header: "Owner",
-                          cell: ({ row }: { row: Row<Equipment> }) => {
-                              const owner = row.original.equipmentOwner; // Access nested owner object
+                          meta: {
+                              type: "text",
+                              displayName: "Owner Email",
+                              icon: UsersIcon,
+                          },
+                          cell: ({ row }: CellContext<Equipment, unknown>) => {
+                              const owner = row.original.equipmentOwner;
                               return owner ? (
                                   <div>
                                       {owner.firstName} {owner.lastName}
@@ -481,7 +540,8 @@ function EquipmentInventory() {
                                   </span>
                               );
                           },
-                      } as ColumnDef<Equipment>, // Type assertion
+                          filterFn: filterFn("text"),
+                      } as ColumnDef<Equipment>,
                   ]
                 : []),
             // Actions column (only for roles that can manage)
@@ -489,9 +549,8 @@ function EquipmentInventory() {
                 ? [
                       {
                           id: "actions",
-                          cell: ({ row }) => {
+                          cell: ({ row }: CellContext<Equipment, unknown>) => {
                               const item = row.original;
-                              // Check if the current user can manage this specific item
                               const canManage =
                                   role === "SUPER_ADMIN" ||
                                   (["EQUIPMENT_OWNER", "MSDO", "OPC"].includes(
@@ -500,9 +559,7 @@ function EquipmentInventory() {
                                       item.equipmentOwner?.publicId ===
                                           currentUser?.publicId);
 
-                              if (!canManage) {
-                                  return null; // No actions if user cannot manage
-                              }
+                              if (!canManage) return null;
 
                               const isMutatingItem =
                                   deleteMutation.isPending &&
@@ -516,9 +573,10 @@ function EquipmentInventory() {
                                               variant="ghost"
                                               size="icon"
                                               className="h-8 w-8"
-                                              disabled={isMutatingItem} // Disable only if this item is being mutated
+                                              disabled={isMutatingItem}
                                           >
-                                              <MoreHorizontal className="h-4 w-4" />
+                                              {" "}
+                                              <MoreHorizontal className="h-4 w-4" />{" "}
                                           </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
@@ -526,13 +584,12 @@ function EquipmentInventory() {
                                               onClick={() =>
                                                   handleEditEquipment(item)
                                               }
-                                              disabled={editMutation.isPending} // Disable if any edit is pending
+                                              disabled={editMutation.isPending}
                                           >
-                                              <Edit className="mr-2 h-4 w-4" />
-                                              Edit
+                                              {" "}
+                                              <Edit className="mr-2 h-4 w-4" />{" "}
+                                              Edit{" "}
                                           </DropdownMenuItem>
-                                          {/* Add Maintenance action if needed */}
-                                          {/* <DropdownMenuItem ... > Mark for Maintenance </DropdownMenuItem> */}
                                           <DropdownMenuSeparator />
                                           <DropdownMenuItem
                                               className="text-destructive"
@@ -542,30 +599,33 @@ function EquipmentInventory() {
                                                   );
                                                   setIsDeleteDialogOpen(true);
                                               }}
-                                              disabled={isMutatingItem} // Disable if this item is being deleted
+                                              disabled={isMutatingItem}
                                           >
-                                              <Trash2 className="mr-2 h-4 w-4" />
-                                              Delete
+                                              {" "}
+                                              <Trash2 className="mr-2 h-4 w-4" />{" "}
+                                              Delete{" "}
                                           </DropdownMenuItem>
                                       </DropdownMenuContent>
                                   </DropdownMenu>
                               );
                           },
+                          enableSorting: false,
+                          enableHiding: false,
                       } as ColumnDef<Equipment>,
                   ]
-                : []), // Type assertion
+                : []),
         ],
         [
-            role,
             currentUser?.publicId,
-            editMutation.isPending,
             deleteMutation.isPending,
             deleteMutation.variables,
-            getStatusBadge, // Added dependency
-            handleEditEquipment, // Added dependency
-            isPrivilegedUser, // Added dependency
+            editMutation.isPending,
+            getStatusBadge,
+            handleEditEquipment,
+            isPrivilegedUser,
+            role,
         ],
-    ); // Add mutation states/variables
+    );
 
     // --- Render JSX ---
     const isMutating =
@@ -741,176 +801,27 @@ function EquipmentInventory() {
                 <div className="flex-1 overflow-auto p-6">
                     {/* Table View */}
                     {viewMode === "table" && isPrivilegedUser && (
-                        <DataTable
+                        <EquipmentTable
+                            data={equipment}
                             columns={columns}
-                            data={filteredEquipment}
-                            searchColumn="name"
-                            searchPlaceholder="Search equipment..."
-                            // Pass the state object directly
-                            rowSelection={rowSelection}
-                            // Pass the state setter directly
-                            onRowSelectionChange={setRowSelection}
-                            // Enable row selection (managed by DataTable)
+                            role={role}
+                            currentUser={currentUser ?? null}
+                            isMutating={isMutating}
                         />
                     )}
 
                     {/* Grid View */}
-                    {viewMode === "grid" && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {filteredEquipment.map((item) => {
-                                const imageUrl = item.imagePath;
-                                const canManage =
-                                    role === "SUPER_ADMIN" ||
-                                    ([
-                                        "EQUIPMENT_OWNER",
-                                        "MSDO",
-                                        "OPC",
-                                    ].includes(role ?? "") &&
-                                        item.equipmentOwner?.publicId ===
-                                            currentUser?.publicId); // Compare numbers
-                                const isMutatingItem =
-                                    deleteMutation.isPending &&
-                                    deleteMutation.variables?.equipmentId ===
-                                        item.publicId;
-                                return (
-                                    <Card
-                                        key={item.publicId}
-                                        className="overflow-hidden"
-                                    >
-                                        <CardHeader className="p-0 relative">
-                                            <img
-                                                src={imageUrl}
-                                                alt={item.name}
-                                                className="aspect-video w-full object-cover"
-                                                loading="lazy"
-                                            />
-                                            <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-                                                {getStatusBadge(item.status)}
-                                                {item.availability ? (
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="bg-green-100 text-green-700"
-                                                    >
-                                                        Available
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="bg-gray-100 text-gray-600"
-                                                    >
-                                                        Unavailable
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="p-4">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <CardTitle className="text-base leading-tight">
-                                                    {item.name}
-                                                </CardTitle>
-                                                {canManage && (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger
-                                                            asChild
-                                                        >
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 flex-shrink-0 -mt-1 -mr-2"
-                                                                disabled={
-                                                                    isMutatingItem
-                                                                }
-                                                            >
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    handleEditEquipment(
-                                                                        item,
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    editMutation.isPending
-                                                                }
-                                                            >
-                                                                <Edit className="mr-2 h-4 w-4" />{" "}
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            {/* Add Maintenance action if needed */}
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                className="text-destructive"
-                                                                onClick={() => {
-                                                                    setEquipmentToDelete(
-                                                                        item.publicId,
-                                                                    );
-                                                                    setIsDeleteDialogOpen(
-                                                                        true,
-                                                                    );
-                                                                }}
-                                                                disabled={
-                                                                    isMutatingItem
-                                                                }
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />{" "}
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
-                                            </div>
-                                            <CardDescription className="text-xs">
-                                                Brand: {item.brand} | Qty:{" "}
-                                                {item.quantity}
-                                            </CardDescription>
-                                            {/* Display owner for SUPER_ADMIN in grid view */}
-                                            {role === "SUPER_ADMIN" &&
-                                                item.equipmentOwner && (
-                                                    <CardDescription className="text-xs mt-1">
-                                                        Owner:{" "}
-                                                        {
-                                                            item.equipmentOwner
-                                                                .firstName
-                                                        }{" "}
-                                                        {
-                                                            item.equipmentOwner
-                                                                .lastName
-                                                        }
-                                                    </CardDescription>
-                                                )}
-                                        </CardContent>
-                                        {/* Add Reserve button for non-admins/owners in grid view */}
-                                        {/* {role !== "SUPER_ADMIN" &&
-                                            role !== "EQUIPMENT_OWNER" &&
-                                            item.availability && (
-                                                <CardFooter className="p-4 pt-0">
-                                                    <Button
-                                                        size="sm"
-                                                        className="w-full"
-                                                        onClick={() => {
-                                                            console.log(
-                                                                "Reserve item:",
-                                                                item.id,
-                                                            );
-                                                            // setReservingItem(item); // Need state for this
-                                                            // setIsReservationDialogOpen(true);
-                                                        }}
-                                                    >
-                                                        Reserve
-                                                    </Button>
-                                                </CardFooter>
-                                            )} */}
-                                    </Card>
-                                );
-                            })}
-                            {filteredEquipment.length === 0 && (
-                                <div className="col-span-full text-center py-8 text-muted-foreground">
-                                    No equipment found.
-                                </div>
-                            )}
-                        </div>
+                    {filteredEquipment.length > 0 && viewMode === "grid" && (
+                        <EquipmentGrid
+                            equipment={equipment}
+                            role={role}
+                            isMutating={isMutating}
+                            currentUser={currentUser ?? null}
+                            getStatusBadge={getStatusBadge}
+                            handleEditEquipment={handleEditEquipment}
+                            setEquipmentToDelete={setEquipmentToDelete}
+                            setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+                        />
                     )}
 
                     {/* Reservations View */}
@@ -951,19 +862,16 @@ function EquipmentInventory() {
                             setEquipmentToDelete(null);
                         }}
                         onConfirm={confirmDelete}
-                        isLoading={
-                            // Renamed prop
-                            deleteMutation.isPending /* || bulkDeleteMutation.isPending */
-                        }
+                        isLoading={deleteMutation.isPending}
                         title={
                             equipmentToDelete
                                 ? "Delete Equipment"
-                                : "Delete Selected Equipment" // This part is now unused
+                                : `Delete ${selectedRowCount} Selected Equipment Items`
                         }
                         description={
                             equipmentToDelete
                                 ? "Are you sure you want to permanently delete this equipment?"
-                                : "Are you sure you want to permanently delete the selected equipment items?" // This part is now unused
+                                : `Are you sure you want to permanently delete the ${selectedRowCount} selected equipment items?`
                         }
                     />
                 )}

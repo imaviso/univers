@@ -540,7 +540,12 @@ export function PropertyFilterOperatorMenu<TData>({
     column,
     closeController,
 }: PropertyFilterOperatorMenuProps<TData>) {
-    const { type } = column.columnDef.meta!;
+    // Use optional chaining and provide a fallback or check
+    const type = column.columnDef.meta?.type;
+    if (!type) {
+        console.error("Column meta or type is missing for column:", column.id);
+        return null; // Or handle the error appropriately
+    }
 
     switch (type) {
         case "option":
@@ -952,12 +957,15 @@ export function PropertyFilterOptionValueDisplay<TData, TValue>({
         <div className="inline-flex items-center gap-0.5">
             {hasOptionIcons &&
                 take(selected, 3).map(({ value, icon }) => {
-                    const Icon = icon!;
-                    return isValidElement(Icon) ? (
-                        Icon
-                    ) : (
-                        <Icon key={value} className="size-4" />
-                    );
+                    // Conditionally render Icon only if it exists
+                    const Icon = icon;
+                    return Icon ? (
+                        isValidElement(Icon) ? (
+                            Icon
+                        ) : (
+                            <Icon key={value} className="size-4" />
+                        )
+                    ) : null;
                 })}
             <span className={cn(hasOptionIcons && "ml-1.5")}>
                 {selected.length} {pluralName}
@@ -1035,12 +1043,15 @@ export function PropertyFilterMultiOptionValueDisplay<TData, TValue>({
             {hasOptionIcons && (
                 <div key="icons" className="inline-flex items-center gap-0.5">
                     {take(selected, 3).map(({ value, icon }) => {
-                        const Icon = icon!;
-                        return isValidElement(Icon) ? (
-                            cloneElement(Icon, { key: value })
-                        ) : (
-                            <Icon key={value} className="size-4" />
-                        );
+                        // Conditionally render Icon only if it exists
+                        const Icon = icon;
+                        return Icon ? (
+                            isValidElement(Icon) ? (
+                                cloneElement(Icon, { key: value })
+                            ) : (
+                                <Icon key={value} className="size-4" />
+                            )
+                        ) : null;
                     })}
                 </div>
             )}
@@ -1262,13 +1273,17 @@ export function PropertyFilterOptionValueMenu<TData, TValue>({
     const optionsCount: Record<ColumnOption["value"], number> =
         columnVals.reduce(
             (acc, curr) => {
-                const { value } = columnMeta.transformOptionFn
-                    ? columnMeta.transformOptionFn(
+                // Use safe access for transformOptionFn
+                const value = columnMeta.options
+                    ? (curr as string)
+                    : columnMeta.transformOptionFn?.(
                           curr as ElementType<NonNullable<TValue>>,
-                      )
-                    : { value: curr as string };
+                      )?.value;
 
-                acc[value] = (acc[value] ?? 0) + 1;
+                // Only increment count if value is valid
+                if (value !== undefined && value !== null) {
+                    acc[value] = (acc[value] ?? 0) + 1;
+                }
                 return acc;
             },
             {} as Record<ColumnOption["value"], number>,
@@ -1411,13 +1426,17 @@ export function PropertyFilterMultiOptionValueMenu<
     const optionsCount: Record<ColumnOption["value"], number> =
         columnVals.reduce(
             (acc, curr) => {
+                // Use safe access for transformOptionFn
                 const value = columnMeta.options
                     ? (curr as string)
-                    : columnMeta.transformOptionFn!(
+                    : columnMeta.transformOptionFn?.(
                           curr as ElementType<NonNullable<TValue>>,
-                      ).value;
+                      )?.value;
 
-                acc[value] = (acc[value] ?? 0) + 1;
+                // Only increment count if value is valid
+                if (value !== undefined && value !== null) {
+                    acc[value] = (acc[value] ?? 0) + 1;
+                }
                 return acc;
             },
             {} as Record<ColumnOption["value"], number>,

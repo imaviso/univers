@@ -196,9 +196,9 @@ export const equipmentsQueryOptions = (user: UserDTO | null | undefined) =>
         queryFn: async () => {
             if (!user) return []; // Don't fetch if no user
 
-            if (user.role === "SUPER_ADMIN") {
-                return await getAllEquipmentsAdmin();
-            }
+            // if (user.role === "SUPER_ADMIN") {
+            //     return await getAllEquipmentsAdmin();
+            // }
             if (
                 user.role === "EQUIPMENT_OWNER" ||
                 user.role === "MSDO" ||
@@ -209,7 +209,7 @@ export const equipmentsQueryOptions = (user: UserDTO | null | undefined) =>
             // Other roles (like ORGANIZER) might need all available equipment?
             // Adjust this logic based on requirements. Fetching all for now.
             // Consider if non-owners should see only 'available' equipment via a different endpoint/filter.
-            return await getAllEquipmentsByOwner(user.publicId);
+            return await getAllEquipmentsAdmin();
         },
         enabled: !!user,
         staleTime: 1000 * 60 * 2, // 2 minutes stale time

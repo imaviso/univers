@@ -1,24 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
+import { VenueGrid } from "@/components/venue/VenueGrid";
+import { VenueTable } from "@/components/venue/VenueTable";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
 import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
 import {
@@ -40,19 +26,27 @@ import { format } from "date-fns";
 import {
     Building,
     CalendarDays,
-    Edit,
-    Eye,
     HelpCircle,
     MapPin,
-    MoreHorizontal,
     Plus,
-    Search,
-    Trash2,
     UserCheck,
-    UserCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+
+// Moved formatDateTime to VenueTable.tsx and kept a global one in dashboard for VenueGrid if needed (or de-duplicate)
+// For now, assuming dashboard's formatDateTime is still used by dialogs or other parts.
+const formatGlobalDateTime = (
+    dateString: string | null | undefined,
+): string => {
+    if (!dateString) return "—";
+    try {
+        return format(new Date(dateString), "MMM d, yyyy h:mm a");
+    } catch (e) {
+        console.error("Error formatting date:", dateString, e);
+        return "Invalid Date";
+    }
+};
 
 export const Route = createFileRoute("/app/venues/dashboard")({
     component: VenueManagement,
@@ -70,7 +64,6 @@ export function VenueManagement() {
     const queryClient = context.queryClient;
     const navigate = useNavigate();
     // State variables
-    const [searchQuery, setSearchQuery] = useState("");
     const [isAddVenueOpen, setIsAddVenueOpen] = useState(false);
     const [editingVenue, setEditingVenue] = useState<VenueDTO | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -80,6 +73,7 @@ export function VenueManagement() {
     );
     const [activeEventTab, setActiveEventTab] = useState("all");
 
+    // React Table States - MOVED to VenueTable.tsx
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: users = [] } = useQuery({
         ...usersQueryOptions,
@@ -95,6 +89,14 @@ export function VenueManagement() {
         role === "SUPER_ADMIN"
             ? users.filter((user: UserDTO) => user.role === "VENUE_OWNER")
             : [];
+
+    // Wrap handleNavigate in useCallback
+    const handleNavigate = useCallback(
+        (venueId: string) => {
+            navigate({ to: `/app/venues/${venueId}` });
+        },
+        [navigate],
+    );
 
     // --- Mutations ---
     const createVenueMutation = useMutation({
@@ -174,20 +176,6 @@ export function VenueManagement() {
         }
     };
 
-    const formatDateTime = (dateString: string | null | undefined): string => {
-        if (!dateString) return "—";
-        try {
-            return format(new Date(dateString), "MMM d, yyyy h:mm a");
-        } catch (e) {
-            console.error("Error formatting date:", dateString, e);
-            return "Invalid Date";
-        }
-    };
-
-    const handleNavigate = (venueId: string) => {
-        navigate({ to: `/app/venues/${venueId}` });
-    };
-
     // Filter venues
     const baseVenuesToDisplay =
         role === "VENUE_OWNER" && currentUser?.publicId
@@ -196,21 +184,6 @@ export function VenueManagement() {
                       venue.venueOwner?.publicId === currentUser.publicId,
               )
             : venues;
-
-    const filteredVenues = baseVenuesToDisplay.filter(
-        (venue) =>
-            venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            venue.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            venue.venueOwner?.firstName
-                ?.toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-            venue.venueOwner?.lastName
-                ?.toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-            venue.venueOwner?.email
-                ?.toLowerCase()
-                .includes(searchQuery.toLowerCase()),
-    );
 
     // Filter user's own events for the "My Events" tab
     const filteredOwnEvents = useMemo(() => {
@@ -237,12 +210,24 @@ export function VenueManagement() {
                 : 0,
     };
 
-    // --- Render Logic ---
+    // Moved isMutating definition before venueTableColumns
     const isMutating =
         createVenueMutation.isPending ||
         updateVenueMutation.isPending ||
         deleteVenueMutation.isPending;
 
+    // --- Helper Functions for Card Actions ---
+    const handleEditClick = useCallback((venue: VenueDTO) => {
+        setEditingVenue(venue);
+        setIsAddVenueOpen(true);
+    }, []);
+
+    const handleDeleteClick = useCallback((venueId: string) => {
+        setVenueToDelete(venueId);
+        setIsDeleteDialogOpen(true);
+    }, []);
+
+    // --- Render Logic ---
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
@@ -250,16 +235,6 @@ export function VenueManagement() {
                 <header className="flex items-center justify-between border-b px-6 py-3.5 h-16">
                     <h1 className="text-xl font-semibold">Venues</h1>
                     <div className="flex items-center gap-2">
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search venues..."
-                                className="w-64 pl-8"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
                         {role === "SUPER_ADMIN" && (
                             <Button
                                 onClick={() => {
@@ -328,10 +303,7 @@ export function VenueManagement() {
                 <div className="flex items-center justify-between border-b px-6 py-2">
                     <div className="flex items-center gap-2">
                         {/* Bulk Actions Removed */}
-                        <span className="text-sm text-muted-foreground">
-                            {filteredVenues.length} venue
-                            {filteredVenues.length !== 1 ? "s" : ""} found
-                        </span>
+                        {/* DataTableFilter will be placed here or nearby */}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -374,359 +346,29 @@ export function VenueManagement() {
 
                 {/* Main Content Area */}
                 <div className="flex-1 overflow-auto p-6">
-                    {/* Table View (SUPER_ADMIN or VENUE_OWNER) */}
+                    {/* Filter component and column toggle for Table View - MOVED to VenueTable.tsx */}
                     {viewMode === "table" &&
                         (role === "SUPER_ADMIN" || role === "VENUE_OWNER") && (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        {/* <TableHead className="w-[40px]">
-                                    <Checkbox
-                                        // checked={selectedItems.length === filteredVenues.length && filteredVenues.length > 0}
-                                        // onCheckedChange={handleSelectAll}
-                                        aria-label="Select all"
-                                        // disabled={isMutating}
-                                    />
-                                </TableHead> */}
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Location</TableHead>
-                                        {role === "SUPER_ADMIN" && (
-                                            <TableHead>Owner</TableHead>
-                                        )}
-                                        <TableHead>Created At</TableHead>
-                                        <TableHead>Updated At</TableHead>
-                                        <TableHead className="w-[100px]">
-                                            Actions
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredVenues.length > 0 ? (
-                                        filteredVenues.map((venue) => (
-                                            <TableRow key={venue.publicId}>
-                                                {/* <TableCell>
-                                        <Checkbox
-                                            // checked={selectedItems.includes(venue.id)}
-                                            // onCheckedChange={() => handleSelectItem(venue.id)}
-                                            aria-label={`Select venue ${venue.name}`}
-                                            // disabled={isMutating}
-                                        />
-                                    </TableCell> */}
-                                                <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                                                            <img
-                                                                src={
-                                                                    venue.imagePath ??
-                                                                    "https://cit.edu/wp-content/uploads/2023/07/GLE-Building.jpg"
-                                                                } // Construct URL
-                                                                alt={venue.name}
-                                                                className="h-full w-full object-cover"
-                                                                loading="lazy"
-                                                            />
-                                                        </div>
-                                                        <Button
-                                                            variant="link"
-                                                            className="p-0 h-auto text-left justify-start font-medium truncate"
-                                                            onClick={() =>
-                                                                handleNavigate(
-                                                                    venue.publicId,
-                                                                )
-                                                            }
-                                                            title={venue.name}
-                                                        >
-                                                            {venue.name}
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell
-                                                    className="truncate max-w-xs"
-                                                    title={venue.location}
-                                                >
-                                                    {venue.location}
-                                                </TableCell>
-                                                {role === "SUPER_ADMIN" && (
-                                                    <TableCell>
-                                                        {venue.venueOwner ? (
-                                                            <div
-                                                                title={`${venue.venueOwner.firstName} ${venue.venueOwner.lastName} (${venue.venueOwner.email})`}
-                                                            >
-                                                                {
-                                                                    venue
-                                                                        .venueOwner
-                                                                        .firstName
-                                                                }{" "}
-                                                                {
-                                                                    venue
-                                                                        .venueOwner
-                                                                        .lastName
-                                                                }
-                                                                <div className="text-xs text-muted-foreground truncate">
-                                                                    {
-                                                                        venue
-                                                                            .venueOwner
-                                                                            .email
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-muted-foreground">
-                                                                —
-                                                            </span>
-                                                        )}
-                                                    </TableCell>
-                                                )}
-                                                <TableCell>
-                                                    {formatDateTime(
-                                                        venue.createdAt,
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {formatDateTime(
-                                                        venue.updatedAt,
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger
-                                                            asChild
-                                                        >
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8"
-                                                                disabled={
-                                                                    isMutating
-                                                                }
-                                                            >
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                                <span className="sr-only">
-                                                                    Venue
-                                                                    Actions
-                                                                </span>
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem
-                                                                onClick={() =>
-                                                                    handleNavigate(
-                                                                        venue.publicId,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <Eye className="mr-2 h-4 w-4" />{" "}
-                                                                View
-                                                            </DropdownMenuItem>
-                                                            {role ===
-                                                                "SUPER_ADMIN" && (
-                                                                <>
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => {
-                                                                            setEditingVenue(
-                                                                                venue,
-                                                                            );
-                                                                            setIsAddVenueOpen(
-                                                                                true,
-                                                                            );
-                                                                        }}
-                                                                    >
-                                                                        <Edit className="mr-2 h-4 w-4" />{" "}
-                                                                        Edit
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        className="text-destructive focus:text-destructive"
-                                                                        onClick={() => {
-                                                                            setVenueToDelete(
-                                                                                venue.publicId,
-                                                                            );
-                                                                            setIsDeleteDialogOpen(
-                                                                                true,
-                                                                            );
-                                                                        }}
-                                                                        disabled={
-                                                                            deleteVenueMutation.isPending &&
-                                                                            deleteVenueMutation.variables ===
-                                                                                venue.publicId
-                                                                        }
-                                                                    >
-                                                                        <Trash2 className="mr-2 h-4 w-4" />{" "}
-                                                                        Delete
-                                                                    </DropdownMenuItem>
-                                                                </>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell
-                                                colSpan={
-                                                    role === "SUPER_ADMIN"
-                                                        ? 6
-                                                        : 5
-                                                }
-                                                className="text-center py-8 text-muted-foreground"
-                                            >
-                                                No venues found matching your
-                                                search.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                            <VenueTable
+                                venues={baseVenuesToDisplay}
+                                role={role}
+                                isMutating={isMutating}
+                                onNavigate={handleNavigate}
+                                onEdit={handleEditClick}
+                                onDelete={handleDeleteClick}
+                            />
                         )}
 
                     {/* Grid View */}
                     {viewMode === "grid" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filteredVenues.length > 0 ? (
-                                filteredVenues.map((venue) => (
-                                    <Card
-                                        key={venue.publicId}
-                                        className="overflow-hidden flex flex-col group"
-                                    >
-                                        <div className="aspect-video w-full overflow-hidden relative">
-                                            <img
-                                                src={
-                                                    venue.imagePath ?? undefined
-                                                } // Construct URL
-                                                alt={venue.name}
-                                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                                onError={(e) => {
-                                                    e.currentTarget.src =
-                                                        "/placeholder.svg";
-                                                }}
-                                                loading="lazy"
-                                            />
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="secondary"
-                                                        size="icon"
-                                                        className="absolute top-2 right-2 h-7 w-7 opacity-80 group-hover:opacity-100"
-                                                        disabled={isMutating}
-                                                    >
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                        <span className="sr-only">
-                                                            Venue Actions
-                                                        </span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            handleNavigate(
-                                                                venue.publicId,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Eye className="mr-2 h-4 w-4" />{" "}
-                                                        View Details
-                                                    </DropdownMenuItem>
-                                                    {role === "SUPER_ADMIN" && (
-                                                        <>
-                                                            <DropdownMenuItem
-                                                                onClick={() => {
-                                                                    setEditingVenue(
-                                                                        venue,
-                                                                    );
-                                                                    setIsAddVenueOpen(
-                                                                        true,
-                                                                    );
-                                                                }}
-                                                            >
-                                                                <Edit className="mr-2 h-4 w-4" />{" "}
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                className="text-destructive focus:text-destructive"
-                                                                onClick={() => {
-                                                                    setVenueToDelete(
-                                                                        venue.publicId,
-                                                                    );
-                                                                    setIsDeleteDialogOpen(
-                                                                        true,
-                                                                    );
-                                                                }}
-                                                                disabled={
-                                                                    deleteVenueMutation.isPending &&
-                                                                    deleteVenueMutation.variables ===
-                                                                        venue.publicId
-                                                                }
-                                                            >
-                                                                <Trash2 className="mr-2 h-4 w-4" />{" "}
-                                                                Delete
-                                                            </DropdownMenuItem>
-                                                        </>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                        <CardHeader className="pb-2 pt-4 px-4">
-                                            <CardTitle
-                                                className="text-base font-semibold truncate"
-                                                title={venue.name}
-                                            >
-                                                {venue.name}
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="text-sm text-muted-foreground flex-grow px-4 pb-3">
-                                            <div className="flex items-start gap-1.5 mb-2">
-                                                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                                <span
-                                                    className="line-clamp-2"
-                                                    title={venue.location}
-                                                >
-                                                    {venue.location}
-                                                </span>
-                                            </div>
-                                            {venue.venueOwner && (
-                                                <div
-                                                    className="flex items-start gap-1.5"
-                                                    title={`${venue.venueOwner.firstName} ${venue.venueOwner.lastName}`}
-                                                >
-                                                    <UserCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                                    <span className="truncate">
-                                                        Owner:{" "}
-                                                        {
-                                                            venue.venueOwner
-                                                                .firstName
-                                                        }{" "}
-                                                        {
-                                                            venue.venueOwner
-                                                                .lastName
-                                                        }
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                        {/* {role !== "SUPER_ADMIN" && ( // Show Reserve button for non-admins
-                                            <CardFooter className="p-4 pt-0">
-                                                <Button
-                                                    size="sm"
-                                                    className="w-full"
-                                                    onClick={() =>
-                                                        setIsReservationDialogOpen(
-                                                            true,
-                                                        )
-                                                    }
-                                                >
-                                                    Reserve
-                                                </Button>
-                                            </CardFooter>
-                                        )} */}
-                                    </Card>
-                                ))
-                            ) : (
-                                <div className="col-span-full text-center py-8 text-muted-foreground">
-                                    No venues found matching your search.
-                                </div>
-                            )}
-                        </div>
+                        <VenueGrid
+                            venues={baseVenuesToDisplay}
+                            isMutating={isMutating}
+                            role={role}
+                            onNavigate={handleNavigate}
+                            onEdit={handleEditClick}
+                            onDelete={handleDeleteClick}
+                        />
                     )}
 
                     {viewMode === "events" && (
@@ -835,7 +477,7 @@ export function VenueManagement() {
                                                 <div className="flex items-start gap-1.5">
                                                     <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0" />
                                                     <span>
-                                                        {formatDateTime(
+                                                        {formatGlobalDateTime(
                                                             event.startTime,
                                                         )}
                                                     </span>
@@ -843,7 +485,7 @@ export function VenueManagement() {
                                                 <div className="flex items-start gap-1.5">
                                                     <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0 opacity-0" />
                                                     <span>
-                                                        {formatDateTime(
+                                                        {formatGlobalDateTime(
                                                             event.endTime,
                                                         )}
                                                     </span>
