@@ -34,7 +34,51 @@ import {
     subMonths,
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useMemo, useState } from "react"; // Import useMemo
+import { useEffect, useMemo, useState } from "react"; // Import useMemo
+
+// Custom hook for persistent state
+function usePersistentState<T>(
+    key: string,
+    initialValue: T,
+): [T, (value: T | ((prevState: T) => T)) => void] {
+    const [state, setState] = useState<T>(() => {
+        try {
+            const storedValue = localStorage.getItem(key);
+            if (storedValue) {
+                const parsed = JSON.parse(storedValue);
+                // Special handling for dates stored as ISO strings
+                if (
+                    key === "calendarCurrentDate" &&
+                    typeof parsed === "string"
+                ) {
+                    const date = parseISO(parsed);
+                    if (isValid(date)) {
+                        return date as unknown as T;
+                    }
+                }
+                return parsed;
+            }
+            return initialValue;
+        } catch (error) {
+            console.error(
+                "Error reading from localStorage for key:",
+                key,
+                error,
+            );
+            return initialValue;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(key, JSON.stringify(state));
+        } catch (error) {
+            console.error("Error writing to localStorage for key:", key, error);
+        }
+    }, [key, state]);
+
+    return [state, setState];
+}
 
 const eventColorClasses = [
     "bg-blue-500",
@@ -317,20 +361,35 @@ function Calendar() {
     const role = context.authState?.role; // Get user role if needed for logic
 
     // Fetch events using useQuery
-    const { data: events = [], isLoading: isLoadingEvents } = useQuery(
-        approvedEventsQueryOptions,
+    const { data: eventsData, isLoading: isLoadingEvents } = useQuery(
+        approvedEventsQueryOptions, // This returns AppEvent[] (aliased Event[])
     );
+    // Adapt AppEvent[] to EventDTO[] to satisfy component's internal types
+    const events: EventDTO[] = (eventsData || []).map((event) => ({
+        ...event, // Spread fields from AppEvent (Event)
+        approvals: null, // Add missing EventDTO fields with default values
+        cancellationReason: null,
+        createdAt: "", // Placeholder, ideally this comes from API
+        updatedAt: "", // Placeholder, ideally this comes from API
+        // severity: null, // If severity is needed, add here
+    }));
 
-    const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentDate, setCurrentDate] = usePersistentState<Date>(
+        "calendarCurrentDate",
+        new Date(),
+    );
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<EventDTO | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     type CalendarViewType = "month" | "week" | "day";
-    const [calendarView, setCalendarView] = useState<CalendarViewType>("month");
-    const [filters, setFilters] = useState({
-        // Removed workspaces filter
-        statuses: [] as string[],
-    });
+    const [calendarView, setCalendarView] =
+        usePersistentState<CalendarViewType>("calendarView", "month");
+    const [filters, setFilters] = usePersistentState<{ statuses: string[] }>(
+        "calendarFilters",
+        {
+            statuses: [] as string[],
+        },
+    );
     const [createEventDate, setCreateEventDate] = useState<Date | null>(null);
 
     // Memoized function to get events for a specific date, applying filters
@@ -370,10 +429,14 @@ function Calendar() {
                         );
                     })
                     // --- Add displayColor to each filtered event ---
-                    .map((event) => ({
-                        ...event,
-                        displayColor: getRandomColorForEvent(event.publicId),
-                    }))
+                    .map(
+                        (event: EventDTO): EventWithDisplayColor => ({
+                            ...event,
+                            displayColor: getRandomColorForEvent(
+                                event.publicId,
+                            ),
+                        }),
+                    )
             );
         };
     }, [events, filters.statuses]);

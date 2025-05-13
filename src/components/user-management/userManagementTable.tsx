@@ -35,6 +35,7 @@ import {
     XCircleIcon,
 } from "lucide-react";
 import * as React from "react";
+import { useEffect, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -86,19 +87,66 @@ import { ActivateConfirmDialog } from "./activateConfirmDialog";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 import { EditUserFormDialog } from "./editUserFormDialog";
 
+// Custom hook for persistent state
+function usePersistentState<T>(
+    key: string,
+    initialValue: T,
+): [T, (value: T | ((prevState: T) => T)) => void] {
+    const [state, setState] = useState<T>(() => {
+        try {
+            const storedValue = localStorage.getItem(key);
+            if (storedValue) {
+                // TODO: Add specific parsing logic if needed, e.g., for dates
+                return JSON.parse(storedValue);
+            }
+            return initialValue;
+        } catch (error) {
+            console.error(
+                "Error reading from localStorage for key:",
+                key,
+                error,
+            );
+            return initialValue;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(key, JSON.stringify(state));
+        } catch (error) {
+            console.error("Error writing to localStorage for key:", key, error);
+        }
+    }, [key, state]);
+
+    return [state, setState];
+}
+
 export function UserDataTable() {
     const context = useRouteContext({ from: "/app/user-management" });
     const queryClient = context.queryClient;
-    const [sorting, setSorting] = React.useState<SortingState>([]);
+    const [sorting, setSorting] = usePersistentState<SortingState>(
+        "userTableSorting_v1",
+        [],
+    );
     const [columnFilters, setColumnFilters] =
-        React.useState<ColumnFiltersState>([]);
+        usePersistentState<ColumnFiltersState>("userTableColumnFilters_v1", []);
     const [columnVisibility, setColumnVisibility] =
-        React.useState<VisibilityState>({});
+        usePersistentState<VisibilityState>("userTableColumnVisibility_v1", {});
     const [rowSelection, setRowSelection] = React.useState({});
     const [editDialogOpen, setEditDialogOpen] = useAtom(editDialogAtom);
     const [deleteDialogOpen, setDeleteDialogOpen] = useAtom(deleteDialogAtom);
     const [selectedUser, setSelectedUser] = useAtom(selectedUserAtom);
     const [activateDialogOpen, setActivateDialogOpen] = React.useState(false);
+
+    // Persistent pagination state
+    const [pageSize, setPageSize] = usePersistentState<number>(
+        "userTablePageSize_v1",
+        10,
+    );
+    const [pageIndex, setPageIndex] = usePersistentState<number>(
+        "userTablePageIndex_v1",
+        0,
+    );
 
     const { data: initialUsers } = useSuspenseQuery(usersQueryOptions);
     // Fetch actual departments data
@@ -783,6 +831,11 @@ export function UserDataTable() {
             columnVisibility,
             rowSelection,
             columnFilters,
+            pagination: {
+                // Controlled pagination
+                pageIndex,
+                pageSize,
+            },
         },
         onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
@@ -792,8 +845,21 @@ export function UserDataTable() {
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
         getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
+        getPaginationRowModel: getPaginationRowModel(), // Still needed for page count, etc.
         getSortedRowModel: getSortedRowModel(),
+        manualPagination: false, // Set to false if getPaginationRowModel is used for client-side pagination
+        pageCount: -1, // Or calculate if known, otherwise react-table will estimate
+        onPaginationChange: (updater) => {
+            // Handle pagination changes to update persistent state
+            if (typeof updater === "function") {
+                const newPaginationState = updater(table.getState().pagination);
+                setPageIndex(newPaginationState.pageIndex);
+                setPageSize(newPaginationState.pageSize);
+            } else {
+                setPageIndex(updater.pageIndex);
+                setPageSize(updater.pageSize);
+            }
+        },
     });
 
     return (
@@ -949,16 +1015,15 @@ export function UserDataTable() {
                     <div className="flex items-center space-x-2">
                         <p className="text-sm font-medium">Rows per page</p>
                         <Select
-                            value={`${table.getState().pagination.pageSize}`}
+                            value={`${pageSize}`} // Use persistent pageSize
                             onValueChange={(value) => {
+                                // setPageSize(Number(value)); // This will be handled by onPaginationChange
                                 table.setPageSize(Number(value));
                             }}
                         >
                             <SelectTrigger className="h-8 w-[70px]">
                                 <SelectValue
-                                    placeholder={
-                                        table.getState().pagination.pageSize
-                                    }
+                                    placeholder={pageSize} // Use persistent pageSize
                                 />
                             </SelectTrigger>
                             <SelectContent side="top">
@@ -974,14 +1039,14 @@ export function UserDataTable() {
                         </Select>
                     </div>
                     <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                        Page {table.getState().pagination.pageIndex + 1} of{" "}
+                        Page {pageIndex + 1} of {/* Use persistent pageIndex */}
                         {table.getPageCount()}
                     </div>
                     <div className="flex items-center space-x-2">
                         <Button
                             variant="outline"
                             className="hidden h-8 w-8 p-0 lg:flex"
-                            onClick={() => table.setPageIndex(0)}
+                            onClick={() => table.setPageIndex(0)} // This will trigger onPaginationChange
                             disabled={!table.getCanPreviousPage()}
                         >
                             <span className="sr-only">Go to first page</span>
@@ -990,7 +1055,7 @@ export function UserDataTable() {
                         <Button
                             variant="outline"
                             className="h-8 w-8 p-0"
-                            onClick={() => table.previousPage()}
+                            onClick={() => table.previousPage()} // This will trigger onPaginationChange
                             disabled={!table.getCanPreviousPage()}
                         >
                             <span className="sr-only">Go to previous page</span>
@@ -999,7 +1064,7 @@ export function UserDataTable() {
                         <Button
                             variant="outline"
                             className="h-8 w-8 p-0"
-                            onClick={() => table.nextPage()}
+                            onClick={() => table.nextPage()} // This will trigger onPaginationChange
                             disabled={!table.getCanNextPage()}
                         >
                             <span className="sr-only">Go to next page</span>
@@ -1009,6 +1074,7 @@ export function UserDataTable() {
                             variant="outline"
                             className="hidden h-8 w-8 p-0 lg:flex"
                             onClick={() =>
+                                // This will trigger onPaginationChange
                                 table.setPageIndex(table.getPageCount() - 1)
                             }
                             disabled={!table.getCanNextPage()}

@@ -42,7 +42,6 @@ import type { ColumnDef, Row, RowSelectionState } from "@tanstack/react-table";
 import {
     AlertTriangle,
     CheckCircle,
-    Download,
     Edit,
     MoreHorizontal,
     Package,
@@ -50,8 +49,42 @@ import {
     Trash2,
     Wrench,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
+// Custom hook for persistent state
+function usePersistentState<T>(
+    key: string,
+    initialValue: T,
+): [T, (value: T | ((prevState: T) => T)) => void] {
+    const [state, setState] = useState<T>(() => {
+        try {
+            const storedValue = localStorage.getItem(key);
+            if (storedValue) {
+                return JSON.parse(storedValue);
+            }
+            return initialValue;
+        } catch (error) {
+            console.error(
+                "Error reading from localStorage for key:",
+                key,
+                error,
+            );
+            return initialValue;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(key, JSON.stringify(state));
+        } catch (error) {
+            console.error("Error writing to localStorage for key:", key, error);
+        }
+    }, [key, state]);
+
+    return [state, setState];
+}
+
 export const Route = createFileRoute("/app/equipments")({
     beforeLoad: async ({ location, context }) => {
         const navigationItem = allNavigation.find((item) => {
@@ -116,10 +149,14 @@ function EquipmentInventory() {
         null,
     );
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-    const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
-        isPrivilegedUser ? "table" : "grid",
-    );
+    const [rowSelection, setRowSelection] =
+        usePersistentState<RowSelectionState>(
+            "equipmentTableRowSelection_v1",
+            {},
+        );
+    const [viewMode, setViewMode] = usePersistentState<
+        "table" | "grid" | "reservations"
+    >("equipmentViewMode_v1", isPrivilegedUser ? "table" : "grid");
     const [isReservationDialogOpen, setIsReservationDialogOpen] =
         useState(false);
 
@@ -719,21 +756,6 @@ function EquipmentInventory() {
                                 )}
                             </TabsList>
                         </Tabs>
-                        {/* Add Filters Dropdown if needed */}
-                        {isPrivilegedUser && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1"
-                                onClick={() =>
-                                    console.warn("Export not implemented")
-                                }
-                                disabled={isMutating}
-                            >
-                                <Download className="h-4 w-4" />
-                                Export
-                            </Button>
-                        )}
                     </div>
                 </div>
 

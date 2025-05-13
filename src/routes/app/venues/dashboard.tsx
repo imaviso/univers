@@ -51,8 +51,41 @@ import {
     UserCheck,
     UserCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
+// Custom hook for persistent state
+function usePersistentState<T>(
+    key: string,
+    initialValue: T,
+): [T, (value: T | ((prevState: T) => T)) => void] {
+    const [state, setState] = useState<T>(() => {
+        try {
+            const storedValue = localStorage.getItem(key);
+            if (storedValue) {
+                return JSON.parse(storedValue);
+            }
+            return initialValue;
+        } catch (error) {
+            console.error(
+                "Error reading from localStorage for key:",
+                key,
+                error,
+            );
+            return initialValue;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(key, JSON.stringify(state));
+        } catch (error) {
+            console.error("Error writing to localStorage for key:", key, error);
+        }
+    }, [key, state]);
+
+    return [state, setState];
+}
 
 export const Route = createFileRoute("/app/venues/dashboard")({
     component: VenueManagement,
@@ -70,15 +103,24 @@ export function VenueManagement() {
     const queryClient = context.queryClient;
     const navigate = useNavigate();
     // State variables
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = usePersistentState<string>(
+        "venueDashboardSearchQuery_v1",
+        "",
+    );
     const [isAddVenueOpen, setIsAddVenueOpen] = useState(false);
     const [editingVenue, setEditingVenue] = useState<VenueDTO | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [venueToDelete, setVenueToDelete] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<"table" | "grid" | "events">(
+    const [viewMode, setViewMode] = usePersistentState<
+        "table" | "grid" | "events"
+    >(
+        "venueDashboardViewMode_v1",
         role === "SUPER_ADMIN" || role === "VENUE_OWNER" ? "table" : "grid",
     );
-    const [activeEventTab, setActiveEventTab] = useState("all");
+    const [activeEventTab, setActiveEventTab] = usePersistentState<string>(
+        "venueDashboardActiveEventTab_v1",
+        "all",
+    );
 
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: users = [] } = useQuery({
