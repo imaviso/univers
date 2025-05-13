@@ -1590,3 +1590,23 @@ export const searchEvents = async (
               );
     }
 };
+
+export const getTimelineEventsByDateRange = async (
+    startDate?: string,
+    endDate?: string,
+): Promise<Event[]> => {
+    const params = new URLSearchParams();
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+
+    const response = await fetch(
+        `${API_BASE_URL}/events/timeline?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    const data = await handleApiResponse<Event[]>(response, true);
+    return data || [];
+};

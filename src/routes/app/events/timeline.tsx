@@ -3,6 +3,7 @@ import { EventList } from "@/components/events/eventList";
 import { EventModal } from "@/components/events/eventModal";
 import { EventTimeline } from "@/components/events/eventTimeline";
 import { Button } from "@/components/ui/button"; // Added Button import
+import { Calendar } from "@/components/ui/calendar"; // Added Calendar
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -13,12 +14,20 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"; // Added Dropdown imports
 import { Label } from "@/components/ui/label";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"; // Added Popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 import { useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import useCurrentUser
+import { cn } from "@/lib/utils"; // Added cn
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ListFilter } from "lucide-react"; // Added ListFilter icon
+import { endOfDay, format, formatISO, startOfDay } from "date-fns"; // Added date-fns functions
+import { CalendarIcon, ListFilter } from "lucide-react"; // Added ListFilter icon, Added CalendarIcon
 import { useEffect, useState } from "react";
+import type { DateRange } from "react-day-picker"; // Added DateRange
 
 // Custom hook for persistent state
 function usePersistentState<T>(
@@ -96,6 +105,12 @@ function Events() {
         "eventDisplayView",
         "card",
     ); // State for display view
+    const [selectedDateRange, setSelectedDateRange] = usePersistentState<
+        DateRange | undefined
+    >(
+        "eventTimelineParentDateRange_v1", // New key for date range in parent
+        undefined,
+    );
 
     const isAuthorized =
         currentUser?.role === "SUPER_ADMIN" ||
@@ -348,7 +363,76 @@ function Events() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            {/* Status Filter Dropdown for non-authorized users in list view */}
+                            {/* Date Range Filter for TIMELINE VIEW */}
+                            {view === "timeline" && (
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className={cn(
+                                                "w-fit justify-start text-left font-normal",
+                                                !selectedDateRange &&
+                                                    "text-muted-foreground",
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {selectedDateRange?.from ? (
+                                                selectedDateRange.to ? (
+                                                    <>
+                                                        {format(
+                                                            selectedDateRange.from,
+                                                            "LLL dd, y",
+                                                        )}{" "}
+                                                        -{" "}
+                                                        {format(
+                                                            selectedDateRange.to,
+                                                            "LLL dd, y",
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    format(
+                                                        selectedDateRange.from,
+                                                        "LLL dd, y",
+                                                    )
+                                                )
+                                            ) : (
+                                                <span>Pick a date range</span>
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        className="w-auto p-0"
+                                        align="end"
+                                    >
+                                        <Calendar
+                                            initialFocus
+                                            mode="range"
+                                            defaultMonth={
+                                                selectedDateRange?.from
+                                            }
+                                            selected={selectedDateRange}
+                                            onSelect={setSelectedDateRange}
+                                            numberOfMonths={1}
+                                        />
+                                        <div className="p-2 border-t flex justify-end">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                    setSelectedDateRange(
+                                                        undefined,
+                                                    )
+                                                }
+                                                disabled={!selectedDateRange}
+                                            >
+                                                Clear
+                                            </Button>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
+                            {/* Status Filter Dropdown for LIST VIEW */}
                             {view === "list" && (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
@@ -440,46 +524,6 @@ function Events() {
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             )}
-                            {/* Date Range Filter Dropdown - always shown if view is list */}
-                            {view === "list" && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline">
-                                            Date:{" "}
-                                            {dateRangeFilter === "allTime"
-                                                ? "All Time"
-                                                : dateRangeFilter === "pastDay"
-                                                  ? "Past Day"
-                                                  : dateRangeFilter ===
-                                                      "pastWeek"
-                                                    ? "Past Week"
-                                                    : dateRangeFilter ===
-                                                        "pastMonth"
-                                                      ? "Past Month"
-                                                      : "All Time"}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuRadioGroup
-                                            value={dateRangeFilter}
-                                            onValueChange={setDateRangeFilter}
-                                        >
-                                            <DropdownMenuRadioItem value="allTime">
-                                                All Time
-                                            </DropdownMenuRadioItem>
-                                            <DropdownMenuRadioItem value="pastDay">
-                                                Past Day
-                                            </DropdownMenuRadioItem>
-                                            <DropdownMenuRadioItem value="pastWeek">
-                                                Past Week
-                                            </DropdownMenuRadioItem>
-                                            <DropdownMenuRadioItem value="pastMonth">
-                                                Past Month
-                                            </DropdownMenuRadioItem>
-                                        </DropdownMenuRadioGroup>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
                             <CreateEventButton
                                 onClick={() => setIsModalOpen(true)}
                             />
@@ -497,7 +541,24 @@ function Events() {
                                 displayView={displayView}
                             />
                         ) : (
-                            <EventTimeline />
+                            <EventTimeline
+                                startDateISO={
+                                    selectedDateRange?.from
+                                        ? formatISO(
+                                              startOfDay(
+                                                  selectedDateRange.from,
+                                              ),
+                                          )
+                                        : undefined
+                                }
+                                endDateISO={
+                                    selectedDateRange?.to
+                                        ? formatISO(
+                                              endOfDay(selectedDateRange.to),
+                                          )
+                                        : undefined
+                                }
+                            />
                         )}
                     </main>
                 </div>
