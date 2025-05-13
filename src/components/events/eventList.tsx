@@ -1,204 +1,73 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { EventCard } from "@/components/events/eventCard"; // Import EventCard relative to src
+import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
 import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import {
-    allEventsQueryOptions,
-    approvedEventsQueryOptions,
-    ownEventsQueryOptions,
-    pendingVenueOwnerEventsQueryOptions,
+    searchEventsQueryOptions,
     useCurrentUser,
     venuesQueryOptions,
 } from "@/lib/query"; // Import query options
-import type { EventDTO, VenueDTO } from "@/lib/types"; // Ensure Venue is imported if not already
-import { formatDateRange, getInitials, getStatusColor } from "@/lib/utils";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
+import type { VenueDTO } from "@/lib/types"; // Ensure Venue is imported if not already
+import { useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
-import { useMemo } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-
-// Helper function to map AppEvent to EventDTO, providing defaults for missing fields
-const mapEventToEventDTO = (event: EventDTO): EventDTO => {
-    // Assuming AppEvent might be missing some EventDTO fields or has different field names.
-    // Adjust this based on the actual structure of AppEvent vs EventDTO.
-    // Ensure all fields required by EventDTO are present.
-    return {
-        // Fields assumed to be common or directly from AppEvent
-        publicId: event.publicId,
-        eventName: event.eventName,
-        eventType: event.eventType,
-        startTime: event.startTime, // Assumed to be ISO string from backend Instant
-        endTime: event.endTime, // Assumed to be ISO string from backend Instant
-        status: event.status,
-        organizer: event.organizer,
-        eventVenue: event.eventVenue,
-        department: event.department,
-        approvedLetterUrl: event.approvedLetterUrl ?? null,
-        createdAt: event.createdAt,
-        updatedAt: event.updatedAt,
-        imageUrl: event.imageUrl,
-        approvals: Array.isArray(event.approvals) ? event.approvals : [],
-        cancellationReason:
-            typeof event.cancellationReason === "string"
-                ? event.cancellationReason
-                : null,
-    };
-};
-
-// Helper component for rendering a single event card
-function EventCard({
-    event,
-    venueMap,
-    onNavigate,
-}: {
-    event: EventDTO;
-    venueMap: Map<string, string>;
-    onNavigate: (eventId: string | undefined) => void;
-}) {
-    let dateDisplayString = "Date not available";
-
-    if (
-        typeof event.startTime === "string" &&
-        typeof event.endTime === "string"
-    ) {
-        const startDate = new Date(event.startTime);
-        const endDate = new Date(event.endTime);
-
-        if (
-            !Number.isNaN(startDate.getTime()) &&
-            !Number.isNaN(endDate.getTime())
-        ) {
-            dateDisplayString = formatDateRange(startDate, endDate);
-        } else {
-            console.error(
-                `Failed to parse dates for event ${event.publicId}: start='${event.startTime}', end='${event.endTime}'`,
-            );
-            dateDisplayString = "Invalid date format received";
-        }
-    } else {
-        console.warn(
-            `Missing or invalid date strings for event ${event.publicId}: start='${event.startTime}', end='${event.endTime}'`,
-        );
-        dateDisplayString = "Date missing";
-    }
-
-    const organizerName = event.organizer
-        ? `${event.organizer.firstName} ${event.organizer.lastName}`
-        : "Unknown Organizer";
-
-    return (
-        <Card
-            key={event.publicId ?? `temp-${Math.random()}`}
-            className="overflow-hidden transition-all hover:shadow-md flex flex-col"
-        >
-            <CardHeader>
-                <div className="flex items-start justify-between">
-                    <h3 className="font-medium">{event.eventName}</h3>
-                    <Badge className={`${getStatusColor(event.status)}`}>
-                        {event.status
-                            ? event.status.charAt(0).toUpperCase() +
-                              event.status.slice(1).toLowerCase()
-                            : "Unknown"}
-                    </Badge>
-                </div>
-            </CardHeader>
-            <CardContent className="flex-grow">
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Tag className="h-4 w-4" />
-                        <span>{event.eventType ?? "N/A"}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        <span>{dateDisplayString}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        <span>
-                            {venueMap.get(event.eventVenue?.publicId) ??
-                                "Unknown Venue"}
-                        </span>
-                    </div>
-                </div>
-            </CardContent>
-            <Separator />
-            <CardFooter className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage
-                            src={event.organizer?.profileImagePath ?? ""}
-                            alt={organizerName}
-                        />
-                        <AvatarFallback>
-                            {getInitials(organizerName)}
-                        </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-muted-foreground">
-                        {organizerName}
-                    </span>
-                </div>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="flex items-center gap-2 text-sm font-normal"
-                    onClick={() => onNavigate(event.publicId)}
-                    disabled={typeof event.publicId !== "string"}
-                >
-                    <span className="sr-only">View Details</span>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </Button>
-            </CardFooter>
-        </Card>
-    );
-}
+import { EventListItem } from "./EventListItem"; // Import EventListItem
 
 // Accept activeTab and eventStatusFilter as props
 export function EventList({
     activeTab,
     eventStatusFilter,
-}: { activeTab: "all" | "mine"; eventStatusFilter: string }) {
+    sortBy,
+    dateRangeFilter,
+    displayView, // Add displayView prop
+}: {
+    activeTab: "all" | "mine";
+    eventStatusFilter: string;
+    sortBy?: string;
+    dateRangeFilter?: string;
+    displayView: "list" | "card"; // Define prop type
+}) {
     const navigate = useNavigate();
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: currentUser } = useCurrentUser();
-
-    // Fetch raw data (typed as AppEvent[])
-    const { data: rawOwnEvents = [] } = useSuspenseQuery(ownEventsQueryOptions);
-    const { data: rawApprovedEvents = [] } = useSuspenseQuery(
-        approvedEventsQueryOptions,
-    );
-    const { data: rawAllEvents = [] } = useQuery({
-        ...allEventsQueryOptions,
-        enabled:
-            currentUser?.role === "SUPER_ADMIN" ||
-            currentUser?.role === "VP_ADMIN" ||
-            currentUser?.role === "MSDO" ||
-            currentUser?.role === "OPC" ||
-            currentUser?.role === "SSD" ||
-            currentUser?.role === "FAO" ||
-            currentUser?.role === "VPAA" ||
-            currentUser?.role === "DEPT_HEAD",
-    });
-    const { data: rawPendingVenueOwnerEvents = [] } = useQuery({
-        ...pendingVenueOwnerEventsQueryOptions,
-        enabled: currentUser?.role === "VENUE_OWNER",
-    });
 
     const venueMap = new Map(
         venues.map((venue: VenueDTO) => [venue.publicId, venue.name]),
     );
 
-    // Map raw data to EventDTO[]
-    const ownEvents = rawOwnEvents.map(mapEventToEventDTO);
-    const approvedEvents = rawApprovedEvents.map(mapEventToEventDTO);
-    const allEvents = (rawAllEvents ?? []).map(mapEventToEventDTO);
-    const pendingVenueOwnerEvents =
-        rawPendingVenueOwnerEvents.map(mapEventToEventDTO);
+    let scope = "approved"; // Start with the most restrictive default for others
+
+    if (activeTab === "mine") {
+        scope = "mine";
+    } else if (currentUser) {
+        // Check user exists first
+        const role = currentUser.role;
+        if (
+            role === "SUPER_ADMIN" ||
+            role === "VP_ADMIN" ||
+            role === "MSDO" ||
+            role === "OPC" ||
+            role === "SSD" ||
+            role === "FAO" ||
+            role === "VPAA"
+        ) {
+            scope = "all";
+        } else if (role === "VENUE_OWNER") {
+            scope = "related"; // Venue owner sees related events
+        } else if (role === "DEPT_HEAD") {
+            // Check DEPT_HEAD separately
+            scope = "related"; // Dept head sees related events
+        }
+    }
+    // If none of the above, scope remains "approved"
+    // If no currentUser, scope remains "approved" (safer default)
+
+    // Fetch data using the single search query
+    const { data: events = [] } = useSuspenseQuery(
+        searchEventsQueryOptions(
+            scope,
+            eventStatusFilter,
+            sortBy,
+            dateRangeFilter,
+        ),
+    );
 
     const handleNavigate = (eventId: string | undefined) => {
         if (typeof eventId === "string") {
@@ -208,58 +77,25 @@ export function EventList({
         }
     };
 
-    const filteredOwnEvents = ownEvents.filter((event) => {
-        if (
-            event.status?.toUpperCase() === "CANCELED" &&
-            currentUser?.role !== "SUPER_ADMIN" &&
-            currentUser?.role !== "VP_ADMIN" &&
-            currentUser?.role !== "MSDO" &&
-            currentUser?.role !== "OPC" &&
-            currentUser?.role !== "SSD" &&
-            currentUser?.role !== "FAO" &&
-            currentUser?.role !== "VPAA" &&
-            currentUser?.role !== "DEPT_HEAD"
-        ) {
-            return false;
+    // Client-side filter: Hide CANCELED events in 'mine' tab for non-admins
+    const eventsToDisplay = events.filter((event) => {
+        if (scope === "mine") {
+            if (
+                event.status?.toUpperCase() === "CANCELED" &&
+                currentUser?.role !== "SUPER_ADMIN" &&
+                currentUser?.role !== "VP_ADMIN" &&
+                currentUser?.role !== "MSDO" &&
+                currentUser?.role !== "OPC" &&
+                currentUser?.role !== "SSD" &&
+                currentUser?.role !== "FAO" &&
+                currentUser?.role !== "VPAA" &&
+                currentUser?.role !== "DEPT_HEAD"
+            ) {
+                return false;
+            }
         }
         return true;
     });
-
-    // Determine which list to render for the 'all' tab based on role
-    let allEventsSource: EventDTO[] = []; // Initialize with correct type
-
-    if (currentUser?.role === "VENUE_OWNER") {
-        allEventsSource = pendingVenueOwnerEvents;
-    } else if (
-        currentUser?.role === "SUPER_ADMIN" ||
-        currentUser?.role === "VP_ADMIN" ||
-        currentUser?.role === "MSDO" ||
-        currentUser?.role === "OPC" ||
-        currentUser?.role === "SSD" ||
-        currentUser?.role === "FAO" ||
-        currentUser?.role === "VPAA" ||
-        currentUser?.role === "DEPT_HEAD"
-    ) {
-        allEventsSource = allEvents;
-    } else {
-        // Default to approved events for other roles (like ORGANIZER)
-        allEventsSource = approvedEvents;
-    }
-
-    // Determine which list to render based on the activeTab prop
-    const baseEventsToDisplay =
-        activeTab === "all" ? allEventsSource : filteredOwnEvents;
-
-    // Apply status filter
-    const eventsToDisplay = useMemo(() => {
-        if (eventStatusFilter === "ALL" || !baseEventsToDisplay) {
-            return baseEventsToDisplay ?? [];
-        }
-        return baseEventsToDisplay.filter(
-            (event) =>
-                event.status?.toUpperCase() === eventStatusFilter.toUpperCase(),
-        );
-    }, [baseEventsToDisplay, eventStatusFilter]);
 
     const noEventsMessage =
         activeTab === "all"
@@ -267,23 +103,43 @@ export function EventList({
             : "You have not created any events yet.";
 
     return (
-        <div>
+        <ScrollArea className="h-[90vh] w-full">
             {eventsToDisplay.length === 0 ? (
                 <div className="text-center text-muted-foreground py-10">
                     {noEventsMessage}
                 </div>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pt-4">
-                    {eventsToDisplay.map((event) => (
-                        <EventCard
-                            key={`${activeTab}-${event.publicId}`}
-                            event={event}
-                            venueMap={venueMap}
-                            onNavigate={handleNavigate}
-                        />
-                    ))}
+                <div>
+                    {" "}
+                    {/* Container for list or grid */}
+                    {displayView === "card" ? (
+                        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pr-6 py-4">
+                            {eventsToDisplay.map((event) => (
+                                <EventCard
+                                    key={`card-${activeTab}-${event.publicId}`}
+                                    event={event}
+                                    venueMap={venueMap}
+                                    onNavigate={handleNavigate}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-0 pr-6">
+                            {" "}
+                            {/* List view container */}
+                            {/* Optional: Add a header row here */}
+                            {eventsToDisplay.map((event) => (
+                                <EventListItem
+                                    key={`list-${activeTab}-${event.publicId}`}
+                                    event={event}
+                                    venueMap={venueMap}
+                                    onNavigate={handleNavigate}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
-        </div>
+        </ScrollArea>
     );
 }

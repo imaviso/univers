@@ -1555,3 +1555,38 @@ export const getOngoingAndApprovedEventsByVenue = async (
               );
     }
 };
+
+export const searchEvents = async (
+    scope: string,
+    status?: string,
+    sortBy?: string,
+    dateRange?: string,
+): Promise<EventDTO[]> => {
+    try {
+        const url = new URL(`${API_BASE_URL}/events/search`);
+        url.searchParams.append("scope", scope);
+        if (status && status.toUpperCase() !== "ALL") {
+            url.searchParams.append("status", status.toUpperCase());
+        }
+        if (sortBy) {
+            url.searchParams.append("sortBy", sortBy);
+        }
+        if (dateRange) {
+            url.searchParams.append("dateRange", dateRange);
+        }
+
+        const response = await fetch(url.toString(), {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+        const data = await handleApiResponse<EventDTO[]>(response, true);
+        return data || [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred during searching events.",
+              );
+    }
+};

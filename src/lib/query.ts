@@ -28,6 +28,7 @@ import {
     markAllNotificationsRead,
     markNotificationsRead,
     rejectEquipmentReservation,
+    searchEvents,
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -195,10 +196,6 @@ export const equipmentsQueryOptions = (user: UserDTO | null | undefined) =>
         queryKey: ["equipments", user?.publicId, user?.role],
         queryFn: async () => {
             if (!user) return []; // Don't fetch if no user
-
-            if (user.role === "SUPER_ADMIN") {
-                return await getAllEquipmentsAdmin();
-            }
             if (
                 user.role === "EQUIPMENT_OWNER" ||
                 user.role === "MSDO" ||
@@ -209,7 +206,7 @@ export const equipmentsQueryOptions = (user: UserDTO | null | undefined) =>
             // Other roles (like ORGANIZER) might need all available equipment?
             // Adjust this logic based on requirements. Fetching all for now.
             // Consider if non-owners should see only 'available' equipment via a different endpoint/filter.
-            return await getAllEquipmentsByOwner(user.publicId);
+            return await getAllEquipmentsAdmin();
         },
         enabled: !!user,
         staleTime: 1000 * 60 * 2, // 2 minutes stale time
@@ -563,3 +560,24 @@ export const useDeleteEquipmentReservationMutation = () => {
         },
     });
 };
+
+// --- NEW Generic Event Search Query Option ---
+export const searchEventsQueryOptions = (
+    scope: string,
+    status?: string,
+    sortBy?: string,
+    dateRange?: string,
+) =>
+    queryOptions<EventDTO[]>({
+        queryKey: [
+            ...eventsQueryKeys.lists(),
+            {
+                scope,
+                status: status ?? "ALL",
+                sortBy: sortBy ?? "default",
+                dateRange: dateRange ?? "allTime",
+            },
+        ],
+        queryFn: () => searchEvents(scope, status, sortBy, dateRange),
+        staleTime: 1000 * 60 * 2,
+    });
