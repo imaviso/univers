@@ -70,16 +70,59 @@ import {
     UserIcon,
 } from "lucide-react";
 import * as React from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { EditDepartmentFormDialog } from "./editDepartmentFormDialog";
 
+// Custom hook for persistent state
+function usePersistentState<T>(
+    key: string,
+    initialValue: T,
+): [T, (value: T | ((prevState: T) => T)) => void] {
+    const [state, setState] = useState<T>(() => {
+        try {
+            const storedValue = localStorage.getItem(key);
+            if (storedValue) {
+                return JSON.parse(storedValue);
+            }
+            return initialValue;
+        } catch (error) {
+            console.error(
+                "Error reading from localStorage for key:",
+                key,
+                error,
+            );
+            return initialValue;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(key, JSON.stringify(state));
+        } catch (error) {
+            console.error("Error writing to localStorage for key:", key, error);
+        }
+    }, [key, state]);
+
+    return [state, setState];
+}
+
 export function DepartmentDataTable() {
     const queryClient = useQueryClient();
-    const [sorting, setSorting] = React.useState<SortingState>([]);
+    const [sorting, setSorting] = usePersistentState<SortingState>(
+        "departmentTableSorting_v1",
+        [],
+    );
     const [columnFilters, setColumnFilters] =
-        React.useState<ColumnFiltersState>([]);
+        usePersistentState<ColumnFiltersState>(
+            "departmentTableColumnFilters_v1",
+            [],
+        );
     const [columnVisibility, setColumnVisibility] =
-        React.useState<VisibilityState>({});
+        usePersistentState<VisibilityState>(
+            "departmentTableColumnVisibility_v1",
+            {},
+        );
     const [rowSelection, setRowSelection] = React.useState({});
 
     const [editDialogOpen, setEditDialogOpen] = useAtom(
@@ -91,6 +134,16 @@ export function DepartmentDataTable() {
     // const [assignHeadOpen, setAssignHeadOpen] = useAtom(assignHeadDialogAtom);
     const [selectedDepartment, setSelectedDepartment] = useAtom(
         selectedDepartmentAtom,
+    );
+
+    // Persistent pagination state
+    const [pageSize, setPageSize] = usePersistentState<number>(
+        "departmentTablePageSize_v1",
+        10,
+    );
+    const [pageIndex, setPageIndex] = usePersistentState<number>(
+        "departmentTablePageIndex_v1",
+        0,
     );
 
     // Fetch departments and users
@@ -461,6 +514,10 @@ export function DepartmentDataTable() {
             columnVisibility,
             rowSelection,
             columnFilters,
+            pagination: {
+                pageIndex,
+                pageSize,
+            },
         },
         enableRowSelection: true, // Enable if using select column
         onSortingChange: setSorting,
@@ -473,6 +530,18 @@ export function DepartmentDataTable() {
         getSortedRowModel: getSortedRowModel(),
         getFacetedRowModel: getFacetedRowModel(),
         getFacetedUniqueValues: getFacetedUniqueValues(),
+        manualPagination: false,
+        pageCount: -1,
+        onPaginationChange: (updater) => {
+            if (typeof updater === "function") {
+                const newPaginationState = updater(table.getState().pagination);
+                setPageIndex(newPaginationState.pageIndex);
+                setPageSize(newPaginationState.pageSize);
+            } else {
+                setPageIndex(updater.pageIndex);
+                setPageSize(updater.pageSize);
+            }
+        },
     });
 
     // --- Render ---
@@ -579,17 +648,13 @@ export function DepartmentDataTable() {
                     <div className="flex items-center space-x-2">
                         <p className="text-sm font-medium">Rows per page</p>
                         <Select
-                            value={`${table.getState().pagination.pageSize}`}
+                            value={`${pageSize}`}
                             onValueChange={(value) => {
                                 table.setPageSize(Number(value));
                             }}
                         >
                             <SelectTrigger className="h-8 w-[70px]">
-                                <SelectValue
-                                    placeholder={
-                                        table.getState().pagination.pageSize
-                                    }
-                                />
+                                <SelectValue placeholder={pageSize} />
                             </SelectTrigger>
                             <SelectContent side="top">
                                 {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -604,8 +669,7 @@ export function DepartmentDataTable() {
                         </Select>
                     </div>
                     <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                        Page {table.getState().pagination.pageIndex + 1} of{" "}
-                        {table.getPageCount()}
+                        Page {pageIndex + 1} of {table.getPageCount()}
                     </div>
                     <div className="flex items-center space-x-2">
                         <Button

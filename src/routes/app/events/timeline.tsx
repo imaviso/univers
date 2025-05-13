@@ -18,7 +18,33 @@ import { useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import useC
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { ListFilter } from "lucide-react"; // Added ListFilter icon
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+// Custom hook for persistent state
+function usePersistentState<T>(
+    key: string,
+    initialValue: T,
+): [T, (value: T) => void] {
+    const [state, setState] = useState<T>(() => {
+        try {
+            const storedValue = localStorage.getItem(key);
+            return storedValue ? JSON.parse(storedValue) : initialValue;
+        } catch (error) {
+            console.error("Error reading from localStorage", error);
+            return initialValue;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(key, JSON.stringify(state));
+        } catch (error) {
+            console.error("Error writing to localStorage", error);
+        }
+    }, [key, state]);
+
+    return [state, setState];
+}
 
 export const Route = createFileRoute("/app/events/timeline")({
     component: Events,
@@ -37,8 +63,12 @@ const EventStatus = {
 function Events() {
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: currentUser } = useCurrentUser(); // Get current user
-    const [view, setView] = useState<"list" | "timeline">("list");
-    const [activeTab, setActiveTab] = useState<"all" | "mine">(
+    const [view, setView] = usePersistentState<"list" | "timeline">(
+        "eventView",
+        "list",
+    );
+    const [activeTab, setActiveTab] = usePersistentState<"all" | "mine">(
+        "eventActiveTab",
         currentUser?.role === "SUPER_ADMIN" ||
             currentUser?.role === "VP_ADMIN" ||
             currentUser?.role === "MSDO" ||
@@ -52,10 +82,20 @@ function Events() {
             : "mine",
     );
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [eventStatusFilter, setEventStatusFilter] = useState<string>("ALL"); // Added state for status filter, default to ALL
-    const [sortBy, setSortBy] = useState<string>("recency"); // Added state for sort order, default to recency
-    const [dateRangeFilter, setDateRangeFilter] = useState<string>("allTime"); // Added state for date range filter, default to All Time
-    const [displayView, setDisplayView] = useState<"list" | "card">("card"); // State for display view
+    const [eventStatusFilter, setEventStatusFilter] =
+        usePersistentState<string>("eventStatusFilter", "ALL"); // Added state for status filter, default to ALL
+    const [sortBy, setSortBy] = usePersistentState<string>(
+        "eventSortBy",
+        "recency",
+    ); // Added state for sort order, default to recency
+    const [dateRangeFilter, setDateRangeFilter] = usePersistentState<string>(
+        "eventDateRangeFilter",
+        "allTime",
+    ); // Added state for date range filter, default to All Time
+    const [displayView, setDisplayView] = usePersistentState<"list" | "card">(
+        "eventDisplayView",
+        "card",
+    ); // State for display view
 
     const isAuthorized =
         currentUser?.role === "SUPER_ADMIN" ||

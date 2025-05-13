@@ -67,8 +67,41 @@ import {
     X,
     XCircle,
 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
+
+// Custom hook for persistent state
+function usePersistentState<T>(
+    key: string,
+    initialValue: T,
+): [T, (value: T | ((prevState: T) => T)) => void] {
+    const [state, setState] = useState<T>(() => {
+        try {
+            const storedValue = localStorage.getItem(key);
+            if (storedValue) {
+                return JSON.parse(storedValue);
+            }
+            return initialValue;
+        } catch (error) {
+            console.error(
+                "Error reading from localStorage for key:",
+                key,
+                error,
+            );
+            return initialValue;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(key, JSON.stringify(state));
+        } catch (error) {
+            console.error("Error writing to localStorage for key:", key, error);
+        }
+    }, [key, state]);
+
+    return [state, setState];
+}
 
 export const Route = createFileRoute("/app/equipment-approval/approval")({
     component: EquipmentReservationApproval,
@@ -121,15 +154,37 @@ export function EquipmentReservationApproval() {
     const currentUserRole = authState?.role as UserRole | undefined;
     const currentUserId = authState?.publicId;
 
-    const [viewMode, setViewMode] = useState<ViewMode>("pending");
+    const [viewMode, setViewMode] = usePersistentState<ViewMode>(
+        "equipmentApprovalViewMode_v1",
+        "pending",
+    );
 
-    const [sorting, setSorting] = React.useState<SortingState>([]);
+    const [sorting, setSorting] = usePersistentState<SortingState>(
+        "equipmentApprovalTableSorting_v1",
+        [],
+    );
     const [columnVisibility, setColumnVisibility] =
-        React.useState<VisibilityState>({});
+        usePersistentState<VisibilityState>(
+            "equipmentApprovalTableColumnVisibility_v1",
+            {},
+        );
     const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
         {},
     );
-    const [globalFilter, setGlobalFilter] = useState("");
+    const [globalFilter, setGlobalFilter] = usePersistentState<string>(
+        "equipmentApprovalGlobalFilter_v1",
+        "",
+    );
+
+    // Persistent pagination state for the table
+    const [pageSize, setPageSize] = usePersistentState<number>(
+        "equipmentApprovalTablePageSize_v1",
+        10,
+    );
+    const [pageIndex, setPageIndex] = usePersistentState<number>(
+        "equipmentApprovalTablePageIndex_v1",
+        0,
+    );
 
     const [singleActionInfo, setSingleActionInfo] = useState<SingleActionInfo>({
         id: null,
