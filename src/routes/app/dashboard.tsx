@@ -1,16 +1,16 @@
-import { ApprovalTimeChart } from "@/components/dashboard/approvalTimeChart";
+import ErrorPage from "@/components/ErrorPage";
+import PendingPage from "@/components/PendingPage";
 import { CancellationRateChart } from "@/components/dashboard/cancellationRateChart";
-import { EquipmentReservationsChart } from "@/components/dashboard/equipmentReservationsChart";
-import { EventCategoriesChart } from "@/components/dashboard/eventCategoriesChart";
-import { EventsOverviewChart } from "@/components/dashboard/eventOverviewChart";
+import { EventTypesChart } from "@/components/dashboard/eventTypesChart";
+import { EventsOverviewChart } from "@/components/dashboard/eventsOverviewChart";
 import { EventsPerVenueChart } from "@/components/dashboard/eventsPerVenueChart";
 import { PeakReservationHoursChart } from "@/components/dashboard/peakReservationHoursChart";
 import { RecentActivity } from "@/components/dashboard/recentActivity";
-import { ReservationOverlapChart } from "@/components/dashboard/reservationOverlapChart";
 import { TopEquipmentChart } from "@/components/dashboard/topEquipmentChart";
-import { TopVenuesChart } from "@/components/dashboard/topVenuesChart";
 import { UpcomingEvents } from "@/components/dashboard/upcomingEvents";
 import { UserActivityChart } from "@/components/dashboard/userActivityChart";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
     Card,
     CardContent,
@@ -18,14 +18,97 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { allNavigation } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Calendar, CalendarDays, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { addDays, format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { DateRange } from "react-day-picker";
+
+function usePersistentState<T>(
+    key: string,
+    defaultValue: T,
+    parseISO?: boolean,
+) {
+    const getInitialValue = (): T => {
+        const storedValue = localStorage.getItem(key);
+        if (storedValue) {
+            try {
+                const parsed = JSON.parse(storedValue);
+                if (parseISO && typeof parsed === "string") {
+                    const date = new Date(parsed);
+                    if (!Number.isNaN(date.getTime())) {
+                        return date as unknown as T;
+                    }
+                } else if (
+                    parseISO &&
+                    typeof parsed === "object" &&
+                    parsed !== null &&
+                    "from" in parsed // Condition simplified: only check for 'from' key existence
+                ) {
+                    // Handle DateRange object with string dates
+                    const fromValue = (parsed as { from?: string | null }).from;
+                    const toValue = (parsed as { to?: string | null }).to;
+
+                    const fromDate = fromValue
+                        ? new Date(fromValue)
+                        : undefined;
+                    const toDate = toValue ? new Date(toValue) : undefined;
+
+                    if (fromDate && !Number.isNaN(fromDate.getTime())) {
+                        return {
+                            from: fromDate,
+                            to:
+                                toDate && !Number.isNaN(toDate.getTime())
+                                    ? toDate
+                                    : undefined,
+                        } as unknown as T;
+                    }
+                }
+                return parsed as T;
+            } catch (error) {
+                console.error(
+                    `Error parsing localStorage key "${key}":`,
+                    error,
+                );
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    };
+
+    const [value, setValue] = useState<T>(getInitialValue);
+
+    useEffect(() => {
+        localStorage.setItem(key, JSON.stringify(value));
+    }, [key, value]);
+
+    return [value, setValue] as const;
+}
 
 export const Route = createFileRoute("/app/dashboard")({
     component: Dashboard,
+    errorComponent: () => <ErrorPage />,
+    pendingComponent: () => <PendingPage />,
+    // loader: async ({ context }) => {
+    // 	await context.queryClient.ensureQueryData(venuesQueryOptions);
+    // 	await context.queryClient.ensureQueryData(
+    // 		equipmentsQueryOptions(context.authState),
+    // 	);
+    // },
     beforeLoad: async ({ location, context }) => {
         const navigationItem = allNavigation.find((item) => {
             return (
@@ -59,18 +142,27 @@ export const Route = createFileRoute("/app/dashboard")({
 });
 
 function Dashboard() {
-    type Period = "day" | "week" | "month" | "year";
-    const [period, setPeriod] = useState<Period>("month");
+    // const context = useRouteContext({ from: "/app/dashboard" });
+    // const { data: venues } = useSuspenseQuery(venuesQueryOptions);
+    const [dateRange, setDateRange] = usePersistentState<DateRange | undefined>(
+        "dashboardDateRange",
+        {
+            from: addDays(new Date(), -30),
+            to: new Date(),
+        },
+        true,
+    );
+    const [venueFilter, setVenueFilter] = usePersistentState<string>(
+        "dashboardVenueFilter",
+        "",
+    );
+    const [equipmentTypeFilter, setEquipmentTypeFilter] =
+        usePersistentState<string>("dashboardEquipmentTypeFilter", "");
 
-    // Sample stats data
-    const stats = {
-        totalEvents: 24,
-        upcomingEvents: 8,
-        totalAttendees: 3450,
-        averageAttendance: 143,
-        completionRate: 92,
-        growthRate: 18,
-    };
+    const [eventTypeFilter, setEventTypeFilter] = usePersistentState<string>(
+        "dashboardEventTypeFilter",
+        "",
+    );
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
@@ -79,220 +171,177 @@ function Dashboard() {
                         <h1 className="text-xl font-semibold">Dashboard</h1>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Tabs
-                            defaultValue="month"
-                            onValueChange={(value) =>
-                                setPeriod(value as Period)
-                            }
-                        >
-                            <TabsList>
-                                <TabsTrigger value="day">Day</TabsTrigger>
-                                <TabsTrigger value="week">Week</TabsTrigger>
-                                <TabsTrigger value="month">Month</TabsTrigger>
-                                <TabsTrigger value="year">Year</TabsTrigger>
-                            </TabsList>
-                        </Tabs>
+                        {/* Date Range Picker */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-fit justify-start text-left font-normal",
+                                        !dateRange && "text-muted-foreground",
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateRange?.from ? (
+                                        dateRange.to ? (
+                                            <>
+                                                {format(
+                                                    dateRange.from,
+                                                    "LLL dd, y",
+                                                )}{" "}
+                                                -{" "}
+                                                {format(
+                                                    dateRange.to,
+                                                    "LLL dd, y",
+                                                )}
+                                            </>
+                                        ) : (
+                                            format(dateRange.from, "LLL dd, y")
+                                        )
+                                    ) : (
+                                        <span>Pick a date range</span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                                <Select
+                                    onValueChange={(value) => {
+                                        const now = new Date();
+                                        if (value === "custom") {
+                                            // For custom, we allow DayPicker to handle it, or set a default.
+                                            // Ensure dateRange is an object, even if dates are undefined initially
+                                            setDateRange(
+                                                (
+                                                    prevRange:
+                                                        | DateRange
+                                                        | undefined,
+                                                ) => ({
+                                                    from:
+                                                        prevRange?.from ??
+                                                        addDays(now, -7),
+                                                    to: prevRange?.to ?? now,
+                                                }),
+                                            );
+                                        } else {
+                                            setDateRange({
+                                                from: addDays(
+                                                    now,
+                                                    -Number.parseInt(value),
+                                                ),
+                                                to: now,
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger className="m-2 mb-0 w-[calc(100%-1rem)]">
+                                        <SelectValue placeholder="Select quick range" />
+                                    </SelectTrigger>
+                                    <SelectContent position="popper">
+                                        <SelectItem value="7">
+                                            Last 7 days
+                                        </SelectItem>
+                                        <SelectItem value="30">
+                                            Last 30 days
+                                        </SelectItem>
+                                        <SelectItem value="90">
+                                            Last 90 days
+                                        </SelectItem>
+                                        <SelectItem value="365">
+                                            Last 365 days
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateRange?.from}
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={1} // shadcn Calendar typically shows 1 month by default for range
+                                />
+                            </PopoverContent>
+                        </Popover>
+
+                        {/* <Popover>
+							<PopoverTrigger asChild>
+								<Button variant="outline" className="ml-auto">
+									<FilterIcon className="mr-2 h-4 w-4" />
+									Filters
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent className="w-80 p-4" align="end">
+								<div className="grid gap-4">
+									<div className="space-y-2">
+										<h4 className="font-medium leading-none">
+											Additional Filters
+										</h4>
+										<p className="text-sm text-muted-foreground">
+											Refine dashboard data.
+										</p>
+									</div>
+									<div className="grid gap-2">
+										<div className="grid grid-cols-3 items-center gap-4">
+											<Label htmlFor="venue-filter">Venue</Label>
+											<Select
+												value={venueFilter}
+												onValueChange={(value) => setVenueFilter(value)}
+											>
+												<SelectTrigger id="venue-filter" className="col-span-2 h-8 w-full">
+													<SelectValue placeholder="Select venue">
+														{venueFilter === "ALL_VENUES"
+															? "All Venues"
+															: venues.find((v) => v.publicId === venueFilter)?.name || "Select venue"}
+													</SelectValue>
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="ALL_VENUES">All Venues</SelectItem>
+													{venues.map((venue) => (
+														<SelectItem key={venue.publicId} value={venue.name}>
+															{venue.name}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+										<div className="grid grid-cols-3 items-center gap-4">
+											<Label htmlFor="event-type-filter">Event Type</Label>
+											<Select
+												value={eventTypeFilter}
+												onValueChange={(value) => setEventTypeFilter(value === "ALL_EVENT_TYPES" ? "" : value)}
+											>
+												<SelectTrigger id="event-type-filter" className="col-span-2 h-8 w-full">
+													<SelectValue placeholder="Select event type" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="ALL_EVENT_TYPES">All Event Types</SelectItem>
+													{eventTypes.map((type) => (
+														<SelectItem key={type} value={type}>
+															{type}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+										{/* <div className="grid grid-cols-3 items-center gap-4">
+											<Label htmlFor="equipment-filter">Equipment Type</Label>
+											<Input
+												id="equipment-filter"
+												placeholder="Enter equipment type"
+												className="col-span-2 h-8"
+												value={equipmentTypeFilter}
+												onChange={(e) => setEquipmentTypeFilter(e.target.value)}
+											/>
+										</div>
+									</div>
+								</div>
+							</PopoverContent>
+						</Popover>  */}
                     </div>
                 </header>
                 <main className="flex-1 overflow-auto p-6">
-                    <div className="grid gap-6">
-                        {/* Stats Overview */}
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Total Events
-                                    </CardTitle>
-                                    <Calendar className="h-4 w-4 text-muted-foreground">
-                                        <title>Total Events Icon</title>
-                                    </Calendar>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">
-                                        {stats.totalEvents}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        +{stats.growthRate}% from last {period}
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Upcoming Events
-                                    </CardTitle>
-                                    <CalendarDays className="h-4 w-4 text-muted-foreground">
-                                        <title>Upcoming Events Icon</title>
-                                    </CalendarDays>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">
-                                        {stats.upcomingEvents}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Next 30 days
-                                    </p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium">
-                                        Completion Rate
-                                    </CardTitle>
-                                    <TrendingUp className="h-4 w-4 text-muted-foreground">
-                                        <title>Completion Rate Icon</title>
-                                    </TrendingUp>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">
-                                        {stats.completionRate}%
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Events completed successfully
-                                    </p>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Events per Venue</CardTitle>
-                                    <CardDescription>
-                                        Number of events per month per venue
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <EventsPerVenueChart />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>
-                                        Equipment Reservations
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Number of equipment reservations per
-                                        month
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <EquipmentReservationsChart />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>
-                                        Peak Reservation Hours
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Most common times for venue and
-                                        equipment bookings
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <PeakReservationHoursChart />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Top Venues</CardTitle>
-                                    <CardDescription>
-                                        Most frequently used venues
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <TopVenuesChart />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Top Equipment</CardTitle>
-                                    <CardDescription>
-                                        Most reserved equipment
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <TopEquipmentChart />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>
-                                        Approval Time Analysis
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Average time for reservation approvals
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ApprovalTimeChart />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Cancellation Rate</CardTitle>
-                                    <CardDescription>
-                                        Cancellation rate per month
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <CancellationRateChart />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>
-                                        User Reservation Activity
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Most active organizers
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <UserActivityChart />
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Reservation Overlap</CardTitle>
-                                    <CardDescription>
-                                        Time slots with highest scheduling
-                                        conflicts
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ReservationOverlapChart />
-                                </CardContent>
-                            </Card>
-                        </div>
-                        {/* Charts */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Events Overview</CardTitle>
-                                <CardDescription>
-                                    Number of events over time
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="pl-2">
-                                <EventsOverviewChart />
-                            </CardContent>
-                        </Card>
-
-                        {/* Bottom Row */}
-                        <div className="grid gap-6 md:grid-cols-3">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Event Categories</CardTitle>
-                                    <CardDescription>
-                                        Distribution by category
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <EventCategoriesChart />
-                                </CardContent>
-                            </Card>
-                            {/* Recent Activity */}
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-6 col-span-1">
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Recent Activity</CardTitle>
@@ -304,19 +353,129 @@ function Dashboard() {
                                     <RecentActivity />
                                 </CardContent>
                             </Card>
-
+                        </div>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Upcoming Events</CardTitle>
+                                <CardDescription>
+                                    Scheduled events
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <UpcomingEvents />
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Event Type</CardTitle>
+                                <CardDescription>
+                                    Distribution by event type
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <EventTypesChart dateRange={dateRange} />
+                            </CardContent>
+                        </Card>
+                        <div className="grid gap-6 col-span-3">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Upcoming Events</CardTitle>
+                                    <CardTitle>Events Overview</CardTitle>
                                     <CardDescription>
-                                        Your next scheduled events
+                                        Number of events over time
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent>
-                                    <UpcomingEvents />
+                                <CardContent className="pl-2">
+                                    <EventsOverviewChart
+                                        dateRange={dateRange}
+                                    />
                                 </CardContent>
                             </Card>
                         </div>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Peak Reservation Hours</CardTitle>
+                                <CardDescription>
+                                    Most common times for venue and equipment
+                                    bookings
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <PeakReservationHoursChart
+                                    dateRange={dateRange}
+                                    venueFilter={
+                                        venueFilter === "ALL_VENUES"
+                                            ? undefined
+                                            : venueFilter
+                                    }
+                                    equipmentTypeFilter={equipmentTypeFilter}
+                                />
+                            </CardContent>
+                        </Card>
+
+                        <div className="grid gap-6 col-span-2">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Cancellation Rate</CardTitle>
+                                    <CardDescription>
+                                        Cancellation rate based on given date
+                                        range
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <CancellationRateChart
+                                        dateRange={dateRange}
+                                        venueFilter={
+                                            venueFilter === "ALL_VENUES"
+                                                ? undefined
+                                                : venueFilter
+                                        }
+                                        equipmentTypeFilter={
+                                            equipmentTypeFilter
+                                        }
+                                    />
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Events per Venue</CardTitle>
+                                <CardDescription>
+                                    Number of events per venue
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <EventsPerVenueChart
+                                    dateRange={dateRange}
+                                    // venueFilter={venueFilter === "ALL_VENUES" ? undefined : venueFilter}
+                                />
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Top Equipment</CardTitle>
+                                <CardDescription>
+                                    Most reserved equipment
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <TopEquipmentChart
+                                    dateRange={dateRange}
+                                    equipmentTypeFilter={equipmentTypeFilter}
+                                />
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>User Reservation Activity</CardTitle>
+                                <CardDescription>
+                                    Most active organizers
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <UserActivityChart dateRange={dateRange} />
+                            </CardContent>
+                        </Card>
                     </div>
                 </main>
             </div>

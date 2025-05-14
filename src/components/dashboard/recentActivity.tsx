@@ -1,89 +1,82 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { recentActivityQueryOptions } from "@/lib/query";
+import type { RecentActivityItemDTO } from "@/lib/types";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { formatDistanceToNow } from "date-fns";
+import { Building, CalendarCheck, CalendarClock } from "lucide-react"; // Example icons
 
-// Sample activity data
-const activities = [
-    {
-        id: 1,
-        user: {
-            name: "Alex Johnson",
-            avatar: "/placeholder.svg?height=32&width=32",
-        },
-        action: "created a new event",
-        target: "Annual Tech Conference",
-        time: "2 hours ago",
-    },
-    {
-        id: 2,
-        user: {
-            name: "Maria Garcia",
-            avatar: "/placeholder.svg?height=32&width=32",
-        },
-        action: "updated the details for",
-        target: "Product Launch: Version 2.0",
-        time: "5 hours ago",
-    },
-    {
-        id: 3,
-        user: {
-            name: "Sam Lee",
-            avatar: "/placeholder.svg?height=32&width=32",
-        },
-        action: "added 3 team members to",
-        target: "Marketing Strategy Workshop",
-        time: "Yesterday",
-    },
-    {
-        id: 4,
-        user: {
-            name: "Taylor Swift",
-            avatar: "/placeholder.svg?height=32&width=32",
-        },
-        action: "completed",
-        target: "Quarterly Team Building",
-        time: "2 days ago",
-    },
-    {
-        id: 5,
-        user: {
-            name: "Jane Doe",
-            avatar: "/placeholder.svg?height=32&width=32",
-        },
-        action: "created a new workspace",
-        target: "Customer Success",
-        time: "3 days ago",
-    },
-];
+function getActivityIcon(type: string) {
+    if (type.toLowerCase().includes("event")) {
+        return <CalendarClock className="h-5 w-5 text-muted-foreground" />;
+    }
+    if (type.toLowerCase().includes("reservation")) {
+        return <CalendarCheck className="h-5 w-5 text-muted-foreground" />;
+    }
+    return <Building className="h-5 w-5 text-muted-foreground" />; // Default icon
+}
 
 export function RecentActivity() {
+    const {
+        data: activities,
+        isLoading,
+        error,
+    } = useSuspenseQuery(recentActivityQueryOptions(10));
+
+    if (isLoading) return <p>Loading recent activity...</p>;
+    if (error) return <p>Error loading activity: {error.message}</p>;
+    if (!activities || activities.length === 0)
+        return <p>No recent activity.</p>;
+
     return (
-        <div className="space-y-4">
-            {activities.map((activity) => (
-                <div
-                    key={activity.id}
-                    className="flex items-start gap-4 border-b pb-4 last:border-0 last:pb-0"
-                >
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={activity.user.avatar} />
-                        <AvatarFallback>
-                            {activity.user.name.charAt(0)}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-1">
-                        <p className="text-sm">
-                            <span className="font-medium">
-                                {activity.user.name}
-                            </span>{" "}
-                            {activity.action}{" "}
-                            <span className="font-medium">
-                                {activity.target}
-                            </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {activity.time}
-                        </p>
+        <ScrollArea className="h-[300px]">
+            <div className="space-y-4 p-1">
+                {activities.map((activity: RecentActivityItemDTO) => (
+                    <div key={activity.id} className="flex items-start gap-3">
+                        <Avatar className="h-9 w-9 border">
+                            {/* Placeholder for user/system avatar based on actorName if available */}
+                            {/* <AvatarImage src={activity.actorAvatarUrl} alt={activity.actorName} /> */}
+                            <AvatarFallback>
+                                {activity.actorName
+                                    ? activity.actorName
+                                          .substring(0, 2)
+                                          .toUpperCase()
+                                    : "SY"}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 space-y-1">
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium leading-none">
+                                    {activity.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {formatDistanceToNow(
+                                        new Date(activity.timestamp),
+                                        { addSuffix: true },
+                                    )}
+                                </p>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                                {activity.description} - by{" "}
+                                <span className="font-medium">
+                                    {activity.actorName || "System"}
+                                </span>
+                            </p>
+                            <Link
+                                to={"/app/events/$eventId"}
+                                params={{ eventId: activity.id }}
+                                className="text-xs text-primary hover:underline"
+                            >
+                                View Details
+                            </Link>
+                        </div>
+                        <div className="self-center">
+                            {getActivityIcon(activity.type)}
+                        </div>
                     </div>
-                </div>
-            ))}
-        </div>
+                ))}
+            </div>
+        </ScrollArea>
     );
 }

@@ -68,7 +68,12 @@ interface EventModalProps {
     venues: VenueDTO[];
 }
 
-const eventTypes = ["External", "Program-based", "Admin", "SSG/Advocay-based"];
+export const eventTypes = [
+    "External",
+    "Program-based",
+    "Admin",
+    "SSG/Advocay-based",
+];
 
 export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
     const { data: currentUser } = useCurrentUser();
