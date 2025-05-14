@@ -81,13 +81,10 @@ export function PeakReservationHoursChart({
     if (!peakHoursData || peakHoursData.length === 0) {
         return (
             <div className="h-[300px] w-full flex flex-col items-center justify-center p-4 text-muted-foreground">
-                {/* Removed CardHeader, CardTitle, CardDescription */}
-                <p className="text-lg font-semibold">No Data Available</p>
                 <p className="text-sm">
                     No peak reservation hour data available for the selected
                     period.
                 </p>
-                {/* Removed CardFooter */}
             </div>
         );
     }
