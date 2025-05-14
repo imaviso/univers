@@ -47,15 +47,15 @@ export function EventsOverviewChart({ dateRange }: EventsOverviewChartProps) {
 
     if (isLoading) {
         return (
-            <div className="h-[350px] w-full flex items-center justify-center">
-                <Skeleton className="h-[330px] w-[95%]" />
+            <div className="h-[200px] w-full flex items-center justify-center">
+                <Skeleton className="h-[230px] w-[95%]" />
             </div>
         );
     }
 
     if (isError) {
         return (
-            <div className="h-[350px] w-full flex flex-col items-center justify-center text-red-500">
+            <div className="h-[200px] w-full flex flex-col items-center justify-center text-red-500">
                 <p>Error loading events overview data.</p>
                 <p className="text-sm">{error?.message}</p>
             </div>
@@ -64,7 +64,7 @@ export function EventsOverviewChart({ dateRange }: EventsOverviewChartProps) {
 
     if (!eventsOverviewData || eventsOverviewData.length === 0) {
         return (
-            <div className="h-[350px] w-full flex items-center justify-center text-muted-foreground">
+            <div className="h-[200px] w-full flex items-center justify-center text-muted-foreground">
                 <p>No event overview data available for the selected period.</p>
             </div>
         );

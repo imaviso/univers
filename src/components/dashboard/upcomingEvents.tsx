@@ -6,6 +6,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { CalendarDays } from "lucide-react";
+import { Skeleton } from "../ui/skeleton";
 
 export function UpcomingEvents() {
     // Fetch 5 upcoming approved events by default
@@ -15,10 +16,49 @@ export function UpcomingEvents() {
         error,
     } = useSuspenseQuery(upcomingApprovedEventsQueryOptions(5));
 
-    if (isLoading) return <p>Loading upcoming events...</p>;
-    if (error) return <p>Error loading events: {error.message}</p>;
+    if (isLoading) {
+        return (
+            <ScrollArea className="h-[300px]">
+                <div className="space-y-4 p-1">
+                    {[...Array(3)].map((_, index) => (
+                        <div
+                            key={`skeleton-event-${
+                                // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                                index
+                            }`}
+                            className="block p-3 rounded-lg border"
+                        >
+                            <div className="flex items-center justify-between mb-2">
+                                <Skeleton className="h-5 w-3/5" />
+                                <Skeleton className="h-5 w-1/4" />
+                            </div>
+                            <Skeleton className="h-4 w-4/5 mb-2" />
+                            <div className="flex items-center">
+                                <Skeleton className="h-3 w-3 mr-1.5" />
+                                <Skeleton className="h-3 w-2/5" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </ScrollArea>
+        );
+    }
+    if (error)
+        return (
+            <div className="flex flex-col h-[300px] p-6 items-center justify-center">
+                <p className="text-red-500">
+                    Error loading events: {error.message}
+                </p>
+            </div>
+        );
     if (!events || events.length === 0)
-        return <p>No upcoming approved events.</p>;
+        return (
+            <div className="flex flex-col h-[300px] p-6 items-center justify-center">
+                <p className="text-muted-foreground">
+                    No upcoming approved events.
+                </p>
+            </div>
+        );
 
     return (
         <ScrollArea className="h-[300px]">
