@@ -19,12 +19,29 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"; // Added Popover
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"; // ADDED Select components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 import { useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import useCurrentUser
 import { cn } from "@/lib/utils"; // Added cn
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { endOfDay, format, formatISO, startOfDay } from "date-fns"; // Added date-fns functions
+import {
+    addDays,
+    endOfDay,
+    endOfMonth,
+    endOfWeek,
+    format,
+    formatISO,
+    startOfDay,
+    startOfMonth,
+    startOfWeek,
+} from "date-fns"; // Added date-fns functions, ADDED addDays
 import { CalendarIcon, ListFilter } from "lucide-react"; // Added ListFilter icon, Added CalendarIcon
 import { useEffect, useState } from "react";
 import type { DateRange } from "react-day-picker"; // Added DateRange
@@ -33,7 +50,7 @@ import type { DateRange } from "react-day-picker"; // Added DateRange
 function usePersistentState<T>(
     key: string,
     initialValue: T,
-): [T, (value: T) => void] {
+): [T, React.Dispatch<React.SetStateAction<T>>] {
     const [state, setState] = useState<T>(() => {
         try {
             const storedValue = localStorage.getItem(key);
@@ -97,20 +114,20 @@ function Events() {
         "eventSortBy",
         "recency",
     ); // Added state for sort order, default to recency
-    const [dateRangeFilter, setDateRangeFilter] = usePersistentState<string>(
-        "eventDateRangeFilter",
-        "allTime",
-    ); // Added state for date range filter, default to All Time
+    const [listSelectedDateRange, setListSelectedDateRange] =
+        usePersistentState<DateRange | undefined>(
+            "eventListDateRange_v1",
+            undefined,
+        );
+    const [timelineSelectedDateRange, setTimelineSelectedDateRange] =
+        usePersistentState<DateRange | undefined>(
+            "eventTimelineParentDateRange_v1",
+            undefined,
+        );
     const [displayView, setDisplayView] = usePersistentState<"list" | "card">(
         "eventDisplayView",
         "card",
     ); // State for display view
-    const [selectedDateRange, setSelectedDateRange] = usePersistentState<
-        DateRange | undefined
-    >(
-        "eventTimelineParentDateRange_v1", // New key for date range in parent
-        undefined,
-    );
 
     const isAuthorized =
         currentUser?.role === "SUPER_ADMIN" ||
@@ -254,45 +271,160 @@ function Events() {
                                 </DropdownMenu>
                             )}
 
-                            {/* Date Range Filter Dropdown - always shown if view is list */}
+                            {/* Date Range Popover for LIST VIEW (replaces old DropdownMenu) */}
                             {view === "list" && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline">
-                                            Date:{" "}
-                                            {dateRangeFilter === "allTime"
-                                                ? "All Time"
-                                                : dateRangeFilter === "pastDay"
-                                                  ? "Past Day"
-                                                  : dateRangeFilter ===
-                                                      "pastWeek"
-                                                    ? "Past Week"
-                                                    : dateRangeFilter ===
-                                                        "pastMonth"
-                                                      ? "Past Month"
-                                                      : "All Time"}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuRadioGroup
-                                            value={dateRangeFilter}
-                                            onValueChange={setDateRangeFilter}
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "w-fit justify-start text-left font-normal",
+                                                !listSelectedDateRange &&
+                                                    "text-muted-foreground",
+                                            )}
                                         >
-                                            <DropdownMenuRadioItem value="allTime">
-                                                All Time
-                                            </DropdownMenuRadioItem>
-                                            <DropdownMenuRadioItem value="pastDay">
-                                                Past Day
-                                            </DropdownMenuRadioItem>
-                                            <DropdownMenuRadioItem value="pastWeek">
-                                                Past Week
-                                            </DropdownMenuRadioItem>
-                                            <DropdownMenuRadioItem value="pastMonth">
-                                                Past Month
-                                            </DropdownMenuRadioItem>
-                                        </DropdownMenuRadioGroup>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {listSelectedDateRange?.from ? (
+                                                listSelectedDateRange.to ? (
+                                                    <>
+                                                        {format(
+                                                            listSelectedDateRange.from,
+                                                            "LLL dd, y",
+                                                        )}{" "}
+                                                        -{" "}
+                                                        {format(
+                                                            listSelectedDateRange.to,
+                                                            "LLL dd, y",
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    format(
+                                                        listSelectedDateRange.from,
+                                                        "LLL dd, y",
+                                                    )
+                                                )
+                                            ) : (
+                                                <span>Pick a date range</span>
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        className="w-auto p-0"
+                                        align="end"
+                                    >
+                                        <Select
+                                            onValueChange={(value) => {
+                                                const now = new Date();
+                                                if (value === "custom") {
+                                                    setListSelectedDateRange(
+                                                        (
+                                                            prevRange:
+                                                                | DateRange
+                                                                | undefined,
+                                                        ) => ({
+                                                            from:
+                                                                prevRange?.from ??
+                                                                startOfDay(
+                                                                    addDays(
+                                                                        now,
+                                                                        -7,
+                                                                    ),
+                                                                ),
+                                                            to:
+                                                                prevRange?.to ??
+                                                                endOfDay(now),
+                                                        }),
+                                                    );
+                                                } else if (value === "all") {
+                                                    setListSelectedDateRange(
+                                                        undefined,
+                                                    );
+                                                } else if (value === "today") {
+                                                    setListSelectedDateRange({
+                                                        from: startOfDay(now),
+                                                        to: endOfDay(now),
+                                                    });
+                                                } else if (
+                                                    value === "thisWeek"
+                                                ) {
+                                                    setListSelectedDateRange({
+                                                        from: startOfWeek(now, {
+                                                            weekStartsOn: 1,
+                                                        }),
+                                                        to: endOfWeek(now, {
+                                                            weekStartsOn: 1,
+                                                        }),
+                                                    });
+                                                } else if (
+                                                    value === "thisMonth"
+                                                ) {
+                                                    setListSelectedDateRange({
+                                                        from: startOfMonth(now),
+                                                        to: endOfMonth(now),
+                                                    });
+                                                } else {
+                                                    const numDays =
+                                                        Number.parseInt(value);
+                                                    if (
+                                                        !Number.isNaN(numDays)
+                                                    ) {
+                                                        setListSelectedDateRange(
+                                                            {
+                                                                from: startOfDay(
+                                                                    addDays(
+                                                                        now,
+                                                                        -numDays,
+                                                                    ),
+                                                                ),
+                                                                to: endOfDay(
+                                                                    now,
+                                                                ),
+                                                            },
+                                                        );
+                                                    } else {
+                                                        setListSelectedDateRange(
+                                                            undefined,
+                                                        );
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="m-2 mb-0 w-[calc(100%-1rem)]">
+                                                <SelectValue placeholder="Select quick range" />
+                                            </SelectTrigger>
+                                            <SelectContent position="popper">
+                                                <SelectItem value="all">
+                                                    All Time
+                                                </SelectItem>
+                                                <SelectItem value="today">
+                                                    Today
+                                                </SelectItem>
+                                                <SelectItem value="thisWeek">
+                                                    This Week
+                                                </SelectItem>
+                                                <SelectItem value="thisMonth">
+                                                    This Month
+                                                </SelectItem>
+                                                <SelectItem value="7">
+                                                    Last 7 days
+                                                </SelectItem>
+                                                <SelectItem value="30">
+                                                    Last 30 days
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <Calendar
+                                            initialFocus
+                                            mode="range"
+                                            defaultMonth={
+                                                listSelectedDateRange?.from
+                                            }
+                                            selected={listSelectedDateRange}
+                                            onSelect={setListSelectedDateRange}
+                                            numberOfMonths={1}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             )}
 
                             {/* TabsList only shown for these authorized roles in list view */}
@@ -315,7 +447,24 @@ function Events() {
                                 activeTab="all"
                                 eventStatusFilter={eventStatusFilter}
                                 sortBy={sortBy}
-                                dateRangeFilter={dateRangeFilter}
+                                startDateISO={
+                                    listSelectedDateRange?.from
+                                        ? formatISO(
+                                              startOfDay(
+                                                  listSelectedDateRange.from,
+                                              ),
+                                          )
+                                        : undefined
+                                }
+                                endDateISO={
+                                    listSelectedDateRange?.to
+                                        ? formatISO(
+                                              endOfDay(
+                                                  listSelectedDateRange.to,
+                                              ),
+                                          )
+                                        : undefined
+                                }
                                 displayView={displayView}
                             />
                         </TabsContent>
@@ -324,7 +473,24 @@ function Events() {
                                 activeTab="mine"
                                 eventStatusFilter={eventStatusFilter}
                                 sortBy={sortBy}
-                                dateRangeFilter={dateRangeFilter}
+                                startDateISO={
+                                    listSelectedDateRange?.from
+                                        ? formatISO(
+                                              startOfDay(
+                                                  listSelectedDateRange.from,
+                                              ),
+                                          )
+                                        : undefined
+                                }
+                                endDateISO={
+                                    listSelectedDateRange?.to
+                                        ? formatISO(
+                                              endOfDay(
+                                                  listSelectedDateRange.to,
+                                              ),
+                                          )
+                                        : undefined
+                                }
                                 displayView={displayView}
                             />
                         </TabsContent>
@@ -372,27 +538,27 @@ function Events() {
                                             size="sm"
                                             className={cn(
                                                 "w-fit justify-start text-left font-normal",
-                                                !selectedDateRange &&
+                                                !timelineSelectedDateRange &&
                                                     "text-muted-foreground",
                                             )}
                                         >
                                             <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {selectedDateRange?.from ? (
-                                                selectedDateRange.to ? (
+                                            {timelineSelectedDateRange?.from ? (
+                                                timelineSelectedDateRange.to ? (
                                                     <>
                                                         {format(
-                                                            selectedDateRange.from,
+                                                            timelineSelectedDateRange.from,
                                                             "LLL dd, y",
                                                         )}{" "}
                                                         -{" "}
                                                         {format(
-                                                            selectedDateRange.to,
+                                                            timelineSelectedDateRange.to,
                                                             "LLL dd, y",
                                                         )}
                                                     </>
                                                 ) : (
                                                     format(
-                                                        selectedDateRange.from,
+                                                        timelineSelectedDateRange.from,
                                                         "LLL dd, y",
                                                     )
                                                 )
@@ -405,30 +571,133 @@ function Events() {
                                         className="w-auto p-0"
                                         align="end"
                                     >
+                                        <Select
+                                            onValueChange={(value) => {
+                                                const now = new Date();
+                                                if (value === "custom") {
+                                                    setTimelineSelectedDateRange(
+                                                        (
+                                                            prevRange:
+                                                                | DateRange
+                                                                | undefined,
+                                                        ) => ({
+                                                            from:
+                                                                prevRange?.from ??
+                                                                startOfDay(
+                                                                    addDays(
+                                                                        now,
+                                                                        -7,
+                                                                    ),
+                                                                ),
+                                                            to:
+                                                                prevRange?.to ??
+                                                                endOfDay(now),
+                                                        }),
+                                                    );
+                                                } else if (value === "all") {
+                                                    setTimelineSelectedDateRange(
+                                                        undefined,
+                                                    );
+                                                } else if (value === "today") {
+                                                    setTimelineSelectedDateRange(
+                                                        {
+                                                            from: startOfDay(
+                                                                now,
+                                                            ),
+                                                            to: endOfDay(now),
+                                                        },
+                                                    );
+                                                } else if (
+                                                    value === "thisWeek"
+                                                ) {
+                                                    setTimelineSelectedDateRange(
+                                                        {
+                                                            from: startOfWeek(
+                                                                now,
+                                                                {
+                                                                    weekStartsOn: 1,
+                                                                },
+                                                            ),
+                                                            to: endOfWeek(now, {
+                                                                weekStartsOn: 1,
+                                                            }),
+                                                        },
+                                                    );
+                                                } else if (
+                                                    value === "thisMonth"
+                                                ) {
+                                                    setTimelineSelectedDateRange(
+                                                        {
+                                                            from: startOfMonth(
+                                                                now,
+                                                            ),
+                                                            to: endOfMonth(now),
+                                                        },
+                                                    );
+                                                } else {
+                                                    const numDays =
+                                                        Number.parseInt(value);
+                                                    if (
+                                                        !Number.isNaN(numDays)
+                                                    ) {
+                                                        setTimelineSelectedDateRange(
+                                                            {
+                                                                from: startOfDay(
+                                                                    addDays(
+                                                                        now,
+                                                                        -numDays,
+                                                                    ),
+                                                                ),
+                                                                to: endOfDay(
+                                                                    now,
+                                                                ),
+                                                            },
+                                                        );
+                                                    } else {
+                                                        setTimelineSelectedDateRange(
+                                                            undefined,
+                                                        );
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="m-2 mb-0 w-[calc(100%-1rem)]">
+                                                <SelectValue placeholder="Select quick range" />
+                                            </SelectTrigger>
+                                            <SelectContent position="popper">
+                                                <SelectItem value="all">
+                                                    All Time
+                                                </SelectItem>
+                                                <SelectItem value="today">
+                                                    Today
+                                                </SelectItem>
+                                                <SelectItem value="thisWeek">
+                                                    This Week
+                                                </SelectItem>
+                                                <SelectItem value="thisMonth">
+                                                    This Month
+                                                </SelectItem>
+                                                {/* Retaining Last X Days for flexibility, can be removed if not desired */}
+                                                <SelectItem value="7">
+                                                    Last 7 days
+                                                </SelectItem>
+                                                <SelectItem value="30">
+                                                    Last 30 days
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <Calendar
                                             initialFocus
                                             mode="range"
                                             defaultMonth={
-                                                selectedDateRange?.from
+                                                timelineSelectedDateRange?.from
                                             }
-                                            selected={selectedDateRange}
-                                            onSelect={setSelectedDateRange}
+                                            selected={timelineSelectedDateRange}
+                                            onSelect={
+                                                setTimelineSelectedDateRange
+                                            }
                                             numberOfMonths={1}
                                         />
-                                        <div className="p-2 border-t flex justify-end">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    setSelectedDateRange(
-                                                        undefined,
-                                                    )
-                                                }
-                                                disabled={!selectedDateRange}
-                                            >
-                                                Clear
-                                            </Button>
-                                        </div>
                                     </PopoverContent>
                                 </Popover>
                             )}
@@ -537,24 +806,43 @@ function Events() {
                                 activeTab="mine"
                                 eventStatusFilter={eventStatusFilter}
                                 sortBy={sortBy}
-                                dateRangeFilter={dateRangeFilter}
-                                displayView={displayView}
-                            />
-                        ) : (
-                            <EventTimeline
                                 startDateISO={
-                                    selectedDateRange?.from
+                                    listSelectedDateRange?.from
                                         ? formatISO(
                                               startOfDay(
-                                                  selectedDateRange.from,
+                                                  listSelectedDateRange.from,
                                               ),
                                           )
                                         : undefined
                                 }
                                 endDateISO={
-                                    selectedDateRange?.to
+                                    listSelectedDateRange?.to
                                         ? formatISO(
-                                              endOfDay(selectedDateRange.to),
+                                              endOfDay(
+                                                  listSelectedDateRange.to,
+                                              ),
+                                          )
+                                        : undefined
+                                }
+                                displayView={displayView}
+                            />
+                        ) : (
+                            <EventTimeline
+                                startDateISO={
+                                    timelineSelectedDateRange?.from
+                                        ? formatISO(
+                                              startOfDay(
+                                                  timelineSelectedDateRange.from,
+                                              ),
+                                          )
+                                        : undefined
+                                }
+                                endDateISO={
+                                    timelineSelectedDateRange?.to
+                                        ? formatISO(
+                                              endOfDay(
+                                                  timelineSelectedDateRange.to,
+                                              ),
                                           )
                                         : undefined
                                 }

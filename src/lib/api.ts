@@ -7,6 +7,7 @@ import type {
     VenueInput,
 } from "./schema";
 import type {
+    CancellationRateDTO,
     CreateEquipmentReservationInput,
     DepartmentDTO,
     Equipment,
@@ -15,8 +16,15 @@ import type {
     EquipmentReservationDTO,
     Event,
     EventApprovalDTO,
+    EventCountDTO,
     EventDTO,
     EventDTOPayload,
+    EventTypeSummaryDTO,
+    PeakHourDTO,
+    RecentActivityItemDTO,
+    TopEquipmentDTO,
+    TopVenueDTO,
+    UserActivityDTO,
     UserDTO,
     UserRole,
     VenueDTO,
@@ -1560,7 +1568,8 @@ export const searchEvents = async (
     scope: string,
     status?: string,
     sortBy?: string,
-    dateRange?: string,
+    startDate?: string,
+    endDate?: string,
 ): Promise<EventDTO[]> => {
     try {
         const url = new URL(`${API_BASE_URL}/events/search`);
@@ -1571,8 +1580,11 @@ export const searchEvents = async (
         if (sortBy) {
             url.searchParams.append("sortBy", sortBy);
         }
-        if (dateRange) {
-            url.searchParams.append("dateRange", dateRange);
+        if (startDate) {
+            url.searchParams.append("startDate", startDate);
+        }
+        if (endDate) {
+            url.searchParams.append("endDate", endDate);
         }
 
         const response = await fetch(url.toString(), {
@@ -1609,4 +1621,187 @@ export const getTimelineEventsByDateRange = async (
     );
     const data = await handleApiResponse<Event[]>(response, true);
     return data || [];
+};
+
+const DASHBOARD_BASE_URL = `${API_BASE_URL}/dashboard`;
+
+export const getTopVenues = async (
+    startDate: string,
+    endDate: string,
+    limit = 5,
+): Promise<TopVenueDTO[]> => {
+    const params = new URLSearchParams({
+        startDate,
+        endDate,
+        limit: limit.toString(),
+    });
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/top-venues?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<TopVenueDTO[]>(response, true);
+};
+
+export const getTopEquipment = async (
+    startDate: string,
+    endDate: string,
+    equipmentTypeFilter?: string,
+    limit = 5,
+): Promise<TopEquipmentDTO[]> => {
+    const params = new URLSearchParams({
+        startDate,
+        endDate,
+        limit: limit.toString(),
+    });
+    if (equipmentTypeFilter) {
+        params.append("equipmentTypeFilter", equipmentTypeFilter);
+    }
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/top-equipment?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<TopEquipmentDTO[]>(response, true);
+};
+
+export const getEventsOverview = async (
+    startDate: string,
+    endDate: string,
+): Promise<EventCountDTO[]> => {
+    const params = new URLSearchParams({ startDate, endDate });
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/events-overview?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<EventCountDTO[]>(response, true);
+};
+
+export const getCancellationRates = async (
+    startDate: string,
+    endDate: string,
+): Promise<CancellationRateDTO[]> => {
+    const params = new URLSearchParams({ startDate, endDate });
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/cancellation-rate?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<CancellationRateDTO[]>(response, true);
+};
+
+export const getPeakReservationHours = async (
+    startDate: string,
+    endDate: string,
+): Promise<PeakHourDTO[]> => {
+    const params = new URLSearchParams({ startDate, endDate });
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/peak-hours?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<PeakHourDTO[]>(response, true);
+};
+
+export const getUserActivity = async (
+    startDate: string,
+    endDate: string,
+    limit = 10,
+): Promise<UserActivityDTO[]> => {
+    const params = new URLSearchParams({
+        startDate,
+        endDate,
+        limit: limit.toString(),
+    });
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/user-activity?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<UserActivityDTO[]>(response, true);
+};
+
+export const getRecentActivityApi = async (
+    limit = 10,
+): Promise<RecentActivityItemDTO[]> => {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/recent-activity?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<RecentActivityItemDTO[]>(response, true);
+};
+
+export const getUpcomingApprovedEventsApi = async (
+    limit = 5,
+): Promise<EventDTO[]> => {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/upcoming-approved-events?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<EventDTO[]>(response, true);
+};
+
+export const getUpcomingApprovedEventsCountNextDaysApi = async (
+    days = 30,
+): Promise<number> => {
+    const params = new URLSearchParams({ days: days.toString() });
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/upcoming-approved-events-count-next-days?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<number>(response, true);
+};
+
+export const getEventTypesSummary = async (
+    startDate: string,
+    endDate: string,
+    limit = 10, // Default limit, can be adjusted or made optional
+): Promise<EventTypeSummaryDTO[]> => {
+    const params = new URLSearchParams({
+        startDate,
+        endDate,
+        limit: limit.toString(),
+    });
+    const response = await fetch(
+        `${DASHBOARD_BASE_URL}/event-types-summary?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        },
+    );
+    return handleApiResponse<EventTypeSummaryDTO[]>(response, true);
 };

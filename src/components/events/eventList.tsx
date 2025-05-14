@@ -15,13 +15,15 @@ export function EventList({
     activeTab,
     eventStatusFilter,
     sortBy,
-    dateRangeFilter,
+    startDateISO,
+    endDateISO,
     displayView, // Add displayView prop
 }: {
     activeTab: "all" | "mine";
     eventStatusFilter: string;
     sortBy?: string;
-    dateRangeFilter?: string;
+    startDateISO?: string;
+    endDateISO?: string;
     displayView: "list" | "card"; // Define prop type
 }) {
     const navigate = useNavigate();
@@ -65,7 +67,8 @@ export function EventList({
             scope,
             eventStatusFilter,
             sortBy,
-            dateRangeFilter,
+            startDateISO,
+            endDateISO,
         ),
     );
 

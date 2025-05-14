@@ -15,17 +15,28 @@ import {
     getAllVenues,
     getApprovalsForEquipmentReservation,
     getApprovedEvents,
+    getCancellationRates,
     getEquipmentReservationById,
     getEquipmentReservationsByEventId,
     getEventById,
+    getEventTypesSummary,
+    getEventsOverview,
     getNotifications,
     getOwnEquipmentReservations,
     getOwnEvents,
+    getPeakReservationHours,
     getPendingDeptHeadEvents,
     getPendingEquipmentOwnerReservations,
     getPendingVenueOwnerEvents,
+    getRecentActivityApi,
     getTimelineEventsByDateRange,
+    getTopEquipment,
+    // Dashboard API imports
+    getTopVenues,
     getUnreadNotificationCount,
+    getUpcomingApprovedEventsApi,
+    getUpcomingApprovedEventsCountNextDaysApi,
+    getUserActivity,
     markAllNotificationsRead,
     markNotificationsRead,
     rejectEquipmentReservation,
@@ -41,10 +52,19 @@ import {
 import { type AnyRoute, useRouteContext } from "@tanstack/react-router"; // Added AnyRoute import
 import type {
     Event as AppEvent, // Alias Event to AppEvent
+    CancellationRateDTO,
     EquipmentApprovalDTO,
     EquipmentReservationDTO,
     EventApprovalDTO,
+    EventCountDTO,
     EventDTO,
+    EventTypeSummaryDTO,
+    PeakHourDTO,
+    RecentActivityItemDTO,
+    TopEquipmentDTO,
+    // Dashboard DTO imports
+    TopVenueDTO,
+    UserActivityDTO,
     UserDTO,
     UserRole,
 } from "./types"; // Import UserRole and Event (aliased)
@@ -566,7 +586,8 @@ export const searchEventsQueryOptions = (
     scope: string,
     status?: string,
     sortBy?: string,
-    dateRange?: string,
+    startDate?: string,
+    endDate?: string,
 ) =>
     queryOptions<EventDTO[]>({
         queryKey: [
@@ -575,10 +596,11 @@ export const searchEventsQueryOptions = (
                 scope,
                 status: status ?? "ALL",
                 sortBy: sortBy ?? "default",
-                dateRange: dateRange ?? "allTime",
+                startDate: startDate ?? "allTime",
+                endDate: endDate ?? "allTime",
             },
         ],
-        queryFn: () => searchEvents(scope, status, sortBy, dateRange),
+        queryFn: () => searchEvents(scope, status, sortBy, startDate, endDate),
         staleTime: 1000 * 60 * 2,
     });
 
@@ -590,4 +612,214 @@ export const timelineEventsByDateRangeQueryOptions = (
         queryKey: ["events", "timelineByDate", { startDate, endDate }],
         queryFn: () => getTimelineEventsByDateRange(startDate, endDate),
         staleTime: 1000 * 60 * 2, // 2 minutes stale time
+    });
+
+// Dashboard Query Keys and Options
+
+export const dashboardQueryKeys = {
+    all: ["dashboardData"] as const,
+    topVenues: (startDate?: string, endDate?: string, limit?: number) =>
+        [
+            ...dashboardQueryKeys.all,
+            "topVenues",
+            { startDate, endDate, limit },
+        ] as const,
+    topEquipment: (
+        startDate?: string,
+        endDate?: string,
+        equipmentTypeFilter?: string,
+        limit?: number,
+    ) =>
+        [
+            ...dashboardQueryKeys.all,
+            "topEquipment",
+            { startDate, endDate, equipmentTypeFilter, limit },
+        ] as const,
+    eventsOverview: (startDate?: string, endDate?: string) =>
+        [
+            ...dashboardQueryKeys.all,
+            "eventsOverview",
+            { startDate, endDate },
+        ] as const,
+    cancellationRates: (startDate?: string, endDate?: string) =>
+        [
+            ...dashboardQueryKeys.all,
+            "cancellationRates",
+            { startDate, endDate },
+        ] as const,
+    peakReservationHours: (startDate?: string, endDate?: string) =>
+        [
+            ...dashboardQueryKeys.all,
+            "peakReservationHours",
+            { startDate, endDate },
+        ] as const,
+    userActivity: (startDate?: string, endDate?: string, limit?: number) =>
+        [
+            ...dashboardQueryKeys.all,
+            "userActivity",
+            { startDate, endDate, limit },
+        ] as const,
+    recentActivity: (limit = 10) => [
+        ...dashboardQueryKeys.all,
+        "recentActivity",
+        { limit },
+    ],
+    upcomingApprovedEvents: (limit = 5) => [
+        ...dashboardQueryKeys.all,
+        "upcomingApprovedEvents",
+        { limit },
+    ],
+    upcomingApprovedEventsCountNextDays: (days = 30) => [
+        ...dashboardQueryKeys.all,
+        "upcomingApprovedEventsCountNextDays",
+        { days },
+    ],
+    eventTypesSummary: (startDate?: string, endDate?: string, limit?: number) =>
+        [
+            ...dashboardQueryKeys.all,
+            "eventTypesSummary",
+            { startDate, endDate, limit },
+        ] as const,
+};
+
+export const topVenuesQueryOptions = (
+    startDate?: string,
+    endDate?: string,
+    limit = 5,
+) =>
+    queryOptions<TopVenueDTO[]>({
+        queryKey: dashboardQueryKeys.topVenues(startDate, endDate, limit),
+        queryFn: () => {
+            if (!startDate || !endDate) return Promise.resolve([]);
+            return getTopVenues(startDate, endDate, limit);
+        },
+        enabled: !!startDate && !!endDate,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const topEquipmentQueryOptions = (
+    startDate?: string,
+    endDate?: string,
+    equipmentTypeFilter?: string,
+    limit = 5,
+) =>
+    queryOptions<TopEquipmentDTO[]>({
+        queryKey: dashboardQueryKeys.topEquipment(
+            startDate,
+            endDate,
+            equipmentTypeFilter,
+            limit,
+        ),
+        queryFn: () => {
+            if (!startDate || !endDate) return Promise.resolve([]);
+            return getTopEquipment(
+                startDate,
+                endDate,
+                equipmentTypeFilter,
+                limit,
+            );
+        },
+        enabled: !!startDate && !!endDate,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const eventsOverviewQueryOptions = (
+    startDate?: string,
+    endDate?: string,
+) =>
+    queryOptions<EventCountDTO[]>({
+        queryKey: dashboardQueryKeys.eventsOverview(startDate, endDate),
+        queryFn: () => {
+            if (!startDate || !endDate) return Promise.resolve([]);
+            return getEventsOverview(startDate, endDate);
+        },
+        enabled: !!startDate && !!endDate,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const cancellationRatesQueryOptions = (
+    startDate?: string,
+    endDate?: string,
+) =>
+    queryOptions<CancellationRateDTO[]>({
+        queryKey: dashboardQueryKeys.cancellationRates(startDate, endDate),
+        queryFn: () => {
+            if (!startDate || !endDate) return Promise.resolve([]);
+            return getCancellationRates(startDate, endDate);
+        },
+        enabled: !!startDate && !!endDate,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const peakReservationHoursQueryOptions = (
+    startDate?: string,
+    endDate?: string,
+) =>
+    queryOptions<PeakHourDTO[]>({
+        queryKey: dashboardQueryKeys.peakReservationHours(startDate, endDate),
+        queryFn: () => {
+            if (!startDate || !endDate) return Promise.resolve([]);
+            return getPeakReservationHours(startDate, endDate);
+        },
+        enabled: !!startDate && !!endDate,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const userActivityQueryOptions = (
+    startDate?: string,
+    endDate?: string,
+    limit = 5,
+) =>
+    queryOptions<UserActivityDTO[]>({
+        queryKey: dashboardQueryKeys.userActivity(startDate, endDate, limit),
+        queryFn: () => {
+            if (!startDate || !endDate) return Promise.resolve([]);
+            return getUserActivity(startDate, endDate, limit);
+        },
+        enabled: !!startDate && !!endDate,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const recentActivityQueryOptions = (limit = 10) =>
+    queryOptions<RecentActivityItemDTO[]>({
+        queryKey: [...dashboardQueryKeys.all, "recentActivity", { limit }],
+        queryFn: () => getRecentActivityApi(limit),
+        staleTime: 1000 * 60 * 1, // 1 minute, as activity changes often
+    });
+
+export const upcomingApprovedEventsQueryOptions = (limit = 5) =>
+    queryOptions<EventDTO[]>({
+        queryKey: [
+            ...dashboardQueryKeys.all,
+            "upcomingApprovedEvents",
+            { limit },
+        ],
+        queryFn: () => getUpcomingApprovedEventsApi(limit),
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+export const upcomingApprovedEventsCountNextDaysQueryOptions = (days = 30) =>
+    queryOptions<number>({
+        queryKey: dashboardQueryKeys.upcomingApprovedEventsCountNextDays(days),
+        queryFn: () => getUpcomingApprovedEventsCountNextDaysApi(days),
+        staleTime: 1000 * 60 * 15, // Stale for 15 minutes
+    });
+
+export const eventTypeSummaryQueryOptions = (
+    startDate?: string,
+    endDate?: string,
+    limit = 10, // Default limit, consistent with API
+) =>
+    queryOptions<EventTypeSummaryDTO[]>({
+        queryKey: dashboardQueryKeys.eventTypesSummary(
+            startDate,
+            endDate,
+            limit,
+        ),
+        queryFn: () => {
+            if (!startDate || !endDate) return Promise.resolve([]);
+            return getEventTypesSummary(startDate, endDate, limit);
+        },
+        enabled: !!startDate && !!endDate,
+        staleTime: 1000 * 60 * 5, // 5 minutes
     });

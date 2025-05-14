@@ -314,3 +314,55 @@ export interface ApiResponse<T> {
         details?: string;
     };
 }
+
+// Dashboard-specific DTOs
+export interface TopVenueDTO {
+    venueName: string;
+    eventCount: number;
+}
+
+export interface TopEquipmentDTO {
+    equipmentName: string;
+    reservationCount: number;
+}
+
+export interface EventCountDTO {
+    date: string; // LocalDate is typically string "YYYY-MM-DD"
+    eventCount: number;
+}
+
+export interface CancellationRateDTO {
+    date: string; // LocalDate is typically string "YYYY-MM-DD"
+    cancellationRate: number;
+    canceledCount: number;
+    totalCreatedCount: number;
+}
+
+export interface PeakHourDTO {
+    hourOfDay: number;
+    eventCount: number;
+}
+
+export interface UserActivityDTO {
+    userPublicId: string; // UUID is string
+    userFirstName: string;
+    userLastName: string;
+    eventCount: number;
+}
+
+export type RecentActivityItemDTO = {
+    id: string;
+    type: string; // e.g., "Event", "Equipment Reservation"
+    title: string; // e.g., Event Name, Equipment Name
+    description: string;
+    timestamp: string; // ISO Date string
+    actorName: string; // User who performed the action or "System"
+    link?: string; // Optional link to the item
+};
+
+export type EventTypeSummaryDTO = {
+    name: string; // Event type name
+    value: number; // Count of events for this type (using number for frontend consistency with charts)
+};
+
+// --- Notification System Types ---
