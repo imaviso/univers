@@ -147,12 +147,18 @@ export const eventSchema = v.pipe(
         startTime: v.date("Start date is required"),
         endTime: v.date("End date is required"),
         approvedLetter: v.pipe(
-            v.instance(File, "Approved letter (image) is required."),
+            v.instance(File, "Approved letter is required."),
             v.mimeType(
-                ["image/jpeg", "image/png", "image/webp"],
-                "Invalid file type. Please select a JPG, PNG, or WEBP image.",
+                [
+                    "image/jpeg",
+                    "image/png",
+                    "image/webp",
+                    "application/pdf",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ],
+                "Invalid file type. Please select an Image (JPG, PNG, WEBP), PDF, or DOCX file.",
             ),
-            v.maxSize(1024 * 1024 * 5, "Image file too large (max 5MB)."),
+            v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."),
         ),
     }),
     v.forward(
@@ -197,12 +203,18 @@ export const editEventSchema = v.pipe(
         endTime: v.optional(v.date()),
         approvedLetter: v.optional(
             v.pipe(
-                v.instance(File, "Approved letter (image) is required."),
+                v.instance(File, "Approved letter is required if provided."),
                 v.mimeType(
-                    ["image/jpeg", "image/png", "image/webp"],
-                    "Invalid file type. Please select a JPG, PNG, or WEBP image.",
+                    [
+                        "image/jpeg",
+                        "image/png",
+                        "image/webp",
+                        "application/pdf",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    ],
+                    "Invalid file type. Please select an Image (JPG, PNG, WEBP), PDF, or DOCX file.",
                 ),
-                v.maxSize(1024 * 1024 * 5, "Image file too large (max 5MB)."),
+                v.maxSize(1024 * 1024 * 5, "File too large (max 5MB)."),
             ),
         ),
     }),

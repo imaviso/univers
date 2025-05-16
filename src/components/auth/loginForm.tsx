@@ -9,6 +9,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ApiError } from "@/lib/api";
 import { userSignIn } from "@/lib/auth";
 import { userQueryOptions } from "@/lib/query";
 import { type LoginInput, loginSchema } from "@/lib/schema";
@@ -45,25 +46,33 @@ export default function LoginForm() {
             });
             navigate({ to: "/app/calendar", replace: true });
         } catch (error) {
-            let errorMessage = "An unexpected error occurred";
-            let shouldOpenVerifyDialog = false;
+            console.log("Caught error in LoginForm onSubmit:", error);
 
-            if (error instanceof Error) {
-                errorMessage = error.message;
+            if (error instanceof ApiError) {
+                console.log(
+                    `ApiError caught: Status ${error.status}, Message: "${error.message}"`,
+                );
                 if (
-                    errorMessage ===
-                    "Email not verified. Please verify your email before logging in."
+                    error.status === 403 &&
+                    error.message.includes("Email not verified")
                 ) {
-                    shouldOpenVerifyDialog = true;
                     localStorage.setItem("userEmail", values.email);
                     toast.info("Please verify your email address to continue.");
+                    setIsVerifyDialogOpen(true);
+                } else {
+                    toast.error(
+                        error.message ||
+                            "Login failed. Please check your credentials.",
+                    );
                 }
-            }
-
-            if (shouldOpenVerifyDialog) {
-                setIsVerifyDialogOpen(true);
+            } else if (error instanceof Error) {
+                console.log(`Generic Error caught: "${error.message}"`);
+                toast.error(error.message || "An unexpected error occurred.");
             } else {
-                toast.error(errorMessage);
+                console.log("Unknown error type caught:", error);
+                toast.error(
+                    "An entirely unexpected error occurred. Please try again.",
+                );
             }
         } finally {
             setIsLoading(false);

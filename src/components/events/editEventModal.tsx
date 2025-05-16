@@ -555,7 +555,7 @@ export function EditEventModal({
                                                     }}
                                                     maxFiles={1}
                                                     maxSize={5 * 1024 * 1024}
-                                                    accept=".pdf, image/*"
+                                                    accept=".pdf, image/*, .docx, .doc"
                                                     disabled={
                                                         updateEventMutation.isPending
                                                     }
@@ -571,8 +571,8 @@ export function EditEventModal({
                                                             to upload
                                                         </p>
                                                         <p className="text-xs text-muted-foreground">
-                                                            PDF or Image (max
-                                                            5MB)
+                                                            PDF, Image, DOCX,
+                                                            DOC (max 5MB)
                                                         </p>
                                                     </FileUploadDropzone>
                                                     <FileUploadList className="p-3">

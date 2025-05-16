@@ -30,6 +30,18 @@ import type {
     VenueDTO,
 } from "./types";
 
+// Define a custom error class
+export class ApiError extends Error {
+    status: number;
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = "ApiError";
+        this.status = status;
+        // Set the prototype explicitly.
+        Object.setPrototypeOf(this, ApiError.prototype);
+    }
+}
+
 export async function handleApiResponse<T>(
     response: Response,
     expectJson = true,
@@ -42,15 +54,23 @@ export async function handleApiResponse<T>(
             let potentialMessage: string | undefined;
 
             if (errorData && typeof errorData === "object") {
-                if (errorData.error && typeof errorData.error === "object") {
-                    // Backend ApiResponse.error structure
-                    potentialMessage =
-                        errorData.error.message || errorData.error.details;
-                } else if (
+                if (errorData.error) {
+                    // Check if 'error' property exists
+                    if (typeof errorData.error === "object") {
+                        // Case 1: { error: { message: "..." } }
+                        potentialMessage =
+                            errorData.error.message || errorData.error.details;
+                    } else if (typeof errorData.error === "string") {
+                        // Case 2: { error: "message" }
+                        potentialMessage = errorData.error;
+                    }
+                }
+                if (
+                    !potentialMessage &&
                     errorData.message &&
                     typeof errorData.message === "string"
                 ) {
-                    // Simpler JSON error { message: "..." } or ApiResponse itself
+                    // Case 3: { message: "..." }
                     potentialMessage = errorData.message;
                 }
 
@@ -72,17 +92,19 @@ export async function handleApiResponse<T>(
                         // potentialMessage was not a stringified JSON, use it directly
                         errorMessage = potentialMessage;
                     }
-                } else if (errorText) {
-                    errorMessage = errorText; // Fallback to raw error text if no clear message structure
+                } else if (errorText && !potentialMessage) {
+                    // Ensure errorText is used if potentialMessage wasn't found
+                    errorMessage = errorText;
                 }
             } else if (errorText) {
-                errorMessage = errorText; // errorData was not an object, use raw text
+                // errorData was not an object, or errorText is not JSON
+                errorMessage = errorText;
             }
         } catch (e) {
             // errorText wasn't valid JSON, or another parsing error occurred
             errorMessage = errorText || `Server error: ${response.status}`;
         }
-        throw new Error(errorMessage);
+        throw new ApiError(errorMessage, response.status); // Throw custom ApiError
     }
 
     if (response.status === 204) {

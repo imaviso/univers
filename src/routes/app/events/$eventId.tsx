@@ -100,6 +100,12 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+// Helper function to check if URL likely points to an image
+const isImageUrl = (url: string | undefined | null): boolean => {
+    if (!url) return false;
+    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+};
+
 export const Route = createFileRoute("/app/events/$eventId")({
     loader: async ({
         params: { eventId },
@@ -1295,48 +1301,75 @@ export function EventDetailsPage() {
                                                 <h3 className="text-sm font-medium text-muted-foreground">
                                                     Approved Letter
                                                 </h3>
-                                                <Dialog>
-                                                    <DialogTrigger asChild>
-                                                        <div className="flex items-center gap-2 mt-1 cursor-pointer text-blue-600 hover:underline">
-                                                            <Paperclip className="h-4 w-4" />
-                                                            <span className="text-sm">
-                                                                View Attached
-                                                                Letter
-                                                            </span>
-                                                        </div>
-                                                    </DialogTrigger>
-                                                    <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
-                                                        {" "}
-                                                        {/* Adjust size */}
-                                                        <DialogHeader>
-                                                            <DialogTitle>
-                                                                Approved Letter
-                                                            </DialogTitle>
-                                                            <DialogDescription>
-                                                                Viewing the
-                                                                letter for
-                                                                event:{" "}
-                                                                {
-                                                                    event.eventName
-                                                                }
-                                                            </DialogDescription>
-                                                        </DialogHeader>
-                                                        <div className="mt-4 max-h-[70vh] overflow-auto">
-                                                            {" "}
-                                                            {/* Limit height and allow scroll */}
-                                                            {/* Display image - adjust if it could be PDF */}
-                                                            <img
-                                                                src={
-                                                                    event.approvedLetterUrl
-                                                                }
-                                                                alt="Approved Letter"
-                                                                className="max-w-full h-auto mx-auto"
-                                                            />
-                                                            {/* For PDF, you might use: */}
-                                                            {/* <iframe src={approvedLetterUrl} width="100%" height="600px" title="Approved Letter"></iframe> */}
-                                                        </div>
-                                                    </DialogContent>
-                                                </Dialog>
+                                                {isImageUrl(
+                                                    event.approvedLetterUrl,
+                                                ) ? (
+                                                    <Dialog>
+                                                        <DialogTrigger asChild>
+                                                            <div className="flex items-center gap-2 mt-1 cursor-pointer text-blue-600 hover:underline">
+                                                                <Paperclip className="h-4 w-4" />
+                                                                <span className="text-sm">
+                                                                    View
+                                                                    Attached
+                                                                    Letter
+                                                                    (Image)
+                                                                </span>
+                                                            </div>
+                                                        </DialogTrigger>
+                                                        <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
+                                                            <DialogHeader>
+                                                                <DialogTitle>
+                                                                    Approved
+                                                                    Letter
+                                                                </DialogTitle>
+                                                                <DialogDescription>
+                                                                    Viewing the
+                                                                    letter for
+                                                                    event:{" "}
+                                                                    {
+                                                                        event.eventName
+                                                                    }
+                                                                </DialogDescription>
+                                                            </DialogHeader>
+                                                            <div className="mt-4 max-h-[70vh] overflow-auto">
+                                                                <img
+                                                                    src={
+                                                                        event.approvedLetterUrl
+                                                                    }
+                                                                    alt="Approved Letter"
+                                                                    className="max-w-full h-auto mx-auto"
+                                                                />
+                                                            </div>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                ) : (
+                                                    <a // Direct download link for non-images
+                                                        href={
+                                                            event.approvedLetterUrl
+                                                        }
+                                                        download
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-2 mt-1"
+                                                    >
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            asChild
+                                                        >
+                                                            <div>
+                                                                {" "}
+                                                                {/* Additional div for styling if Button asChild needs a single child component */}
+                                                                <Paperclip className="h-4 w-4" />
+                                                                <span className="text-sm">
+                                                                    Download
+                                                                    Approved
+                                                                    Letter
+                                                                </span>
+                                                            </div>
+                                                        </Button>
+                                                    </a>
+                                                )}
                                             </div>
                                         )}
                                         <div>

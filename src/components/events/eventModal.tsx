@@ -53,6 +53,7 @@ import {
     AlertCircleIcon,
     Check,
     ChevronsUpDown,
+    FileTextIcon,
     ImageUpIcon,
     Loader2,
     XIcon,
@@ -546,7 +547,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 
                                         const [hookState, hookActions] =
                                             useFileUpload({
-                                                accept: "image/*",
+                                                accept: "image/jpeg, image/png, image/webp, application/pdf, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                                 maxSize,
                                                 maxFiles: 1,
                                                 multiple: false,
@@ -588,8 +589,10 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                             getInputProps,
                                         } = hookActions;
 
-                                        const previewUrl =
-                                            files[0]?.preview || null;
+                                        const currentFileObject =
+                                            files[0]?.file;
+                                        const previewUrl = files[0]?.preview;
+
                                         // Sync RHF field value with useFileUpload state (e.g., on form.reset)
                                         useEffect(() => {
                                             if (
@@ -680,20 +683,41 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                                     className="sr-only"
                                                                     aria-label="Upload approved letter image"
                                                                 />
-                                                                {previewUrl ? (
+                                                                {previewUrl &&
+                                                                currentFileObject?.type?.startsWith(
+                                                                    "image/",
+                                                                ) ? (
                                                                     <div className="absolute inset-0">
                                                                         <img
                                                                             src={
                                                                                 previewUrl
                                                                             }
                                                                             alt={
-                                                                                files[0]
-                                                                                    ?.file
-                                                                                    ?.name ||
+                                                                                currentFileObject?.name ||
                                                                                 "Uploaded image"
                                                                             }
                                                                             className="size-full object-cover"
                                                                         />
+                                                                    </div>
+                                                                ) : currentFileObject ? (
+                                                                    // Display for non-image files or if previewUrl isn't available but a file is selected
+                                                                    <div className="flex flex-col items-center justify-center text-center p-4">
+                                                                        <FileTextIcon className="size-12 text-muted-foreground mb-2" />
+                                                                        <p className="text-sm font-medium truncate max-w-full">
+                                                                            {
+                                                                                currentFileObject.name
+                                                                            }
+                                                                        </p>
+                                                                        {currentFileObject instanceof
+                                                                            File && (
+                                                                            <p className="text-xs text-muted-foreground">
+                                                                                {Math.round(
+                                                                                    currentFileObject.size /
+                                                                                        1024,
+                                                                                )}{" "}
+                                                                                KB
+                                                                            </p>
+                                                                        )}
                                                                     </div>
                                                                 ) : (
                                                                     <div className="flex flex-col items-center justify-center px-4 py-3 text-center">
@@ -706,7 +730,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                                         <p className="mb-1.5 text-sm font-medium">
                                                                             Drop
                                                                             your
-                                                                            image
+                                                                            file
                                                                             here
                                                                             or
                                                                             click
@@ -721,7 +745,9 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                                                             }
                                                                             MB.
                                                                             Accepted:
-                                                                            image/*
+                                                                            Images,
+                                                                            PDF,
+                                                                            DOCX
                                                                         </p>
                                                                     </div>
                                                                 )}
