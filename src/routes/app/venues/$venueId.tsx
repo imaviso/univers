@@ -174,10 +174,7 @@ export function VenueDetails() {
                                 <div className="md:col-span-2 space-y-6">
                                     <div className="rounded-lg overflow-hidden border aspect-video">
                                         <img
-                                            src={
-                                                venue.imagePath ||
-                                                "https://cit.edu/wp-content/uploads/2023/07/GLE-Building.jpg"
-                                            }
+                                            src={venue.imagePath || undefined}
                                             alt={venue.name}
                                             className="w-full h-full object-cover"
                                         />

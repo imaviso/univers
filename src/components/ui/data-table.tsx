@@ -7,6 +7,8 @@ import {
     type VisibilityState,
     flexRender,
     getCoreRowModel,
+    getFacetedRowModel,
+    getFacetedUniqueValues,
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
@@ -55,6 +57,10 @@ interface DataTableProps<TData, TValue> {
     // Add props for controlled row selection
     rowSelection?: RowSelectionState;
     onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+    // Add props for filtering
+    columnFilters?: ColumnFiltersState;
+    onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>;
+    enableFacetedFilter?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -67,9 +73,19 @@ export function DataTable<TData, TValue>({
     // Destructure new props
     rowSelection,
     onRowSelectionChange,
+    // Destructure filter props
+    columnFilters: externalColumnFilters,
+    onColumnFiltersChange: externalOnColumnFiltersChange,
+    enableFacetedFilter,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([]);
-    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+    // Use controlled columnFilters if provided, otherwise internal state
+    const [internalColumnFilters, setInternalColumnFilters] =
+        useState<ColumnFiltersState>([]);
+    const columnFilters = externalColumnFilters ?? internalColumnFilters;
+    const onColumnFiltersChange =
+        externalOnColumnFiltersChange ?? setInternalColumnFilters;
+
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
         {},
     );
@@ -80,7 +96,7 @@ export function DataTable<TData, TValue>({
         data,
         columns,
         onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
+        onColumnFiltersChange: onColumnFiltersChange, // Use the determined handler
         onColumnVisibilityChange: setColumnVisibility,
         // Use props for row selection
         onRowSelectionChange: onRowSelectionChange,
@@ -88,9 +104,16 @@ export function DataTable<TData, TValue>({
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
+        // Conditionally add faceted models if enabled
+        getFacetedRowModel: enableFacetedFilter
+            ? getFacetedRowModel()
+            : undefined,
+        getFacetedUniqueValues: enableFacetedFilter
+            ? getFacetedUniqueValues()
+            : undefined,
         state: {
             sorting,
-            columnFilters,
+            columnFilters, // Use the determined state
             columnVisibility,
             // Use prop for row selection state
             rowSelection,
@@ -103,54 +126,59 @@ export function DataTable<TData, TValue>({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                {searchColumn && (
-                    <div className="flex items-center gap-2">
-                        <Input
-                            placeholder={searchPlaceholder}
-                            value={
-                                (table
-                                    .getColumn(searchColumn)
-                                    ?.getFilterValue() as string) ?? ""
-                            }
-                            onChange={(event) =>
-                                table
-                                    .getColumn(searchColumn)
-                                    ?.setFilterValue(event.target.value)
-                            }
-                            className="max-w-sm"
-                        />
-                    </div>
-                )}
-                {showColumnToggle && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="ml-auto">
-                                Columns <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {table
-                                .getAllColumns()
-                                .filter((column) => column.getCanHide())
-                                .map((column) => {
-                                    return (
-                                        <DropdownMenuCheckboxItem
-                                            key={column.id}
-                                            className="capitalize"
-                                            checked={column.getIsVisible()}
-                                            onCheckedChange={(value) =>
-                                                column.toggleVisibility(!!value)
-                                            }
-                                        >
-                                            {column.id}
-                                        </DropdownMenuCheckboxItem>
-                                    );
-                                })}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
-            </div>
+            {(searchColumn || showColumnToggle) && (
+                <div className="flex items-center justify-between">
+                    {searchColumn && (
+                        <div className="flex items-center gap-2">
+                            <Input
+                                placeholder={searchPlaceholder}
+                                value={
+                                    (table
+                                        .getColumn(searchColumn)
+                                        ?.getFilterValue() as string) ?? ""
+                                }
+                                onChange={(event) =>
+                                    table
+                                        .getColumn(searchColumn)
+                                        ?.setFilterValue(event.target.value)
+                                }
+                                className="max-w-sm"
+                            />
+                        </div>
+                    )}
+                    {showColumnToggle && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="ml-auto">
+                                    Columns{" "}
+                                    <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                {table
+                                    .getAllColumns()
+                                    .filter((column) => column.getCanHide())
+                                    .map((column) => {
+                                        return (
+                                            <DropdownMenuCheckboxItem
+                                                key={column.id}
+                                                className="capitalize"
+                                                checked={column.getIsVisible()}
+                                                onCheckedChange={(value) =>
+                                                    column.toggleVisibility(
+                                                        !!value,
+                                                    )
+                                                }
+                                            >
+                                                {column.id}
+                                            </DropdownMenuCheckboxItem>
+                                        );
+                                    })}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                </div>
+            )}
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>

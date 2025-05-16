@@ -161,7 +161,7 @@ export function EquipmentFormDialog({
                 shouldDirty: false,
             });
         }
-    }, [isOpen, equipment, form]);
+    }, [isOpen, equipment, form.reset, form.setValue]);
 
     const processSubmit = (data: EquipmentDTOInput) => {
         // Validate image presence for new equipment

@@ -574,7 +574,7 @@ export function DepartmentDataTable() {
             </div>
 
             {/* Table */}
-            <div className="rounded-md border overflow-y-auto h-[80vh]">
+            <div className="rounded-md border overflow-y-auto max-h-[80vh]">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
