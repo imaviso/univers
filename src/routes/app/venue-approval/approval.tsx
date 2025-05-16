@@ -65,7 +65,6 @@ import {
     flexRender,
     getCoreRowModel,
     getFilteredRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
@@ -192,15 +191,6 @@ export function VenueReservationApproval() {
         );
     const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
         {},
-    );
-
-    const [pageSize, setPageSize] = usePersistentState<number>(
-        "venueApprovalTablePageSize_v1",
-        10,
-    );
-    const [pageIndex, setPageIndex] = usePersistentState<number>(
-        "venueApprovalTablePageIndex_v1",
-        0,
     );
 
     const [singleActionInfo, setSingleActionInfo] = useState<SingleActionInfo>({
@@ -826,10 +816,6 @@ export function VenueReservationApproval() {
             columnVisibility,
             rowSelection,
             globalFilter: searchQuery,
-            pagination: {
-                pageIndex,
-                pageSize,
-            },
         },
         enableRowSelection: true,
         onRowSelectionChange: setRowSelection,
@@ -839,20 +825,7 @@ export function VenueReservationApproval() {
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         getRowId: (row) => row.publicId.toString(),
-        manualPagination: false,
-        pageCount: -1,
-        onPaginationChange: (updater) => {
-            if (typeof updater === "function") {
-                const newPaginationState = updater(table.getState().pagination);
-                setPageIndex(newPaginationState.pageIndex);
-                setPageSize(newPaginationState.pageSize);
-            } else {
-                setPageIndex(updater.pageIndex);
-                setPageSize(updater.pageSize);
-            }
-        },
     });
 
     const stats = useMemo(() => {
@@ -1113,7 +1086,7 @@ export function VenueReservationApproval() {
                 </div>
 
                 <div className="flex-1 overflow-auto p-6">
-                    <div className="rounded-md border">
+                    <div className="rounded-md border overflow-y-auto max-h-[60vh]">
                         <Table>
                             <TableHeader>
                                 {table.getHeaderGroups().map((headerGroup) => (
@@ -1172,31 +1145,6 @@ export function VenueReservationApproval() {
                                 )}
                             </TableBody>
                         </Table>
-                    </div>
-                    <div className="flex items-center justify-between space-x-2 py-4">
-                        <div className="flex-1 text-sm text-muted-foreground">
-                            {numSelected} of{" "}
-                            {table.getFilteredRowModel().rows.length} row(s)
-                            selected.
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => table.previousPage()}
-                                disabled={!table.getCanPreviousPage()}
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => table.nextPage()}
-                                disabled={!table.getCanNextPage()}
-                            >
-                                Next
-                            </Button>
-                        </div>
                     </div>
                 </div>
             </div>

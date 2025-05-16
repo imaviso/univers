@@ -540,7 +540,16 @@ export function PropertyFilterOperatorMenu<TData>({
     column,
     closeController,
 }: PropertyFilterOperatorMenuProps<TData>) {
-    const { type } = column.columnDef.meta!;
+    const type = column.columnDef.meta?.type;
+
+    // Add a check for type, though in practice it should always be defined
+    // if meta is present and has a filter configuration.
+    if (!type) {
+        console.error(
+            `[data-table-filter] Column ${column.id} has no filter type defined in meta.`,
+        );
+        return null;
+    }
 
     switch (type) {
         case "option":
@@ -895,7 +904,6 @@ export function PropertyFilterOptionValueDisplay<TData, TValue>({
     if (columnMeta.options) {
         options = columnMeta.options;
     }
-
     // No static options provided,
     // We should dynamically generate them based on the column data
     else if (columnMeta.transformOptionFn) {
@@ -905,12 +913,10 @@ export function PropertyFilterOptionValueDisplay<TData, TValue>({
             transformOptionFn(v as ElementType<NonNullable<TValue>>),
         );
     }
-
     // Make sure the column data conforms to ColumnOption type
     else if (isColumnOptionArray(uniqueVals)) {
         options = uniqueVals;
     }
-
     // Invalid configuration
     else {
         throw new Error(
@@ -929,15 +935,15 @@ export function PropertyFilterOptionValueDisplay<TData, TValue>({
     // 1) up to 3 icons of the selected options
     // 2) the number of selected options
     if (selected.length === 1) {
-        const { label, icon: Icon } = selected[0];
-        const hasIcon = !!Icon;
+        const { label, icon: IconComponent } = selected[0]; // Renamed to avoid conflict
+        const hasIcon = !!IconComponent;
         return (
             <span className="inline-flex items-center gap-1">
                 {hasIcon &&
-                    (isValidElement(Icon) ? (
-                        Icon
+                    (isValidElement(IconComponent) ? ( // Use renamed variable
+                        IconComponent
                     ) : (
-                        <Icon className="size-4 text-primary" />
+                        <IconComponent className="size-4 text-primary" />
                     ))}
                 <span>{label}</span>
             </span>
@@ -951,12 +957,14 @@ export function PropertyFilterOptionValueDisplay<TData, TValue>({
     return (
         <div className="inline-flex items-center gap-0.5">
             {hasOptionIcons &&
-                take(selected, 3).map(({ value, icon }) => {
-                    const Icon = icon!;
-                    return isValidElement(Icon) ? (
-                        Icon
+                take(selected, 3).map(({ value, icon: IconComponent }) => {
+                    // Renamed
+                    // const Icon = icon!; // Remove non-null assertion
+                    if (!IconComponent) return null; // Guard against undefined icon
+                    return isValidElement(IconComponent) ? ( // Use renamed variable
+                        IconComponent
                     ) : (
-                        <Icon key={value} className="size-4" />
+                        <IconComponent key={value} className="size-4" />
                     );
                 })}
             <span className={cn(hasOptionIcons && "ml-1.5")}>
@@ -1010,15 +1018,15 @@ export function PropertyFilterMultiOptionValueDisplay<TData, TValue>({
     const selected = options.filter((o) => filter?.values[0].includes(o.value));
 
     if (selected.length === 1) {
-        const { label, icon: Icon } = selected[0];
-        const hasIcon = !!Icon;
+        const { label, icon: IconComponent } = selected[0];
+        const hasIcon = !!IconComponent;
         return (
             <span className="inline-flex items-center gap-1.5">
                 {hasIcon &&
-                    (isValidElement(Icon) ? (
-                        Icon
+                    (isValidElement(IconComponent) ? (
+                        IconComponent
                     ) : (
-                        <Icon className="size-4 text-primary" />
+                        <IconComponent className="size-4 text-primary" />
                     ))}
 
                 <span>{label}</span>
@@ -1034,12 +1042,14 @@ export function PropertyFilterMultiOptionValueDisplay<TData, TValue>({
         <div className="inline-flex items-center gap-1.5">
             {hasOptionIcons && (
                 <div key="icons" className="inline-flex items-center gap-0.5">
-                    {take(selected, 3).map(({ value, icon }) => {
-                        const Icon = icon!;
-                        return isValidElement(Icon) ? (
-                            cloneElement(Icon, { key: value })
+                    {take(selected, 3).map(({ value, icon: IconComponent }) => {
+                        // Renamed
+                        // const Icon = icon!; // Remove non-null assertion
+                        if (!IconComponent) return null; // Guard against undefined icon
+                        return isValidElement(IconComponent) ? ( // Use renamed variable
+                            cloneElement(IconComponent, { key: value })
                         ) : (
-                            <Icon key={value} className="size-4" />
+                            <IconComponent key={value} className="size-4" />
                         );
                     })}
                 </div>
@@ -1236,7 +1246,6 @@ export function PropertyFilterOptionValueMenu<TData, TValue>({
     if (columnMeta.options) {
         options = columnMeta.options;
     }
-
     // No static options provided,
     // We should dynamically generate them based on the column data
     else if (columnMeta.transformOptionFn) {
@@ -1246,12 +1255,10 @@ export function PropertyFilterOptionValueMenu<TData, TValue>({
             transformOptionFn(v as ElementType<NonNullable<TValue>>),
         );
     }
-
     // Make sure the column data conforms to ColumnOption type
     else if (isColumnOptionArray(uniqueVals)) {
         options = uniqueVals;
     }
-
     // Invalid configuration
     else {
         throw new Error(
@@ -1262,13 +1269,20 @@ export function PropertyFilterOptionValueMenu<TData, TValue>({
     const optionsCount: Record<ColumnOption["value"], number> =
         columnVals.reduce(
             (acc, curr) => {
-                const { value } = columnMeta.transformOptionFn
-                    ? columnMeta.transformOptionFn(
-                          curr as ElementType<NonNullable<TValue>>,
-                      )
-                    : { value: curr as string };
+                const transformFn = columnMeta.transformOptionFn;
+                let valueToCount: string;
 
-                acc[value] = (acc[value] ?? 0) + 1;
+                if (columnMeta.options) {
+                    valueToCount = String(curr);
+                } else if (transformFn) {
+                    valueToCount = transformFn(
+                        curr as ElementType<NonNullable<TValue>>,
+                    ).value;
+                } else {
+                    valueToCount = String(curr);
+                }
+
+                acc[valueToCount] = (acc[valueToCount] ?? 0) + 1;
                 return acc;
             },
             {} as Record<ColumnOption["value"], number>,
@@ -1411,13 +1425,20 @@ export function PropertyFilterMultiOptionValueMenu<
     const optionsCount: Record<ColumnOption["value"], number> =
         columnVals.reduce(
             (acc, curr) => {
-                const value = columnMeta.options
-                    ? (curr as string)
-                    : columnMeta.transformOptionFn!(
-                          curr as ElementType<NonNullable<TValue>>,
-                      ).value;
+                const transformFn = columnMeta.transformOptionFn;
+                let valueToCount: string;
 
-                acc[value] = (acc[value] ?? 0) + 1;
+                if (columnMeta.options) {
+                    valueToCount = String(curr);
+                } else if (transformFn) {
+                    valueToCount = transformFn(
+                        curr as ElementType<NonNullable<TValue>>,
+                    ).value;
+                } else {
+                    valueToCount = String(curr);
+                }
+
+                acc[valueToCount] = (acc[valueToCount] ?? 0) + 1;
                 return acc;
             },
             {} as Record<ColumnOption["value"], number>,

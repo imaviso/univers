@@ -9,7 +9,6 @@ import {
     getFacetedRowModel,
     getFacetedUniqueValues,
     getFilteredRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
@@ -19,10 +18,6 @@ import {
     CalendarIcon,
     CheckCircleIcon,
     ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    ChevronsLeft,
-    ChevronsRight,
     FingerprintIcon,
     ListFilterIcon,
     MoreHorizontal,
@@ -50,13 +45,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
     Table,
     TableBody,
@@ -139,14 +127,14 @@ export function UserDataTable() {
     const [activateDialogOpen, setActivateDialogOpen] = React.useState(false);
 
     // Persistent pagination state
-    const [pageSize, setPageSize] = usePersistentState<number>(
-        "userTablePageSize_v1",
-        10,
-    );
-    const [pageIndex, setPageIndex] = usePersistentState<number>(
-        "userTablePageIndex_v1",
-        0,
-    );
+    // const [pageSize, setPageSize] = usePersistentState<number>(
+    //     "userTablePageSize_v1",
+    //     10,
+    // );
+    // const [pageIndex, setPageIndex] = usePersistentState<number>(
+    //     "userTablePageIndex_v1",
+    //     0,
+    // );
 
     const { data: initialUsers } = useSuspenseQuery(usersQueryOptions);
     // Fetch actual departments data
@@ -831,11 +819,11 @@ export function UserDataTable() {
             columnVisibility,
             rowSelection,
             columnFilters,
-            pagination: {
-                // Controlled pagination
-                pageIndex,
-                pageSize,
-            },
+            // pagination: {
+            // Controlled pagination
+            // pageIndex,
+            // pageSize,
+            // },
         },
         onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
@@ -845,21 +833,21 @@ export function UserDataTable() {
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
         getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(), // Still needed for page count, etc.
+        // getPaginationRowModel: getPaginationRowModel(), // Still needed for page count, etc.
         getSortedRowModel: getSortedRowModel(),
-        manualPagination: false, // Set to false if getPaginationRowModel is used for client-side pagination
-        pageCount: -1, // Or calculate if known, otherwise react-table will estimate
-        onPaginationChange: (updater) => {
-            // Handle pagination changes to update persistent state
-            if (typeof updater === "function") {
-                const newPaginationState = updater(table.getState().pagination);
-                setPageIndex(newPaginationState.pageIndex);
-                setPageSize(newPaginationState.pageSize);
-            } else {
-                setPageIndex(updater.pageIndex);
-                setPageSize(updater.pageSize);
-            }
-        },
+        // manualPagination: false, // Set to false if getPaginationRowModel is used for client-side pagination
+        // pageCount: -1, // Or calculate if known, otherwise react-table will estimate
+        // onPaginationChange: (updater) => {
+        //     // Handle pagination changes to update persistent state
+        //     if (typeof updater === "function") {
+        //         const newPaginationState = updater(table.getState().pagination);
+        //         setPageIndex(newPaginationState.pageIndex);
+        //         setPageSize(newPaginationState.pageSize);
+        //     } else {
+        //         setPageIndex(updater.pageIndex);
+        //         setPageSize(updater.pageSize);
+        //     }
+        // },
     });
 
     return (
@@ -931,7 +919,7 @@ export function UserDataTable() {
                 </div>
             </div>
             {/* --- Table Rendering --- */}
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-y-auto max-h-[80vh]">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -1003,14 +991,13 @@ export function UserDataTable() {
                 </Table>
             </div>
             {/* --- Pagination --- */}
+            {/*
             <div className="flex items-center justify-between">
-                {/* Row Selection Count */}
                 <div className="flex-1 text-sm text-muted-foreground">
                     {table.getFilteredSelectedRowModel().rows.length} of{" "}
                     {table.getFilteredRowModel().rows.length} row(s) selected.
                 </div>
 
-                {/* Pagination Controls */}
                 <div className="flex items-center space-x-6 lg:space-x-8">
                     <div className="flex items-center space-x-2">
                         <p className="text-sm font-medium">Rows per page</p>
@@ -1039,8 +1026,7 @@ export function UserDataTable() {
                         </Select>
                     </div>
                     <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                        Page {pageIndex + 1} of {/* Use persistent pageIndex */}
-                        {table.getPageCount()}
+                        Page {pageIndex + 1} of {table.getPageCount()}
                     </div>
                     <div className="flex items-center space-x-2">
                         <Button
@@ -1085,6 +1071,7 @@ export function UserDataTable() {
                     </div>
                 </div>
             </div>
+            */}
             {/* --- Dialogs --- */}
             {selectedUser && (
                 <EditUserFormDialog

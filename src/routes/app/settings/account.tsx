@@ -68,6 +68,7 @@ import {
 } from "@/components/ui/cropper";
 import { Slider } from "@/components/ui/slider";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import { formatRole, getBadgeVariant } from "@/lib/utils";
 import { ArrowLeftIcon, ZoomInIcon, ZoomOutIcon } from "lucide-react";
 
 export const Route = createFileRoute("/app/settings/account")({
@@ -820,11 +821,9 @@ export function AccountSettings() {
                             <div className="grid gap-1">
                                 <Label htmlFor="profileRole">Role</Label>
                                 <Badge
-                                    variant="destructive"
-                                    className="mt-2"
-                                    id="profileRole"
+                                    className={`font-medium capitalize px-2 py-0.5 mt-2 ${getBadgeVariant(user.role)}`}
                                 >
-                                    {user.role || "N/A"}
+                                    {formatRole(user.role)}
                                 </Badge>
                             </div>
                             {/* Email Display & Change Button */}

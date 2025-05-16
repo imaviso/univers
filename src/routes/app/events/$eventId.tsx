@@ -1358,11 +1358,8 @@ export function EventDetailsPage() {
                                                             asChild
                                                         >
                                                             <div>
-                                                                {" "}
-                                                                {/* Additional div for styling if Button asChild needs a single child component */}
                                                                 <Paperclip className="h-4 w-4" />
                                                                 <span className="text-sm">
-                                                                    Download
                                                                     Approved
                                                                     Letter
                                                                 </span>

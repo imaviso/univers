@@ -10,13 +10,6 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import {
     Table,
     TableBody,
     TableCell,
@@ -50,7 +43,6 @@ import {
     getFacetedRowModel,
     getFacetedUniqueValues,
     getFilteredRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
@@ -60,10 +52,6 @@ import {
     Building,
     CalendarIcon,
     ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    ChevronsLeft,
-    ChevronsRight,
     MoreHorizontal,
     TextIcon, // For Description
     Trash2, // For Assign Head
@@ -137,14 +125,14 @@ export function DepartmentDataTable() {
     );
 
     // Persistent pagination state
-    const [pageSize, setPageSize] = usePersistentState<number>(
-        "departmentTablePageSize_v1",
-        10,
-    );
-    const [pageIndex, setPageIndex] = usePersistentState<number>(
-        "departmentTablePageIndex_v1",
-        0,
-    );
+    // const [pageSize, setPageSize] = usePersistentState<number>(
+    //     "departmentTablePageSize_v1",
+    //     10,
+    // );
+    // const [pageIndex, setPageIndex] = usePersistentState<number>(
+    //     "departmentTablePageIndex_v1",
+    //     0,
+    // );
 
     // Fetch departments and users
     const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
@@ -514,10 +502,10 @@ export function DepartmentDataTable() {
             columnVisibility,
             rowSelection,
             columnFilters,
-            pagination: {
-                pageIndex,
-                pageSize,
-            },
+            // pagination: {
+            //     pageIndex,
+            //     pageSize,
+            // },
         },
         enableRowSelection: true, // Enable if using select column
         onSortingChange: setSorting,
@@ -526,22 +514,22 @@ export function DepartmentDataTable() {
         onRowSelectionChange: setRowSelection,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
+        // getPaginationRowModel: getPaginationRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFacetedRowModel: getFacetedRowModel(),
         getFacetedUniqueValues: getFacetedUniqueValues(),
-        manualPagination: false,
-        pageCount: -1,
-        onPaginationChange: (updater) => {
-            if (typeof updater === "function") {
-                const newPaginationState = updater(table.getState().pagination);
-                setPageIndex(newPaginationState.pageIndex);
-                setPageSize(newPaginationState.pageSize);
-            } else {
-                setPageIndex(updater.pageIndex);
-                setPageSize(updater.pageSize);
-            }
-        },
+        // manualPagination: false,
+        // pageCount: -1,
+        // onPaginationChange: (updater) => {
+        //     if (typeof updater === "function") {
+        //         const newPaginationState = updater(table.getState().pagination);
+        //         setPageIndex(newPaginationState.pageIndex);
+        //         setPageSize(newPaginationState.pageSize);
+        //     } else {
+        //         setPageIndex(updater.pageIndex);
+        //         setPageSize(updater.pageSize);
+        //     }
+        // },
     });
 
     // --- Render ---
@@ -586,7 +574,7 @@ export function DepartmentDataTable() {
             </div>
 
             {/* Table */}
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-y-auto max-h-[80vh]">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -639,7 +627,7 @@ export function DepartmentDataTable() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between space-x-2 py-4">
+            {/* <div className="flex items-center justify-between space-x-2 py-4">
                 <div className="flex-1 text-sm text-muted-foreground">
                     {table.getFilteredSelectedRowModel().rows.length} of{" "}
                     {table.getFilteredRowModel().rows.length} row(s) selected.
@@ -712,7 +700,7 @@ export function DepartmentDataTable() {
                         </Button>
                     </div>
                 </div>
-            </div>
+            </div> */}
 
             {selectedDepartment && (
                 <EditDepartmentFormDialog

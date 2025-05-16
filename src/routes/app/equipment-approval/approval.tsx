@@ -53,7 +53,6 @@ import {
     flexRender,
     getCoreRowModel,
     getFilteredRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
@@ -174,16 +173,6 @@ export function EquipmentReservationApproval() {
     const [globalFilter, setGlobalFilter] = usePersistentState<string>(
         "equipmentApprovalGlobalFilter_v1",
         "",
-    );
-
-    // Persistent pagination state for the table
-    const [pageSize, setPageSize] = usePersistentState<number>(
-        "equipmentApprovalTablePageSize_v1",
-        10,
-    );
-    const [pageIndex, setPageIndex] = usePersistentState<number>(
-        "equipmentApprovalTablePageIndex_v1",
-        0,
     );
 
     const [singleActionInfo, setSingleActionInfo] = useState<SingleActionInfo>({
@@ -648,7 +637,6 @@ export function EquipmentReservationApproval() {
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         getRowId: (row) => row.publicId,
     });
 
@@ -880,7 +868,7 @@ export function EquipmentReservationApproval() {
                             Loading reservations...
                         </p>
                     ) : (
-                        <div className="rounded-md border">
+                        <div className="rounded-md border overflow-y-auto max-h-[60vh]">
                             <Table>
                                 <TableHeader>
                                     {table
@@ -949,32 +937,6 @@ export function EquipmentReservationApproval() {
                             </Table>
                         </div>
                     )}
-                    {/* Pagination */}
-                    <div className="flex items-center justify-between space-x-2 py-4">
-                        <div className="flex-1 text-sm text-muted-foreground">
-                            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                            {table.getFilteredRowModel().rows.length} row(s)
-                            selected.
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => table.previousPage()}
-                                disabled={!table.getCanPreviousPage()}
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => table.nextPage()}
-                                disabled={!table.getCanNextPage()}
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
