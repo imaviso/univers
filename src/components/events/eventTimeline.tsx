@@ -148,12 +148,8 @@ export function EventTimeline({
     };
 
     return (
-        <ScrollArea className="h-[calc(100vh-var(--header-height,0px)-var(--filter-bar-height,0px)-2rem)] w-full">
+        <ScrollArea className="h-[85vh] w-full">
             <div className="space-y-6 p-4">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Event Timeline</h2>
-                </div>
-
                 {isLoadingEvents ? (
                     <div className="text-center text-muted-foreground py-10">
                         Loading events...
