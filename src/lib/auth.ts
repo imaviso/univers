@@ -2,6 +2,82 @@ import { ApiError, handleApiResponse } from "@/lib/api";
 import type { UserDTO } from "@/lib/types";
 export const API_BASE_URL = "http://localhost:8080"; // Backend API URL
 
+// --- START: Added for Token Refresh ---
+let refreshTokenPromise: Promise<void> | null = null;
+
+async function callRefreshTokenApi(): Promise<void> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: "POST",
+            credentials: "include",
+        });
+
+        if (!response.ok) {
+            throw new ApiError(
+                "REFRESH_FAILED: Your session has expired. Please log in again.",
+                response.status,
+            );
+        }
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        console.error("Error during token refresh:", error);
+        throw new ApiError(
+            "REFRESH_UNEXPECTED_ERROR: Could not refresh session. Please log in again.",
+            0,
+        );
+    }
+}
+
+export async function fetchWithAuth(
+    url: string,
+    options: RequestInit,
+    isRetry = false,
+): Promise<Response> {
+    const requestOptions: RequestInit = {
+        ...options,
+        credentials: "include",
+    };
+
+    const response = await fetch(url, requestOptions);
+
+    if (response.status === 401 && !isRetry) {
+        console.log("Access token expired, attempting refresh...");
+        if (!refreshTokenPromise) {
+            refreshTokenPromise = callRefreshTokenApi().finally(() => {
+                refreshTokenPromise = null;
+            });
+        }
+
+        try {
+            await refreshTokenPromise;
+            console.log("Token refresh successful, retrying original request.");
+            return fetchWithAuth(url, options, true);
+        } catch (refreshError) {
+            console.error("Token refresh failed:", refreshError);
+            if (refreshError instanceof ApiError) {
+                throw refreshError;
+            }
+            throw new ApiError(
+                "REFRESH_PROPAGATION_ERROR: Session refresh failed. Please log in again.",
+                0,
+            );
+        }
+    } else if (response.status === 401 && isRetry) {
+        console.error(
+            "Authentication failed (401) even after token refresh attempt.",
+        );
+        throw new ApiError(
+            "POST_REFRESH_AUTH_FAILED: Authentication failed. Please log in again.",
+            401,
+        );
+    }
+
+    return response;
+}
+// --- END: Added for Token Refresh ---
+
 export const userSignIn = async (email: string, password: string) => {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -92,29 +168,37 @@ export const userSignOut = async () => {
 
 export const getCurrentUser = async (): Promise<UserDTO | null> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        const response = await fetchWithAuth(`${API_BASE_URL}/auth/me`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
             },
-            credentials: "include",
         });
-        if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                return null;
-            }
-        }
-        const data = await handleApiResponse<UserDTO>(response, true);
-        return data || null;
+
+        const data = await handleApiResponse<{
+            user: UserDTO;
+            refreshToken?: string;
+        }>(response, true);
+
+        return data?.user || null;
     } catch (error) {
         if (error instanceof ApiError) {
             console.warn(
                 `ApiError in getCurrentUser (Status ${error.status}): ${error.message}`,
             );
+            if (
+                error.message.startsWith("REFRESH_FAILED") ||
+                error.message.startsWith("POST_REFRESH_AUTH_FAILED") ||
+                error.message.startsWith("REFRESH_UNEXPECTED_ERROR") ||
+                error.message.startsWith("REFRESH_PROPAGATION_ERROR")
+            ) {
+                throw error;
+            }
             return null;
         }
         console.warn("Generic error in getCurrentUser:", error);
-        return null;
+        if (error instanceof Error) throw error;
+        throw new Error("An unexpected error occurred in getCurrentUser");
     }
 };
 
