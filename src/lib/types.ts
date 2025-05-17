@@ -69,6 +69,7 @@ export type Equipment = {
     equipmentOwner: UserDTO;
     imagePath: string;
     status: "DEFECT" | "MAINTENANCE" | "NEED_REPLACEMENT" | "NEW";
+    serialNo: string;
     createdAt: string;
     updatedAt: string;
 };

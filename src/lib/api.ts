@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./auth";
+import { API_BASE_URL, fetchWithAuth } from "./auth";
 import type { NotificationDTO, Page } from "./notifications";
 import type {
     DepartmentInput,
@@ -154,10 +154,9 @@ export async function handleApiResponse<T>(
 
 export const getAllUsers = async (): Promise<UserDTO[]> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/users`, {
+        const response = await fetchWithAuth(`${API_BASE_URL}/admin/users`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         });
         const data = await handleApiResponse<UserDTO[]>(response, true);
         return data || [];
@@ -210,11 +209,13 @@ export const updateProfile = async ({
         if (imageFile) {
             formData.append("image", imageFile, imageFile.name);
         }
-        const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
-            method: "PATCH",
-            credentials: "include",
-            body: formData,
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/users/${userId}`,
+            {
+                method: "PATCH",
+                body: formData,
+            },
+        );
         const responseData = await handleApiResponse<string>(response, false);
         return responseData || "Profile updated successfully";
     } catch (error) {
@@ -239,11 +240,10 @@ export const createUser = async (
     userData: CreateUserInputFEWithDepartment,
 ): Promise<string> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/users`, {
+        const response = await fetchWithAuth(`${API_BASE_URL}/admin/users`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(userData),
-            credentials: "include",
         });
         const data = await handleApiResponse<string>(response, false);
         return data || "User created successfully";
@@ -296,11 +296,13 @@ export const updateUser = async ({
         if (imageFile) {
             formData.append("image", imageFile, imageFile.name);
         }
-        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
-            method: "PATCH",
-            credentials: "include",
-            body: formData,
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/admin/users/${userId}`,
+            {
+                method: "PATCH",
+                body: formData,
+            },
+        );
         const data = await handleApiResponse<string>(response, false);
         return data || "User updated successfully";
     } catch (error) {
@@ -312,10 +314,12 @@ export const updateUser = async ({
 
 export const deactivateUser = async (userId: string): Promise<string> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
-            method: "DELETE",
-            credentials: "include",
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/admin/users/${userId}`,
+            {
+                method: "DELETE",
+            },
+        );
         const data = await handleApiResponse<string>(response, false);
         return data || "User deactivated successfully";
     } catch (error) {
@@ -329,10 +333,12 @@ export const deactivateUser = async (userId: string): Promise<string> => {
 
 export const activateUser = async (userId: string): Promise<string> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
-            method: "POST",
-            credentials: "include",
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/admin/users/${userId}`,
+            {
+                method: "POST",
+            },
+        );
         const data = await handleApiResponse<string>(response, false);
         return data || "User activated successfully";
     } catch (error) {
@@ -344,10 +350,9 @@ export const activateUser = async (userId: string): Promise<string> => {
 
 export const getAllVenues = async (): Promise<VenueDTO[]> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/venues`, {
+        const response = await fetchWithAuth(`${API_BASE_URL}/venues`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         });
         const data = await handleApiResponse<VenueDTO[]>(response, true);
         return data || [];
@@ -360,10 +365,9 @@ export const getAllVenues = async (): Promise<VenueDTO[]> => {
 
 export const getAllEvents = async (): Promise<Event[]> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/events`, {
+        const response = await fetchWithAuth(`${API_BASE_URL}/events`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         });
         const data = await handleApiResponse<Event[]>(response, true);
         return data || [];
@@ -376,11 +380,13 @@ export const getAllEvents = async (): Promise<Event[]> => {
 
 export const getEventById = async (eventId: string): Promise<EventDTO> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/events/${eventId}`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+            },
+        );
         const data = await handleApiResponse<EventDTO>(response, true);
         return data || ({} as EventDTO);
     } catch (error) {
@@ -407,9 +413,8 @@ export const createEvent = async (
         if (eventImage) {
             formData.append("eventImage", eventImage, eventImage.name);
         }
-        const response = await fetch(`${API_BASE_URL}/events`, {
+        const response = await fetchWithAuth(`${API_BASE_URL}/events`, {
             method: "POST",
-            credentials: "include",
             body: formData,
         });
         const responseData = await handleApiResponse<EventDTO>(response, true);
@@ -453,11 +458,13 @@ export const updateEvent = async ({
             formData.append("eventImage", eventImage, eventImage.name);
         }
 
-        const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
-            method: "PATCH",
-            credentials: "include",
-            body: formData,
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/events/${eventId}`,
+            {
+                method: "PATCH",
+                body: formData,
+            },
+        );
 
         const responseData = await handleApiResponse<string>(response, false);
         return responseData || "Event updated successfully";
@@ -479,9 +486,8 @@ export const cancelEvent = async (
         if (reason) {
             url.searchParams.append("reason", reason);
         }
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithAuth(url.toString(), {
             method: "PATCH",
-            credentials: "include",
         });
 
         const responseData = await handleApiResponse<string>(response, false);
@@ -497,10 +503,12 @@ export const cancelEvent = async (
 
 export const deleteEvent = async (eventId: string): Promise<string> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
-            method: "DELETE",
-            credentials: "include",
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/events/${eventId}`,
+            {
+                method: "DELETE",
+            },
+        );
         const responseData = await handleApiResponse<string>(response, false);
         return responseData || "Event deleted successfully";
     } catch (error) {
@@ -524,12 +532,11 @@ export const approveEvent = async ({
 
         const payload = { remarks: remarks || "" };
 
-        const response = await fetch(url, {
+        const response = await fetchWithAuth(url, {
             method: "PATCH",
             headers: {
                 "Content-Type": "application/json",
             },
-            credentials: "include",
             body: JSON.stringify(payload),
         });
         const responseData = await handleApiResponse<string>(response, false);
@@ -548,12 +555,11 @@ export const getAllApprovalsOfEvent = async (
     eventId: string,
 ): Promise<EventApprovalDTO[]> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/event-approval/${eventId}`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const data = await handleApiResponse<EventApprovalDTO[]>(
@@ -572,11 +578,13 @@ export const getAllApprovalsOfEvent = async (
 
 export const getOwnEvents = async (): Promise<Event[]> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/users/me/events`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/users/me/events`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+            },
+        );
         const data = await handleApiResponse<Event[]>(response, true);
         return data || [];
     } catch (error) {
@@ -590,11 +598,13 @@ export const getOwnEvents = async (): Promise<Event[]> => {
 
 export const getApprovedEvents = async (): Promise<Event[]> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/events/approved`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/events/approved`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+            },
+        );
         const data = await handleApiResponse<Event[]>(response, true);
         return data || [];
     } catch (error) {
@@ -608,12 +618,11 @@ export const getApprovedEvents = async (): Promise<Event[]> => {
 
 export const getPendingVenueOwnerEvents = async (): Promise<EventDTO[]> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/events/pending/venue-owner`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const data = await handleApiResponse<EventDTO[]>(response, true);
@@ -629,12 +638,11 @@ export const getPendingVenueOwnerEvents = async (): Promise<EventDTO[]> => {
 
 export const getPendingDeptHeadEvents = async (): Promise<Event[]> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/events/pending/department-head`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const data = await handleApiResponse<Event[]>(response, true);
@@ -671,9 +679,8 @@ export const createVenue = async ({
         if (imageFile) {
             formData.append("image", imageFile, imageFile.name);
         }
-        const response = await fetch(`${API_BASE_URL}/admin/venues`, {
+        const response = await fetchWithAuth(`${API_BASE_URL}/admin/venues`, {
             method: "POST",
-            credentials: "include",
             body: formData,
         });
         const responseData = await handleApiResponse<VenueDTO>(response, true);
@@ -712,11 +719,10 @@ export const updateVenue = async ({
         if (imageFile) {
             formData.append("image", imageFile, imageFile.name);
         }
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/admin/venues/${venueId}`,
             {
                 method: "PATCH",
-                credentials: "include",
                 body: formData,
             },
         );
@@ -733,11 +739,10 @@ export const updateVenue = async ({
 
 export const deleteVenue = async (venueId: string): Promise<string> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/admin/venues/${venueId}`,
             {
                 method: "DELETE",
-                credentials: "include",
             },
         );
         const responseData = await handleApiResponse<string>(response, false);
@@ -754,9 +759,8 @@ export const deleteVenue = async (venueId: string): Promise<string> => {
 export const getAllEquipmentsAdmin = async (): Promise<Equipment[]> => {
     try {
         const url = new URL(`${API_BASE_URL}/equipments/all`);
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithAuth(url.toString(), {
             method: "GET",
-            credentials: "include",
         });
         const data = await handleApiResponse<Equipment[]>(response, true);
         return data || [];
@@ -773,12 +777,11 @@ export const getEquipmentReservationsByEventId = async (
     eventId: string,
 ): Promise<EquipmentReservationDTO[]> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${EQUIPMENT_RESERVATIONS_BASE_URL}/event/${eventId}`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const data = await handleApiResponse<EquipmentReservationDTO[]>(
@@ -801,9 +804,8 @@ export const getAllEquipmentsByOwner = async (
     try {
         const url = new URL(`${API_BASE_URL}/equipments`);
         url.searchParams.append("userId", ownerUserId);
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithAuth(url.toString(), {
             method: "GET",
-            credentials: "include",
         });
         const data = await handleApiResponse<Equipment[]>(response, true);
         return data || [];
@@ -860,9 +862,8 @@ export const addEquipment = async ({
         const url = new URL(`${API_BASE_URL}/equipments`);
         url.searchParams.append("userId", userId);
 
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithAuth(url.toString(), {
             method: "POST",
-            credentials: "include",
             body: formData,
         });
         const responseData = await handleApiResponse<Equipment>(response, true);
@@ -924,9 +925,8 @@ export const editEquipment = async ({
         const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`);
         url.searchParams.append("userId", userId);
 
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithAuth(url.toString(), {
             method: "PATCH",
-            credentials: "include",
             body: formData,
         });
         const responseData = await handleApiResponse<Equipment>(response, true);
@@ -948,9 +948,8 @@ export const deleteEquipment = async (
         const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`);
         url.searchParams.append("userId", userId);
 
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithAuth(url.toString(), {
             method: "DELETE",
-            credentials: "include",
         });
         const responseData = await handleApiResponse<string>(response, false);
         return responseData || "Equipment deleted successfully";
@@ -965,10 +964,9 @@ export const deleteEquipment = async (
 
 export const getAllDepartments = async (): Promise<DepartmentDTO[]> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/departments`, {
+        const response = await fetchWithAuth(`${API_BASE_URL}/departments`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         });
         const data = await handleApiResponse<DepartmentDTO[]>(response, true);
         return (data || []).map((dept: DepartmentDTO) => ({
@@ -999,12 +997,14 @@ export const addDepartment = async (
                 ? ({ publicId: departmentData.deptHeadId } as UserDTO)
                 : null,
         };
-        const response = await fetch(`${API_BASE_URL}/admin/departments`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(payload),
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/admin/departments`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            },
+        );
         const responseData = await handleApiResponse<string>(response, false);
         return responseData || "Department added successfully";
     } catch (error) {
@@ -1031,12 +1031,11 @@ export const updateDepartment = async (
                 ? ({ publicId: departmentData.deptHeadId } as UserDTO)
                 : null;
         }
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/admin/department/${departmentId}`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
                 body: JSON.stringify(payload),
             },
         );
@@ -1056,11 +1055,10 @@ export const assignDepartmentHead = async (
     userId: string,
 ): Promise<string> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/admin/department/${departmentId}/assign-head/${userId}`,
             {
                 method: "POST",
-                credentials: "include",
             },
         );
 
@@ -1079,11 +1077,10 @@ export const deleteDepartment = async (
     departmentId: string,
 ): Promise<string> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/admin/department/${departmentId}`,
             {
                 method: "DELETE",
-                credentials: "include",
             },
         );
 
@@ -1105,10 +1102,11 @@ export const getNotifications = async (
     page: number,
     size: number,
 ): Promise<Page<NotificationDTO>> => {
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${NOTIFICATIONS_BASE_URL}?page=${page}&size=${size}`,
         {
-            credentials: "include",
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
         },
     );
     const responseData = await handleApiResponse<Page<NotificationDTO>>(
@@ -1130,9 +1128,13 @@ export const getNotifications = async (
 export const getUnreadNotificationCount = async (): Promise<{
     unreadCount: number;
 }> => {
-    const response = await fetch(`${NOTIFICATIONS_BASE_URL}/count-unread`, {
-        credentials: "include",
-    });
+    const response = await fetchWithAuth(
+        `${NOTIFICATIONS_BASE_URL}/count-unread`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        },
+    );
     const responseData = await handleApiResponse<{ unreadCount: number }>(
         response,
         true,
@@ -1148,10 +1150,9 @@ export const markNotificationsRead = async (
         if (!notificationPublicIds || notificationPublicIds.length === 0) {
             return; // Nothing to mark
         }
-        const response = await fetch(`${API_BASE_URL}/notifications/read`, {
+        const response = await fetchWithAuth(`${NOTIFICATIONS_BASE_URL}/read`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
             body: JSON.stringify(notificationPublicIds),
         });
         await handleApiResponse<void>(response, false);
@@ -1167,10 +1168,12 @@ export const markNotificationsRead = async (
 // PATCH /notifications/read-all
 export const markAllNotificationsRead = async (): Promise<void> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
-            method: "PATCH",
-            credentials: "include",
-        });
+        const response = await fetchWithAuth(
+            `${NOTIFICATIONS_BASE_URL}/read-all`,
+            {
+                method: "PATCH",
+            },
+        );
         await handleApiResponse<void>(response, false);
     } catch (error) {
         throw error instanceof Error
@@ -1189,10 +1192,9 @@ export const deleteNotifications = async (
         if (!notificationPublicIds || notificationPublicIds.length === 0) {
             return; // Nothing to delete
         }
-        const response = await fetch(`${API_BASE_URL}/notifications`, {
+        const response = await fetchWithAuth(`${NOTIFICATIONS_BASE_URL}`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
             body: JSON.stringify(notificationPublicIds),
         });
         await handleApiResponse<void>(response, false);
@@ -1208,9 +1210,8 @@ export const deleteNotifications = async (
 // DELETE /notifications/all
 export const deleteAllNotifications = async (): Promise<void> => {
     try {
-        const response = await fetch(`${API_BASE_URL}/notifications/all`, {
+        const response = await fetchWithAuth(`${NOTIFICATIONS_BASE_URL}/all`, {
             method: "DELETE",
-            credentials: "include",
         });
         await handleApiResponse<void>(response, false);
     } catch (error) {
@@ -1236,9 +1237,8 @@ export const createEquipmentReservation = async (
     );
 
     try {
-        const response = await fetch(EQUIPMENT_RESERVATIONS_BASE_URL, {
+        const response = await fetchWithAuth(EQUIPMENT_RESERVATIONS_BASE_URL, {
             method: "POST",
-            credentials: "include",
             body: formData,
         });
         const responseData = await handleApiResponse<EquipmentReservationDTO>(
@@ -1260,11 +1260,13 @@ export const getOwnEquipmentReservations = async (): Promise<
     EquipmentReservationDTO[]
 > => {
     try {
-        const response = await fetch(`${EQUIPMENT_RESERVATIONS_BASE_URL}/me`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
+        const response = await fetchWithAuth(
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/me`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+            },
+        );
         const data = await handleApiResponse<EquipmentReservationDTO[]>(
             response,
             true,
@@ -1284,10 +1286,9 @@ export const getAllEquipmentReservations = async (): Promise<
     EquipmentReservationDTO[]
 > => {
     try {
-        const response = await fetch(EQUIPMENT_RESERVATIONS_BASE_URL, {
+        const response = await fetchWithAuth(EQUIPMENT_RESERVATIONS_BASE_URL, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         });
         const data = await handleApiResponse<EquipmentReservationDTO[]>(
             response,
@@ -1308,12 +1309,11 @@ export const getEquipmentReservationById = async (
     reservationId: string,
 ): Promise<EquipmentReservationDTO> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const responseData = await handleApiResponse<EquipmentReservationDTO>(
@@ -1337,12 +1337,11 @@ export const approveEquipmentReservation = async ({
 }: EquipmentActionInput): Promise<string> => {
     try {
         const payload = { remarks: remarks || "" };
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationPublicId}/approve`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
                 body: JSON.stringify(payload),
             },
         );
@@ -1367,12 +1366,11 @@ export const rejectEquipmentReservation = async ({
     }
     try {
         const payload = { remarks };
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationPublicId}/reject`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
                 body: JSON.stringify(payload),
             },
         );
@@ -1392,11 +1390,10 @@ export const cancelEquipmentReservation = async (
     reservationId: string,
 ): Promise<string> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/cancel`,
             {
                 method: "PATCH",
-                credentials: "include",
             },
         );
         const responseData = await handleApiResponse<string>(response, false);
@@ -1415,11 +1412,10 @@ export const deleteEquipmentReservation = async (
     reservationId: string,
 ): Promise<string> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}`,
             {
                 method: "DELETE",
-                credentials: "include",
             },
         );
         // Expects text response
@@ -1439,12 +1435,11 @@ export const getApprovalsForEquipmentReservation = async (
     reservationId: string,
 ): Promise<EquipmentApprovalDTO[]> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/approvals`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const data = await handleApiResponse<EquipmentApprovalDTO[]>(
@@ -1466,12 +1461,11 @@ export const getPendingEquipmentOwnerReservations = async (): Promise<
     EquipmentReservationDTO[]
 > => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${EQUIPMENT_RESERVATIONS_BASE_URL}/pending/equipment-owner`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const data = await handleApiResponse<EquipmentReservationDTO[]>(
@@ -1493,12 +1487,11 @@ export const getAllEquipmentOwnerReservations = async (): Promise<
     EquipmentReservationDTO[]
 > => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${EQUIPMENT_RESERVATIONS_BASE_URL}/all/equipment-owner`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const data = await handleApiResponse<EquipmentReservationDTO[]>(
@@ -1520,13 +1513,12 @@ export const rejectEvent = async (data: {
     remarks: string;
 }): Promise<string> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/event-approval/${data.eventId}/reject`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ remarks: data.remarks }),
-                credentials: "include",
             },
         );
         const responseData = await handleApiResponse<string>(response, false);
@@ -1544,12 +1536,11 @@ export const getApprovedEventsByVenue = async (
     venueId: string,
 ): Promise<Event[]> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/events/approved/by-venue/${venueId}`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const data = await handleApiResponse<Event[]>(response, true);
@@ -1567,12 +1558,11 @@ export const getOngoingAndApprovedEventsByVenue = async (
     venueId: string,
 ): Promise<Event[]> => {
     try {
-        const response = await fetch(
+        const response = await fetchWithAuth(
             `${API_BASE_URL}/events/ongoing-and-approved/by-venue/${venueId}`,
             {
                 method: "GET",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
             },
         );
         const data = await handleApiResponse<Event[]>(response, true);
@@ -1609,10 +1599,9 @@ export const searchEvents = async (
             url.searchParams.append("endDate", endDate);
         }
 
-        const response = await fetch(url.toString(), {
+        const response = await fetchWithAuth(url.toString(), {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         });
         const data = await handleApiResponse<EventDTO[]>(response, true);
         return data || [];
@@ -1633,12 +1622,11 @@ export const getTimelineEventsByDateRange = async (
     if (startDate) params.append("startDate", startDate);
     if (endDate) params.append("endDate", endDate);
 
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${API_BASE_URL}/events/timeline?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     const data = await handleApiResponse<Event[]>(response, true);
@@ -1657,12 +1645,11 @@ export const getTopVenues = async (
         endDate,
         limit: limit.toString(),
     });
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/top-venues?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<TopVenueDTO[]>(response, true);
@@ -1682,12 +1669,11 @@ export const getTopEquipment = async (
     if (equipmentTypeFilter) {
         params.append("equipmentTypeFilter", equipmentTypeFilter);
     }
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/top-equipment?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<TopEquipmentDTO[]>(response, true);
@@ -1698,12 +1684,11 @@ export const getEventsOverview = async (
     endDate: string,
 ): Promise<EventCountDTO[]> => {
     const params = new URLSearchParams({ startDate, endDate });
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/events-overview?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<EventCountDTO[]>(response, true);
@@ -1714,12 +1699,11 @@ export const getCancellationRates = async (
     endDate: string,
 ): Promise<CancellationRateDTO[]> => {
     const params = new URLSearchParams({ startDate, endDate });
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/cancellation-rate?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<CancellationRateDTO[]>(response, true);
@@ -1730,12 +1714,11 @@ export const getPeakReservationHours = async (
     endDate: string,
 ): Promise<PeakHourDTO[]> => {
     const params = new URLSearchParams({ startDate, endDate });
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/peak-hours?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<PeakHourDTO[]>(response, true);
@@ -1751,12 +1734,11 @@ export const getUserActivity = async (
         endDate,
         limit: limit.toString(),
     });
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/user-activity?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<UserActivityDTO[]>(response, true);
@@ -1766,12 +1748,11 @@ export const getRecentActivityApi = async (
     limit = 10,
 ): Promise<RecentActivityItemDTO[]> => {
     const params = new URLSearchParams({ limit: limit.toString() });
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/recent-activity?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<RecentActivityItemDTO[]>(response, true);
@@ -1781,12 +1762,11 @@ export const getUpcomingApprovedEventsApi = async (
     limit = 5,
 ): Promise<EventDTO[]> => {
     const params = new URLSearchParams({ limit: limit.toString() });
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/upcoming-approved-events?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<EventDTO[]>(response, true);
@@ -1796,12 +1776,11 @@ export const getUpcomingApprovedEventsCountNextDaysApi = async (
     days = 30,
 ): Promise<number> => {
     const params = new URLSearchParams({ days: days.toString() });
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/upcoming-approved-events-count-next-days?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<number>(response, true);
@@ -1817,12 +1796,11 @@ export const getEventTypesSummary = async (
         endDate,
         limit: limit.toString(),
     });
-    const response = await fetch(
+    const response = await fetchWithAuth(
         `${DASHBOARD_BASE_URL}/event-types-summary?${params.toString()}`,
         {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
         },
     );
     return handleApiResponse<EventTypeSummaryDTO[]>(response, true);
