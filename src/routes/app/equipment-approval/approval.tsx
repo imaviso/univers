@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { allNavigation } from "@/lib/navigation";
 import {
     allEquipmentOwnerReservationsQueryOptions,
     useApproveEquipmentReservationMutation,
@@ -38,10 +37,9 @@ import {
 } from "@/lib/query";
 import type { EquipmentReservationDTO, UserRole } from "@/lib/types";
 import { formatDateTime, getStatusBadgeClass } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
-    redirect,
     useNavigate,
     useRouteContext,
 } from "@tanstack/react-router";
@@ -104,40 +102,6 @@ function usePersistentState<T>(
 
 export const Route = createFileRoute("/app/equipment-approval/approval")({
     component: EquipmentReservationApproval,
-    beforeLoad: async ({ location, context }) => {
-        const navigationItem = allNavigation.find((item) => {
-            return (
-                location.pathname === item.href ||
-                location.pathname.startsWith(`${item.href}/`)
-            );
-        });
-        const allowedRoles: string[] = navigationItem
-            ? navigationItem.roles
-            : [];
-
-        if (context.authState == null) {
-            throw redirect({
-                to: "/login",
-                search: {
-                    redirect: location.href,
-                },
-            });
-        }
-
-        const isAuthorized = allowedRoles.includes(context.authState.role);
-
-        if (!isAuthorized) {
-            toast.error("You are not authorized to view this page.");
-            throw redirect({
-                to: "/app",
-            });
-        }
-    },
-    loader: ({ context }) => {
-        context.queryClient.ensureQueryData(
-            allEquipmentOwnerReservationsQueryOptions,
-        );
-    },
 });
 
 type ViewMode = "all" | "pending" | "approved" | "rejected";
@@ -189,7 +153,7 @@ export function EquipmentReservationApproval() {
     const approveMutation = useApproveEquipmentReservationMutation();
     const rejectMutation = useRejectEquipmentReservationMutation();
 
-    const { data: reservations = [], isLoading } = useQuery(
+    const { data: reservations = [], isLoading } = useSuspenseQuery(
         allEquipmentOwnerReservationsQueryOptions,
     );
 

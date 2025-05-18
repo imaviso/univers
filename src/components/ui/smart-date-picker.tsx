@@ -94,11 +94,11 @@ const inputBase =
 
 // @source: https://www.perplexity.ai/search/in-javascript-how-RfI7fMtITxKr5c.V9Lv5KA#1
 // use this pattern to validate the transformed date string for the natural language input
-const naturalInputValidationPattern =
-    "^[A-Z][a-z]{2}sd{1,2},sd{4},sd{1,2}:d{2}s[AP]M$";
+// const naturalInputValidationPattern =
+//     "^[A-Z][a-z]{2}sd{1,2},sd{4},sd{1,2}:d{2}s[AP]M$";
 
 // Adjust DEFAULT_SIZE for 30-minute increments (24 hours * 2 slots/hour)
-const DEFAULT_SIZE = 48;
+// const DEFAULT_SIZE = 48;
 
 /**
  * Smart time input Docs: {@link: https://shadcn-extension.vercel.app/docs/smart-time-input}
@@ -195,94 +195,94 @@ const TimePicker = () => {
         [value, onValueChange, onTimeChange, disabled],
     );
 
-    const handleKeydown = React.useCallback(
-        (e: React.KeyboardEvent<HTMLDivElement>) => {
-            e.stopPropagation();
+    // const handleKeydown = React.useCallback(
+    //     (e: React.KeyboardEvent<HTMLDivElement>) => {
+    //         e.stopPropagation();
 
-            if (!document) return;
+    //         if (!document) return;
 
-            const moveNext = () => {
-                const nextIndex =
-                    activeIndex + 1 > DEFAULT_SIZE - 1 ? 0 : activeIndex + 1;
+    //         const moveNext = () => {
+    //             const nextIndex =
+    //                 activeIndex + 1 > DEFAULT_SIZE - 1 ? 0 : activeIndex + 1;
 
-                const currentElm = document.getElementById(`time-${nextIndex}`);
+    //             const currentElm = document.getElementById(`time-${nextIndex}`);
 
-                currentElm?.focus();
+    //             currentElm?.focus();
 
-                setActiveIndex(nextIndex);
-            };
+    //             setActiveIndex(nextIndex);
+    //         };
 
-            const movePrev = () => {
-                const prevIndex =
-                    activeIndex - 1 < 0 ? DEFAULT_SIZE - 1 : activeIndex - 1;
+    //         const movePrev = () => {
+    //             const prevIndex =
+    //                 activeIndex - 1 < 0 ? DEFAULT_SIZE - 1 : activeIndex - 1;
 
-                const currentElm = document.getElementById(`time-${prevIndex}`);
+    //             const currentElm = document.getElementById(`time-${prevIndex}`);
 
-                currentElm?.focus();
+    //             currentElm?.focus();
 
-                setActiveIndex(prevIndex);
-            };
+    //             setActiveIndex(prevIndex);
+    //         };
 
-            const setElement = () => {
-                const currentElm = document.getElementById(
-                    `time-${activeIndex}`,
-                );
+    //         const setElement = () => {
+    //             const currentElm = document.getElementById(
+    //                 `time-${activeIndex}`,
+    //             );
 
-                if (!currentElm) return;
+    //             if (!currentElm) return;
 
-                currentElm.focus();
+    //             currentElm.focus();
 
-                const timeValue = currentElm.textContent ?? "";
+    //             const timeValue = currentElm.textContent ?? "";
 
-                const PM_AM = timeValue.split(" ")[1];
-                const PM_AM_hour = Number.parseInt(
-                    timeValue.split(" ")[0].split(":")[0],
-                );
-                const hour =
-                    PM_AM === "AM"
-                        ? PM_AM_hour === 12
-                            ? 0
-                            : PM_AM_hour
-                        : PM_AM_hour === 12
-                          ? 12
-                          : PM_AM_hour + 12;
+    //             const PM_AM = timeValue.split(" ")[1];
+    //             const PM_AM_hour = Number.parseInt(
+    //                 timeValue.split(" ")[0].split(":")[0],
+    //             );
+    //             const hour =
+    //                 PM_AM === "AM"
+    //                     ? PM_AM_hour === 12
+    //                         ? 0
+    //                         : PM_AM_hour
+    //                     : PM_AM_hour === 12
+    //                       ? 12
+    //                       : PM_AM_hour + 12;
 
-                const part =
-                    Number.parseInt(timeValue.split(" ")[0].split(":")[1]) === 0
-                        ? 0
-                        : 1;
+    //             const part =
+    //                 Number.parseInt(timeValue.split(" ")[0].split(":")[1]) === 0
+    //                     ? 0
+    //                     : 1;
 
-                formatSelectedTime(timeValue, hour, part);
-            };
+    //             formatSelectedTime(timeValue, hour, part);
+    //         };
 
-            const reset = () => {
-                const currentElm = document.getElementById(
-                    `time-${activeIndex}`,
-                );
-                currentElm?.blur();
-                setActiveIndex(-1);
-            };
+    //         const reset = () => {
+    //             const currentElm = document.getElementById(
+    //                 `time-${activeIndex}`,
+    //             );
+    //             currentElm?.blur();
+    //             setActiveIndex(-1);
+    //         };
 
-            switch (e.key) {
-                case "ArrowUp":
-                    movePrev();
-                    break;
+    //         switch (e.key) {
+    //             case "ArrowUp":
+    //                 movePrev();
+    //                 break;
 
-                case "ArrowDown":
-                    moveNext();
-                    break;
+    //             case "ArrowDown":
+    //                 moveNext();
+    //                 break;
 
-                case "Escape":
-                    reset();
-                    break;
+    //             case "Escape":
+    //                 reset();
+    //                 break;
 
-                case "Enter":
-                    setElement();
-                    break;
-            }
-        },
-        [activeIndex, formatSelectedTime],
-    );
+    //             case "Enter":
+    //                 setElement();
+    //                 break;
+    //         }
+    //     },
+    //     [activeIndex, formatSelectedTime],
+    // );
 
     const handleClick = React.useCallback(
         (hour: number, part: number, PM_AM: string, currentIndex: number) => {

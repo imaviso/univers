@@ -172,7 +172,7 @@ function EquipmentInventory() {
             await deleteEquipment(equipmentId, userId);
             return Promise.resolve(undefined);
         },
-        onSuccess: (_, variables) => {
+        onSuccess: () => {
             toast.success("Equipment deleted successfully.");
             queryClient.invalidateQueries({
                 queryKey: equipmentsQueryOptions(currentUser).queryKey,
@@ -180,8 +180,8 @@ function EquipmentInventory() {
             setIsDeleteDialogOpen(false);
             setEquipmentToDelete(null);
         },
-        onError: (error) => {
-            toast.error(`Failed to delete equipment: ${error.message}`);
+        onError: () => {
+            toast.error("Failed to delete equipment");
             setIsDeleteDialogOpen(false);
             setEquipmentToDelete(null);
         },

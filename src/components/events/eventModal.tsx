@@ -818,10 +818,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
                                 </Button>
                                 <Button
                                     type="submit"
-                                    disabled={
-                                        createEventMutation.isPending ||
-                                        !form.formState.isValid // Also disable if form is invalid
-                                    }
+                                    disabled={createEventMutation.isPending}
                                 >
                                     {createEventMutation.isPending && (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

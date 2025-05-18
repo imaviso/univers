@@ -74,7 +74,7 @@ export const unreadNotificationsCountAtom = atom(
 export const addNotificationAtom = atom(
     null, // write-only atom
     (
-        get,
+        _get,
         set,
         newNotificationData: Omit<
             Notification,
@@ -95,7 +95,7 @@ export const addNotificationAtom = atom(
 // Atom to mark a notification as read
 export const markNotificationAsReadAtom = atom(
     null, // write-only atom
-    (get, set, publicId: string) => {
+    (_get, set, publicId: string) => {
         set(notificationsAtom, (prev) =>
             prev.map((n) =>
                 n.publicId === publicId ? { ...n, isRead: true } : n,
@@ -107,7 +107,7 @@ export const markNotificationAsReadAtom = atom(
 // Atom to clear all notifications
 export const clearNotificationsAtom = atom(
     null, // write-only atom
-    (get, set) => {
+    (_get, set) => {
         set(notificationsAtom, []);
     },
 );

@@ -623,13 +623,7 @@ export function EditEventModal({
                                 </Button>
                                 <Button
                                     type="submit"
-                                    disabled={
-                                        updateEventMutation.isPending
-                                        // ||
-                                        // !form.formState.isValid
-                                        // ||
-                                        // !form.formState.isDirty // Disable if not valid or no changes made
-                                    }
+                                    disabled={updateEventMutation.isPending}
                                 >
                                     {updateEventMutation.isPending && (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

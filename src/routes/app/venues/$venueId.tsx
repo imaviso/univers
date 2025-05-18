@@ -12,12 +12,7 @@ import { getOngoingAndApprovedEventsByVenue } from "@/lib/api";
 import { eventsQueryKeys, venuesQueryOptions } from "@/lib/query";
 import type { Event as AppEvent, VenueDTO } from "@/lib/types";
 import { formatDateRange, getStatusColor } from "@/lib/utils";
-import {
-    Link,
-    createFileRoute,
-    useNavigate,
-    useRouter,
-} from "@tanstack/react-router";
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import { format } from "date-fns";
 import {
     ArrowLeft,
@@ -54,7 +49,6 @@ export const Route = createFileRoute("/app/venues/$venueId")({
 });
 
 export function VenueDetails() {
-    const navigate = useNavigate();
     const { venue, ongoingAndApprovedEvents } = Route.useLoaderData();
     const router = useRouter();
     const onBack = () => router.history.back();
@@ -70,54 +64,9 @@ export function VenueDetails() {
         );
     }
 
-    // Handle navigation to reservation details
-    const handleViewReservation = (reservationId: number) => {
-        // Navigate to the reservation details page
-        navigate({ to: `/app/reservations/${reservationId}` });
-    };
-
-    // Status badge styling
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case "pending":
-                return (
-                    <Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
-                        Pending
-                    </Badge>
-                );
-            case "approved":
-                return (
-                    <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">
-                        Approved
-                    </Badge>
-                );
-            case "disapproved":
-                return (
-                    <Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-                        Disapproved
-                    </Badge>
-                );
-            default:
-                return <Badge variant="outline">{status}</Badge>;
-        }
-    };
-
-    // Format date and time
-    const formatDate = (dateString: string) => {
-        return format(new Date(dateString), "MMM d, yyyy");
-    };
-
     const formatDateTime = (dateString: string | null) => {
         if (!dateString) return "—";
         return format(new Date(dateString), "MMM d, yyyy h:mm a");
-    };
-
-    const formatTime = (timeString: string) => {
-        const [hours, minutes] = timeString.split(":");
-        const date = new Date();
-        date.setHours(Number.parseInt(hours, 10));
-        date.setMinutes(Number.parseInt(minutes, 10));
-        return format(date, "h:mm a");
     };
 
     return (

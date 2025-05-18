@@ -28,8 +28,8 @@ const chartConfig = {
 
 export function CancellationRateChart({
     dateRange,
-    venueFilter,
-    equipmentTypeFilter,
+    // venueFilter,
+    // equipmentTypeFilter,
 }: CancellationRateChartProps) {
     const startDate = dateRange?.from
         ? format(dateRange.from, "yyyy-MM-dd")
