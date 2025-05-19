@@ -218,7 +218,7 @@ export function VenueDataTable({
                     icon: MapPin,
                 }) as ColumnMeta<VenueDTO, unknown>,
             },
-            ...((currentUser?.role === "SUPER_ADMIN"
+            ...((currentUser?.roles?.includes("SUPER_ADMIN")
                 ? [
                       {
                           accessorFn: (row: VenueDTO) =>
@@ -276,12 +276,15 @@ export function VenueDataTable({
 
                     // SUPER_ADMIN can edit/delete. VENUE_OWNER can only edit/delete their own.
                     const canManage =
-                        currentUser?.role === "SUPER_ADMIN" ||
-                        (currentUser?.role === "VENUE_OWNER" &&
+                        currentUser?.roles?.includes("SUPER_ADMIN") ||
+                        (currentUser?.roles?.includes("VENUE_OWNER") &&
                             venue.venueOwner?.publicId ===
                                 currentUser?.publicId);
 
-                    if (!canManage && currentUser?.role !== "SUPER_ADMIN") {
+                    if (
+                        !canManage &&
+                        !currentUser?.roles?.includes("SUPER_ADMIN")
+                    ) {
                         // Adjusted condition slightly for clarity
                         // View action for non-managers or non-privileged users
                         return (
@@ -325,7 +328,9 @@ export function VenueDataTable({
                                     <Eye className="mr-2 h-4 w-4" /> View
                                 </DropdownMenuItem>
                                 {(canManage ||
-                                    currentUser?.role === "SUPER_ADMIN") && (
+                                    currentUser?.roles?.includes(
+                                        "SUPER_ADMIN",
+                                    )) && (
                                     <>
                                         <DropdownMenuItem
                                             onClick={() =>

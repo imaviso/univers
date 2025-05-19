@@ -18,6 +18,7 @@ import { userSignOut } from "@/lib/auth";
 import { allNavigation } from "@/lib/navigation";
 import { webSocketStatusAtom } from "@/lib/notifications";
 import { useCurrentUser } from "@/lib/query";
+import type { UserRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -44,9 +45,12 @@ export function Sidebar() {
 
     useEffect(() => {
         if (user) {
-            const filteredNavigation = allNavigation.filter((item) =>
-                item.roles.includes(user.role),
-            );
+            const filteredNavigation = allNavigation.filter((item) => {
+                const userRoles = new Set(user.roles || []);
+                return item.roles.some((role) =>
+                    userRoles.has(role as UserRole),
+                );
+            });
             setNavigation(filteredNavigation);
         }
     }, [user]);

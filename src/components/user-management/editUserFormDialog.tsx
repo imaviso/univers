@@ -16,6 +16,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import MultipleSelector, { type Option } from "@/components/ui/multiselect";
 import {
     Select,
     SelectContent,
@@ -64,10 +65,12 @@ export function EditUserFormDialog({
             password: "",
             confirmPassword: "",
             email: "",
-            role: "",
+            roles: [],
             departmentPublicId: "",
             telephoneNumber: "",
             phoneNumber: "",
+            active: true,
+            emailVerified: false,
         },
         mode: "onChange",
     });
@@ -81,26 +84,30 @@ export function EditUserFormDialog({
             idNumber,
             firstName,
             lastName,
-            role,
+            roles,
             email,
             password,
             confirmPassword,
             departmentPublicId,
             telephoneNumber,
             phoneNumber,
+            active,
+            emailVerified,
         } = values;
 
         const payload = {
             idNumber,
             firstName,
             lastName,
-            role: role,
+            roles,
             email,
             password: password ?? "",
             confirmPassword: confirmPassword ?? "",
             departmentPublicId,
             telephoneNumber,
             phoneNumber: phoneNumber ?? "",
+            active,
+            emailVerified,
         };
 
         onSubmit(payload);
@@ -116,10 +123,12 @@ export function EditUserFormDialog({
                     email: user.email || "",
                     password: "",
                     confirmPassword: "",
-                    role: user.role || "",
+                    roles: Array.from(user.roles),
                     departmentPublicId: user.department?.publicId || "",
                     telephoneNumber: user.telephoneNumber || "",
                     phoneNumber: user.phoneNumber || "",
+                    active: user.active ?? true,
+                    emailVerified: user.emailVerified ?? false,
                 });
             } else {
                 // Reset for potential "Add New User" case (if this dialog is reused)
@@ -130,10 +139,12 @@ export function EditUserFormDialog({
                     email: "",
                     password: "",
                     confirmPassword: "",
-                    role: "",
+                    roles: [],
                     departmentPublicId: "",
                     telephoneNumber: "",
                     phoneNumber: "",
+                    active: true,
+                    emailVerified: false,
                 });
             }
         }
@@ -176,32 +187,41 @@ export function EditUserFormDialog({
                         />
                         <FormField
                             control={form.control}
-                            name="role"
+                            name="roles"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Role</FormLabel>
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        // Use value prop for controlled component
-                                        value={field.value}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select a role" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent className="w-[--radix-select-trigger-width]">
-                                            {roles.map((role) => (
-                                                <SelectItem
-                                                    key={role.value}
-                                                    value={role.value}
-                                                    className="overflow-hidden text-ellipsis whitespace-nowrap"
-                                                >
-                                                    {role.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <FormLabel>Roles</FormLabel>
+                                    <FormControl>
+                                        <MultipleSelector
+                                            value={
+                                                Array.isArray(field.value)
+                                                    ? field.value.map(
+                                                          (role) => ({
+                                                              value: role,
+                                                              label:
+                                                                  roles.find(
+                                                                      (r) =>
+                                                                          r.value ===
+                                                                          role,
+                                                                  )?.label ||
+                                                                  role,
+                                                          }),
+                                                      )
+                                                    : []
+                                            }
+                                            onChange={(options: Option[]) => {
+                                                field.onChange(
+                                                    options.map(
+                                                        (opt) => opt.value,
+                                                    ),
+                                                );
+                                            }}
+                                            options={roles}
+                                            placeholder="Select roles"
+                                            className="w-full file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input"
+                                            badgeClassName="bg-accent text-accent-foreground hover:bg-accent/80"
+                                        />
+                                    </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -315,7 +335,7 @@ export function EditUserFormDialog({
                                                 type="tel"
                                                 // Ensure value is handled correctly (controlled component)
                                                 {...field}
-                                                value={field.value || undefined} // Handle null/undefined
+                                                value={field.value || ""} // Handle null/undefined
                                             />
                                         </FormControl>
                                         <FormMessage />

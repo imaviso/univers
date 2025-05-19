@@ -31,7 +31,7 @@ export const Route = createRootRouteWithContext<{
                     "Critical auth error in root loader, redirecting to login:",
                     error.message,
                 );
-                await context.queryClient.removeQueries({
+                context.queryClient.removeQueries({
                     queryKey: userQueryOptions.queryKey,
                 });
 

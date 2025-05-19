@@ -393,7 +393,7 @@ export function EquipmentDataTable({
                     options: STATUS_OPTIONS,
                 }) as ColumnMeta<Equipment, unknown>,
             },
-            ...(currentUser?.role === "SUPER_ADMIN"
+            ...(currentUser?.roles?.includes("SUPER_ADMIN")
                 ? [
                       {
                           accessorFn: (row: Equipment) =>
@@ -435,9 +435,13 @@ export function EquipmentDataTable({
                           cell: ({ row }) => {
                               const item = row.original;
                               const canManage =
-                                  currentUser?.role === "SUPER_ADMIN" ||
-                                  (["EQUIPMENT_OWNER", "MSDO", "OPC"].includes(
-                                      currentUser?.role ?? "",
+                                  currentUser?.roles?.includes("SUPER_ADMIN") ||
+                                  (currentUser?.roles?.some((role) =>
+                                      [
+                                          "EQUIPMENT_OWNER",
+                                          "MSDO",
+                                          "OPC",
+                                      ].includes(role),
                                   ) &&
                                       item.equipmentOwner?.publicId ===
                                           currentUser?.publicId);

@@ -26,7 +26,7 @@ import {
     useCurrentUser, // To check current user's role
     useRejectEquipmentReservationMutation,
 } from "@/lib/query";
-import { formatDateTime, formatRole, getStatusBadgeClass } from "@/lib/utils";
+import { formatDateTime, formatRoles, getStatusBadgeClass } from "@/lib/utils";
 import { useSuspenseQueries } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2, FileText, X } from "lucide-react";
@@ -114,7 +114,8 @@ export function EquipmentReservationDetails() {
 
     // Check if the current user is the designated equipment owner for *this* equipment
     // Note: Backend enforces this, but frontend check improves UX
-    const isCurrentUserEquipmentOwner = currentUser?.role === "EQUIPMENT_OWNER";
+    const isCurrentUserEquipmentOwner =
+        currentUser?.roles?.includes("EQUIPMENT_OWNER");
     // We don't have the equipment owner ID directly on the reservation DTO
     // The backend service logic handles checking if the *acting* user is the owner
     // So, for the UI, we just check if the user *has* the EQUIPMENT_OWNER role.
@@ -322,8 +323,10 @@ export function EquipmentReservationDetails() {
                                                             }
                                                         </TableCell>
                                                         <TableCell>
-                                                            {formatRole(
-                                                                approval.userRole,
+                                                            {formatRoles(
+                                                                approval
+                                                                    .signedByUser
+                                                                    .roles,
                                                             )}
                                                         </TableCell>
                                                         <TableCell>

@@ -2,6 +2,7 @@ import ErrorPage from "@/components/ErrorPage";
 import PendingPage from "@/components/PendingPage";
 import { allNavigation } from "@/lib/navigation";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query"; // Add departmentsQueryOptions
+import type { UserRole } from "@/lib/types";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/departments")({
@@ -23,7 +24,10 @@ export const Route = createFileRoute("/app/departments")({
                 search: { redirect: location.href },
             });
         }
-        const isAuthorized = allowedRoles.includes(context.authState.role);
+        const userRoles = context.authState?.roles || [];
+        const isAuthorized = allowedRoles.some((role) =>
+            userRoles.includes(role as UserRole),
+        );
 
         if (!isAuthorized) {
             throw redirect({

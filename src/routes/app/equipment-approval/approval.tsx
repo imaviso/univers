@@ -35,7 +35,7 @@ import {
     useApproveEquipmentReservationMutation,
     useRejectEquipmentReservationMutation,
 } from "@/lib/query";
-import type { EquipmentReservationDTO, UserRole } from "@/lib/types";
+import type { EquipmentReservationDTO } from "@/lib/types";
 import { formatDateTime, getStatusBadgeClass } from "@/lib/utils";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
@@ -114,7 +114,7 @@ type SingleActionInfo = {
 export function EquipmentReservationApproval() {
     const navigate = useNavigate();
     const { authState } = useRouteContext({ from: "/app" });
-    const currentUserRole = authState?.role as UserRole | undefined;
+    const currentUserRole = authState?.roles || [];
     const currentUserId = authState?.publicId;
 
     const [viewMode, setViewMode] = usePersistentState<ViewMode>(
@@ -638,8 +638,8 @@ export function EquipmentReservationApproval() {
     }
 
     const availableTabs: ViewMode[] =
-        currentUserRole === "EQUIPMENT_OWNER" ||
-        currentUserRole === "SUPER_ADMIN"
+        currentUserRole.includes("EQUIPMENT_OWNER") ||
+        currentUserRole.includes("SUPER_ADMIN")
             ? ["pending", "approved", "rejected", "all"]
             : ["all"];
 
@@ -695,8 +695,8 @@ export function EquipmentReservationApproval() {
                     </div>
                 </header>
 
-                {(currentUserRole === "EQUIPMENT_OWNER" ||
-                    currentUserRole === "SUPER_ADMIN") && (
+                {(currentUserRole.includes("EQUIPMENT_OWNER") ||
+                    currentUserRole.includes("SUPER_ADMIN")) && (
                     <div className="grid grid-cols-4 gap-4 p-6 pb-0">
                         <Card
                             className={`hover:shadow-md transition-shadow cursor-pointer ${viewMode === "all" ? "ring-2 ring-primary" : ""}`}

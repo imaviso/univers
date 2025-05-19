@@ -7,7 +7,7 @@ export type UserType = {
     firstName: string;
     lastName: string;
     email: string;
-    role: UserRole;
+    roles: UserRole[];
     password: string | undefined;
     departmentId: string;
     telephoneNumber: string;
@@ -29,7 +29,7 @@ export type UserDTO = {
     idNumber: string | null;
     phoneNumber: string | null;
     telephoneNumber: string | null;
-    role: UserRole;
+    roles: UserRole[];
     department: DepartmentDTO | null;
     emailVerified: boolean | null;
     active: boolean;

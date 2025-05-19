@@ -54,7 +54,7 @@ interface EquipmentFormDialogProps {
     equipment?: Equipment;
     onSubmit: (data: EquipmentDTOInput) => void;
     isMutating: boolean;
-    currentUserRole: UserDTO["role"];
+    currentUserRoles: UserDTO["roles"];
     equipmentOwners: UserDTO[];
 }
 
@@ -64,10 +64,10 @@ export function EquipmentFormDialog({
     equipment,
     onSubmit,
     isMutating,
-    currentUserRole,
+    currentUserRoles,
     equipmentOwners,
 }: EquipmentFormDialogProps) {
-    const isSuperAdmin = currentUserRole === "SUPER_ADMIN";
+    const isSuperAdmin = currentUserRoles?.includes("SUPER_ADMIN");
     const isEditing = !!equipment;
 
     const formDefaultValues = equipment

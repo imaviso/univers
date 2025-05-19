@@ -8,6 +8,7 @@ import {
     pendingVenueOwnerEventsQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
+import type { UserRole } from "@/lib/types";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/events")({
@@ -40,7 +41,10 @@ export const Route = createFileRoute("/app/events")({
             });
         }
 
-        const isAuthorized = allowedRoles.includes(context.authState.role);
+        const userRoles = context.authState?.roles || [];
+        const isAuthorized = allowedRoles.some((role) =>
+            userRoles.includes(role as UserRole),
+        );
 
         if (!isAuthorized) {
             throw redirect({
@@ -56,18 +60,18 @@ export const Route = createFileRoute("/app/events")({
     pendingComponent: () => <PendingPage />,
     loader: async ({ context }) => {
         if (
-            context.authState?.role === "SUPER_ADMIN" ||
-            context.authState?.role === "VP_ADMIN" ||
-            context.authState?.role === "MSDO" ||
-            context.authState?.role === "OPC" ||
-            context.authState?.role === "SSD" ||
-            context.authState?.role === "FAO" ||
-            context.authState?.role === "VPAA" ||
-            context.authState?.role === "DEPT_HEAD"
+            context.authState?.roles.includes("SUPER_ADMIN") ||
+            context.authState?.roles.includes("VP_ADMIN") ||
+            context.authState?.roles.includes("MSDO") ||
+            context.authState?.roles.includes("OPC") ||
+            context.authState?.roles.includes("SSD") ||
+            context.authState?.roles.includes("FAO") ||
+            context.authState?.roles.includes("VPAA") ||
+            context.authState?.roles.includes("DEPT_HEAD")
         ) {
             context.queryClient.ensureQueryData(allEventsQueryOptions);
         }
-        if (context.authState?.role === "VENUE_OWNER") {
+        if (context.authState?.roles.includes("VENUE_OWNER")) {
             context.queryClient.ensureQueryData(
                 pendingVenueOwnerEventsQueryOptions,
             );

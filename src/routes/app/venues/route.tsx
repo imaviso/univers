@@ -2,6 +2,7 @@ import ErrorPage from "@/components/ErrorPage";
 import PendingPage from "@/components/PendingPage";
 import { allNavigation } from "@/lib/navigation";
 import { usersQueryOptions, venuesQueryOptions } from "@/lib/query";
+import type { UserRole } from "@/lib/types";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/venues")({
@@ -34,7 +35,10 @@ export const Route = createFileRoute("/app/venues")({
             });
         }
 
-        const isAuthorized = allowedRoles.includes(context.authState.role);
+        const userRoles = context.authState?.roles || [];
+        const isAuthorized = allowedRoles.some((role) =>
+            userRoles.includes(role as UserRole),
+        );
 
         if (!isAuthorized) {
             throw redirect({
@@ -50,7 +54,7 @@ export const Route = createFileRoute("/app/venues")({
     errorComponent: () => <ErrorPage />,
     loader: async ({ context }) => {
         context.queryClient.ensureQueryData(venuesQueryOptions);
-        if (context.authState?.role === "SUPER_ADMIN") {
+        if (context.authState?.roles.includes("SUPER_ADMIN")) {
             context.queryClient.ensureQueryData(usersQueryOptions);
         }
     },

@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { type ClassValue, clsx } from "clsx";
 import { format, setHours, setMinutes } from "date-fns";
 import { twMerge } from "tailwind-merge";
-import type { Equipment } from "./types";
+import type { Equipment, UserRole } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -150,18 +150,23 @@ export const getApproverStatusBadge = (status: string | undefined) => {
     }
 };
 
-export function formatRole(role: string | null | undefined): string {
+export function formatRole(role: UserRole): string {
     if (!role) return "N/A";
     return role
-        .split("_") // Split by underscore
+        .split("_")
         .map(
             (word) =>
                 word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
-        ) // Capitalize each word
-        .join(" ") // Join with space
-        .toUpperCase(); // Convert the whole string to uppercase
+        )
+        .join(" ");
 }
-export const getBadgeVariant = (role: string): string => {
+
+export function formatRoles(roles: UserRole[] | null | undefined): string[] {
+    if (!roles || roles.length === 0) return ["N/A"];
+    return roles.map((role) => formatRole(role));
+}
+
+export const getBadgeVariant = (role: UserRole): string => {
     switch (role) {
         case "SUPER_ADMIN":
             return "bg-red-100 text-red-800";

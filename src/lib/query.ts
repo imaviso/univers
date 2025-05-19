@@ -107,7 +107,10 @@ export const isAuthenticated = async (
             return false; // Not authenticated
         }
 
-        if (requiredRoles && !requiredRoles.includes(user.role)) {
+        if (
+            requiredRoles &&
+            !requiredRoles.some((role) => user.roles.includes(role))
+        ) {
             return false; // Does not have any of the required roles
         }
 
@@ -213,14 +216,14 @@ export const venuesQueryOptions = {
 
 export const equipmentsQueryOptions = (user: UserDTO | null | undefined) =>
     queryOptions({
-        // Include role in query key if fetch logic depends on it, or just userId if sufficient
-        queryKey: ["equipments", user?.publicId, user?.role],
+        // Include roles in query key if fetch logic depends on it, or just userId if sufficient
+        queryKey: ["equipments", user?.publicId, user?.roles],
         queryFn: async () => {
             if (!user) return []; // Don't fetch if no user
             if (
-                user.role === "EQUIPMENT_OWNER" ||
-                user.role === "MSDO" ||
-                user.role === "OPC"
+                user.roles.includes("EQUIPMENT_OWNER") ||
+                user.roles.includes("MSDO") ||
+                user.roles.includes("OPC")
             ) {
                 return await getAllEquipmentsByOwner(user.publicId);
             }

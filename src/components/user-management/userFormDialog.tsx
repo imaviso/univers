@@ -16,6 +16,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import MultipleSelector, { type Option } from "@/components/ui/multiselect";
 import {
     Select,
     SelectContent,
@@ -57,7 +58,7 @@ export function UserFormDialog({
             email: "",
             password: "",
             confirmPassword: "",
-            role: "",
+            roles: [],
             departmentPublicId: "",
             telephoneNumber: "",
             phoneNumber: "",
@@ -69,6 +70,10 @@ export function UserFormDialog({
 
     const handleFormSubmit = (values: UserFormInput) => {
         const { confirmPassword, ...dataToSubmit } = values;
+        // Ensure roles is an array
+        if (!Array.isArray(dataToSubmit.roles)) {
+            dataToSubmit.roles = [];
+        }
         onSubmit(dataToSubmit);
     };
 
@@ -96,55 +101,67 @@ export function UserFormDialog({
                         className="space-y-4 py-4"
                     >
                         <div className="space-y-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="idNumber"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>ID Number</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter ID number"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                            <FormField
+                                control={form.control}
+                                name="idNumber"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>ID Number</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter ID number"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                                <FormField
-                                    control={form.control}
-                                    name="role"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Role</FormLabel>
-                                            <Select
-                                                onValueChange={field.onChange}
-                                                defaultValue={field.value}
-                                            >
-                                                <FormControl>
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Select a role" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {roles.map((role) => (
-                                                        <SelectItem
-                                                            key={role.value}
-                                                            value={role.value}
-                                                        >
-                                                            {role.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                            <FormField
+                                control={form.control}
+                                name="roles"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Roles</FormLabel>
+                                        <FormControl>
+                                            <MultipleSelector
+                                                value={
+                                                    Array.isArray(field.value)
+                                                        ? field.value.map(
+                                                              (role) => ({
+                                                                  value: role,
+                                                                  label:
+                                                                      roles.find(
+                                                                          (r) =>
+                                                                              r.value ===
+                                                                              role,
+                                                                      )
+                                                                          ?.label ||
+                                                                      role,
+                                                              }),
+                                                          )
+                                                        : []
+                                                }
+                                                onChange={(
+                                                    options: Option[],
+                                                ) => {
+                                                    field.onChange(
+                                                        options.map(
+                                                            (opt) => opt.value,
+                                                        ),
+                                                    );
+                                                }}
+                                                options={roles}
+                                                placeholder="Select roles"
+                                                className="w-full file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input"
+                                                badgeClassName="bg-accent text-accent-foreground hover:bg-accent/80"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
@@ -351,7 +368,7 @@ export function UserFormDialog({
                         </Button>
                         <Button
                             type="button"
-                            disabled={!form.formState.isValid || isLoading}
+                            disabled={isLoading}
                             onClick={form.handleSubmit(handleFormSubmit)}
                         >
                             Create User
