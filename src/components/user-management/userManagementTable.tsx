@@ -200,10 +200,10 @@ export function UserDataTable() {
                             ...(payload.telephoneNumber && {
                                 telephoneNumber: payload.telephoneNumber,
                             }),
-                            role:
-                                payload.role !== undefined
-                                    ? (payload.role as UserRole)
-                                    : user.role,
+                            roles:
+                                payload.roles !== undefined
+                                    ? Array.from(payload.roles as UserRole[])
+                                    : user.roles,
                             email: user.email,
                             password: user.password,
                             emailVerified: user.emailVerified,
@@ -511,7 +511,7 @@ export function UserDataTable() {
             },
             // ... Role column ...
             {
-                accessorKey: "role",
+                accessorKey: "roles",
                 header: ({ column }) => (
                     <Button
                         variant="ghost"
@@ -524,22 +524,28 @@ export function UserDataTable() {
                     </Button>
                 ),
                 cell: ({ row }) => {
-                    const roleValue = row.getValue("role") as string;
-                    const roleInfo = ROLES.find(
-                        (role) => role.value === roleValue,
-                    );
-
+                    const roles = row.getValue("roles") as Set<UserRole>;
                     return (
-                        <Badge
-                            className={`font-medium capitalize px-2 py-0.5 ${getBadgeVariant(roleValue)}`}
-                            variant="outline" // Base variant, colors applied via className
-                        >
-                            {roleInfo ? roleInfo.label : roleValue}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                            {Array.from(roles).map((role) => {
+                                const roleInfo = ROLES.find(
+                                    (r) => r.value === role,
+                                );
+                                return (
+                                    <Badge
+                                        key={role}
+                                        className={`font-medium capitalize px-2 py-0.5 ${getBadgeVariant(role)}`}
+                                        variant="outline"
+                                    >
+                                        {roleInfo ? roleInfo.label : role}
+                                    </Badge>
+                                );
+                            })}
+                        </div>
                     );
                 },
                 filterFn: filterFn("option"),
-                meta: defineMeta((row: UserDTO) => row.role, {
+                meta: defineMeta((row: UserDTO) => row.roles, {
                     displayName: "Role",
                     type: "option",
                     icon: UsersIcon,

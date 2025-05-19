@@ -267,7 +267,7 @@ export const userFormSchema = v.pipe(
             "",
         ),
         confirmPassword: v.optional(v.string(), ""),
-        role: v.pipe(v.string(), v.nonEmpty("Role is required")),
+        roles: v.pipe(v.array(v.string()), v.nonEmpty("Role is required")),
         telephoneNumber: v.pipe(
             v.string(),
             v.minLength(3, "Telephone Number is required"),
@@ -337,7 +337,7 @@ export const editUserFormSchema = v.pipe(
             "",
         ),
         confirmPassword: v.optional(v.string(), ""),
-        role: v.pipe(v.string(), v.nonEmpty("Role is required")),
+        roles: v.pipe(v.array(v.string()), v.nonEmpty("Role is required")),
         departmentPublicId: v.string("Department selection is required."),
         telephoneNumber: v.pipe(
             v.string(),

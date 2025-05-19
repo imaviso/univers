@@ -18,7 +18,12 @@ export const Route = createFileRoute("/app/user-management/users")({
 
 type CreateUserInputFE = Omit<
     UserDTO,
-    "id" | "emailVerified" | "createdAt" | "updatedAt" | "department"
+    | "id"
+    | "publicId"
+    | "emailVerified"
+    | "createdAt"
+    | "updatedAt"
+    | "department"
 >;
 
 type CreateUserInputFEWithDepartment = CreateUserInputFE & {
@@ -92,19 +97,19 @@ function UsersComponent() {
     const handleAddUser = (
         userData: Omit<UserFormInput, "confirmPassword">,
     ) => {
-        const apiPayload: CreateUserInputFEWithDepartment = {
-            publicId: `${Math.random().toString(36).substring(2)}_user_pub`,
+        const apiPayload = {
             idNumber: userData.idNumber,
             firstName: userData.firstName,
             lastName: userData.lastName,
             email: userData.email,
             password: userData.password,
-            role: userData.role as UserDTO["role"],
+            roles: userData.roles,
             departmentPublicId: userData.departmentPublicId,
             telephoneNumber: userData.telephoneNumber,
             phoneNumber: userData.phoneNumber || "",
             active: userData.active,
         };
+        //@ts-ignore
         createUserMutation.mutate(apiPayload);
     };
 

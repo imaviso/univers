@@ -44,7 +44,7 @@ import {
     pendingVenueOwnerEventsQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
-import type { EventApprovalDTO, EventDTO } from "@/lib/types";
+import type { EventApprovalDTO, EventDTO, UserRole } from "@/lib/types";
 import { getStatusBadgeClass } from "@/lib/utils";
 import {
     useMutation,
@@ -130,7 +130,9 @@ export const Route = createFileRoute("/app/venue-approval/approval")({
         if (!context.authState) {
             throw redirect({ to: "/login", replace: true });
         }
-        const isAuthorized = allowedRoles.includes(context.authState.role);
+        const isAuthorized = allowedRoles.some((role) =>
+            context.authState?.roles.includes(role as UserRole),
+        );
         if (!isAuthorized) {
             throw redirect({
                 to: "/app/dashboard",

@@ -40,20 +40,20 @@ export function EventList({
         scope = "mine";
     } else if (currentUser) {
         // Check user exists first
-        const role = currentUser.role;
+        const role = currentUser.roles;
         if (
-            role === "SUPER_ADMIN" ||
-            role === "VP_ADMIN" ||
-            role === "MSDO" ||
-            role === "OPC" ||
-            role === "SSD" ||
-            role === "FAO" ||
-            role === "VPAA"
+            role.includes("SUPER_ADMIN") ||
+            role.includes("VP_ADMIN") ||
+            role.includes("MSDO") ||
+            role.includes("OPC") ||
+            role.includes("SSD") ||
+            role.includes("FAO") ||
+            role.includes("VPAA")
         ) {
             scope = "all";
-        } else if (role === "VENUE_OWNER") {
+        } else if (role.includes("VENUE_OWNER")) {
             scope = "related"; // Venue owner sees related events
-        } else if (role === "DEPT_HEAD") {
+        } else if (role.includes("DEPT_HEAD")) {
             // Check DEPT_HEAD separately
             scope = "related"; // Dept head sees related events
         }
@@ -85,14 +85,14 @@ export function EventList({
         if (scope === "mine") {
             if (
                 event.status?.toUpperCase() === "CANCELED" &&
-                currentUser?.role !== "SUPER_ADMIN" &&
-                currentUser?.role !== "VP_ADMIN" &&
-                currentUser?.role !== "MSDO" &&
-                currentUser?.role !== "OPC" &&
-                currentUser?.role !== "SSD" &&
-                currentUser?.role !== "FAO" &&
-                currentUser?.role !== "VPAA" &&
-                currentUser?.role !== "DEPT_HEAD"
+                !currentUser?.roles?.includes("SUPER_ADMIN") &&
+                !currentUser?.roles?.includes("VP_ADMIN") &&
+                !currentUser?.roles?.includes("MSDO") &&
+                !currentUser?.roles?.includes("OPC") &&
+                !currentUser?.roles?.includes("SSD") &&
+                !currentUser?.roles?.includes("FAO") &&
+                !currentUser?.roles?.includes("VPAA") &&
+                !currentUser?.roles?.includes("DEPT_HEAD")
             ) {
                 return false;
             }

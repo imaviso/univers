@@ -136,7 +136,7 @@ export const Route = createFileRoute("/app/events/$eventId")({
 // Define constants outside the component to prevent re-creation on re-renders
 const DEFAULT_USER_PLACEHOLDER_FIELDS: Omit<
     UserDTO,
-    "publicId" | "firstName" | "lastName" | "email" | "role" | "department"
+    "publicId" | "firstName" | "lastName" | "email" | "roles" | "department"
 > = {
     profileImagePath: null,
     idNumber: null,
@@ -320,7 +320,7 @@ const EXPECTED_APPROVERS_CONFIG: Array<{
 
 export function EventDetailsPage() {
     const context = useRouteContext({ from: "/app/events" });
-    const role = context.authState?.role;
+    const role = context.authState?.roles;
     const currentUser = context.authState;
     const router = useRouter();
     const queryClient = context.queryClient;
@@ -411,48 +411,54 @@ export function EventDetailsPage() {
     }, [approvals, currentUser]); // Recalculate when approvals or currentUser changes
 
     const isOrganizer = currentUser?.publicId === event.organizer.publicId;
-    const isSuperAdmin = role === "SUPER_ADMIN";
+    const isSuperAdmin = role?.includes("SUPER_ADMIN");
 
     const canUserApprove =
         currentUser &&
         !hasUserApproved &&
         event.status === "PENDING" &&
         (isSuperAdmin || // Super Admin
-            (currentUser.role === "DEPT_HEAD" &&
+            (currentUser.roles?.includes("DEPT_HEAD") &&
                 event.organizer?.department?.deptHead?.publicId ===
                     currentUser.publicId) ||
-            (currentUser.role === "VENUE_OWNER" &&
+            (currentUser.roles?.includes("VENUE_OWNER") &&
                 eventVenue?.venueOwner?.publicId === currentUser.publicId) || // Venue Owner of event venue
             // MSDO related approval
-            ((currentUser.role === "EQUIPMENT_OWNER" ||
-                currentUser.role === "MSDO") &&
+            ((currentUser.roles?.includes("EQUIPMENT_OWNER") ||
+                currentUser.roles?.includes("MSDO")) &&
                 currentUser.department?.name?.includes("(MSDO)")) ||
             // OPC related approval
-            ((currentUser.role === "EQUIPMENT_OWNER" ||
-                currentUser.role === "OPC") &&
+            ((currentUser.roles?.includes("EQUIPMENT_OWNER") ||
+                currentUser.roles?.includes("OPC")) &&
                 currentUser.department?.name?.includes("(OPC)")) ||
             // Other general approver roles
-            ["VP_ADMIN", "VPAA", "SSD", "FAO"].includes(currentUser.role));
+            currentUser.roles?.includes("VP_ADMIN") ||
+            currentUser.roles?.includes("VPAA") ||
+            currentUser.roles?.includes("SSD") ||
+            currentUser.roles?.includes("FAO"));
 
     const canUserReject =
         currentUser &&
         event.status === "PENDING" &&
         (isSuperAdmin || // Super Admin
-            (currentUser.role === "DEPT_HEAD" &&
+            (currentUser.roles?.includes("DEPT_HEAD") &&
                 event.organizer?.department?.deptHead?.publicId ===
                     currentUser.publicId) || // Department Head of event organizer
-            (currentUser.role === "VENUE_OWNER" &&
+            (currentUser.roles?.includes("VENUE_OWNER") &&
                 eventVenue?.venueOwner?.publicId === currentUser.publicId) || // Venue Owner of event venue
             // MSDO related approval
-            ((currentUser.role === "EQUIPMENT_OWNER" ||
-                currentUser.role === "MSDO") &&
+            ((currentUser.roles?.includes("EQUIPMENT_OWNER") ||
+                currentUser.roles?.includes("MSDO")) &&
                 currentUser.department?.name?.includes("MSDO")) ||
             // OPC related approval
-            ((currentUser.role === "EQUIPMENT_OWNER" ||
-                currentUser.role === "OPC") &&
+            ((currentUser.roles?.includes("EQUIPMENT_OWNER") ||
+                currentUser.roles?.includes("OPC")) &&
                 currentUser.department?.name?.includes("OPC")) ||
             // Other general approver roles
-            ["VP_ADMIN", "VPAA", "SSD", "FAO"].includes(currentUser.role));
+            currentUser.roles?.includes("VP_ADMIN") ||
+            currentUser.roles?.includes("VPAA") ||
+            currentUser.roles?.includes("SSD") ||
+            currentUser.roles?.includes("FAO"));
 
     const canCancelEvent =
         event.status === "PENDING" || event.status === "APPROVED";
@@ -1004,8 +1010,7 @@ export function EventDetailsPage() {
                     lastName:
                         placeholderData.signedByUserInitial.lastName || "",
                     email: placeholderData.signedByUserInitial.email || "",
-                    role: placeholderData.signedByUserInitial
-                        .userRole as UserRole,
+                    roles: [placeholderData.signedByUserInitial.userRole],
                     department: {
                         ...DEFAULT_DEPARTMENT_PLACEHOLDER_FIELDS,
                         publicId:
@@ -1394,11 +1399,11 @@ export function EventDetailsPage() {
                                                         {organizerName}
                                                     </div>
                                                     {/* Display organizer role if available */}
-                                                    {event.organizer?.role && (
+                                                    {event.organizer?.roles && (
                                                         <div className="text-xs text-muted-foreground">
                                                             {
                                                                 event.organizer
-                                                                    .role
+                                                                    .roles
                                                             }
                                                         </div>
                                                     )}

@@ -29,7 +29,7 @@ import {
     usersQueryOptions,
 } from "@/lib/query";
 import type { EquipmentDTOInput } from "@/lib/schema";
-import type { Equipment, UserDTO } from "@/lib/types";
+import type { Equipment, UserDTO, UserRole } from "@/lib/types";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
     createFileRoute,
@@ -69,7 +69,10 @@ export const Route = createFileRoute("/app/equipments")({
                 },
             });
         }
-        const isAuthorized = allowedRoles.includes(context.authState.role);
+        const userRoles = context.authState?.roles || [];
+        const isAuthorized = allowedRoles.some((role) =>
+            userRoles.includes(role as UserRole),
+        );
 
         if (!isAuthorized) {
             throw redirect({
@@ -95,11 +98,13 @@ function EquipmentInventory() {
         from: "/app/equipments",
     });
     const { data: currentUser } = useCurrentUser();
-    const role = currentUser?.role;
+    const role = currentUser?.roles;
 
     const isPrivilegedUser = useMemo(() => {
         if (!role) return false;
-        return ["SUPER_ADMIN", "EQUIPMENT_OWNER", "MSDO", "OPC"].includes(role);
+        return ["SUPER_ADMIN", "EQUIPMENT_OWNER", "MSDO", "OPC"].some((r) =>
+            role.includes(r as UserRole),
+        );
     }, [role]);
 
     const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
@@ -121,14 +126,14 @@ function EquipmentInventory() {
 
     const { data: allUsers = [] } = useQuery({
         ...usersQueryOptions,
-        enabled: role === "SUPER_ADMIN",
+        enabled: role?.includes("SUPER_ADMIN"),
     });
 
     const equipmentOwners = useMemo(
         () =>
-            role === "SUPER_ADMIN"
-                ? allUsers.filter(
-                      (user: UserDTO) => user.role === "EQUIPMENT_OWNER",
+            role?.includes("SUPER_ADMIN")
+                ? allUsers.filter((user: UserDTO) =>
+                      user.roles.includes("EQUIPMENT_OWNER"),
                   )
                 : [],
         [role, allUsers],
@@ -435,12 +440,10 @@ function EquipmentInventory() {
                             {filteredEquipment.map((item) => {
                                 const imageUrl = item.imagePath;
                                 const canManage =
-                                    role === "SUPER_ADMIN" ||
-                                    ([
-                                        "EQUIPMENT_OWNER",
-                                        "MSDO",
-                                        "OPC",
-                                    ].includes(role ?? "") &&
+                                    role?.includes("SUPER_ADMIN") ||
+                                    (["EQUIPMENT_OWNER", "MSDO", "OPC"].some(
+                                        (r) => role?.includes(r as UserRole),
+                                    ) &&
                                         item.equipmentOwner?.publicId ===
                                             currentUser?.publicId);
                                 const isMutatingItem =
@@ -545,7 +548,7 @@ function EquipmentInventory() {
                                                 Brand: {item.brand} | Qty:{" "}
                                                 {item.quantity}
                                             </CardDescription>
-                                            {role === "SUPER_ADMIN" &&
+                                            {role?.includes("SUPER_ADMIN") &&
                                                 item.equipmentOwner && (
                                                     <CardDescription className="text-xs mt-1">
                                                         Owner:{" "}
@@ -572,8 +575,8 @@ function EquipmentInventory() {
                     )}
 
                     {viewMode === "reservations" &&
-                        role !== "SUPER_ADMIN" &&
-                        role !== "EQUIPMENT_OWNER" && (
+                        !role?.includes("SUPER_ADMIN") &&
+                        !role?.includes("EQUIPMENT_OWNER") && (
                             <div>
                                 <UserReservations />
                             </div>
@@ -597,7 +600,7 @@ function EquipmentInventory() {
                         isMutating={
                             addMutation.isPending || editMutation.isPending
                         }
-                        currentUserRole={role}
+                        currentUserRoles={role}
                         equipmentOwners={equipmentOwners}
                     />
                 )}

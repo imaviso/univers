@@ -54,18 +54,33 @@ function usePersistentState<T>(
     const [state, setState] = useState<T>(() => {
         try {
             const storedValue = localStorage.getItem(key);
-            return storedValue ? JSON.parse(storedValue) : initialValue;
+            if (!storedValue) return initialValue;
+
+            try {
+                const parsed = JSON.parse(storedValue);
+                return parsed ?? initialValue;
+            } catch (parseError) {
+                console.warn(
+                    `Invalid JSON in localStorage for key "${key}":`,
+                    parseError,
+                );
+                return initialValue;
+            }
         } catch (error) {
-            console.error("Error reading from localStorage", error);
+            console.error("Error reading from localStorage:", error);
             return initialValue;
         }
     });
 
     useEffect(() => {
         try {
-            localStorage.setItem(key, JSON.stringify(state));
+            if (state === undefined) {
+                localStorage.removeItem(key);
+            } else {
+                localStorage.setItem(key, JSON.stringify(state));
+            }
         } catch (error) {
-            console.error("Error writing to localStorage", error);
+            console.error("Error writing to localStorage:", error);
         }
     }, [key, state]);
 
@@ -93,17 +108,18 @@ function Events() {
         "eventView",
         "list",
     );
+    const userRoles = currentUser?.roles || [];
     const [activeTab, setActiveTab] = usePersistentState<"all" | "mine">(
         "eventActiveTab",
-        currentUser?.role === "SUPER_ADMIN" ||
-            currentUser?.role === "VP_ADMIN" ||
-            currentUser?.role === "MSDO" ||
-            currentUser?.role === "OPC" ||
-            currentUser?.role === "SSD" ||
-            currentUser?.role === "FAO" ||
-            currentUser?.role === "VPAA" ||
-            currentUser?.role === "DEPT_HEAD" ||
-            currentUser?.role === "VENUE_OWNER"
+        userRoles.includes("SUPER_ADMIN") ||
+            userRoles.includes("VP_ADMIN") ||
+            userRoles.includes("MSDO") ||
+            userRoles.includes("OPC") ||
+            userRoles.includes("SSD") ||
+            userRoles.includes("FAO") ||
+            userRoles.includes("VPAA") ||
+            userRoles.includes("DEPT_HEAD") ||
+            userRoles.includes("VENUE_OWNER")
             ? "all"
             : "mine",
     );
@@ -130,15 +146,15 @@ function Events() {
     ); // State for display view
 
     const isAuthorized =
-        currentUser?.role === "SUPER_ADMIN" ||
-        currentUser?.role === "VP_ADMIN" ||
-        currentUser?.role === "MSDO" ||
-        currentUser?.role === "OPC" ||
-        currentUser?.role === "SSD" ||
-        currentUser?.role === "FAO" ||
-        currentUser?.role === "DEPT_HEAD" ||
-        currentUser?.role === "VPAA" ||
-        currentUser?.role === "VENUE_OWNER";
+        userRoles.includes("SUPER_ADMIN") ||
+        userRoles.includes("VP_ADMIN") ||
+        userRoles.includes("MSDO") ||
+        userRoles.includes("OPC") ||
+        userRoles.includes("SSD") ||
+        userRoles.includes("FAO") ||
+        userRoles.includes("DEPT_HEAD") ||
+        userRoles.includes("VPAA") ||
+        userRoles.includes("VENUE_OWNER");
 
     return (
         <div className="bg-background flex flex-col overflow-hidden h-full">

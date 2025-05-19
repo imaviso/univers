@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"; // Added CardContent
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
 import { approvedEventsQueryOptions } from "@/lib/query";
-import type { EventDTO } from "@/lib/types"; // Use the shared Event type
+import type { EventDTO, UserRole } from "@/lib/types"; // Use the shared Event type
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query"; // Import useQuery
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -315,7 +315,10 @@ export const Route = createFileRoute("/app/calendar")({
                 },
             });
         }
-        const isAuthorized = allowedRoles.includes(context.authState.role);
+        const userRoles = context.authState?.roles || [];
+        const isAuthorized = allowedRoles.some((role) =>
+            userRoles.includes(role as UserRole),
+        );
 
         if (!isAuthorized) {
             throw redirect({

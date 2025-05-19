@@ -26,7 +26,6 @@ import type {
     TopVenueDTO,
     UserActivityDTO,
     UserDTO,
-    UserRole,
     VenueDTO,
 } from "./types";
 
@@ -240,10 +239,15 @@ export const createUser = async (
     userData: CreateUserInputFEWithDepartment,
 ): Promise<string> => {
     try {
+        const payload = {
+            ...userData,
+            roles: Array.from(userData.roles),
+        };
+
         const response = await fetchWithAuth(`${API_BASE_URL}/admin/users`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(userData),
+            body: JSON.stringify(payload),
         });
         const data = await handleApiResponse<string>(response, false);
         return data || "User created successfully";
@@ -265,10 +269,7 @@ export const updateUser = async ({
 }): Promise<string> => {
     try {
         const formData = new FormData();
-        const userDtoPayload: Partial<CreateUserInputFEWithDepartment> & {
-            role?: UserRole;
-            password?: string;
-        } = {
+        const userDtoPayload = {
             firstName: userData.firstName,
             lastName: userData.lastName,
             idNumber: userData.idNumber,
@@ -276,10 +277,11 @@ export const updateUser = async ({
             password: userData.password,
             phoneNumber: userData.phoneNumber,
             telephoneNumber: userData.telephoneNumber,
-            role: userData.role as UserRole,
+            roles: Array.from(userData.roles),
             departmentPublicId: userData.departmentPublicId,
             active: userData.active,
         };
+
         for (const key in userDtoPayload) {
             if (
                 userDtoPayload[key as keyof typeof userDtoPayload] === undefined
@@ -287,6 +289,7 @@ export const updateUser = async ({
                 delete userDtoPayload[key as keyof typeof userDtoPayload];
             }
         }
+
         formData.append(
             "userDTO",
             new Blob([JSON.stringify(userDtoPayload)], {
@@ -303,8 +306,8 @@ export const updateUser = async ({
                 body: formData,
             },
         );
-        const data = await handleApiResponse<string>(response, false);
-        return data || "User updated successfully";
+        const responseData = await handleApiResponse<string>(response, false);
+        return responseData || "User updated successfully";
     } catch (error) {
         throw error instanceof Error
             ? error

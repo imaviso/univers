@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { type FileMetadata, useFileUpload } from "@/hooks/use-file-upload"; // Updated import
 import { type VenueInput, venueSchema } from "@/lib/schema";
-import type { UserDTO, VenueDTO } from "@/lib/types";
+import type { UserDTO, UserRole, VenueDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { AlertCircleIcon, ImageUpIcon, Loader2, XIcon } from "lucide-react"; // Updated imports
@@ -48,7 +48,7 @@ interface VenueFormDialogProps {
     venue?: VenueDTO | null;
     isLoading?: boolean;
     venueOwners: UserDTO[];
-    currentUserRole?: string;
+    currentUserRole?: UserRole[];
 }
 
 export function VenueFormDialog({
@@ -156,7 +156,7 @@ export function VenueFormDialog({
                             )}
                         />
 
-                        {currentUserRole === "SUPER_ADMIN" && (
+                        {currentUserRole?.includes("SUPER_ADMIN") && (
                             <FormField
                                 control={form.control}
                                 name="venueOwnerId"
@@ -164,10 +164,9 @@ export function VenueFormDialog({
                                     <FormItem>
                                         <FormLabel>Venue Owner</FormLabel>
                                         <Select
-                                            // Handle 'none' value during change
                                             onValueChange={(value) => {
                                                 if (value === "none") {
-                                                    field.onChange(undefined); // Set form value to undefined for 'none'
+                                                    field.onChange(undefined);
                                                 } else {
                                                     field.onChange(value);
                                                 }

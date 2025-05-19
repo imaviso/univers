@@ -31,6 +31,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { allNavigation } from "@/lib/navigation";
+import type { UserRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { addDays, format } from "date-fns";
@@ -128,7 +129,10 @@ export const Route = createFileRoute("/app/dashboard")({
                 },
             });
         }
-        const isAuthorized = allowedRoles.includes(context.authState.role);
+        const userRoles = context.authState?.roles || [];
+        const isAuthorized = allowedRoles.some((role) =>
+            userRoles.includes(role as UserRole),
+        );
 
         if (!isAuthorized) {
             throw redirect({

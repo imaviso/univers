@@ -91,7 +91,7 @@ export const Route = createFileRoute("/app/venues/dashboard")({
 
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
-    const role = context.authState?.role;
+    const role = context.authState?.roles || [];
     const currentUser = context.authState; // Get full user object
     const queryClient = context.queryClient;
     const navigate = useNavigate();
@@ -108,7 +108,9 @@ export function VenueManagement() {
         "table" | "grid" | "events"
     >(
         "venueDashboardViewMode_v1",
-        role === "SUPER_ADMIN" || role === "VENUE_OWNER" ? "table" : "grid",
+        role.includes("SUPER_ADMIN") || role.includes("VENUE_OWNER")
+            ? "table"
+            : "grid",
     );
     const [activeEventTab, setActiveEventTab] = usePersistentState<string>(
         "venueDashboardActiveEventTab_v1",
@@ -118,18 +120,17 @@ export function VenueManagement() {
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
     const { data: users = [] } = useQuery({
         ...usersQueryOptions,
-        enabled: role === "SUPER_ADMIN",
+        enabled: role.includes("SUPER_ADMIN"),
     });
 
     const { data: ownEvents = [], isLoading: isLoadingOwnEvents } = useQuery({
         ...ownEventsQueryOptions,
-        enabled: viewMode === "events" && role !== "SUPER_ADMIN",
+        enabled: viewMode === "events" && !role.includes("SUPER_ADMIN"),
     });
 
-    const venueOwners =
-        role === "SUPER_ADMIN"
-            ? users.filter((user: UserDTO) => user.role === "VENUE_OWNER")
-            : [];
+    const venueOwners = role.includes("SUPER_ADMIN")
+        ? users.filter((user: UserDTO) => user.roles.includes("VENUE_OWNER"))
+        : [];
 
     // --- Mutations ---
     const createVenueMutation = useMutation({
@@ -190,7 +191,7 @@ export function VenueManagement() {
             });
         } else {
             let finalVenueData = { ...venueData };
-            if (role === "VENUE_OWNER" && currentUser?.publicId) {
+            if (role.includes("VENUE_OWNER") && currentUser?.publicId) {
                 finalVenueData = {
                     ...finalVenueData,
                     venueOwnerId: currentUser.publicId,
@@ -225,7 +226,7 @@ export function VenueManagement() {
 
     // Filter venues
     const baseVenuesToDisplay =
-        role === "VENUE_OWNER" && currentUser?.publicId
+        role.includes("VENUE_OWNER") && currentUser?.publicId
             ? venues.filter(
                   (venue) =>
                       venue.venueOwner?.publicId === currentUser.publicId,
@@ -260,16 +261,15 @@ export function VenueManagement() {
     const stats = {
         total: baseVenuesToDisplay.length,
         myVenues:
-            role === "VENUE_OWNER" && currentUser?.publicId
+            role.includes("VENUE_OWNER") && currentUser?.publicId
                 ? venues.filter(
                       (venue) =>
                           venue.venueOwner?.publicId === currentUser.publicId,
                   ).length
                 : 0,
-        unassignedVenues:
-            role === "SUPER_ADMIN"
-                ? venues.filter((venue) => !venue.venueOwner).length
-                : 0,
+        unassignedVenues: role.includes("SUPER_ADMIN")
+            ? venues.filter((venue) => !venue.venueOwner).length
+            : 0,
     };
 
     // --- Render Logic ---
@@ -295,7 +295,7 @@ export function VenueManagement() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        {role === "SUPER_ADMIN" && (
+                        {role.includes("SUPER_ADMIN") && (
                             <Button
                                 onClick={() => {
                                     setEditingVenue(null);
@@ -327,7 +327,7 @@ export function VenueManagement() {
                             </div>
                         </CardContent>
                     </Card>
-                    {role === "VENUE_OWNER" && (
+                    {role.includes("VENUE_OWNER") && (
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">
@@ -342,7 +342,7 @@ export function VenueManagement() {
                             </CardContent>
                         </Card>
                     )}
-                    {role === "SUPER_ADMIN" && (
+                    {role.includes("SUPER_ADMIN") && (
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">
@@ -380,20 +380,20 @@ export function VenueManagement() {
                             }
                         >
                             <TabsList>
-                                {(role === "SUPER_ADMIN" ||
-                                    role === "VENUE_OWNER") && (
+                                {(role.includes("SUPER_ADMIN") ||
+                                    role.includes("VENUE_OWNER")) && (
                                     <TabsTrigger value="table">
                                         Table
                                     </TabsTrigger>
                                 )}
                                 <TabsTrigger value="grid">
-                                    {role === "SUPER_ADMIN" ||
-                                    role === "VENUE_OWNER"
+                                    {role.includes("SUPER_ADMIN") ||
+                                    role.includes("VENUE_OWNER")
                                         ? "Grid"
                                         : "Venues"}
                                 </TabsTrigger>
                                 {/* Separate tab for user's events */}
-                                {role !== "SUPER_ADMIN" && (
+                                {!role.includes("SUPER_ADMIN") && (
                                     <TabsTrigger value="events">
                                         My Reservations
                                     </TabsTrigger>
@@ -411,7 +411,8 @@ export function VenueManagement() {
                 <div className="flex-1 overflow-auto p-6">
                     {/* Table View (SUPER_ADMIN or VENUE_OWNER) */}
                     {viewMode === "table" &&
-                        (role === "SUPER_ADMIN" || role === "VENUE_OWNER") && (
+                        (role.includes("SUPER_ADMIN") ||
+                            role.includes("VENUE_OWNER")) && (
                             <VenueDataTable
                                 data={filteredVenues}
                                 currentUser={currentUser}
@@ -474,7 +475,9 @@ export function VenueManagement() {
                                                         <Eye className="mr-2 h-4 w-4" />{" "}
                                                         View Details
                                                     </DropdownMenuItem>
-                                                    {role === "SUPER_ADMIN" && (
+                                                    {role.includes(
+                                                        "SUPER_ADMIN",
+                                                    ) && (
                                                         <>
                                                             <DropdownMenuItem
                                                                 onClick={() => {
@@ -728,7 +731,7 @@ export function VenueManagement() {
                 </div>
             </div>
 
-            {role === "SUPER_ADMIN" && (
+            {role.includes("SUPER_ADMIN") && (
                 <>
                     <VenueFormDialog
                         isOpen={isAddVenueOpen}
@@ -742,7 +745,9 @@ export function VenueManagement() {
                             createVenueMutation.isPending ||
                             updateVenueMutation.isPending
                         }
-                        venueOwners={role === "SUPER_ADMIN" ? venueOwners : []}
+                        venueOwners={
+                            role.includes("SUPER_ADMIN") ? venueOwners : []
+                        }
                         currentUserRole={role}
                     />
                     <DeleteConfirmDialog

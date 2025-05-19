@@ -2,6 +2,7 @@ import ErrorPage from "@/components/ErrorPage";
 import PendingPage from "@/components/PendingPage";
 import { allNavigation } from "@/lib/navigation";
 import { allEquipmentOwnerReservationsQueryOptions } from "@/lib/query";
+import type { UserRole } from "@/lib/types";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { toast } from "sonner";
 
@@ -29,7 +30,10 @@ export const Route = createFileRoute("/app/equipment-approval")({
             });
         }
 
-        const isAuthorized = allowedRoles.includes(context.authState.role);
+        const userRoles = context.authState?.roles || [];
+        const isAuthorized = allowedRoles.some((role) =>
+            userRoles.includes(role as UserRole),
+        );
 
         if (!isAuthorized) {
             toast.error("You are not authorized to view this page.");

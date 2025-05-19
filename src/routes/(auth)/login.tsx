@@ -1,5 +1,6 @@
 import LoginForm from "@/components/auth/loginForm";
 import { authNavigation } from "@/lib/navigation";
+import type { UserRole } from "@/lib/types";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/(auth)/login")({
     component: LoginPage,
@@ -16,8 +17,10 @@ export const Route = createFileRoute("/(auth)/login")({
             : [];
 
         const isAuthorized =
-            context.authState?.role != null &&
-            allowedRoles.includes(context.authState.role);
+            context.authState?.roles != null &&
+            allowedRoles.some((role) =>
+                context.authState?.roles?.includes(role as UserRole),
+            );
 
         if (isAuthorized) {
             throw redirect({

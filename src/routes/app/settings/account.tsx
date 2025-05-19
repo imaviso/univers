@@ -40,7 +40,7 @@ import {
     setNewPasswordSchema,
 } from "@/lib/schema";
 import type { EmailInput } from "@/lib/schema";
-import type { UserDTO } from "@/lib/types";
+import type { UserDTO, UserRole } from "@/lib/types";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import {
@@ -819,12 +819,17 @@ export function AccountSettings() {
                             </div>
                             {/* Role Display */}
                             <div className="grid gap-1">
-                                <Label htmlFor="profileRole">Role</Label>
-                                <Badge
-                                    className={`font-medium capitalize px-2 py-0.5 mt-2 ${getBadgeVariant(user.role)}`}
-                                >
-                                    {formatRole(user.role)}
-                                </Badge>
+                                <Label htmlFor="profileRole">Roles</Label>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {(user.roles || []).map((role) => (
+                                        <Badge
+                                            key={role}
+                                            className={`font-medium capitalize px-2 py-0.5 ${getBadgeVariant(role as UserRole)}`}
+                                        >
+                                            {formatRole(role as UserRole)}
+                                        </Badge>
+                                    ))}
+                                </div>
                             </div>
                             {/* Email Display & Change Button */}
                             <div className="grid gap-1">
