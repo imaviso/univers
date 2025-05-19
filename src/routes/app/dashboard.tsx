@@ -152,17 +152,18 @@ function Dashboard() {
         },
         true,
     );
-    const [venueFilter, setVenueFilter] = usePersistentState<string>(
-        "dashboardVenueFilter",
-        "",
-    );
-    const [equipmentTypeFilter, setEquipmentTypeFilter] =
-        usePersistentState<string>("dashboardEquipmentTypeFilter", "");
+    // const [venueFilter, setVenueFilter] = usePersistentState<string>(
+    //     "dashboardVenueFilter",
+    //     "",
+    // );
+    // const [equipmentTypeFilter, setEquipmentTypeFilter] =
+    //     usePersistentState<string>("dashboardEquipmentTypeFilter", "");
 
-    const [eventTypeFilter, setEventTypeFilter] = usePersistentState<string>(
-        "dashboardEventTypeFilter",
-        "",
-    );
+    // const [eventTypeFilter, setEventTypeFilter] = usePersistentState<string>(
+    //     "dashboardEventTypeFilter",
+    //     "",
+    // );
+
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
@@ -403,12 +404,12 @@ function Dashboard() {
                             <CardContent>
                                 <PeakReservationHoursChart
                                     dateRange={dateRange}
-                                    venueFilter={
-                                        venueFilter === "ALL_VENUES"
-                                            ? undefined
-                                            : venueFilter
-                                    }
-                                    equipmentTypeFilter={equipmentTypeFilter}
+                                    // venueFilter={
+                                    //     venueFilter === "ALL_VENUES"
+                                    //         ? undefined
+                                    //         : venueFilter
+                                    // }
+                                    // equipmentTypeFilter={equipmentTypeFilter}
                                 />
                             </CardContent>
                         </Card>
@@ -425,14 +426,14 @@ function Dashboard() {
                                 <CardContent>
                                     <CancellationRateChart
                                         dateRange={dateRange}
-                                        venueFilter={
-                                            venueFilter === "ALL_VENUES"
-                                                ? undefined
-                                                : venueFilter
-                                        }
-                                        equipmentTypeFilter={
-                                            equipmentTypeFilter
-                                        }
+                                        // venueFilter={
+                                        //     venueFilter === "ALL_VENUES"
+                                        //         ? undefined
+                                        //         : venueFilter
+                                        // }
+                                        // equipmentTypeFilter={
+                                        //     equipmentTypeFilter
+                                        // }
                                     />
                                 </CardContent>
                             </Card>
@@ -461,7 +462,7 @@ function Dashboard() {
                             <CardContent>
                                 <TopEquipmentChart
                                     dateRange={dateRange}
-                                    equipmentTypeFilter={equipmentTypeFilter}
+                                    // equipmentTypeFilter={equipmentTypeFilter}
                                 />
                             </CardContent>
                         </Card>

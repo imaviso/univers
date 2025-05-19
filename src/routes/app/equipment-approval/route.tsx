@@ -1,0 +1,50 @@
+import ErrorPage from "@/components/ErrorPage";
+import PendingPage from "@/components/PendingPage";
+import { allNavigation } from "@/lib/navigation";
+import { allEquipmentOwnerReservationsQueryOptions } from "@/lib/query";
+import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/app/equipment-approval")({
+    component: RouteComponent,
+    errorComponent: () => <ErrorPage />,
+    pendingComponent: () => <PendingPage />,
+    beforeLoad: async ({ location, context }) => {
+        const navigationItem = allNavigation.find((item) => {
+            return (
+                location.pathname === item.href ||
+                location.pathname.startsWith(`${item.href}/`)
+            );
+        });
+        const allowedRoles: string[] = navigationItem
+            ? navigationItem.roles
+            : [];
+
+        if (context.authState == null) {
+            throw redirect({
+                to: "/login",
+                search: {
+                    redirect: location.href,
+                },
+            });
+        }
+
+        const isAuthorized = allowedRoles.includes(context.authState.role);
+
+        if (!isAuthorized) {
+            toast.error("You are not authorized to view this page.");
+            throw redirect({
+                to: "/app",
+            });
+        }
+    },
+    loader: ({ context }) => {
+        context.queryClient.ensureQueryData(
+            allEquipmentOwnerReservationsQueryOptions,
+        );
+    },
+});
+
+function RouteComponent() {
+    return <Outlet />;
+}

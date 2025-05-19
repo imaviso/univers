@@ -507,14 +507,10 @@ export const useCancelEquipmentReservationMutation = () => {
             // Return a context object with the snapshotted value
             return { previousReservations, eventId };
         },
-        onError: (
-            err,
-            variables,
-            context?: {
-                previousReservations?: EquipmentReservationDTO[];
-                eventId?: string;
-            },
-        ) => {
+        onError: (context?: {
+            previousReservations?: EquipmentReservationDTO[];
+            eventId?: string;
+        }) => {
             // Rollback to the previous value if mutation fails
             if (context?.previousReservations && context?.eventId) {
                 queryClient.setQueryData(
@@ -524,7 +520,7 @@ export const useCancelEquipmentReservationMutation = () => {
             }
             // Consider showing an error toast here if not handled by the component
         },
-        onSuccess: (data, variables) => {
+        onSuccess: (_data, _error, variables) => {
             // `data` is the result of `cancelEquipmentReservation`
             // `variables` is { reservationId, eventId }
             // Invalidate related queries to ensure data consistency
@@ -534,7 +530,7 @@ export const useCancelEquipmentReservationMutation = () => {
                 queryKey: equipmentReservationKeys.byEvent(variables.eventId),
             });
         },
-        onSettled: (data, error, variables) => {
+        onSettled: (_data, _error, variables) => {
             // This function runs after the mutation is either successful or errors.
             // Good place for invalidations that should happen regardless of outcome,
             // or to ensure specific details are fresh.

@@ -138,7 +138,6 @@ export function EquipmentFormDialog({
         handleDragOver,
         handleDrop,
         openFileDialog,
-        removeFile,
         getInputProps,
     } = hookActions;
 

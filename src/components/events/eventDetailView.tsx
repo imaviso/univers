@@ -406,7 +406,7 @@ export function EventDetailView() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-3">
-                                        {event.team.map((member, index) => (
+                                        {event.team.map((member) => (
                                             <div
                                                 key={member.name}
                                                 className="flex items-center gap-3"

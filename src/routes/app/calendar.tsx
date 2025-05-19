@@ -10,11 +10,7 @@ import { approvedEventsQueryOptions } from "@/lib/query";
 import type { EventDTO } from "@/lib/types"; // Use the shared Event type
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query"; // Import useQuery
-import {
-    createFileRoute,
-    redirect,
-    useRouteContext,
-} from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import {
     addDays,
     addMonths,
@@ -228,7 +224,7 @@ const calculateDayLayout = (events: EventDTO[]): EventWithLayout[] => {
         }
     }
 
-    const totalColumns = columns.length;
+    // const totalColumns = columns.length;
 
     // 3. Refine layout based on columns (apply width/left)
     // Calculate the number of columns needed for each event based on actual overlaps.
@@ -339,27 +335,7 @@ export const Route = createFileRoute("/app/calendar")({
     pendingComponent: () => <PendingPage />,
 });
 
-// Define possible event statuses based on backend/types (adjust if needed)
-const eventStatuses = [
-    { id: "PENDING", name: "Pending", color: "bg-yellow-500" },
-    { id: "APPROVED", name: "Approved", color: "bg-green-500" },
-    { id: "REJECTED", name: "Rejected", color: "bg-red-500" },
-    { id: "CANCELLED", name: "Cancelled", color: "bg-gray-500" },
-    // Add other relevant statuses if applicable
-];
-
-const getStatusColor = (status: string | undefined | null): string => {
-    const statusInfo = eventStatuses.find((s) => s.id === status);
-    return statusInfo?.color ?? "bg-gray-400"; // Default color
-};
-
-const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
 function Calendar() {
-    const context = useRouteContext({ from: "/app/calendar" });
-    const queryClient = context.queryClient;
-    const role = context.authState?.role; // Get user role if needed for logic
-
     // Fetch events using useQuery
     const { data: eventsData, isLoading: isLoadingEvents } = useQuery(
         approvedEventsQueryOptions, // This returns AppEvent[] (aliased Event[])
@@ -378,19 +354,19 @@ function Calendar() {
         "calendarCurrentDate",
         new Date(),
     );
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    // const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState<EventDTO | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     type CalendarViewType = "month" | "week" | "day";
     const [calendarView, setCalendarView] =
         usePersistentState<CalendarViewType>("calendarView", "month");
-    const [filters, setFilters] = usePersistentState<{ statuses: string[] }>(
-        "calendarFilters",
-        {
-            statuses: [] as string[],
-        },
-    );
-    const [createEventDate, setCreateEventDate] = useState<Date | null>(null);
+    // const [filters, setFilters] = usePersistentState<{ statuses: string[] }>(
+    //     "calendarFilters",
+    //     {
+    //         statuses: [] as string[],
+    //     },
+    // );
+    // const [createEventDate, setCreateEventDate] = useState<Date | null>(null);
 
     // Memoized function to get events for a specific date, applying filters
     const getEventsForDate = useMemo(() => {
@@ -404,11 +380,10 @@ function Calendar() {
             return (
                 events
                     .filter((event) => {
-                        // Apply status filters
-                        const statusMatch =
-                            filters.statuses.length === 0 ||
-                            filters.statuses.includes(event.status);
-                        if (!statusMatch) return false;
+                        // const statusMatch =
+                        //     filters.statuses.length === 0 ||
+                        //     filters.statuses.includes(event.status);
+                        // if (!statusMatch) return false;
 
                         // Parse event start and end times
                         const eventStart = parseISO(event.startTime);
@@ -439,17 +414,7 @@ function Calendar() {
                     )
             );
         };
-    }, [events, filters.statuses]);
-
-    // Handle status filter toggle
-    const toggleStatusFilter = (statusId: string) => {
-        setFilters((prev) => {
-            const statuses = prev.statuses.includes(statusId)
-                ? prev.statuses.filter((id) => id !== statusId)
-                : [...prev.statuses, statusId];
-            return { ...prev, statuses };
-        });
-    };
+    }, [events]);
 
     // Previous month/week/day
     const handlePrev = () => {
@@ -477,17 +442,6 @@ function Calendar() {
     const handleEventClick = (event: EventWithDisplayColor) => {
         setSelectedEvent(event);
         setIsDetailsModalOpen(true);
-    };
-
-    // Create event from calendar cell
-    const handleCellClick = (date: Date) => {
-        // Check permissions before opening create modal if needed
-        // if (role === 'ORGANIZER' || role === 'SUPER_ADMIN') {
-        setCreateEventDate(date);
-        setIsCreateModalOpen(true);
-        // } else {
-        // Show message or do nothing if user can't create events
-        // }
     };
 
     // Generate days for month view
@@ -575,7 +529,7 @@ function Calendar() {
                                 !day.isCurrentMonth && "bg-muted/30",
                                 day.isToday && "border-primary",
                             )}
-                            onClick={() => handleCellClick(day.date)}
+                            // onClick={() => handleCellClick(day.date)}
                         >
                             <CardContent className="p-1 h-full flex flex-col">
                                 <div
@@ -661,7 +615,7 @@ function Calendar() {
                                 !day.isCurrentMonth && "bg-muted/50",
                                 day.isToday && "border-primary/50",
                             )}
-                            onClick={() => handleCellClick(day.date)}
+                            // onClick={() => handleCellClick(day.date)}
                         >
                             <div className="space-y-1 no-scrollbar">
                                 {day.events.map((event) => (
@@ -738,7 +692,7 @@ function Calendar() {
                     {/* Adjusted width */}
                     {/* Hour Labels */}
                     <div className="space-y-0 border-r pr-2">
-                        {hours.map((hour, index) => (
+                        {hours.map((hour) => (
                             <div
                                 key={hour.label}
                                 // Use totalHours (number of intervals) for height calculation
@@ -911,9 +865,9 @@ function Calendar() {
 
 									<div className="flex justify-between pt-2">
 										<Button
-											variant="ghost" 
+											variant="ghost"
 											size="sm"
-											onClick={() => setFilters({ statuses: [] })} 
+											onClick={() => setFilters({ statuses: [] })}
 										>
 											Reset
 										</Button>

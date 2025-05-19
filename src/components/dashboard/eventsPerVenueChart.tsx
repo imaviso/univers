@@ -163,7 +163,7 @@ export function EventsPerVenueChart({ dateRange }: EventsPerVenueChartProps) {
                         <YAxis type="category" dataKey="name" hide />
                         <ChartTooltip
                             cursor={{ fill: "var(--muted)" }}
-                            content={({ active, payload, label }) => {
+                            content={({ active, payload }) => {
                                 if (active && payload && payload.length) {
                                     const data = payload[0].payload;
                                     return (

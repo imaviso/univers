@@ -67,7 +67,7 @@ function UsersComponent() {
 
             return { previousUsers };
         },
-        onError: (err, newUser, context) => {
+        onError: (err, _newUser, context) => {
             if (context?.previousUsers) {
                 queryClient.setQueryData(
                     usersQueryOptions.queryKey,

@@ -33,8 +33,8 @@ const chartConfig = {
 
 export function PeakReservationHoursChart({
     dateRange,
-    venueFilter,
-    equipmentTypeFilter,
+    // venueFilter,
+    // equipmentTypeFilter,
 }: PeakReservationHoursChartProps) {
     const startDate = dateRange?.from
         ? format(dateRange.from, "yyyy-MM-dd")

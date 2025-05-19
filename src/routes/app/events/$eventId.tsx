@@ -797,9 +797,9 @@ export function EventDetailsPage() {
         });
     };
 
-    const handleRejectClick = () => {
-        setIsRejectionDialogOpen(true);
-    };
+    // const handleRejectClick = () => {
+    //     setIsRejectionDialogOpen(true);
+    // };
 
     const handleConfirmReject = () => {
         if (!currentUser) return;

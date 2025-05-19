@@ -39,8 +39,8 @@ import {
     type SetNewPasswordInput,
     setNewPasswordSchema,
 } from "@/lib/schema";
-import { type EmailInput, emailSchema } from "@/lib/schema";
-import type { UserType } from "@/lib/types";
+import type { EmailInput } from "@/lib/schema";
+import type { UserDTO } from "@/lib/types";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import {
@@ -93,7 +93,7 @@ type EditableProfile = {
 };
 
 const getInitialProfileState = (
-    user: UserType | undefined,
+    user: UserDTO | undefined,
 ): EditableProfile => ({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
@@ -214,16 +214,16 @@ export function AccountSettings() {
     const [isRequestingCode, setIsRequestingCode] = useState(false);
     const [isVerifyingCode, setIsVerifyingCode] = useState(false);
     const [isSettingPassword, setIsSettingPassword] = useState(false);
-    const [isRequestingEmailCode, setIsRequestingEmailCode] = useState(false);
-    const [isVerifyingEmailCode, setIsVerifyingEmailCode] = useState(false);
-    const [emailDialogStep, setEmailDialogStep] = useState<EmailDialogStep>();
-    const [emailForm, setEmailForm] = useState<EmailInput>(
+    // const [isRequestingEmailCode, setIsRequestingEmailCode] = useState(false);
+    // const [isVerifyingEmailCode, setIsVerifyingEmailCode] = useState(false);
+    const [_emailDialogStep, setEmailDialogStep] = useState<EmailDialogStep>();
+    const [_emailForm, setEmailForm] = useState<EmailInput>(
         initialChangeEmailState,
     );
-    const [emailFormError, setEmailFormError] = useState<string | null>(null);
-    const [emailOtpCode, setEmailOtpCode] = useState<string>("");
-    const [emailOtpError, setEmailOtpError] = useState<string | null>(null);
-    const [isChangeEmailDialogOpen, setIsChangeEmailDialogOpen] =
+    const [_emailFormError, setEmailFormError] = useState<string | null>(null);
+    const [_emailOtpCode, setEmailOtpCode] = useState<string>("");
+    const [_emailOtpError, setEmailOtpError] = useState<string | null>(null);
+    const [_isChangeEmailDialogOpen, setIsChangeEmailDialogOpen] =
         useState(false);
     // Other State
     // const [twoFactorEnabled, setTwoFactorEnabled] = useState(false); // Removed as per original file state
@@ -288,17 +288,17 @@ export function AccountSettings() {
             await queryClient.cancelQueries({
                 queryKey: userQueryOptions.queryKey,
             });
-            const previousUserData = queryClient.getQueryData<UserType>(
+            const previousUserData = queryClient.getQueryData<UserDTO>(
                 userQueryOptions.queryKey,
             );
             // Optimistically update only the data part, not the file
-            queryClient.setQueryData<UserType | undefined>(
+            queryClient.setQueryData<UserDTO | undefined>(
                 userQueryOptions.queryKey,
                 (old) => (old ? { ...old, ...payload.data } : undefined),
             );
             return { previousUserData };
         },
-        onError: (err, payload, context) => {
+        onError: (err, _payload, context) => {
             if (context?.previousUserData) {
                 queryClient.setQueryData(
                     userQueryOptions.queryKey,
@@ -447,7 +447,7 @@ export function AccountSettings() {
         }
 
         // Prepare the data payload for the API
-        const dataPayload: Partial<Pick<UserType, "firstName" | "lastName">> =
+        const dataPayload: Partial<Pick<UserDTO, "firstName" | "lastName">> =
             {};
         if (hasNameChange) {
             dataPayload.firstName = profileForm.firstName;
@@ -615,95 +615,95 @@ export function AccountSettings() {
         setIsChangeEmailDialogOpen(true);
     };
 
-    const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEmailForm({ email: e.target.value });
-        if (emailFormError) setEmailFormError(null); // Clear error on change
-    };
+    // const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    //     setEmailForm({ email: e.target.value });
+    //     if (emailFormError) setEmailFormError(null); // Clear error on change
+    // };
 
-    const handleRequestEmailCode = async () => {
-        const result = v.safeParse(emailSchema, emailForm);
-        if (!result.success) {
-            setEmailFormError(
-                v.flatten(result.issues).nested?.newEmail?.[0] ||
-                    "Invalid email format.",
-            );
-            return;
-        }
-        if (result.output.email === user?.email) {
-            setEmailFormError("This is already your current email address.");
-            return;
-        }
-        setEmailFormError(null);
-        setIsRequestingEmailCode(true);
-        try {
-            // await requestEmailChangeCode(result.output.email);
-            toast.success(`Verification code sent to ${result.output.email}`);
-            setEmailDialogStep("verify"); // Move to OTP step
-        } catch (err) {
-            toast.error(
-                `Failed to send code: ${err instanceof Error ? err.message : "Unknown error"}`,
-            );
-        } finally {
-            setIsRequestingEmailCode(false);
-        }
-    };
+    // const handleRequestEmailCode = async () => {
+    //     const result = v.safeParse(emailSchema, emailForm);
+    //     if (!result.success) {
+    //         setEmailFormError(
+    //             v.flatten(result.issues).nested?.newEmail?.[0] ||
+    //                 "Invalid email format.",
+    //         );
+    //         return;
+    //     }
+    //     if (result.output.email === user?.email) {
+    //         setEmailFormError("This is already your current email address.");
+    //         return;
+    //     }
+    //     setEmailFormError(null);
+    //     setIsRequestingEmailCode(true);
+    //     try {
+    //         // await requestEmailChangeCode(result.output.email);
+    //         toast.success(`Verification code sent to ${result.output.email}`);
+    //         setEmailDialogStep("verify"); // Move to OTP step
+    //     } catch (err) {
+    //         toast.error(
+    //             `Failed to send code: ${err instanceof Error ? err.message : "Unknown error"}`,
+    //         );
+    //     } finally {
+    //         setIsRequestingEmailCode(false);
+    //     }
+    // };
 
-    const handleVerifyEmailCode = async () => {
-        const otpResult = v.safeParse(OtpSchema, { code: emailOtpCode });
-        if (!otpResult.success) {
-            setEmailOtpError(
-                v.flatten(otpResult.issues).nested?.code?.[0] ||
-                    "Invalid code format.",
-            );
-            return;
-        }
-        // We also need the email that the code was sent to
-        const emailResult = v.safeParse(emailSchema, emailForm);
-        if (!emailResult.success) {
-            // Should not happen if we are at this step, but good practice
-            toast.error("An error occurred. Please try again.");
-            setEmailDialogStep("input"); // Go back
-            return;
-        }
-        setEmailOtpError(null);
-        setIsVerifyingEmailCode(true);
-        try {
-            // Call API to verify code and update email
-            // const updatedUser = await verifyEmailChangeCode(
-            //     emailResult.output.newEmail,
-            //     otpResult.output.code,
-            // );
-            // // Manually update the user data in the cache
-            // queryClient.setQueryData(
-            //     currentUserQueryOptions.queryKey,
-            //     updatedUser,
-            // );
-            setEmailDialogStep("success"); // Move to success step
-        } catch (err) {
-            const errorMessage =
-                err instanceof Error ? err.message : "Verification failed";
-            setEmailOtpError(errorMessage);
-            toast.error(`Email change failed: ${errorMessage}`);
-        } finally {
-            setIsVerifyingEmailCode(false);
-        }
-    };
+    // const handleVerifyEmailCode = async () => {
+    //     const otpResult = v.safeParse(OtpSchema, { code: emailOtpCode });
+    //     if (!otpResult.success) {
+    //         setEmailOtpError(
+    //             v.flatten(otpResult.issues).nested?.code?.[0] ||
+    //                 "Invalid code format.",
+    //         );
+    //         return;
+    //     }
+    //     // We also need the email that the code was sent to
+    //     const emailResult = v.safeParse(emailSchema, emailForm);
+    //     if (!emailResult.success) {
+    //         // Should not happen if we are at this step, but good practice
+    //         toast.error("An error occurred. Please try again.");
+    //         setEmailDialogStep("input"); // Go back
+    //         return;
+    //     }
+    //     setEmailOtpError(null);
+    //     setIsVerifyingEmailCode(true);
+    //     try {
+    //         // Call API to verify code and update email
+    //         // const updatedUser = await verifyEmailChangeCode(
+    //         //     emailResult.output.newEmail,
+    //         //     otpResult.output.code,
+    //         // );
+    //         // // Manually update the user data in the cache
+    //         // queryClient.setQueryData(
+    //         //     currentUserQueryOptions.queryKey,
+    //         //     updatedUser,
+    //         // );
+    //         setEmailDialogStep("success"); // Move to success step
+    //     } catch (err) {
+    //         const errorMessage =
+    //             err instanceof Error ? err.message : "Verification failed";
+    //         setEmailOtpError(errorMessage);
+    //         toast.error(`Email change failed: ${errorMessage}`);
+    //     } finally {
+    //         setIsVerifyingEmailCode(false);
+    //     }
+    // };
 
-    const handleEmailDialogClose = (open: boolean) => {
-        if (!open) {
-            setIsChangeEmailDialogOpen(false);
-            // Reset state after closing
-            setTimeout(() => {
-                setEmailDialogStep("input");
-                setEmailForm(initialChangeEmailState);
-                setEmailFormError(null);
-                setEmailOtpCode("");
-                setEmailOtpError(null);
-                setIsRequestingEmailCode(false);
-                setIsVerifyingEmailCode(false);
-            }, 300);
-        }
-    };
+    // const handleEmailDialogClose = (open: boolean) => {
+    //     if (!open) {
+    //         setIsChangeEmailDialogOpen(false);
+    //         // Reset state after closing
+    //         setTimeout(() => {
+    //             setEmailDialogStep("input");
+    //             setEmailForm(initialChangeEmailState);
+    //             setEmailFormError(null);
+    //             setEmailOtpCode("");
+    //             setEmailOtpError(null);
+    //             setIsRequestingEmailCode(false);
+    //             setIsVerifyingEmailCode(false);
+    //         }, 300);
+    //     }
+    // };
     // --- End Handlers ---
 
     // --- Derived State ---

@@ -167,7 +167,7 @@ export function VenueReservationApproval() {
         "venueApprovalSearchQuery_v1",
         "",
     );
-    const [statusFilter, setStatusFilter] = usePersistentState<string | null>(
+    const [statusFilter] = usePersistentState<string | null>(
         "venueApprovalStatusFilter_v1",
         null,
     );
@@ -441,7 +441,7 @@ export function VenueReservationApproval() {
 
         toast.promise(Promise.all(promises), {
             loading: `Approving ${eligibleEventPayloads.length} event(s)...`,
-            success: (messages: string[]) => {
+            success: (_messages: string[]) => {
                 setRowSelection({});
                 setIsBulkApproveDialogOpen(false);
                 setBulkApproveRemarks("");
@@ -507,7 +507,7 @@ export function VenueReservationApproval() {
 
         toast.promise(Promise.all(promises), {
             loading: `Rejecting ${eligibleEventPayloads.length} event(s)...`,
-            success: (messages: string[]) => {
+            success: (_messages: string[]) => {
                 setRowSelection({});
                 setIsBulkRejectDialogOpen(false);
                 setBulkRejectionRemarks("");

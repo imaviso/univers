@@ -55,7 +55,7 @@ import {
 } from "react";
 import type { DateRange } from "react-day-picker";
 
-export function DataTableFilter<TData, TValue>({
+export function DataTableFilter<TData, _TValue>({
     table,
 }: { table: Table<TData> }) {
     const isMobile = useIsMobile();
@@ -1659,7 +1659,7 @@ export function PropertyFilterTextValueMenu<TData, TValue>({
 }
 
 export function PropertyFilterNumberValueMenu<TData, TValue>({
-    table,
+    // table,
     column,
     columnMeta,
 }: ProperFilterValueMenuProps<TData, TValue>) {

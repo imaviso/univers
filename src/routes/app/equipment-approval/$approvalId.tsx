@@ -28,11 +28,7 @@ import {
 } from "@/lib/query";
 import { formatDateTime, formatRole, getStatusBadgeClass } from "@/lib/utils";
 import { useSuspenseQueries } from "@tanstack/react-query";
-import {
-    createFileRoute,
-    useNavigate,
-    useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2, FileText, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -48,15 +44,10 @@ export const Route = createFileRoute("/app/equipment-approval/$approvalId")({
         await queryClient.ensureQueryData(
             equipmentReservationApprovalsQueryOptions(approvalId),
         );
-        // No need to return data, useSuspenseQueries will get it
     },
-    errorComponent: ({ error }) => (
-        <div>Error loading reservation: {error.message}</div>
-    ), // Basic error component
 });
 
 export function EquipmentReservationDetails() {
-    const navigate = useNavigate();
     const router = useRouter();
     const onBack = () => router.history.back();
 
@@ -84,12 +75,12 @@ export function EquipmentReservationDetails() {
     const handleApproveReservation = () => {
         // Remarks can be added optionally for approval if needed, but API takes empty string
         approveMutation.mutate(
-            { reservationId: reservation.publicId, remarks: "" },
+            { reservationPublicId: reservation.publicId, remarks: "" },
             {
-                onSuccess: (message) => {
+                onSuccess: () => {
                     toast.success("Reservation approved.");
                 },
-                onError: (error) => {
+                onError: () => {
                     toast.error("Failed to approve reservation.");
                 },
             },
@@ -103,15 +94,18 @@ export function EquipmentReservationDetails() {
         }
 
         rejectMutation.mutate(
-            { reservationId: reservation.publicId, remarks: rejectionRemarks },
             {
-                onSuccess: (message) => {
+                reservationPublicId: reservation.publicId,
+                remarks: rejectionRemarks,
+            },
+            {
+                onSuccess: () => {
                     toast.success("Reservation rejected.");
                     setIsRejectionDialogOpen(false);
                     setRejectionRemarks("");
                     // No need to manually update state
                 },
-                onError: (error) => {
+                onError: () => {
                     toast.error("Failed to reject reservation.");
                 },
             },
