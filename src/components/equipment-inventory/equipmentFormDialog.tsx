@@ -44,6 +44,7 @@ const defaultValues: EquipmentDTOInput = {
     availability: true,
     quantity: 1,
     status: "NEW",
+    serialNo: "",
     ownerId: undefined,
     image: undefined,
 };
@@ -77,6 +78,7 @@ export function EquipmentFormDialog({
               availability: equipment.availability,
               quantity: equipment.quantity,
               status: equipment.status,
+              serialNo: equipment.serialNo,
               ownerId: equipment.equipmentOwner?.publicId ?? undefined,
               image: undefined,
           }
@@ -150,6 +152,7 @@ export function EquipmentFormDialog({
                       availability: equipment.availability,
                       quantity: equipment.quantity,
                       status: equipment.status,
+                      serialNo: equipment.serialNo,
                       ownerId: equipment.equipmentOwner?.publicId ?? undefined,
                       image: undefined,
                   }
@@ -280,23 +283,45 @@ export function EquipmentFormDialog({
                         />
 
                         {/* Brand */}
-                        <FormField
-                            control={form.control}
-                            name="brand"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Brand</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="e.g., Epson, Dell"
-                                            {...field}
-                                            disabled={isMutating}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="brand"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Brand</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="e.g., Epson, Dell"
+                                                {...field}
+                                                disabled={isMutating}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="serialNo"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Serial Number</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter Serial Number"
+                                                {...field}
+                                                disabled={isMutating}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        {/* Quantity and Status */}
 
                         <div className="grid grid-cols-2 gap-4">
                             {/* Quantity */}
@@ -594,15 +619,7 @@ export function EquipmentFormDialog({
                     <Button
                         type="submit"
                         form="equipment-form"
-                        disabled={
-                            isMutating ||
-                            !form.formState.isValid ||
-                            (!isEditing && !form.getValues("image")) ||
-                            uploadErrors.length > 0 ||
-                            (isSuperAdmin &&
-                                !isEditing &&
-                                !form.getValues("ownerId"))
-                        }
+                        disabled={isMutating}
                     >
                         {isMutating ? (
                             <>

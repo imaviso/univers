@@ -220,11 +220,7 @@ export const equipmentsQueryOptions = (user: UserDTO | null | undefined) =>
         queryKey: ["equipments", user?.publicId, user?.roles],
         queryFn: async () => {
             if (!user) return []; // Don't fetch if no user
-            if (
-                user.roles.includes("EQUIPMENT_OWNER") ||
-                user.roles.includes("MSDO") ||
-                user.roles.includes("OPC")
-            ) {
+            if (user.roles.includes("EQUIPMENT_OWNER")) {
                 return await getAllEquipmentsByOwner(user.publicId);
             }
             // Other roles (like ORGANIZER) might need all available equipment?

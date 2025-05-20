@@ -61,12 +61,7 @@ export const Route = createFileRoute("/app/events")({
     loader: async ({ context }) => {
         if (
             context.authState?.roles.includes("SUPER_ADMIN") ||
-            context.authState?.roles.includes("VP_ADMIN") ||
-            context.authState?.roles.includes("MSDO") ||
-            context.authState?.roles.includes("OPC") ||
-            context.authState?.roles.includes("SSD") ||
-            context.authState?.roles.includes("FAO") ||
-            context.authState?.roles.includes("VPAA") ||
+            context.authState?.roles.includes("ADMIN") ||
             context.authState?.roles.includes("DEPT_HEAD")
         ) {
             context.queryClient.ensureQueryData(allEventsQueryOptions);

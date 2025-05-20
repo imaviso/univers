@@ -139,8 +139,8 @@ export function EditDepartmentFormDialog({
                     : "Failed to update department",
             );
         },
-        onSuccess: (data) => {
-            toast.success(data || "Department updated successfully");
+        onSuccess: () => {
+            toast.success("Department updated successfully");
             onClose(); // Call onClose prop
         },
         onSettled: () => {

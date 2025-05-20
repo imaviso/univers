@@ -531,12 +531,12 @@ export const approveEvent = async ({
     remarks: string;
 }): Promise<string> => {
     try {
-        const url = `${API_BASE_URL}/event-approval/${eventId}/approve`;
+        const url = `${API_BASE_URL}/event-approval/${eventId}/action`;
 
-        const payload = { remarks: remarks || "" };
+        const payload = { status: "APPROVED", remarks: remarks || "" };
 
         const response = await fetchWithAuth(url, {
-            method: "PATCH",
+            method: "PUT",
             headers: {
                 "Content-Type": "application/json",
             },
@@ -1517,11 +1517,14 @@ export const rejectEvent = async (data: {
 }): Promise<string> => {
     try {
         const response = await fetchWithAuth(
-            `${API_BASE_URL}/event-approval/${data.eventId}/reject`,
+            `${API_BASE_URL}/event-approval/${data.eventId}/action`,
             {
-                method: "PATCH",
+                method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ remarks: data.remarks }),
+                body: JSON.stringify({
+                    status: "REJECTED",
+                    remarks: data.remarks,
+                }),
             },
         );
         const responseData = await handleApiResponse<string>(response, false);

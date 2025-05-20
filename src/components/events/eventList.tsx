@@ -44,11 +44,8 @@ export function EventList({
         if (
             role.includes("SUPER_ADMIN") ||
             role.includes("VP_ADMIN") ||
-            role.includes("MSDO") ||
-            role.includes("OPC") ||
-            role.includes("SSD") ||
-            role.includes("FAO") ||
-            role.includes("VPAA")
+            role.includes("ADMIN") ||
+            role.includes("DEPT_HEAD")
         ) {
             scope = "all";
         } else if (role.includes("VENUE_OWNER")) {
@@ -87,11 +84,7 @@ export function EventList({
                 event.status?.toUpperCase() === "CANCELED" &&
                 !currentUser?.roles?.includes("SUPER_ADMIN") &&
                 !currentUser?.roles?.includes("VP_ADMIN") &&
-                !currentUser?.roles?.includes("MSDO") &&
-                !currentUser?.roles?.includes("OPC") &&
-                !currentUser?.roles?.includes("SSD") &&
-                !currentUser?.roles?.includes("FAO") &&
-                !currentUser?.roles?.includes("VPAA") &&
+                !currentUser?.roles?.includes("ADMIN") &&
                 !currentUser?.roles?.includes("DEPT_HEAD")
             ) {
                 return false;

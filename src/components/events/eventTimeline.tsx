@@ -139,12 +139,8 @@ export function EventTimeline({
         return monthA - monthB;
     });
 
-    const handleNavigate = (eventId: string | undefined) => {
-        if (typeof eventId === "string") {
-            navigate({ to: `/app/events/${eventId}` });
-        } else {
-            console.warn("Attempted to navigate with invalid event ID");
-        }
+    const handleNavigate = (eventId: string) => {
+        navigate({ to: `/app/events/${eventId}` });
     };
 
     return (
@@ -207,10 +203,7 @@ export function EventTimeline({
 
                                         return (
                                             <Card
-                                                key={
-                                                    event.publicId ??
-                                                    `temp-${Math.random()}`
-                                                }
+                                                key={event.publicId}
                                                 className="overflow-hidden border-l-4"
                                             >
                                                 <CardHeader>
@@ -287,10 +280,6 @@ export function EventTimeline({
                                                                 handleNavigate(
                                                                     event.publicId,
                                                                 )
-                                                            }
-                                                            disabled={
-                                                                typeof event.publicId !==
-                                                                "number"
                                                             }
                                                         >
                                                             <ChevronRight className="h-4 w-4 text-muted-foreground" />

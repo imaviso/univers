@@ -80,8 +80,8 @@ export function AddDepartmentFormDialog() {
                 err instanceof Error ? err.message : "Failed to add department",
             );
         },
-        onSuccess: (data) => {
-            toast.success(data || "Department added successfully");
+        onSuccess: () => {
+            toast.success("Department added successfully");
             setIsOpen(false); // Close dialog
             form.reset(); // Reset form
         },

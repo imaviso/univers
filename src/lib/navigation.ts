@@ -10,8 +10,16 @@ import {
     Settings,
     Users,
 } from "lucide-react";
+import type { UserRole } from "./types";
 
-export const allNavigation = [
+type NavigationItem = {
+    name: string;
+    href: string;
+    icon: React.ElementType;
+    roles: UserRole[];
+};
+
+export const allNavigation: NavigationItem[] = [
     {
         name: "Dashboard",
         href: "/app/dashboard",
@@ -27,15 +35,9 @@ export const allNavigation = [
             "ORGANIZER",
             "EQUIPMENT_OWNER",
             "VENUE_OWNER",
-            "VPAA",
             "VP_ADMIN",
-            "MSDO",
-            "OPC",
-            "CORE",
-            "TSG",
-            "SSD",
-            "FAO",
             "DEPT_HEAD",
+            "ADMIN",
         ],
     },
     {
@@ -47,14 +49,8 @@ export const allNavigation = [
             "ORGANIZER",
             "EQUIPMENT_OWNER",
             "VENUE_OWNER",
-            "VPAA",
             "VP_ADMIN",
-            "MSDO",
-            "OPC",
-            "CORE",
-            "TSG",
-            "SSD",
-            "FAO",
+            "ADMIN",
             "DEPT_HEAD",
         ],
     },
@@ -67,14 +63,8 @@ export const allNavigation = [
             "ORGANIZER",
             "EQUIPMENT_OWNER",
             "VENUE_OWNER",
-            "VPAA",
             "VP_ADMIN",
-            "MSDO",
-            "OPC",
-            "CORE",
-            "TSG",
-            "SSD",
-            "FAO",
+            "ADMIN",
             "DEPT_HEAD",
         ],
     },
@@ -99,14 +89,8 @@ export const allNavigation = [
             "ORGANIZER",
             "EQUIPMENT_OWNER",
             "VENUE_OWNER",
-            "VPAA",
             "VP_ADMIN",
-            "MSDO",
-            "OPC",
-            "CORE",
-            "TSG",
-            "SSD",
-            "FAO",
+            "ADMIN",
             "DEPT_HEAD",
         ],
     },
@@ -114,7 +98,7 @@ export const allNavigation = [
         name: "Equipment Approval",
         href: "/app/equipment-approval/approval",
         icon: PackageCheck,
-        roles: ["EQUIPMENT_OWNER", "MSDO", "OPC"],
+        roles: ["EQUIPMENT_OWNER"],
     },
     {
         name: "Departments",
@@ -124,7 +108,7 @@ export const allNavigation = [
     },
 ];
 
-export const settingsNavigation = [
+export const settingsNavigation: NavigationItem[] = [
     {
         name: "Settings",
         href: "/app/settings",
@@ -134,20 +118,14 @@ export const settingsNavigation = [
             "ORGANIZER",
             "EQUIPMENT_OWNER",
             "VENUE_OWNER",
-            "VPAA",
             "VP_ADMIN",
-            "MSDO",
-            "OPC",
-            "CORE",
-            "TSG",
-            "SSD",
-            "FAO",
             "DEPT_HEAD",
+            "ADMIN",
         ],
     },
 ];
 
-export const authNavigation = [
+export const authNavigation: NavigationItem[] = [
     {
         name: "Login",
         href: "/login",
@@ -157,14 +135,8 @@ export const authNavigation = [
             "ORGANIZER",
             "EQUIPMENT_OWNER",
             "VENUE_OWNER",
-            "VPAA",
             "VP_ADMIN",
-            "MSDO",
-            "OPC",
-            "CORE",
-            "TSG",
-            "SSD",
-            "FAO",
+            "ADMIN",
             "DEPT_HEAD",
         ],
     },
