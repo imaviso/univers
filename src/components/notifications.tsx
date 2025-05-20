@@ -175,7 +175,6 @@ export function NotificationDropdown() {
                             let canNavigate = false;
                             let targetPath = "";
 
-// Debugging logs removed for production readiness.
                             if (entityId != null) {
                                 if (
                                     entityType?.includes("EVENT") ||
