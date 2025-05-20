@@ -203,7 +203,7 @@ export function EventTimeline({
 
                                         return (
                                             <Card
-                                                key={event.publicId}
+                                                key={event.publicId ?? `fallback-${index}`}
                                                 className="overflow-hidden border-l-4"
                                             >
                                                 <CardHeader>
