@@ -43,6 +43,7 @@ import {
     ChevronDown,
     Edit,
     Fingerprint,
+    IdCardIcon,
     InfoIcon,
     ListFilter,
     MoreHorizontal,
@@ -356,6 +357,16 @@ export function EquipmentDataTable({
                     displayName: "Brand",
                     type: "text",
                     icon: InfoIcon,
+                }) as ColumnMeta<Equipment, unknown>,
+            },
+            {
+                accessorKey: "serialNo",
+                header: "Serial Number",
+                filterFn: filterFn("text"),
+                meta: defineMeta((row: Equipment) => row.serialNo, {
+                    displayName: "Serial Number",
+                    type: "text",
+                    icon: IdCardIcon,
                 }) as ColumnMeta<Equipment, unknown>,
             },
             {

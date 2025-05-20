@@ -41,15 +41,9 @@ export type UserDTO = {
 export type UserRole =
     | "SUPER_ADMIN"
     | "VP_ADMIN"
-    | "VPAA"
+    | "ADMIN"
     | "ORGANIZER"
     | "DEPT_HEAD"
-    | "MSDO"
-    | "OPC"
-    | "CORE"
-    | "TSG"
-    | "SSD"
-    | "FAO"
     | "VENUE_OWNER"
     | "EQUIPMENT_OWNER";
 
@@ -82,18 +76,9 @@ export type LoginResponse = {
 export const ROLES = [
     { value: "SUPER_ADMIN", label: "Super Admin" },
     { value: "VP_ADMIN", label: "VP Admin" },
-    { value: "VPAA", label: "VPAA" },
+    { value: "ADMIN", label: "Admin" },
     { value: "ORGANIZER", label: "Organizer" },
     { value: "DEPT_HEAD", label: "Department Head" },
-    { value: "MSDO", label: "Multimedia Solutions and Documentation Office" },
-    { value: "OPC", label: "Office of Property Custodian" },
-    {
-        value: "CORE",
-        label: "Center for Communications, Creatives, and Marketing",
-    },
-    { value: "TSG", label: "TSG" },
-    { value: "SSD", label: "Safety and Security Department" },
-    { value: "FAO", label: "Finance and Accounting Office" },
     { value: "VENUE_OWNER", label: "Venue Owner" },
     { value: "EQUIPMENT_OWNER", label: "Equipment Owner" },
 ];

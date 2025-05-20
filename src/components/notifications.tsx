@@ -175,11 +175,12 @@ export function NotificationDropdown() {
                             let canNavigate = false;
                             let targetPath = "";
 
+                            console.log(entityType);
+                            console.log(entityId);
                             if (entityId != null) {
                                 if (
-                                    entityType === "EVENT" ||
-                                    entityType === "VENUE_RESERVATION" ||
-                                    entityType === "EVENT_RESERVATION"
+                                    entityType?.includes("EVENT") ||
+                                    entityType?.includes("VENUE")
                                 ) {
                                     canNavigate = true;
                                     targetPath = `/app/events/${entityId}`;

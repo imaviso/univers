@@ -175,24 +175,15 @@ export function NotificationCenter() {
 
                             if (entityId != null) {
                                 if (
-                                    entityType === "EVENT" ||
-                                    entityType === "EVENT_APPROVED" ||
-                                    entityType === "EVENT_REJECTED" ||
-                                    entityType === "EVENT_RESERVATION" ||
-                                    entityType === "VENUE_RESERVATION" ||
-                                    entityType ===
-                                        "VENUE_RESERVATION_APPROVED" ||
-                                    entityType ===
-                                        "VENUE_RESERVATION_REJECTED" ||
-                                    entityType ===
-                                        "VENUE_RESERVATION_REQUEST" ||
+                                    entityType?.includes("EVENT") ||
+                                    entityType?.includes("VENUE") ||
                                     entityType === "EQUIPMENT_RESERVATION" ||
+                                    entityType ===
+                                        "EQUIPMENT_RESERVATION_APPROVAL" ||
                                     entityType ===
                                         "EQUIPMENT_RESERVATION_APPROVED" ||
                                     entityType ===
-                                        "EQUIPMENT_RESERVATION_REJECTED" ||
-                                    entityType ===
-                                        "EQUIPMENT_RESERVATION_FULLY_APPROVED"
+                                        "EQUIPMENT_RESERVATION_REJECTED"
                                 ) {
                                     canNavigate = true;
                                     targetPath = `/app/events/${entityId}`;

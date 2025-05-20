@@ -113,11 +113,7 @@ function Events() {
         "eventActiveTab",
         userRoles.includes("SUPER_ADMIN") ||
             userRoles.includes("VP_ADMIN") ||
-            userRoles.includes("MSDO") ||
-            userRoles.includes("OPC") ||
-            userRoles.includes("SSD") ||
-            userRoles.includes("FAO") ||
-            userRoles.includes("VPAA") ||
+            userRoles.includes("ADMIN") ||
             userRoles.includes("DEPT_HEAD") ||
             userRoles.includes("VENUE_OWNER")
             ? "all"
@@ -148,12 +144,8 @@ function Events() {
     const isAuthorized =
         userRoles.includes("SUPER_ADMIN") ||
         userRoles.includes("VP_ADMIN") ||
-        userRoles.includes("MSDO") ||
-        userRoles.includes("OPC") ||
-        userRoles.includes("SSD") ||
-        userRoles.includes("FAO") ||
+        userRoles.includes("ADMIN") ||
         userRoles.includes("DEPT_HEAD") ||
-        userRoles.includes("VPAA") ||
         userRoles.includes("VENUE_OWNER");
 
     return (
@@ -712,6 +704,161 @@ function Events() {
                                             onSelect={
                                                 setTimelineSelectedDateRange
                                             }
+                                            numberOfMonths={1}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            )}
+                            {/* Date Range Popover for LIST VIEW (now also for non-authorized users in list view) */}
+                            {view === "list" && (
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "w-fit justify-start text-left font-normal",
+                                                !listSelectedDateRange &&
+                                                    "text-muted-foreground",
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {listSelectedDateRange?.from ? (
+                                                listSelectedDateRange.to ? (
+                                                    <>
+                                                        {format(
+                                                            listSelectedDateRange.from,
+                                                            "LLL dd, y",
+                                                        )}{" "}
+                                                        -{" "}
+                                                        {format(
+                                                            listSelectedDateRange.to,
+                                                            "LLL dd, y",
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    format(
+                                                        listSelectedDateRange.from,
+                                                        "LLL dd, y",
+                                                    )
+                                                )
+                                            ) : (
+                                                <span>Pick a date range</span>
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        className="w-auto p-0"
+                                        align="end"
+                                    >
+                                        <Select
+                                            onValueChange={(value) => {
+                                                const now = new Date();
+                                                if (value === "custom") {
+                                                    setListSelectedDateRange(
+                                                        (
+                                                            prevRange:
+                                                                | DateRange
+                                                                | undefined,
+                                                        ) => ({
+                                                            from:
+                                                                prevRange?.from ??
+                                                                startOfDay(
+                                                                    addDays(
+                                                                        now,
+                                                                        -7,
+                                                                    ),
+                                                                ),
+                                                            to:
+                                                                prevRange?.to ??
+                                                                endOfDay(now),
+                                                        }),
+                                                    );
+                                                } else if (value === "all") {
+                                                    setListSelectedDateRange(
+                                                        undefined,
+                                                    );
+                                                } else if (value === "today") {
+                                                    setListSelectedDateRange({
+                                                        from: startOfDay(now),
+                                                        to: endOfDay(now),
+                                                    });
+                                                } else if (
+                                                    value === "thisWeek"
+                                                ) {
+                                                    setListSelectedDateRange({
+                                                        from: startOfWeek(now, {
+                                                            weekStartsOn: 1,
+                                                        }),
+                                                        to: endOfWeek(now, {
+                                                            weekStartsOn: 1,
+                                                        }),
+                                                    });
+                                                } else if (
+                                                    value === "thisMonth"
+                                                ) {
+                                                    setListSelectedDateRange({
+                                                        from: startOfMonth(now),
+                                                        to: endOfMonth(now),
+                                                    });
+                                                } else {
+                                                    const numDays =
+                                                        Number.parseInt(value);
+                                                    if (
+                                                        !Number.isNaN(numDays)
+                                                    ) {
+                                                        setListSelectedDateRange(
+                                                            {
+                                                                from: startOfDay(
+                                                                    addDays(
+                                                                        now,
+                                                                        -numDays,
+                                                                    ),
+                                                                ),
+                                                                to: endOfDay(
+                                                                    now,
+                                                                ),
+                                                            },
+                                                        );
+                                                    } else {
+                                                        setListSelectedDateRange(
+                                                            undefined,
+                                                        );
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="m-2 mb-0 w-[calc(100%-1rem)]">
+                                                <SelectValue placeholder="Select quick range" />
+                                            </SelectTrigger>
+                                            <SelectContent position="popper">
+                                                <SelectItem value="all">
+                                                    All Time
+                                                </SelectItem>
+                                                <SelectItem value="today">
+                                                    Today
+                                                </SelectItem>
+                                                <SelectItem value="thisWeek">
+                                                    This Week
+                                                </SelectItem>
+                                                <SelectItem value="thisMonth">
+                                                    This Month
+                                                </SelectItem>
+                                                <SelectItem value="7">
+                                                    Last 7 days
+                                                </SelectItem>
+                                                <SelectItem value="30">
+                                                    Last 30 days
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <Calendar
+                                            initialFocus
+                                            mode="range"
+                                            defaultMonth={
+                                                listSelectedDateRange?.from
+                                            }
+                                            selected={listSelectedDateRange}
+                                            onSelect={setListSelectedDateRange}
                                             numberOfMonths={1}
                                         />
                                     </PopoverContent>

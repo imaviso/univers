@@ -76,7 +76,6 @@ import type {
     EventApprovalDTO,
     EventDTO,
     EventDTOPayload,
-    UserDTO,
     UserRole,
     VenueDTO,
 } from "@/lib/types";
@@ -133,194 +132,8 @@ export const Route = createFileRoute("/app/events/$eventId")({
     component: EventDetailsPage,
 });
 
-// Define constants outside the component to prevent re-creation on re-renders
-const DEFAULT_USER_PLACEHOLDER_FIELDS: Omit<
-    UserDTO,
-    "publicId" | "firstName" | "lastName" | "email" | "roles" | "department"
-> = {
-    profileImagePath: null,
-    idNumber: null,
-    phoneNumber: null,
-    telephoneNumber: null,
-    active: true,
-    emailVerified: true,
-    createdAt: "",
-    updatedAt: "",
-};
-
-const DEFAULT_DEPARTMENT_PLACEHOLDER_FIELDS: Omit<
-    DepartmentDTO,
-    "publicId" | "name"
-> = {
-    description: "",
-    deptHead: null,
-    createdAt: "",
-    updatedAt: "",
-};
-
-const EXPECTED_APPROVERS_CONFIG: Array<{
-    id: string;
-    label: string;
-    isSigned: (approval: EventApprovalDTO, eventDto: EventDTO) => boolean;
-    getPlaceholderData: (eventDto: EventDTO) => {
-        signedByUserInitial: Partial<UserDTO> & {
-            firstName: string;
-            departmentName: string;
-            departmentPublicId: string;
-            userRole: UserRole;
-        };
-        approvalRole: UserRole;
-    };
-}> = [
-    {
-        id: "DEPT_HEAD",
-        label: "Department Head",
-        isSigned: (approval, eventDto: EventDTO) =>
-            approval.userRole === "DEPT_HEAD" &&
-            approval.signedByUser?.publicId ===
-                eventDto.organizer?.department?.deptHead?.publicId,
-        getPlaceholderData: (eventDto: EventDTO) => {
-            const deptHead = eventDto.organizer?.department?.deptHead;
-            const orgDept = eventDto.organizer?.department;
-            return {
-                signedByUserInitial: {
-                    firstName: deptHead
-                        ? `${deptHead.firstName} ${deptHead.lastName}`
-                        : "Department Head",
-                    userRole: "DEPT_HEAD",
-                    departmentName: orgDept?.name || "N/A",
-                    departmentPublicId: orgDept?.publicId || "",
-                    publicId: deptHead?.publicId,
-                },
-                approvalRole: "DEPT_HEAD",
-            };
-        },
-    },
-    {
-        id: "VENUE_OWNER",
-        label: "Venue Owner",
-        isSigned: (approval, eventDto: EventDTO) =>
-            approval.userRole === "VENUE_OWNER" &&
-            approval.signedByUser?.publicId ===
-                eventDto.eventVenue?.venueOwner?.publicId,
-        getPlaceholderData: (eventDto: EventDTO) => {
-            const venueOwnerUser = eventDto.eventVenue?.venueOwner;
-            const eventVenue = eventDto.eventVenue;
-            return {
-                signedByUserInitial: {
-                    firstName: venueOwnerUser
-                        ? `${venueOwnerUser.firstName} ${venueOwnerUser.lastName}`
-                        : "Venue Owner",
-                    userRole: "VENUE_OWNER",
-                    departmentName: eventVenue?.name || "Event Venue N/A", // Using venue name as department for placeholder display
-                    departmentPublicId: eventVenue?.publicId || "",
-                    publicId: venueOwnerUser?.publicId,
-                },
-                approvalRole: "VENUE_OWNER",
-            };
-        },
-    },
-    {
-        id: "VP_ADMIN",
-        label: "VP Admin",
-        isSigned: (approval, _eventDto: EventDTO) =>
-            approval.userRole === "VP_ADMIN",
-        getPlaceholderData: (_eventDto: EventDTO) => ({
-            signedByUserInitial: {
-                firstName: "VP Admin",
-                userRole: "VP_ADMIN",
-                departmentName: "Office of VP Admin",
-                departmentPublicId: "vp-admin-dept",
-            },
-            approvalRole: "VP_ADMIN",
-        }),
-    },
-    {
-        id: "VPAA",
-        label: "VPAA Representative",
-        isSigned: (approval, _eventDto: EventDTO) =>
-            (approval.signedByUser?.department?.name?.includes("VPAA") ??
-                false) &&
-            approval.userRole === "VPAA",
-        getPlaceholderData: (_eventDto: EventDTO) => ({
-            signedByUserInitial: {
-                firstName: "VPAA Representative",
-                userRole: "VPAA",
-                departmentName: "VPAA",
-                departmentPublicId: "vp-aa-dept",
-            },
-            approvalRole: "VPAA",
-        }),
-    },
-    {
-        id: "MSDO",
-        label: "MSDO Representative",
-        isSigned: (approval, _eventDto: EventDTO) =>
-            (approval.signedByUser?.department?.name?.includes("MSDO") ??
-                false) &&
-            approval.userRole === "MSDO",
-        getPlaceholderData: (_eventDto: EventDTO) => ({
-            signedByUserInitial: {
-                firstName: "MSDO Representative",
-                userRole: "MSDO",
-                departmentName: "MSDO",
-                departmentPublicId: "msdo-dept",
-            },
-            approvalRole: "MSDO",
-        }),
-    },
-    {
-        id: "OPC",
-        label: "OPC Representative",
-        isSigned: (approval, _eventDto: EventDTO) =>
-            (approval.signedByUser?.department?.name?.includes("OPC") ??
-                false) &&
-            approval.userRole === "OPC",
-        getPlaceholderData: (_eventDto: EventDTO) => ({
-            signedByUserInitial: {
-                firstName: "OPC Representative",
-                userRole: "OPC",
-                departmentName: "OPC",
-                departmentPublicId: "opc-dept",
-            },
-            approvalRole: "OPC",
-        }),
-    },
-    {
-        id: "SSD",
-        label: "SSD",
-        isSigned: (approval, _eventDto: EventDTO) =>
-            approval.userRole === "SSD",
-        getPlaceholderData: (_eventDto: EventDTO) => ({
-            signedByUserInitial: {
-                firstName: "SSD",
-                userRole: "SSD",
-                departmentName: "Student Services Dept.",
-                departmentPublicId: "ssd-dept",
-            },
-            approvalRole: "SSD",
-        }),
-    },
-    {
-        id: "FAO",
-        label: "FAO",
-        isSigned: (approval, _eventDto: EventDTO) =>
-            approval.userRole === "FAO",
-        getPlaceholderData: (_eventDto: EventDTO) => ({
-            signedByUserInitial: {
-                firstName: "FAO",
-                userRole: "FAO",
-                departmentName: "Finance & Accounting Office",
-                departmentPublicId: "fao-dept",
-            },
-            approvalRole: "FAO",
-        }),
-    },
-];
-
 export function EventDetailsPage() {
     const context = useRouteContext({ from: "/app/events" });
-    const role = context.authState?.roles;
     const currentUser = context.authState;
     const router = useRouter();
     const queryClient = context.queryClient;
@@ -379,89 +192,41 @@ export function EventDetailsPage() {
         ? departmentMap.get(event.department.publicId)
         : null;
 
-    const hasUserApproved = useMemo(() => {
-        if (!currentUser) return false;
-
-        return approvals.some((appr: EventApprovalDTO) => {
-            // 1. Check by userId if both currentUser.id and appr.userId exist
-            if (
-                currentUser.publicId &&
-                appr.signedByUser &&
-                appr.signedByUser.publicId != null
-            ) {
-                // Check for null/undefined
-                return appr.signedByUser.publicId === currentUser.publicId;
-            }
-            // 2. Fallback: Check by signedBy name if appr.userId is missing
-            //    Ensure currentUser has names to compare against.
-            if (
-                appr.signedByUser &&
-                currentUser.firstName &&
-                currentUser.lastName
-            ) {
-                // Also check appr.signedBy here
-                // Construct the name exactly as it appears in signedBy
-                // Adjust this if the format in signedBy is different (e.g., "LastName, FirstName")
-                const currentUserName = `${currentUser.firstName} ${currentUser.lastName}`;
-                return appr.signedByUser.firstName === currentUserName;
-            }
-            // If neither check is possible, this approval doesn't match the current user
-            return false;
-        });
-    }, [approvals, currentUser]); // Recalculate when approvals or currentUser changes
-
     const isOrganizer = currentUser?.publicId === event.organizer.publicId;
-    const isSuperAdmin = role?.includes("SUPER_ADMIN");
+    const isSuperAdmin = currentUser?.roles?.includes("SUPER_ADMIN");
+    const isEventPending = event.status === "PENDING";
 
-    const canUserApprove =
-        currentUser &&
-        !hasUserApproved &&
-        event.status === "PENDING" &&
-        (isSuperAdmin || // Super Admin
-            (currentUser.roles?.includes("DEPT_HEAD") &&
-                event.organizer?.department?.deptHead?.publicId ===
-                    currentUser.publicId) ||
-            (currentUser.roles?.includes("VENUE_OWNER") &&
-                eventVenue?.venueOwner?.publicId === currentUser.publicId) || // Venue Owner of event venue
-            // MSDO related approval
-            ((currentUser.roles?.includes("EQUIPMENT_OWNER") ||
-                currentUser.roles?.includes("MSDO")) &&
-                currentUser.department?.name?.includes("(MSDO)")) ||
-            // OPC related approval
-            ((currentUser.roles?.includes("EQUIPMENT_OWNER") ||
-                currentUser.roles?.includes("OPC")) &&
-                currentUser.department?.name?.includes("(OPC)")) ||
-            // Other general approver roles
-            currentUser.roles?.includes("VP_ADMIN") ||
-            currentUser.roles?.includes("VPAA") ||
-            currentUser.roles?.includes("SSD") ||
-            currentUser.roles?.includes("FAO"));
+    // Find the specific approval record for the current logged-in user
+    const currentUserApprovalRecord = useMemo(() => {
+        if (!currentUser?.publicId || !approvals || !Array.isArray(approvals)) {
+            return null;
+        }
+        return approvals.find(
+            (appr: EventApprovalDTO) =>
+                appr.signedByUser?.publicId === currentUser.publicId,
+        );
+    }, [approvals, currentUser]);
 
-    const canUserReject =
-        currentUser &&
-        event.status === "PENDING" &&
-        (isSuperAdmin || // Super Admin
-            (currentUser.roles?.includes("DEPT_HEAD") &&
-                event.organizer?.department?.deptHead?.publicId ===
-                    currentUser.publicId) || // Department Head of event organizer
-            (currentUser.roles?.includes("VENUE_OWNER") &&
-                eventVenue?.venueOwner?.publicId === currentUser.publicId) || // Venue Owner of event venue
-            // MSDO related approval
-            ((currentUser.roles?.includes("EQUIPMENT_OWNER") ||
-                currentUser.roles?.includes("MSDO")) &&
-                currentUser.department?.name?.includes("MSDO")) ||
-            // OPC related approval
-            ((currentUser.roles?.includes("EQUIPMENT_OWNER") ||
-                currentUser.roles?.includes("OPC")) &&
-                currentUser.department?.name?.includes("OPC")) ||
-            // Other general approver roles
-            currentUser.roles?.includes("VP_ADMIN") ||
-            currentUser.roles?.includes("VPAA") ||
-            currentUser.roles?.includes("SSD") ||
-            currentUser.roles?.includes("FAO"));
+    // User can approve if the event is pending AND their specific approval record is pending
+    const canUserApprove = useMemo(() => {
+        if (!isEventPending || !currentUser) return false; // Added !currentUser check
+        // For any user (including SUPER_ADMIN), they need an assigned PENDING approval record to act.
+        return currentUserApprovalRecord?.status === "PENDING";
+    }, [isEventPending, currentUserApprovalRecord, currentUser]);
+
+    // User can reject if the event is pending AND their specific approval record is pending
+    const canUserReject = useMemo(() => {
+        if (!isEventPending || !currentUser) return false; // Added !currentUser check
+        // Same conditions as approving for being able to act on their pending item.
+        return (
+            currentUserApprovalRecord?.status === "APPROVED" ||
+            currentUserApprovalRecord?.status === "PENDING"
+        );
+    }, [isEventPending, currentUserApprovalRecord, currentUser]);
 
     const canCancelEvent =
-        event.status === "PENDING" || event.status === "APPROVED";
+        (isOrganizer || isSuperAdmin) &&
+        (event.status === "PENDING" || event.status === "APPROVED");
 
     const canEditEvent =
         isSuperAdmin || (isOrganizer && event.status === "PENDING");
@@ -955,98 +720,18 @@ export function EventDetailsPage() {
     };
 
     const approvalTableRows = useMemo(() => {
-        if (!event) return [];
+        if (!event || !approvals) return [];
 
-        // Ensure currentApprovals is always an array for consistent processing
         const currentApprovals = Array.isArray(approvals) ? approvals : [];
 
-        type PlaceholderApprovalRow = {
-            publicId: string;
-            signedByUser: UserDTO;
-            userRole: UserRole;
-            dateSigned: null;
-            status: "PENDING";
-            remarks: string;
-            isPlaceholder: true;
-            // Include all other fields from EventApprovalDTO with appropriate placeholder types/values
-            approvedByDepartmentHead: boolean | null;
-            approvedByVenueOwner: boolean | null;
-            finalStatus: string | null;
-            rejectionReason: string | null;
-            version: number;
-            createdAt: string;
-            updatedAt: string;
-            event: Partial<EventDTO> | undefined; // Keep this flexible for placeholders
-        };
-
-        type ApprovalTableRow = EventApprovalDTO | PlaceholderApprovalRow;
-
-        const outputRows: ApprovalTableRow[] = [];
-        const signedApproverConfigIds = new Set<string>();
-
-        // Process existing approvals first and identify which config types are met
-        for (const approval of currentApprovals) {
-            outputRows.push({
-                ...approval,
-                isPlaceholder: false,
-            } as EventApprovalDTO);
-            for (const config of EXPECTED_APPROVERS_CONFIG) {
-                if (config.isSigned(approval, event)) {
-                    signedApproverConfigIds.add(config.id);
-                }
-            }
-        }
-
-        for (const config of EXPECTED_APPROVERS_CONFIG) {
-            if (!signedApproverConfigIds.has(config.id)) {
-                const placeholderData = config.getPlaceholderData(event);
-
-                const completeSignedByUserPlaceholder: UserDTO = {
-                    ...DEFAULT_USER_PLACEHOLDER_FIELDS,
-                    publicId:
-                        placeholderData.signedByUserInitial.publicId ||
-                        `placeholder-user-${config.id}`,
-                    firstName: placeholderData.signedByUserInitial.firstName,
-                    lastName:
-                        placeholderData.signedByUserInitial.lastName || "",
-                    email: placeholderData.signedByUserInitial.email || "",
-                    roles: [placeholderData.signedByUserInitial.userRole],
-                    department: {
-                        ...DEFAULT_DEPARTMENT_PLACEHOLDER_FIELDS,
-                        publicId:
-                            placeholderData.signedByUserInitial
-                                .departmentPublicId,
-                        name: placeholderData.signedByUserInitial
-                            .departmentName,
-                    },
-                };
-
-                const placeholderApproval: PlaceholderApprovalRow = {
-                    publicId: `placeholder-approval-${config.id}`,
-                    signedByUser: completeSignedByUserPlaceholder,
-                    userRole: placeholderData.approvalRole,
-                    dateSigned: null,
-                    status: "PENDING",
-                    remarks: "Awaiting Approval",
-                    isPlaceholder: true,
-                    // Default/null values for other EventApprovalDTO fields consistent with PlaceholderApprovalRow definition
-                    approvedByDepartmentHead: null,
-                    approvedByVenueOwner: null,
-                    finalStatus: null,
-                    rejectionReason: null,
-                    version: 0,
-                    createdAt: "",
-                    updatedAt: "",
-                    event: {
-                        publicId: event.publicId,
-                        eventName: event.eventName,
-                    }, // Provide a partial event ref
-                };
-                outputRows.push(placeholderApproval);
-            }
-        }
-        return outputRows;
-    }, [approvals, event]); // Ensure event is a dependency if its properties are used in getPlaceholderData or isSigned
+        // Directly map backend approvals. No more frontend placeholder generation.
+        // The EventApprovalDTO from backend will have PENDING status for awaiting approvals.
+        return currentApprovals.map((approval) => ({
+            ...approval,
+            // The `isPlaceholder` property is no longer needed as all data comes from backend.
+            // Table rendering logic will rely on status and dateSigned from the DTO.
+        }));
+    }, [approvals, event]);
 
     return (
         <div className="flex h-screen bg-background">
@@ -1661,12 +1346,7 @@ export function EventDetailsPage() {
                                                             }
                                                         </TableCell>
                                                         <TableCell>
-                                                            {approvalRow.dateSigned &&
-                                                            !(
-                                                                "isPlaceholder" in
-                                                                    approvalRow &&
-                                                                approvalRow.isPlaceholder
-                                                            )
+                                                            {approvalRow.dateSigned
                                                                 ? formatDateTime(
                                                                       approvalRow.dateSigned,
                                                                   )
@@ -1678,12 +1358,12 @@ export function EventDetailsPage() {
                                                             )}
                                                         </TableCell>
                                                         <TableCell>
-                                                            {"isPlaceholder" in
-                                                                approvalRow &&
-                                                            approvalRow.isPlaceholder
-                                                                ? "Awaiting Approval"
-                                                                : approvalRow.remarks ||
-                                                                  "—"}
+                                                            {approvalRow.remarks ||
+                                                                (approvalRow.status ===
+                                                                    "PENDING" &&
+                                                                !approvalRow.dateSigned
+                                                                    ? "Awaiting Approval"
+                                                                    : "—")}
                                                         </TableCell>
                                                     </TableRow>
                                                 ),

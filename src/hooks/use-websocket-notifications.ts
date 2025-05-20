@@ -103,7 +103,11 @@ export function useWebSocketNotifications() {
                             // Invalidate specific lists based on the original trigger type
                             if (
                                 entityType === "EQUIPMENT_RESERVATION" ||
-                                entityType === "EQUIPMENT_RESERVATION_REQUEST"
+                                entityType ===
+                                    "EQUIPMENT_RESERVATION_REQUEST" ||
+                                entityType ===
+                                    "EQUIPMENT_RESERVATION_CANCELED" ||
+                                entityType === "EQUIPMENT_RESERVATION_APPROVED"
                             ) {
                                 // Invalidate equipment reservation lists (cannot invalidate detail without reservation ID)
                                 queryClient.invalidateQueries({
