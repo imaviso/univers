@@ -204,9 +204,6 @@ export function useWebSocketNotifications() {
             onDisconnect: () => {
                 if (!intentionalDisconnect.current) {
                     setStatus("disconnected");
-                    toast.error("You are offline.", {
-                        description: "Attempting to reconnect...",
-                    });
                 } else {
                     setStatus("closed");
                 }
