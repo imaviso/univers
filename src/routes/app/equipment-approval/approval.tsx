@@ -1,3 +1,4 @@
+import { DataTableFilter } from "@/components/data-table-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,8 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { uniq } from "@/lib/array";
+import { defineMeta, filterFn } from "@/lib/filters";
 import {
     allEquipmentOwnerReservationsQueryOptions,
     useApproveEquipmentReservationMutation,
@@ -45,22 +48,34 @@ import {
 } from "@tanstack/react-router";
 import {
     type ColumnDef,
+    type ColumnFiltersState,
+    type ColumnMeta,
     type RowSelectionState,
     type SortingState,
     type VisibilityState,
     flexRender,
     getCoreRowModel,
+    getFacetedMinMaxValues,
+    getFacetedRowModel,
+    getFacetedUniqueValues,
     getFilteredRowModel,
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import {
     ArrowUpDown,
+    Building,
+    CalendarDays,
     Check,
+    CheckSquare,
     ChevronDown,
+    Clock,
     Eye,
+    Hash,
     MoreHorizontal,
+    Package,
     Search,
+    Users,
     X,
     XCircle,
 } from "lucide-react";
@@ -131,6 +146,11 @@ export function EquipmentReservationApproval() {
             "equipmentApprovalTableColumnVisibility_v1",
             {},
         );
+    const [columnFilters, setColumnFilters] =
+        usePersistentState<ColumnFiltersState>(
+            "equipmentApprovalTableColumnFilters_v1",
+            [],
+        );
     const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
         {},
     );
@@ -156,6 +176,15 @@ export function EquipmentReservationApproval() {
     const { data: reservations = [], isLoading } = useSuspenseQuery(
         allEquipmentOwnerReservationsQueryOptions,
     );
+
+    const departmentOptions = useMemo(() => {
+        const uniqueDepartments = uniq(
+            reservations
+                .map((r) => r.department.name)
+                .filter((name) => name != null) as string[],
+        );
+        return uniqueDepartments.map((name) => ({ label: name, value: name }));
+    }, [reservations]);
 
     const preFilteredReservations = useMemo(() => {
         return reservations.filter((reservation) => {
@@ -378,27 +407,80 @@ export function EquipmentReservationApproval() {
                         {row.original.event.eventName ?? "N/A"}
                     </Button>
                 ),
+                accessorFn: (reservation) => reservation.event.eventName,
+                filterFn: filterFn("text"),
+                meta: defineMeta(
+                    (row: EquipmentReservationDTO) => row.event.eventName ?? "",
+                    {
+                        displayName: "Event Name",
+                        type: "text",
+                        icon: CalendarDays,
+                    },
+                ) as ColumnMeta<EquipmentReservationDTO, unknown>,
             },
             {
                 accessorKey: "equipmentName",
                 header: "Equipment",
                 cell: ({ row }) => row.original.equipment.name ?? "N/A",
+                accessorFn: (reservation) => reservation.equipment.name,
+                filterFn: filterFn("text"),
+                meta: defineMeta(
+                    (row: EquipmentReservationDTO) => row.equipment.name ?? "",
+                    {
+                        displayName: "Equipment Name",
+                        type: "text",
+                        icon: Package,
+                    },
+                ) as ColumnMeta<EquipmentReservationDTO, unknown>,
             },
             {
                 accessorKey: "quantity",
                 header: "Qty",
+                accessorFn: (reservation) => reservation.quantity,
+                filterFn: filterFn("number"),
+                meta: defineMeta(
+                    (row: EquipmentReservationDTO) => row.quantity,
+                    {
+                        displayName: "Quantity",
+                        type: "number",
+                        icon: Hash,
+                    },
+                ) as ColumnMeta<EquipmentReservationDTO, unknown>,
             },
             {
                 id: "requesterName",
                 header: "Requester",
-                accessorFn: (row) =>
-                    `${row.requestingUser?.firstName ?? ""} ${row.requestingUser?.lastName ?? ""}`.trim() ||
+                accessorFn: (reservation) =>
+                    `${reservation.requestingUser?.firstName ?? ""} ${reservation.requestingUser?.lastName ?? ""}`.trim() ||
                     "N/A",
+                filterFn: filterFn("text"),
+                meta: defineMeta(
+                    (row: EquipmentReservationDTO) =>
+                        `${row.requestingUser?.firstName ?? ""} ${row.requestingUser?.lastName ?? ""}`.trim() ||
+                        "N/A",
+                    {
+                        displayName: "Requester Name",
+                        type: "text",
+                        icon: Users,
+                    },
+                ) as ColumnMeta<EquipmentReservationDTO, unknown>,
             },
             {
                 accessorKey: "departmentName",
                 header: "Department",
                 cell: ({ row }) => row.original.department.name ?? "N/A",
+                accessorFn: (reservation) => reservation.department.name,
+                filterFn: filterFn("option"),
+                meta: defineMeta(
+                    (row: EquipmentReservationDTO) =>
+                        row.department.name ?? "N/A",
+                    {
+                        displayName: "Department",
+                        type: "option",
+                        icon: Building,
+                        options: departmentOptions,
+                    },
+                ) as ColumnMeta<EquipmentReservationDTO, unknown>,
             },
             {
                 accessorKey: "startTime",
@@ -414,11 +496,31 @@ export function EquipmentReservationApproval() {
                     </Button>
                 ),
                 cell: ({ row }) => formatDateTime(row.original.startTime),
+                accessorFn: (reservation) => reservation.startTime,
+                filterFn: filterFn("date"),
+                meta: defineMeta(
+                    (row: EquipmentReservationDTO) => row.startTime,
+                    {
+                        displayName: "Start Time",
+                        type: "date",
+                        icon: Clock,
+                    },
+                ) as ColumnMeta<EquipmentReservationDTO, unknown>,
             },
             {
                 accessorKey: "endTime",
                 header: "End Time",
                 cell: ({ row }) => formatDateTime(row.original.endTime),
+                accessorFn: (reservation) => reservation.endTime,
+                filterFn: filterFn("date"),
+                meta: defineMeta(
+                    (row: EquipmentReservationDTO) => row.endTime,
+                    {
+                        displayName: "End Time",
+                        type: "date",
+                        icon: Clock,
+                    },
+                ) as ColumnMeta<EquipmentReservationDTO, unknown>,
             },
             {
                 accessorKey: "status",
@@ -428,6 +530,19 @@ export function EquipmentReservationApproval() {
                         {row.original.status}
                     </Badge>
                 ),
+                accessorFn: (reservation) => reservation.status,
+                filterFn: filterFn("option"),
+                meta: defineMeta((row: EquipmentReservationDTO) => row.status, {
+                    displayName: "Status",
+                    type: "option",
+                    icon: CheckSquare,
+                    options: [
+                        { value: "PENDING", label: "Pending" },
+                        { value: "APPROVED", label: "Approved" },
+                        { value: "REJECTED", label: "Rejected" },
+                        { value: "CANCELLED", label: "Cancelled" },
+                    ],
+                }) as ColumnMeta<EquipmentReservationDTO, unknown>,
             },
             {
                 id: "yourAction",
@@ -480,6 +595,15 @@ export function EquipmentReservationApproval() {
                     </Button>
                 ),
                 cell: ({ row }) => formatDateTime(row.original.createdAt),
+                filterFn: filterFn("date"),
+                meta: defineMeta(
+                    (row: EquipmentReservationDTO) => row.createdAt,
+                    {
+                        displayName: "Submitted Date",
+                        type: "date",
+                        icon: Clock,
+                    },
+                ) as ColumnMeta<EquipmentReservationDTO, unknown>,
             },
             {
                 id: "actions",
@@ -579,6 +703,7 @@ export function EquipmentReservationApproval() {
             openSingleRejectDialog,
             approveMutation.isPending,
             rejectMutation.isPending,
+            departmentOptions,
         ],
     );
     // --- End Table Columns Definition ---
@@ -592,16 +717,21 @@ export function EquipmentReservationApproval() {
             columnVisibility,
             rowSelection,
             globalFilter,
+            columnFilters,
         },
         enableRowSelection: true,
         onRowSelectionChange: setRowSelection,
         onSortingChange: setSorting,
         onColumnVisibilityChange: setColumnVisibility,
         onGlobalFilterChange: setGlobalFilter,
+        onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getRowId: (row) => row.publicId,
+        getFacetedRowModel: getFacetedRowModel(),
+        getFacetedUniqueValues: getFacetedUniqueValues(),
+        getFacetedMinMaxValues: getFacetedMinMaxValues(),
     });
 
     const stats = useMemo(() => {
@@ -697,7 +827,7 @@ export function EquipmentReservationApproval() {
 
                 {(currentUserRole.includes("EQUIPMENT_OWNER") ||
                     currentUserRole.includes("SUPER_ADMIN")) && (
-                    <div className="grid grid-cols-4 gap-4 p-6 pb-0">
+                    <div className="grid grid-cols-4 gap-4 p-6 pb-6">
                         <Card
                             className={`hover:shadow-md transition-shadow cursor-pointer ${viewMode === "all" ? "ring-2 ring-primary" : ""}`}
                             onClick={() => setViewMode("all")}
@@ -762,7 +892,7 @@ export function EquipmentReservationApproval() {
                 )}
 
                 <div className="flex items-center justify-between border-b px-6 py-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <Tabs
                             value={viewMode}
                             onValueChange={(value) =>
@@ -827,12 +957,51 @@ export function EquipmentReservationApproval() {
 
                 {/* Table */}
                 <div className="flex-1 overflow-auto p-6">
+                    <div className="flex items-center justify-between gap-2">
+                        <DataTableFilter table={table} />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="ml-auto">
+                                    Columns{" "}
+                                    <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                {table
+                                    .getAllColumns()
+                                    .filter((column) => column.getCanHide())
+                                    .map((column) => {
+                                        const columnMeta = column.columnDef
+                                            .meta as
+                                            | { displayName?: string }
+                                            | undefined;
+                                        const displayName =
+                                            columnMeta?.displayName ||
+                                            column.id;
+                                        return (
+                                            <DropdownMenuCheckboxItem
+                                                key={column.id}
+                                                className="capitalize"
+                                                checked={column.getIsVisible()}
+                                                onCheckedChange={(value) =>
+                                                    column.toggleVisibility(
+                                                        !!value,
+                                                    )
+                                                }
+                                            >
+                                                {displayName}
+                                            </DropdownMenuCheckboxItem>
+                                        );
+                                    })}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                     {isLoading ? (
                         <p className="text-center text-muted-foreground">
                             Loading reservations...
                         </p>
                     ) : (
-                        <div className="rounded-md border overflow-y-auto max-h-[60vh]">
+                        <div className="rounded-md border mt-4 overflow-y-auto max-h-[58vh]">
                             <Table>
                                 <TableHeader>
                                     {table

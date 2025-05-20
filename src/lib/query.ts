@@ -421,7 +421,75 @@ export const useApproveEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: approveEquipmentReservation,
+        onMutate: async (variables: {
+            reservationPublicId: string;
+            remarks?: string;
+        }) => {
+            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+            await queryClient.cancelQueries({
+                queryKey: equipmentReservationKeys.allEquipmentOwner(),
+            });
+            await queryClient.cancelQueries({
+                queryKey: equipmentReservationKeys.detail(
+                    variables.reservationPublicId,
+                ),
+            });
+
+            // Snapshot the previous value
+            const previousReservations = queryClient.getQueryData<
+                EquipmentReservationDTO[]
+            >(equipmentReservationKeys.allEquipmentOwner());
+            const currentUser = queryClient.getQueryData<UserDTO>(
+                userQueryOptions.queryKey,
+            );
+
+            // Optimistically update to the new value
+            if (previousReservations && currentUser) {
+                queryClient.setQueryData<EquipmentReservationDTO[]>(
+                    equipmentReservationKeys.allEquipmentOwner(),
+                    (oldData = []) =>
+                        oldData.map((reservation) => {
+                            if (
+                                reservation.publicId ===
+                                variables.reservationPublicId
+                            ) {
+                                const newApproval: EquipmentApprovalDTO = {
+                                    publicId: `optimistic-approval-${Date.now()}`, // Temporary client-side ID
+                                    status: "APPROVED",
+                                    remarks: variables.remarks ?? null,
+                                    signedByUser: currentUser,
+                                    dateSigned: new Date().toISOString(),
+                                    equipmentReservationPublicId:
+                                        reservation.publicId,
+                                    userRole: currentUser.roles[0],
+                                };
+                                return {
+                                    ...reservation,
+                                    status: "APPROVED",
+                                    approvals: [
+                                        ...(reservation.approvals || []),
+                                        newApproval,
+                                    ],
+                                };
+                            }
+                            return reservation;
+                        }),
+                );
+            }
+            return { previousReservations };
+        },
+        onError: (_err, _variables, context) => {
+            if (context?.previousReservations) {
+                queryClient.setQueryData(
+                    equipmentReservationKeys.allEquipmentOwner(),
+                    context.previousReservations,
+                );
+            }
+        },
         onSuccess: (_message, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.allEquipmentOwner(),
+            });
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.detail(
                     variables.reservationPublicId,
@@ -449,7 +517,72 @@ export const useRejectEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: rejectEquipmentReservation,
+        onMutate: async (variables: {
+            reservationPublicId: string;
+            remarks: string;
+        }) => {
+            await queryClient.cancelQueries({
+                queryKey: equipmentReservationKeys.allEquipmentOwner(),
+            });
+            await queryClient.cancelQueries({
+                queryKey: equipmentReservationKeys.detail(
+                    variables.reservationPublicId,
+                ),
+            });
+
+            const previousReservations = queryClient.getQueryData<
+                EquipmentReservationDTO[]
+            >(equipmentReservationKeys.allEquipmentOwner());
+            const currentUser = queryClient.getQueryData<UserDTO>(
+                userQueryOptions.queryKey,
+            );
+
+            if (previousReservations && currentUser) {
+                queryClient.setQueryData<EquipmentReservationDTO[]>(
+                    equipmentReservationKeys.allEquipmentOwner(),
+                    (oldData = []) =>
+                        oldData.map((reservation) => {
+                            if (
+                                reservation.publicId ===
+                                variables.reservationPublicId
+                            ) {
+                                const newApproval: EquipmentApprovalDTO = {
+                                    publicId: `optimistic-rejection-${Date.now()}`,
+                                    status: "REJECTED",
+                                    remarks: variables.remarks,
+                                    signedByUser: currentUser,
+                                    dateSigned: new Date().toISOString(),
+                                    equipmentReservationPublicId:
+                                        reservation.publicId,
+                                    userRole: currentUser.roles[0],
+                                };
+                                return {
+                                    ...reservation,
+                                    status: "REJECTED",
+                                    approvals: [
+                                        ...(reservation.approvals || []),
+                                        newApproval,
+                                    ],
+                                };
+                            }
+                            return reservation;
+                        }),
+                );
+            }
+            return { previousReservations };
+        },
+        onError: (_err, _variables, context) => {
+            if (context?.previousReservations) {
+                queryClient.setQueryData(
+                    equipmentReservationKeys.allEquipmentOwner(),
+                    context.previousReservations,
+                );
+            }
+        },
         onSuccess: (_message, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: equipmentReservationKeys.allEquipmentOwner(),
+            });
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.detail(
                     variables.reservationPublicId,
