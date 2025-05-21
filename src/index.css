@@ -148,6 +148,10 @@
     body {
         @apply bg-background text-foreground;
     }
+    :root {
+        --maroon: 0 100% 25%;  /* HSL value for maroon */
+        --maroon-foreground: 0 0% 100%;  /* White text for contrast */
+    }
 }
 
 @layer utilities {
