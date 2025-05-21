@@ -56,6 +56,9 @@
     --chart-3: hsl(197 37% 24%);
     --chart-4: hsl(43 74% 66%);
     --chart-5: hsl(27 87% 67%);
+
+    --maroon: hsl(100% 25%);
+    --maroon-foreground: hsl(0 0% 100%);
 }
 
 .dark {
@@ -100,6 +103,9 @@
     --chart-3: hsl(30 80% 55%);
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
+
+    --maroon: hsl(100% 25%);
+    --maroon-foreground: hsl(0 0% 100%);
 }
 
 @theme inline {
@@ -139,6 +145,9 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    --color-maroon: var(--maroon);
+    --color-maroon-foreground: var(--maroon-foreground);
 }
 
 @layer base {
@@ -148,13 +157,12 @@
     body {
         @apply bg-background text-foreground;
     }
-    :root {
-        --maroon: 0 100% 25%;  /* HSL value for maroon */
-        --maroon-foreground: 0 0% 100%;  /* White text for contrast */
-    }
 }
 
 @layer utilities {
+    body {
+        font-family: "Geist", sans-serif;
+    }
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
