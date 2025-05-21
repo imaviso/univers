@@ -72,7 +72,7 @@ function categoryTextArrayFilterFn<TData>(
     }
     const actualFilterText = filterInputValue.values[0];
 
-    const rowValue = row.getValue<string[]>(columnId);
+    const rowValue = row.getValue<{ name: string; id: string }[]>(columnId);
     if (!Array.isArray(rowValue)) {
         return false;
     }
@@ -82,8 +82,8 @@ function categoryTextArrayFilterFn<TData>(
         return true;
     }
 
-    return rowValue.some((name) =>
-        name.toLowerCase().includes(lowerCaseFilterValue),
+    return rowValue.some((category) =>
+        category.name.toLowerCase().includes(lowerCaseFilterValue),
     );
 }
 
@@ -371,21 +371,27 @@ export function EquipmentDataTable({
             {
                 id: "categories",
                 accessorFn: (row: Equipment) =>
-                    row.categories.map((cat) => cat.name),
+                    row.categories.map((cat) => ({
+                        name: cat.name,
+                        id: cat.publicId,
+                    })),
                 header: "Categories",
                 cell: ({ row }) => {
-                    const categoriesArray = row.getValue(
-                        "categories",
-                    ) as string[];
+                    const categoriesArray = row.original.categories.map(
+                        (cat) => ({
+                            name: cat.name,
+                            id: cat.publicId,
+                        }),
+                    );
                     return (
                         <div className="flex flex-wrap gap-1">
-                            {categoriesArray.map((categoryName) => (
+                            {categoriesArray.map((category) => (
                                 <Badge
-                                    key={categoryName}
+                                    key={category.id}
                                     variant="secondary"
                                     className="font-base"
                                 >
-                                    {categoryName}
+                                    {category.name}
                                 </Badge>
                             ))}
                         </div>
