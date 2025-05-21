@@ -1,11 +1,15 @@
 import {
     approveEquipmentReservation,
     cancelEquipmentReservation,
+    // Equipment Category API imports
+    createEquipmentCategory,
     createEquipmentReservation,
+    deleteEquipmentCategory,
     deleteEquipmentReservation,
     deleteNotifications,
     getAllApprovalsOfEvent,
     getAllDepartments,
+    getAllEquipmentCategories,
     getAllEquipmentOwnerReservations,
     getAllEquipmentReservations,
     getAllEquipmentsAdmin,
@@ -16,6 +20,7 @@ import {
     getApprovalsForEquipmentReservation,
     getApprovedEvents,
     getCancellationRates,
+    getEquipmentCategoryByPublicId,
     getEquipmentReservationById,
     getEquipmentReservationsByEventId,
     getEventById,
@@ -41,6 +46,7 @@ import {
     markNotificationsRead,
     rejectEquipmentReservation,
     searchEvents,
+    updateEquipmentCategory,
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -54,6 +60,7 @@ import type {
     Event as AppEvent, // Alias Event to AppEvent
     CancellationRateDTO,
     EquipmentApprovalDTO,
+    EquipmentCategoryDTO, // Import EquipmentCategoryDTO
     EquipmentReservationDTO,
     EventApprovalDTO,
     EventCountDTO,
@@ -951,3 +958,88 @@ export const eventTypeSummaryQueryOptions = (
         enabled: !!startDate && !!endDate,
         staleTime: 1000 * 60 * 5, // 5 minutes
     });
+
+// --- Equipment Category Query Keys and Options ---
+
+export const equipmentCategoryKeys = {
+    all: ["equipmentCategories"] as const,
+    lists: () => [...equipmentCategoryKeys.all, "list"] as const,
+    list: (filters: string) =>
+        [...equipmentCategoryKeys.lists(), { filters }] as const,
+    details: () => [...equipmentCategoryKeys.all, "detail"] as const,
+    detail: (id: string) => [...equipmentCategoryKeys.details(), id] as const,
+};
+
+export const allEquipmentCategoriesQueryOptions = queryOptions<
+    EquipmentCategoryDTO[]
+>({
+    queryKey: equipmentCategoryKeys.lists(),
+    queryFn: getAllEquipmentCategories,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+});
+
+export const equipmentCategoryByIdQueryOptions = (publicId: string) =>
+    queryOptions<EquipmentCategoryDTO>({
+        queryKey: equipmentCategoryKeys.detail(publicId),
+        queryFn: () => getEquipmentCategoryByPublicId(publicId),
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+// --- Equipment Category Mutations ---
+
+export const useCreateEquipmentCategoryMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: createEquipmentCategory,
+        onSuccess: (newCategory) => {
+            queryClient.invalidateQueries({
+                queryKey: equipmentCategoryKeys.lists(),
+            });
+            queryClient.setQueryData(
+                equipmentCategoryKeys.detail(newCategory.publicId),
+                newCategory,
+            );
+        },
+    });
+};
+
+export const useUpdateEquipmentCategoryMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (variables: {
+            publicId: string;
+            data: Partial<
+                Omit<
+                    EquipmentCategoryDTO,
+                    "publicId" | "createdAt" | "updatedAt"
+                >
+            >;
+        }) => updateEquipmentCategory(variables.publicId, variables.data),
+        onSuccess: (updatedCategory, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: equipmentCategoryKeys.lists(),
+            });
+            queryClient.setQueryData(
+                equipmentCategoryKeys.detail(variables.publicId),
+                updatedCategory,
+            );
+            // Optionally invalidate other related queries if needed
+        },
+    });
+};
+
+export const useDeleteEquipmentCategoryMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: deleteEquipmentCategory,
+        onSuccess: (_message, publicId) => {
+            queryClient.removeQueries({
+                queryKey: equipmentCategoryKeys.detail(publicId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: equipmentCategoryKeys.lists(),
+            });
+            // Optionally invalidate other related queries if needed
+        },
+    });
+};

@@ -24,6 +24,7 @@ import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmD
 import { addEquipment, deleteEquipment, editEquipment } from "@/lib/api";
 import { allNavigation } from "@/lib/navigation";
 import {
+    allEquipmentCategoriesQueryOptions,
     equipmentsQueryOptions,
     useCurrentUser,
     usersQueryOptions,
@@ -90,6 +91,7 @@ export const Route = createFileRoute("/app/equipments")({
         context.queryClient.ensureQueryData(
             equipmentsQueryOptions(context.authState),
         );
+        context.queryClient.ensureQueryData(allEquipmentCategoriesQueryOptions);
     },
 });
 
@@ -228,6 +230,7 @@ function EquipmentInventory() {
                     status: data.status,
                     serialNo: data.serialNo,
                     ownerId: data.ownerId,
+                    categoryIds: data.categoryIds,
                 },
                 imageFile: imageFile,
             });
@@ -246,6 +249,7 @@ function EquipmentInventory() {
                     status: data.status,
                     serialNo: data.serialNo,
                     ownerId: data.ownerId,
+                    categoryIds: data.categoryIds,
                 },
                 imageFile: imageFile as File,
             });
