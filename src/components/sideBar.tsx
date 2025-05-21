@@ -107,9 +107,9 @@ export function Sidebar() {
                                     to="/"
                                     className="flex items-center font-semibold"
                                 >
-                                    <span className="text-primary">Uni</span>
+                                    <span className="text-cityellow">Uni</span>
                                     <span className="relative">
-                                        <span className="bg-primary text-white px-1">
+                                        <span className="bg-maroon text-white px-1">
                                             VERS
                                         </span>
                                     </span>
