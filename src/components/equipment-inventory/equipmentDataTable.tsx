@@ -18,9 +18,11 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
-import { defineMeta, filterFn } from "@/lib/filters";
+import { type FilterValue, defineMeta, filterFn } from "@/lib/filters";
 import type { Equipment, UserDTO } from "@/lib/types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePersistentState } from "@/lib/utils";
+import { useMutation } from "@tanstack/react-query";
+import { useRouteContext } from "@tanstack/react-router";
 import {
     type ColumnDef,
     type ColumnFiltersState,
@@ -52,41 +54,37 @@ import {
     Users,
     Wrench,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-// Custom hook for persistent state (copied from equipments.tsx for now)
-// TODO: Consider moving to a shared utility if used in more places
-function usePersistentState<T>(
-    key: string,
-    initialValue: T,
-): [T, (value: T | ((prevState: T) => T)) => void] {
-    const [state, setState] = useState<T>(() => {
-        try {
-            const storedValue = localStorage.getItem(key);
-            if (storedValue) {
-                return JSON.parse(storedValue);
-            }
-            return initialValue;
-        } catch (error) {
-            console.error(
-                "Error reading from localStorage for key:",
-                key,
-                error,
-            );
-            return initialValue;
-        }
-    });
+function categoryTextArrayFilterFn<TData>(
+    row: Row<TData>,
+    columnId: string,
+    filterInputValue: FilterValue<"text", TData>,
+) {
+    if (
+        !filterInputValue ||
+        !filterInputValue.values ||
+        filterInputValue.values.length === 0 ||
+        !filterInputValue.values[0]
+    ) {
+        return true;
+    }
+    const actualFilterText = filterInputValue.values[0];
 
-    useEffect(() => {
-        try {
-            localStorage.setItem(key, JSON.stringify(state));
-        } catch (error) {
-            console.error("Error writing to localStorage for key:", key, error);
-        }
-    }, [key, state]);
+    const rowValue = row.getValue<string[]>(columnId);
+    if (!Array.isArray(rowValue)) {
+        return false;
+    }
 
-    return [state, setState];
+    const lowerCaseFilterValue = actualFilterText.toLowerCase().trim();
+    if (lowerCaseFilterValue === "") {
+        return true;
+    }
+
+    return rowValue.some((name) =>
+        name.toLowerCase().includes(lowerCaseFilterValue),
+    );
 }
 
 interface EquipmentDataTableProps {
@@ -132,7 +130,8 @@ export function EquipmentDataTable({
     isDeleteMutating,
     deleteMutationVariables,
 }: EquipmentDataTableProps) {
-    const queryClient = useQueryClient();
+    const context = useRouteContext({ from: "/app/equipments" });
+    const queryClient = context.queryClient;
     const [sorting, setSorting] = usePersistentState<SortingState>(
         "equipmentTableSorting_v2",
         [],
@@ -368,6 +367,39 @@ export function EquipmentDataTable({
                     type: "text",
                     icon: IdCardIcon,
                 }) as ColumnMeta<Equipment, unknown>,
+            },
+            {
+                id: "categories",
+                accessorFn: (row: Equipment) =>
+                    row.categories.map((cat) => cat.name),
+                header: "Categories",
+                cell: ({ row }) => {
+                    const categoriesArray = row.getValue(
+                        "categories",
+                    ) as string[];
+                    return (
+                        <div className="flex flex-wrap gap-1">
+                            {categoriesArray.map((categoryName) => (
+                                <Badge
+                                    key={categoryName}
+                                    variant="secondary"
+                                    className="font-base"
+                                >
+                                    {categoryName}
+                                </Badge>
+                            ))}
+                        </div>
+                    );
+                },
+                filterFn: categoryTextArrayFilterFn,
+                meta: defineMeta(
+                    (row: Equipment) => row.categories.map((cat) => cat.name),
+                    {
+                        displayName: "Categories",
+                        type: "text",
+                        icon: ListFilter,
+                    },
+                ) as ColumnMeta<Equipment, unknown>,
             },
             {
                 accessorKey: "quantity",

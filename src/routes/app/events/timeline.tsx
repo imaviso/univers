@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select"; // ADDED Select components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 import { useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import useCurrentUser
-import { cn } from "@/lib/utils"; // Added cn
+import { cn, usePersistentState } from "@/lib/utils"; // Added cn
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -43,49 +43,8 @@ import {
     startOfWeek,
 } from "date-fns"; // Added date-fns functions, ADDED addDays
 import { CalendarIcon, ListFilter } from "lucide-react"; // Added ListFilter icon, Added CalendarIcon
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { DateRange } from "react-day-picker"; // Added DateRange
-
-// Custom hook for persistent state
-function usePersistentState<T>(
-    key: string,
-    initialValue: T,
-): [T, React.Dispatch<React.SetStateAction<T>>] {
-    const [state, setState] = useState<T>(() => {
-        try {
-            const storedValue = localStorage.getItem(key);
-            if (!storedValue) return initialValue;
-
-            try {
-                const parsed = JSON.parse(storedValue);
-                return parsed ?? initialValue;
-            } catch (parseError) {
-                console.warn(
-                    `Invalid JSON in localStorage for key "${key}":`,
-                    parseError,
-                );
-                return initialValue;
-            }
-        } catch (error) {
-            console.error("Error reading from localStorage:", error);
-            return initialValue;
-        }
-    });
-
-    useEffect(() => {
-        try {
-            if (state === undefined) {
-                localStorage.removeItem(key);
-            } else {
-                localStorage.setItem(key, JSON.stringify(state));
-            }
-        } catch (error) {
-            console.error("Error writing to localStorage:", error);
-        }
-    }, [key, state]);
-
-    return [state, setState];
-}
 
 export const Route = createFileRoute("/app/events/timeline")({
     component: Events,

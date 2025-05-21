@@ -13,6 +13,7 @@ import type {
     Equipment,
     EquipmentActionInput,
     EquipmentApprovalDTO,
+    EquipmentCategoryDTO,
     EquipmentReservationDTO,
     Event,
     EventApprovalDTO,
@@ -833,7 +834,8 @@ export const addEquipment = async ({
     try {
         const formData = new FormData();
 
-        const { ownerId, ...restOfEquipmentData } = equipmentData;
+        const { ownerId, categoryIds, ...restOfEquipmentData } = equipmentData;
+
         const equipmentJsonPayload: Partial<
             Omit<
                 Equipment,
@@ -842,15 +844,20 @@ export const addEquipment = async ({
                 | "imagePath"
                 | "createdAt"
                 | "updatedAt"
+                | "categories"
             >
         > & {
             equipmentOwner?: { publicId: string };
-        } = { ...restOfEquipmentData };
+            categoryIds?: string[];
+        } = {
+            ...restOfEquipmentData,
+        };
 
         if (ownerId) {
-            equipmentJsonPayload.equipmentOwner = {
-                publicId: ownerId as unknown as string,
-            };
+            equipmentJsonPayload.equipmentOwner = { publicId: ownerId };
+        }
+        if (categoryIds && categoryIds.length > 0) {
+            equipmentJsonPayload.categoryIds = categoryIds;
         }
 
         formData.append(
@@ -894,7 +901,8 @@ export const editEquipment = async ({
     try {
         const formData = new FormData();
 
-        const { ownerId, ...restOfEquipmentData } = equipmentData;
+        const { ownerId, categoryIds, ...restOfEquipmentData } = equipmentData;
+
         const equipmentJsonPayload: Partial<
             Omit<
                 Equipment,
@@ -903,15 +911,23 @@ export const editEquipment = async ({
                 | "imagePath"
                 | "createdAt"
                 | "updatedAt"
+                | "categories"
             >
         > & {
-            equipmentOwner?: { publicId: string };
-        } = { ...restOfEquipmentData };
+            equipmentOwner?: { publicId: string } | null;
+            categoryIds?: string[];
+        } = {
+            ...restOfEquipmentData,
+        };
 
-        if (ownerId) {
-            equipmentJsonPayload.equipmentOwner = {
-                publicId: ownerId as unknown as string,
-            };
+        if (Object.prototype.hasOwnProperty.call(equipmentData, "ownerId")) {
+            equipmentJsonPayload.equipmentOwner = ownerId
+                ? { publicId: ownerId }
+                : null;
+        }
+
+        if (categoryIds) {
+            equipmentJsonPayload.categoryIds = categoryIds;
         }
 
         formData.append(
@@ -1810,4 +1826,118 @@ export const getEventTypesSummary = async (
         },
     );
     return handleApiResponse<EventTypeSummaryDTO[]>(response, true);
+};
+
+// --- Equipment Category API ---
+
+const EQUIPMENT_CATEGORY_BASE_URL = `${API_BASE_URL}/equipment-categories`;
+
+export const createEquipmentCategory = async (
+    categoryDTO: Omit<
+        EquipmentCategoryDTO,
+        "publicId" | "createdAt" | "updatedAt"
+    >,
+): Promise<EquipmentCategoryDTO> => {
+    try {
+        const response = await fetchWithAuth(EQUIPMENT_CATEGORY_BASE_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(categoryDTO),
+        });
+        return await handleApiResponse<EquipmentCategoryDTO>(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while creating equipment category.",
+              );
+    }
+};
+
+export const getAllEquipmentCategories = async (): Promise<
+    EquipmentCategoryDTO[]
+> => {
+    try {
+        const response = await fetchWithAuth(EQUIPMENT_CATEGORY_BASE_URL, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+        const data = await handleApiResponse<EquipmentCategoryDTO[]>(
+            response,
+            true,
+        );
+        return data || [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while fetching all equipment categories.",
+              );
+    }
+};
+
+export const getEquipmentCategoryByPublicId = async (
+    publicId: string,
+): Promise<EquipmentCategoryDTO> => {
+    try {
+        const response = await fetchWithAuth(
+            `${EQUIPMENT_CATEGORY_BASE_URL}/${publicId}`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+            },
+        );
+        return await handleApiResponse<EquipmentCategoryDTO>(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred while fetching equipment category ${publicId}.`,
+              );
+    }
+};
+
+export const updateEquipmentCategory = async (
+    publicId: string,
+    categoryDTO: Partial<
+        Omit<EquipmentCategoryDTO, "publicId" | "createdAt" | "updatedAt">
+    >,
+): Promise<EquipmentCategoryDTO> => {
+    try {
+        const response = await fetchWithAuth(
+            `${EQUIPMENT_CATEGORY_BASE_URL}/${publicId}`,
+            {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(categoryDTO),
+            },
+        );
+        return await handleApiResponse<EquipmentCategoryDTO>(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred while updating equipment category ${publicId}.`,
+              );
+    }
+};
+
+export const deleteEquipmentCategory = async (
+    publicId: string,
+): Promise<string> => {
+    try {
+        const response = await fetchWithAuth(
+            `${EQUIPMENT_CATEGORY_BASE_URL}/${publicId}`,
+            {
+                method: "DELETE",
+            },
+        );
+        return await handleApiResponse<string>(response, false); // Expects text response
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred while deleting equipment category ${publicId}.`,
+              );
+    }
 };

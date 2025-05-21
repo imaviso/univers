@@ -63,6 +63,7 @@ export type Equipment = {
     equipmentOwner: UserDTO;
     imagePath: string;
     status: "DEFECT" | "MAINTENANCE" | "NEED_REPLACEMENT" | "NEW";
+    categories: EquipmentCategoryDTO[];
     serialNo: string;
     createdAt: string;
     updatedAt: string;
@@ -313,12 +314,12 @@ export interface TopEquipmentDTO {
 }
 
 export interface EventCountDTO {
-    date: string; // LocalDate is typically string "YYYY-MM-DD"
+    date: string;
     eventCount: number;
 }
 
 export interface CancellationRateDTO {
-    date: string; // LocalDate is typically string "YYYY-MM-DD"
+    date: string;
     cancellationRate: number;
     canceledCount: number;
     totalCreatedCount: number;
@@ -351,4 +352,10 @@ export type EventTypeSummaryDTO = {
     value: number; // Count of events for this type (using number for frontend consistency with charts)
 };
 
-// --- Notification System Types ---
+export type EquipmentCategoryDTO = {
+    publicId: string;
+    name: string;
+    description: string | null;
+    createdAt: string;
+    updatedAt: string | null;
+};

@@ -1,6 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import {
     Dialog,
     DialogContent,
     DialogFooter,
@@ -17,6 +25,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input"; // Keep Input
 import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -24,19 +37,28 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { type FileMetadata, useFileUpload } from "@/hooks/use-file-upload";
+import {
+    allEquipmentCategoriesQueryOptions,
+    useCreateEquipmentCategoryMutation,
+} from "@/lib/query"; // Import query and mutation for categories
 import { type EquipmentDTOInput, equipmentDataSchema } from "@/lib/schema";
 import { type Equipment, STATUS_EQUIPMENT, type UserDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useQuery } from "@tanstack/react-query"; // Import useQuery
 import {
     AlertCircleIcon,
+    CheckIcon, // For selected items
+    ChevronsUpDownIcon, // For combobox trigger button
     Edit,
     ImageUpIcon,
     Loader2,
+    PlusCircleIcon, // Added for new category button
     XIcon as X,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner"; // For toast notifications
 
 const defaultValues: EquipmentDTOInput = {
     name: "",
@@ -47,6 +69,7 @@ const defaultValues: EquipmentDTOInput = {
     serialNo: "",
     ownerId: undefined,
     image: undefined,
+    categoryIds: [], // Added categoryIds
 };
 
 interface EquipmentFormDialogProps {
@@ -71,6 +94,17 @@ export function EquipmentFormDialog({
     const isSuperAdmin = currentUserRoles?.includes("SUPER_ADMIN");
     const isEditing = !!equipment;
 
+    // Fetch equipment categories
+    const {
+        data: categories = [],
+        isLoading: isLoadingCategories,
+        refetch: refetchCategories,
+    } = useQuery(allEquipmentCategoriesQueryOptions);
+    const createCategoryMutation = useCreateEquipmentCategoryMutation();
+
+    const [popoverOpen, setPopoverOpen] = useState(false);
+    const [categorySearchTerm, setCategorySearchTerm] = useState("");
+
     const formDefaultValues = equipment
         ? {
               name: equipment.name,
@@ -81,6 +115,8 @@ export function EquipmentFormDialog({
               serialNo: equipment.serialNo,
               ownerId: equipment.equipmentOwner?.publicId ?? undefined,
               image: undefined,
+              categoryIds:
+                  equipment.categories?.map((cat) => cat.publicId) ?? [], // Added categoryIds
           }
         : defaultValues;
 
@@ -89,6 +125,8 @@ export function EquipmentFormDialog({
         defaultValues: formDefaultValues,
         mode: "onChange",
     });
+
+    const watchedCategoryIds = form.watch("categoryIds") || [];
 
     // Initialize useFileUpload hook
     const initialHookFiles: FileMetadata[] = [];
@@ -155,6 +193,9 @@ export function EquipmentFormDialog({
                       serialNo: equipment.serialNo,
                       ownerId: equipment.equipmentOwner?.publicId ?? undefined,
                       image: undefined,
+                      categoryIds:
+                          equipment.categories?.map((cat) => cat.publicId) ??
+                          [], // Added categoryIds
                   }
                 : defaultValues;
             form.reset(newDefaultValues);
@@ -162,8 +203,41 @@ export function EquipmentFormDialog({
                 shouldValidate: true,
                 shouldDirty: false,
             });
+            setCategorySearchTerm("");
         }
     }, [isOpen, equipment, form.reset, form.setValue]);
+
+    const handleCreateCategory = (name: string) => {
+        if (!name.trim()) {
+            toast.error("Category name cannot be empty.");
+            return;
+        }
+        createCategoryMutation.mutate(
+            { name: name.trim(), description: null },
+            {
+                onSuccess: (createdCategory) => {
+                    toast.success(
+                        `Category "${createdCategory.name}" created successfully.`,
+                    );
+                    setCategorySearchTerm("");
+                    refetchCategories(); // Refetch categories to include the new one
+                    const currentIds = form.getValues("categoryIds") || [];
+                    if (!currentIds.includes(createdCategory.publicId)) {
+                        form.setValue(
+                            "categoryIds",
+                            [...currentIds, createdCategory.publicId],
+                            { shouldValidate: true, shouldDirty: true },
+                        );
+                    }
+                    // Consider keeping popover open or closing based on UX preference
+                    // setPopoverOpen(false);
+                },
+                onError: (error) => {
+                    toast.error(`Failed to create category: ${error.message}`);
+                },
+            },
+        );
+    };
 
     const processSubmit = (data: EquipmentDTOInput) => {
         // Validate image presence for new equipment
@@ -182,7 +256,7 @@ export function EquipmentFormDialog({
             return;
         }
 
-        onSubmit(data);
+        onSubmit(data); // categoryIds will be part of data due to schema and form handling
     };
 
     const currentPreviewUrl =
@@ -190,6 +264,13 @@ export function EquipmentFormDialog({
         (isEditing && equipment?.imagePath && !uploadedFiles[0]?.file
             ? equipment.imagePath
             : null);
+
+    const selectedCategoryNames = useMemo(() => {
+        return watchedCategoryIds
+            .map((id) => categories.find((cat) => cat.publicId === id)?.name)
+            .filter((name) => !!name)
+            .join(", ");
+    }, [watchedCategoryIds, categories]);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -218,7 +299,7 @@ export function EquipmentFormDialog({
                                             onValueChange={(value) =>
                                                 field.onChange(value)
                                             } // Ensure value is number
-                                            value={field.value}
+                                            value={String(field.value ?? "")}
                                             disabled={isMutating}
                                         >
                                             <FormControl>
@@ -274,9 +355,199 @@ export function EquipmentFormDialog({
                                         <Input
                                             placeholder="e.g., Projector Screen"
                                             {...field}
+                                            value={String(field.value ?? "")}
                                             disabled={isMutating}
                                         />
                                     </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Category Multi-Select */}
+                        <FormField
+                            control={form.control}
+                            name="categoryIds"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>Categories</FormLabel>
+                                    <Popover
+                                        open={popoverOpen}
+                                        onOpenChange={setPopoverOpen}
+                                    >
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                    variant="outline"
+                                                    // biome-ignore lint/a11y/useSemanticElements: <yes>
+                                                    role="combobox"
+                                                    aria-expanded={popoverOpen}
+                                                    className={cn(
+                                                        "w-full justify-between",
+                                                        !field.value?.length &&
+                                                            "text-muted-foreground",
+                                                    )}
+                                                    disabled={
+                                                        isMutating ||
+                                                        isLoadingCategories
+                                                    }
+                                                >
+                                                    <span className="truncate">
+                                                        {selectedCategoryNames ||
+                                                            "Select categories..."}
+                                                    </span>
+                                                    <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height] p-0">
+                                            <Command shouldFilter={false}>
+                                                {" "}
+                                                {/* Manual filtering for create option */}
+                                                <CommandInput
+                                                    placeholder="Search or create category..."
+                                                    value={categorySearchTerm}
+                                                    onValueChange={
+                                                        setCategorySearchTerm
+                                                    }
+                                                    disabled={
+                                                        createCategoryMutation.isPending
+                                                    }
+                                                />
+                                                <CommandList>
+                                                    <CommandGroup>
+                                                        {categories
+                                                            .filter((cat) =>
+                                                                cat.name
+                                                                    .toLowerCase()
+                                                                    .includes(
+                                                                        categorySearchTerm.toLowerCase(),
+                                                                    ),
+                                                            )
+                                                            .map((category) => (
+                                                                <CommandItem
+                                                                    value={
+                                                                        category.publicId
+                                                                    } // Use unique publicId for the value
+                                                                    key={
+                                                                        category.publicId
+                                                                    }
+                                                                    onSelect={() => {
+                                                                        const currentIds =
+                                                                            [
+                                                                                ...watchedCategoryIds,
+                                                                            ];
+                                                                        const index =
+                                                                            currentIds.indexOf(
+                                                                                category.publicId,
+                                                                            );
+                                                                        if (
+                                                                            index ===
+                                                                            -1
+                                                                        ) {
+                                                                            currentIds.push(
+                                                                                category.publicId,
+                                                                            );
+                                                                        } else {
+                                                                            currentIds.splice(
+                                                                                index,
+                                                                                1,
+                                                                            );
+                                                                        }
+                                                                        form.setValue(
+                                                                            "categoryIds",
+                                                                            currentIds,
+                                                                            {
+                                                                                shouldValidate: true,
+                                                                                shouldDirty: true,
+                                                                            },
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <CheckIcon
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            watchedCategoryIds.includes(
+                                                                                category.publicId,
+                                                                            )
+                                                                                ? "opacity-100"
+                                                                                : "opacity-0",
+                                                                        )}
+                                                                    />
+                                                                    {
+                                                                        category.name
+                                                                    }
+                                                                </CommandItem>
+                                                            ))}
+                                                    </CommandGroup>
+                                                    {/* Conditionally render 'Create new category' item */}
+                                                    {categorySearchTerm.trim() &&
+                                                        !isLoadingCategories &&
+                                                        !createCategoryMutation.isPending &&
+                                                        !categories.some(
+                                                            (cat) =>
+                                                                cat.name.toLowerCase() ===
+                                                                categorySearchTerm
+                                                                    .trim()
+                                                                    .toLowerCase(),
+                                                        ) && (
+                                                            <CommandItem
+                                                                key="__create_new_category_item__"
+                                                                value="__create_new_category_value__" // Static unique value
+                                                                onSelect={() =>
+                                                                    handleCreateCategory(
+                                                                        categorySearchTerm,
+                                                                    )
+                                                                }
+                                                                className="text-sm cursor-pointer"
+                                                            >
+                                                                <PlusCircleIcon className="mr-2 h-4 w-4" />
+                                                                Create "
+                                                                {categorySearchTerm.trim()}
+                                                                "
+                                                            </CommandItem>
+                                                        )}
+                                                    <CommandEmpty>
+                                                        {
+                                                            isLoadingCategories
+                                                                ? "Loading categories..."
+                                                                : !categories.some(
+                                                                        (cat) =>
+                                                                            cat.name
+                                                                                .toLowerCase()
+                                                                                .includes(
+                                                                                    categorySearchTerm.toLowerCase(),
+                                                                                ),
+                                                                    ) &&
+                                                                    !(
+                                                                        categorySearchTerm.trim() &&
+                                                                        !categories.some(
+                                                                            (
+                                                                                cat,
+                                                                            ) =>
+                                                                                cat.name.toLowerCase() ===
+                                                                                categorySearchTerm
+                                                                                    .trim()
+                                                                                    .toLowerCase(),
+                                                                        )
+                                                                    )
+                                                                  ? "No categories found."
+                                                                  : null /* Or a more specific message if needed */
+                                                        }
+                                                    </CommandEmpty>
+                                                    {createCategoryMutation.isPending && (
+                                                        <CommandItem
+                                                            disabled
+                                                            className="text-sm text-muted-foreground flex items-center justify-center"
+                                                        >
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                                                            Creating...
+                                                        </CommandItem>
+                                                    )}
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -294,6 +565,9 @@ export function EquipmentFormDialog({
                                             <Input
                                                 placeholder="e.g., Epson, Dell"
                                                 {...field}
+                                                value={String(
+                                                    field.value ?? "",
+                                                )}
                                                 disabled={isMutating}
                                             />
                                         </FormControl>
@@ -312,6 +586,9 @@ export function EquipmentFormDialog({
                                             <Input
                                                 placeholder="Enter Serial Number"
                                                 {...field}
+                                                value={String(
+                                                    field.value ?? "",
+                                                )}
                                                 disabled={isMutating}
                                             />
                                         </FormControl>
@@ -346,7 +623,7 @@ export function EquipmentFormDialog({
                                                     )
                                                 }
                                                 // Ensure value is treated as number for input type=number
-                                                value={Number(field.value) || 0}
+                                                value={Number(field.value ?? 0)}
                                                 disabled={isMutating}
                                             />
                                         </FormControl>
@@ -364,7 +641,7 @@ export function EquipmentFormDialog({
                                         <FormLabel>Status</FormLabel>
                                         <Select
                                             onValueChange={field.onChange}
-                                            value={field.value}
+                                            value={String(field.value ?? "")}
                                             disabled={isMutating}
                                         >
                                             <FormControl>
@@ -403,7 +680,7 @@ export function EquipmentFormDialog({
                                 <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
                                     <FormControl>
                                         <Checkbox
-                                            checked={field.value}
+                                            checked={Boolean(field.value)}
                                             onCheckedChange={field.onChange}
                                             disabled={isMutating}
                                         />
@@ -619,7 +896,11 @@ export function EquipmentFormDialog({
                     <Button
                         type="submit"
                         form="equipment-form"
-                        disabled={isMutating}
+                        disabled={
+                            isMutating ||
+                            isLoadingCategories ||
+                            createCategoryMutation.isPending
+                        } // Disable if categories are loading
                     >
                         {isMutating ? (
                             <>
