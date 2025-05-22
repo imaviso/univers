@@ -140,8 +140,8 @@ export const eventSchema = v.pipe(
             v.uuid("Event Venue Public ID must be a valid UUID"),
         ),
         departmentPublicId: v.pipe(
-            v.string("Department is required"), 
-            v.nonEmpty("Department is required"), 
+            v.string("Department is required"),
+            v.nonEmpty("Department is required"),
             v.uuid("Department Public ID must be a valid UUID"),
         ),
         startTime: v.date("Start date is required"),
