@@ -817,21 +817,21 @@ function Calendar() {
                             className="mr-2"
                         >
                             <TabsList className="grid w-[180px] grid-cols-3 bg-background">
-                                <TabsTrigger 
+                                <TabsTrigger
                                     value="month"
-                                    className="data-[state=active]:bg-[#800000] data-[state=active]:text-white"
+                                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                                 >
                                     Month
                                 </TabsTrigger>
-                                <TabsTrigger 
+                                <TabsTrigger
                                     value="week"
-                                    className="data-[state=active]:bg-[#800000] data-[state=active]:text-white"
+                                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                                 >
                                     Week
                                 </TabsTrigger>
-                                <TabsTrigger 
+                                <TabsTrigger
                                     value="day"
-                                    className="data-[state=active]:bg-[#800000] data-[state=active]:text-white"
+                                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                                 >
                                     Day
                                 </TabsTrigger>
