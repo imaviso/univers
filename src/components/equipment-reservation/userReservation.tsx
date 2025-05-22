@@ -26,6 +26,7 @@ import {
     CalendarDays,
     Clock,
     Package,
+    Package2,
 } from "lucide-react"; // Added Package icon and CalendarDays for event
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -192,6 +193,22 @@ export default function UserReservations() {
                                                     </Link>
                                                 </div>
                                             )}
+                                        {reservation.equipment?.categories &&
+                                            reservation.equipment.categories
+                                                .length > 0 && (
+                                                <div className="flex items-center gap-1 truncate">
+                                                    <Package2 className="h-3.5 w-3.5 flex-shrink-0" />
+                                                    <span className="truncate">
+                                                        Categories:{" "}
+                                                        {reservation.equipment.categories
+                                                            .map(
+                                                                (category) =>
+                                                                    category.name,
+                                                            )
+                                                            .join(", ")}
+                                                    </span>
+                                                </div>
+                                            )}
                                         <div className="flex items-center gap-1">
                                             <Package className="h-3.5 w-3.5 flex-shrink-0" />
                                             <span>
@@ -327,6 +344,23 @@ export default function UserReservations() {
                                         (Qty: {selectedReservation.quantity})
                                     </p>
                                 </div>
+                                {selectedReservation.equipment?.categories &&
+                                    selectedReservation.equipment.categories
+                                        .length > 0 && (
+                                        <div>
+                                            <h4 className="font-medium text-muted-foreground">
+                                                Equipment Categories
+                                            </h4>
+                                            <p>
+                                                {selectedReservation.equipment.categories
+                                                    .map(
+                                                        (category) =>
+                                                            category.name,
+                                                    )
+                                                    .join(", ")}
+                                            </p>
+                                        </div>
+                                    )}
                                 <div>
                                     <h4 className="font-medium text-muted-foreground">
                                         Department

@@ -69,10 +69,9 @@ import {
     useCreateEquipmentReservationMutation,
     venuesQueryOptions,
 } from "@/lib/query";
-import type { EquipmentReservationFormInput } from "@/lib/schema";
 import type {
-    CreateEquipmentReservationInput,
     DepartmentDTO,
+    EquipmentReservationDTO,
     EventApprovalDTO,
     EventDTO,
     EventDTOPayload,
@@ -96,7 +95,7 @@ import {
     useRouteContext,
     useRouter,
 } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 // Helper function to check if URL likely points to an image
@@ -653,69 +652,46 @@ export function EventDetailsPage() {
         setIsReserveEquipmentDialogOpen(true);
     };
 
-    // Handler for submitting equipment reservation from the dialog
-    const handleReserveEquipmentSubmit = async (
-        formData: EquipmentReservationFormInput,
+    // Handler for the completion of equipment reservation from the dialog
+    const handleReserveEquipmentSubmit = (
+        success: boolean,
+        reservations?: EquipmentReservationDTO[],
     ) => {
-        console.log("Reservation form submitted:", formData);
         setIsReserveEquipmentDialogOpen(false);
+        console.log(
+            "EquipmentReservationFormDialog submission complete. Success:",
+            success,
+            "Reservations:",
+            reservations,
+        );
 
-        const { selectedEquipment } = formData;
-
-        if (!event || !event.publicId) {
-            toast.error(
-                "Event details are not available to make a reservation.",
-            );
-            return;
-        }
-
-        let successCount = 0;
-        let errorCount = 0;
-
-        for (const item of selectedEquipment) {
-            const payload: CreateEquipmentReservationInput = {
-                event: { publicId: event.publicId },
-                equipment: { publicId: item.equipmentId },
-                quantity: item.quantity,
-            };
-
-            try {
-                await createEquipmentReservationMutation.mutateAsync(payload);
-                successCount++;
-            } catch (error) {
-                errorCount++;
-                console.error(
-                    `Failed to reserve equipment ID ${item.equipmentId}:`,
-                    error,
+        if (success) {
+            const successCount = reservations ? reservations.length : 0;
+            if (successCount > 0) {
+                toast.success(
+                    `Successfully submitted ${successCount} equipment reservation request(s).`,
                 );
-                const equipmentName =
-                    availableEquipments.find(
-                        (eq) => eq.publicId === item.equipmentId,
-                    )?.name || `ID ${item.equipmentId}`;
-                toast.error(
-                    `Failed to reserve item ${equipmentName}: ${
-                        error instanceof Error ? error.message : String(error)
-                    }`,
-                );
+                // Ensure event and event.publicId are available before invalidating queries
+                if (event?.publicId) {
+                    queryClient.invalidateQueries({
+                        queryKey: equipmentReservationKeys.byEvent(
+                            event.publicId,
+                        ),
+                    });
+                } else {
+                    console.warn(
+                        "Event details not available for query invalidation after reservation.",
+                    );
+                }
+            } else {
+                // This case could mean success=true but no actual reservations were made (e.g., empty selection in dialog)
+                // Or it's an edge case. A general info toast might be appropriate.
+                toast.info("Reservation process completed.");
             }
-        }
-
-        if (successCount > 0 && errorCount === 0) {
-            toast.success(
-                `Successfully submitted ${successCount} equipment reservation request(s).`,
+        } else {
+            toast.error(
+                "Failed to submit equipment reservation request(s). Please check details or try again.",
             );
-            queryClient.invalidateQueries({
-                queryKey: equipmentReservationKeys.byEvent(event.publicId),
-            });
-        } else if (errorCount > 0 && successCount > 0) {
-            toast.warning(
-                `Partially submitted: ${successCount} succeeded, ${errorCount} failed.`,
-            );
-            queryClient.invalidateQueries({
-                queryKey: equipmentReservationKeys.byEvent(event.publicId),
-            });
-        } else if (errorCount > 0 && successCount === 0) {
-            toast.error("Failed to submit any equipment reservation requests.");
         }
     };
 
@@ -1185,103 +1161,227 @@ export function EventDetailsPage() {
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle>Reserved Equipment</CardTitle>
-                                {isOrganizer && ( // Only show button to organizer
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="gap-1"
-                                        onClick={handleReserveEquipmentClick}
-                                        disabled={
-                                            createEquipmentReservationMutation.isPending
-                                        }
-                                    >
-                                        <CalendarPlus className="h-4 w-4" />
-                                        Reserve Equipment
-                                    </Button>
-                                )}
+                                {isOrganizer &&
+                                    (event.status === "PENDING" ||
+                                        event.status === "APPROVED") && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="gap-1"
+                                            onClick={
+                                                handleReserveEquipmentClick
+                                            }
+                                            disabled={
+                                                createEquipmentReservationMutation.isPending
+                                            }
+                                        >
+                                            <CalendarPlus className="h-4 w-4" />
+                                            Reserve Equipment
+                                        </Button>
+                                    )}
                             </CardHeader>
                             <CardContent>
-                                {reservedEquipments.length > 0 ? (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Equipment</TableHead>
-                                                <TableHead>Quantity</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                {canUserModifyEquipmentReservation && (
-                                                    <TableHead className="text-right">
-                                                        Actions
-                                                    </TableHead>
-                                                )}
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {reservedEquipments.map(
-                                                (reservation) => (
-                                                    <TableRow
-                                                        key={
-                                                            reservation.publicId
+                                {/* Group reserved equipment by category */}
+                                {(() => {
+                                    const groupedReservedEquipment =
+                                        // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+                                        useMemo(() => {
+                                            const groups = new Map<
+                                                string,
+                                                {
+                                                    categoryName: string;
+                                                    reservations: EquipmentReservationDTO[];
+                                                }
+                                            >();
+                                            for (const reservation of reservedEquipments ||
+                                                []) {
+                                                if (
+                                                    reservation.equipment
+                                                        ?.categories &&
+                                                    reservation.equipment
+                                                        .categories.length > 0
+                                                ) {
+                                                    for (const category of reservation
+                                                        .equipment.categories) {
+                                                        if (
+                                                            !groups.has(
+                                                                category.publicId,
+                                                            )
+                                                        ) {
+                                                            groups.set(
+                                                                category.publicId,
+                                                                {
+                                                                    categoryName:
+                                                                        category.name,
+                                                                    reservations:
+                                                                        [],
+                                                                },
+                                                            );
                                                         }
-                                                    >
-                                                        <TableCell>
-                                                            {reservation
-                                                                .equipment
-                                                                ?.name ?? "N/A"}
-                                                        </TableCell>
-                                                        <TableCell>
+                                                        const group =
+                                                            groups.get(
+                                                                category.publicId,
+                                                            );
+                                                        if (group) {
+                                                            group.reservations.push(
+                                                                reservation,
+                                                            );
+                                                        }
+                                                    }
+                                                } else {
+                                                    const uncategorizedKey =
+                                                        "_uncategorized";
+                                                    if (
+                                                        !groups.has(
+                                                            uncategorizedKey,
+                                                        )
+                                                    ) {
+                                                        groups.set(
+                                                            uncategorizedKey,
                                                             {
-                                                                reservation.quantity
+                                                                categoryName:
+                                                                    "Uncategorized",
+                                                                reservations:
+                                                                    [],
+                                                            },
+                                                        );
+                                                    }
+                                                    const group =
+                                                        groups.get(
+                                                            uncategorizedKey,
+                                                        );
+                                                    if (group) {
+                                                        group.reservations.push(
+                                                            reservation,
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                            return Array.from(groups.values());
+                                        }, [reservedEquipments]);
+
+                                    return reservedEquipments &&
+                                        reservedEquipments.length > 0 ? (
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>
+                                                        Equipment
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Quantity
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Status
+                                                    </TableHead>
+                                                    {canUserModifyEquipmentReservation && (
+                                                        <TableHead className="text-right">
+                                                            Actions
+                                                        </TableHead>
+                                                    )}
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {groupedReservedEquipment.map(
+                                                    (group) => (
+                                                        <Fragment
+                                                            key={
+                                                                group.categoryName
                                                             }
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge
-                                                                className={`${getStatusColor(reservation.status)}`}
-                                                            >
-                                                                {reservation.status
-                                                                    .charAt(0)
-                                                                    .toUpperCase() +
-                                                                    reservation.status
-                                                                        .slice(
-                                                                            1,
-                                                                        )
-                                                                        .toLowerCase()}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        {canUserModifyEquipmentReservation && (
-                                                            <TableCell className="text-right">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() =>
-                                                                        handleCancelEquipmentReservationClick(
-                                                                            reservation.publicId,
-                                                                        )
+                                                        >
+                                                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                                                <TableCell
+                                                                    colSpan={
+                                                                        canUserModifyEquipmentReservation
+                                                                            ? 4
+                                                                            : 3
                                                                     }
-                                                                    disabled={
-                                                                        cancelEquipmentReservationMutationHook.isPending &&
-                                                                        equipmentReservationToCancelId ===
-                                                                            reservation.publicId
-                                                                    }
+                                                                    className="py-2 font-semibold px-3"
                                                                 >
-                                                                    <XCircle className="h-4 w-4 text-destructive" />
-                                                                    <span className="sr-only">
-                                                                        Cancel
-                                                                        Reservation
-                                                                    </span>
-                                                                </Button>
-                                                            </TableCell>
-                                                        )}
-                                                    </TableRow>
-                                                ),
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                ) : (
-                                    <div className="text-center text-muted-foreground py-4">
-                                        No equipment reserved for this event
-                                        yet.
-                                    </div>
-                                )}
+                                                                    {
+                                                                        group.categoryName
+                                                                    }
+                                                                </TableCell>
+                                                            </TableRow>
+                                                            {group.reservations.map(
+                                                                (
+                                                                    reservation,
+                                                                ) => (
+                                                                    <TableRow
+                                                                        key={
+                                                                            reservation.publicId
+                                                                        }
+                                                                    >
+                                                                        <TableCell>
+                                                                            {reservation
+                                                                                .equipment
+                                                                                ?.name ??
+                                                                                "N/A"}
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            {
+                                                                                reservation.quantity
+                                                                            }
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            <Badge
+                                                                                className={`${getStatusColor(reservation.status)}`}
+                                                                            >
+                                                                                {reservation.status
+                                                                                    .charAt(
+                                                                                        0,
+                                                                                    )
+                                                                                    .toUpperCase() +
+                                                                                    reservation.status
+                                                                                        .slice(
+                                                                                            1,
+                                                                                        )
+                                                                                        .toLowerCase()}
+                                                                            </Badge>
+                                                                        </TableCell>
+                                                                        {(reservation.status ===
+                                                                            "PENDING" ||
+                                                                            reservation.status ===
+                                                                                "APPROVED") &&
+                                                                            canUserModifyEquipmentReservation && (
+                                                                                <TableCell className="text-right">
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="icon"
+                                                                                        onClick={() =>
+                                                                                            handleCancelEquipmentReservationClick(
+                                                                                                reservation.publicId,
+                                                                                            )
+                                                                                        }
+                                                                                        disabled={
+                                                                                            cancelEquipmentReservationMutationHook.isPending &&
+                                                                                            equipmentReservationToCancelId ===
+                                                                                                reservation.publicId
+                                                                                        }
+                                                                                    >
+                                                                                        <XCircle className="h-4 w-4 text-destructive" />
+                                                                                        <span className="sr-only">
+                                                                                            Cancel
+                                                                                            Reservation
+                                                                                        </span>
+                                                                                    </Button>
+                                                                                </TableCell>
+                                                                            )}
+                                                                    </TableRow>
+                                                                ),
+                                                            )}
+                                                        </Fragment>
+                                                    ),
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground py-4">
+                                            No equipment reserved for this event
+                                            yet.
+                                        </p>
+                                    );
+                                })()}
                             </CardContent>
                         </Card>
 
@@ -1410,7 +1510,7 @@ export function EventDetailsPage() {
                 <EquipmentReservationFormDialog
                     isOpen={isReserveEquipmentDialogOpen}
                     onClose={() => setIsReserveEquipmentDialogOpen(false)}
-                    onSubmit={handleReserveEquipmentSubmit}
+                    onSubmissionComplete={handleReserveEquipmentSubmit}
                     // Pass the current event directly, not a list
                     // The dialog needs modification to accept a single event or just eventId
                     // For now, passing a single-item array might work depending on dialog logic
@@ -1420,7 +1520,6 @@ export function EventDetailsPage() {
                     equipment={(availableEquipments ?? []).filter(
                         (e) => e.availability,
                     )}
-                    isLoading={createEquipmentReservationMutation.isPending}
                     // Indicate that the event is pre-selected
                 />
             )}

@@ -268,10 +268,10 @@ export type EquipmentReservationDTO = {
 export type CreateEquipmentReservationInput = {
     event: { publicId: string };
     equipment: { publicId: string };
+    department: { publicId: string };
     quantity: number;
-    department?: { publicId: string };
-    startTime?: string;
-    endTime?: string;
+    startTime: string;
+    endTime: string;
 };
 
 export type EquipmentActionInput = {

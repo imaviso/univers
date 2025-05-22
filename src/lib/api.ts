@@ -1245,32 +1245,33 @@ export const deleteAllNotifications = async (): Promise<void> => {
 const EQUIPMENT_RESERVATIONS_BASE_URL = `${API_BASE_URL}/equipment-reservations`;
 
 export const createEquipmentReservation = async (
-    reservationInput: CreateEquipmentReservationInput,
-): Promise<EquipmentReservationDTO> => {
-    const formData = new FormData();
-    formData.append(
-        "reservation",
-        new Blob([JSON.stringify(reservationInput)], {
-            type: "application/json",
-        }),
-    );
-
+    reservationsInput: CreateEquipmentReservationInput[],
+): Promise<EquipmentReservationDTO[]> => {
     try {
         const response = await fetchWithAuth(EQUIPMENT_RESERVATIONS_BASE_URL, {
             method: "POST",
-            body: formData,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(reservationsInput),
         });
-        const responseData = await handleApiResponse<EquipmentReservationDTO>(
+        const responseData = await handleApiResponse<EquipmentReservationDTO[]>(
             response,
             true,
         );
-        return responseData || ({} as EquipmentReservationDTO);
+        return responseData || []; // Return empty array if responseData is null/undefined
     } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred creating equipment reservation.",
-              );
+        // Log the detailed error for better debugging
+        console.error("Error in createEquipmentReservation:", error);
+        // Re-throw a more specific error or the original error if it's already an ApiError
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw new Error(
+            error instanceof Error
+                ? error.message
+                : "An unexpected error occurred while creating equipment reservations.",
+        );
     }
 };
 
