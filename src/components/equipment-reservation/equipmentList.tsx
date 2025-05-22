@@ -65,15 +65,38 @@ export default function EquipmentList({
                 equipmentItems: (Equipment & { uniqueFrontendId: string })[];
             }
         > = new Map();
+        const uncategorizedGroupId = "___uncategorized___";
+        const uncategorizedCategory: EquipmentCategoryDTO = {
+            publicId: uncategorizedGroupId,
+            name: "Uncategorized",
+            description: "Items without a specific category",
+            createdAt: new Date().toISOString(), // Or a fixed date
+            updatedAt: null,
+        };
+
         for (const equip of equipmentWithUniqueFrontendIds) {
-            for (const category of equip.categories) {
-                if (!groups.has(category.publicId)) {
-                    groups.set(category.publicId, {
-                        category,
+            if (equip.categories && equip.categories.length > 0) {
+                for (const category of equip.categories) {
+                    if (!groups.has(category.publicId)) {
+                        groups.set(category.publicId, {
+                            category,
+                            equipmentItems: [],
+                        });
+                    }
+                    const group = groups.get(category.publicId);
+                    if (group) {
+                        group.equipmentItems.push(equip);
+                    }
+                }
+            } else {
+                // Add to Uncategorized group
+                if (!groups.has(uncategorizedGroupId)) {
+                    groups.set(uncategorizedGroupId, {
+                        category: uncategorizedCategory,
                         equipmentItems: [],
                     });
                 }
-                const group = groups.get(category.publicId);
+                const group = groups.get(uncategorizedGroupId);
                 if (group) {
                     group.equipmentItems.push(equip);
                 }
