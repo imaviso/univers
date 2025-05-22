@@ -554,6 +554,18 @@ function EquipmentInventory() {
                                                 Brand: {item.brand} | Qty:{" "}
                                                 {item.quantity}
                                             </CardDescription>
+                                            {item.categories &&
+                                                item.categories.length > 0 && (
+                                                    <CardDescription className="text-xs mt-1">
+                                                        Categories:{" "}
+                                                        {item.categories
+                                                            .map(
+                                                                (category) =>
+                                                                    category.name,
+                                                            )
+                                                            .join(", ")}
+                                                    </CardDescription>
+                                                )}
                                             {role?.includes("SUPER_ADMIN") &&
                                                 item.equipmentOwner && (
                                                     <CardDescription className="text-xs mt-1">
