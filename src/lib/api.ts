@@ -1350,23 +1350,29 @@ export const getEquipmentReservationById = async (
     }
 };
 
-// PATCH /equipment-reservations/{reservationId}/approve
+// PATCH /equipment-reservations/approve
 export const approveEquipmentReservation = async ({
     reservationPublicId,
     remarks,
-}: EquipmentActionInput): Promise<string> => {
+}: EquipmentActionInput): Promise<Map<string, string>> => {
     try {
-        const payload = { remarks: remarks || "" };
+        const payload = {
+            reservationIds: [reservationPublicId],
+            remarks: remarks || "",
+        };
         const response = await fetchWithAuth(
-            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationPublicId}/approve`,
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/approve`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             },
         );
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Equipment reservation approved successfully";
+        const responseData = await handleApiResponse<Map<string, string>>(
+            response,
+            true,
+        );
+        return responseData || new Map();
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1376,26 +1382,32 @@ export const approveEquipmentReservation = async ({
     }
 };
 
-// PATCH /equipment-reservations/{reservationId}/reject
+// PATCH /equipment-reservations/reject
 export const rejectEquipmentReservation = async ({
     reservationPublicId,
     remarks,
-}: EquipmentActionInput): Promise<string> => {
+}: EquipmentActionInput): Promise<Map<string, string>> => {
     if (!remarks || remarks.trim() === "") {
         throw new Error("Rejection remarks are required.");
     }
     try {
-        const payload = { remarks };
+        const payload = {
+            reservationIds: [reservationPublicId],
+            remarks,
+        };
         const response = await fetchWithAuth(
-            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationPublicId}/reject`,
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/reject`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             },
         );
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Equipment reservation rejected successfully";
+        const responseData = await handleApiResponse<Map<string, string>>(
+            response,
+            true,
+        );
+        return responseData || new Map();
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1405,19 +1417,27 @@ export const rejectEquipmentReservation = async ({
     }
 };
 
-// PATCH /equipment-reservations/{reservationId}/cancel
+// PATCH /equipment-reservations/cancel
 export const cancelEquipmentReservation = async (
     reservationId: string,
-): Promise<string> => {
+): Promise<Map<string, string>> => {
     try {
+        const payload = {
+            reservationIds: [reservationId],
+        };
         const response = await fetchWithAuth(
-            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/cancel`,
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/cancel`,
             {
                 method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
             },
         );
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Equipment reservation cancelled successfully";
+        const responseData = await handleApiResponse<Map<string, string>>(
+            response,
+            true,
+        );
+        return responseData || new Map();
     } catch (error) {
         throw error instanceof Error
             ? error

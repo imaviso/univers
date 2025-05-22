@@ -765,7 +765,7 @@ function Calendar() {
     return (
         <>
             <div className="flex flex-col flex-1 overflow-hidden">
-                <header className="flex items-center justify-between border-b px-6 py-3.5">
+                <header className="flex items-center justify-between border-b px-6 h-[65px]">
                     {/* Header content remains largely the same */}
                     <div className="flex items-center gap-4">
                         <h1 className="text-xl font-semibold">Calendar</h1>
