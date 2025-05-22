@@ -326,17 +326,19 @@ export function EquipmentDataTable({
                     const item = row.original;
                     const imageUrl = item.imagePath;
                     return (
-                        <div className="flex items-center gap-3">
-                            <img
-                                src={imageUrl}
-                                alt={item.name}
-                                className="h-10 w-10 rounded object-cover"
-                                loading="lazy"
-                            />
-                            <div>
-                                <div className="font-medium">{item.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                    Brand: {item.brand}
+                        <div className="flex items-center justify-center gap-3 w-full">
+                            <div className="flex items-center gap-3">
+                                <img
+                                    src={imageUrl}
+                                    alt={item.name}
+                                    className="h-10 w-10 rounded object-cover"
+                                    loading="lazy"
+                                />
+                                <div className="text-center">
+                                    <div className="font-medium">{item.name}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Brand: {item.brand}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -352,6 +354,11 @@ export function EquipmentDataTable({
             {
                 accessorKey: "brand",
                 header: "Brand",
+                cell: ({ row }) => (
+                    <div className="text-center w-full">
+                        {row.getValue("brand")}
+                    </div>
+                ),
                 filterFn: filterFn("text"),
                 meta: defineMeta((row: Equipment) => row.brand, {
                     displayName: "Brand",
@@ -605,13 +612,14 @@ export function EquipmentDataTable({
             </div>
             <div className="rounded-md border overflow-y-auto max-h-[58vh]">
                 <Table>
-                    <TableHeader>
+                    <TableHeader >
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => (
                                     <TableHead
                                         key={header.id}
                                         colSpan={header.colSpan}
+                                        className="text-primary-foreground bg-primary text-center font-medium"
                                         style={{
                                             width:
                                                 header.getSize() !== 150
@@ -643,6 +651,7 @@ export function EquipmentDataTable({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
+                                            className="text-center" 
                                             style={{
                                                 width:
                                                     cell.column.getSize() !==
