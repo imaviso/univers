@@ -118,7 +118,7 @@ function Events() {
                     }
                     className="flex flex-col flex-1 overflow-hidden"
                 >
-                    <header className="flex items-center justify-between border-b px-6 py-3.5">
+                    <header className="flex items-center justify-between border-b px-6 h-[65px]">
                         <div className="flex items-center gap-4">
                             <h1 className="text-xl font-semibold">Events</h1>
                             <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ function Events() {
                                 </button>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 h-full">
                             {/* Status Filter Dropdown - only for list view */}
                             {view === "list" && (
                                 <DropdownMenu>
@@ -395,7 +395,7 @@ function Events() {
                             )}
 
                             {/* TabsList only shown for these authorized roles in list view */}
-                            <TabsList className="grid grid-cols-2">
+                            <TabsList className="grid grid-cols-2 h-9">
                                 <TabsTrigger value="all">Events</TabsTrigger>
                                 <TabsTrigger value="mine">
                                     My Events
@@ -466,7 +466,7 @@ function Events() {
             ) : (
                 // Non-SUPER_ADMIN or timeline view structure
                 <div className="flex flex-col flex-1 overflow-hidden">
-                    <header className="flex items-center justify-between border-b px-6 py-4">
+                    <header className="flex items-center justify-between border-b px-6 h-[65px]">
                         <div className="flex items-center gap-4">
                             <h1 className="text-xl font-semibold">Events</h1>
                             {/* View switcher still available */}
@@ -495,7 +495,7 @@ function Events() {
                                 </button>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 h-full">
                             {/* Date Range Filter for TIMELINE VIEW */}
                             {view === "timeline" && (
                                 <Popover>

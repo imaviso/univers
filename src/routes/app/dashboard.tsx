@@ -171,7 +171,7 @@ function Dashboard() {
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
-                <header className="flex items-center justify-between border-b px-6 py-3.5">
+                <header className="flex items-center justify-between border-b px-6 h-[65px]">
                     <div className="flex items-center gap-4">
                         <h1 className="text-xl font-semibold">Dashboard</h1>
                     </div>

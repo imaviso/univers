@@ -55,6 +55,7 @@ import type {
     CreateEquipmentReservationInput, // Added import
     DepartmentDTO, // Added import
     Equipment, // Added import
+    EquipmentActionInput, // Add this import
     EquipmentApprovalDTO,
     EquipmentCategoryDTO, // Import EquipmentCategoryDTO
     EquipmentReservationDTO,
@@ -561,11 +562,8 @@ export const useApproveEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: approveEquipmentReservation,
-        onMutate: async (variables: {
-            reservationPublicId: string;
-            remarks?: string;
-        }) => {
-            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+        onMutate: async (variables: EquipmentActionInput) => {
+            // Cancel any outgoing refetches
             await queryClient.cancelQueries({
                 queryKey: equipmentReservationKeys.allEquipmentOwner(),
             });
@@ -594,9 +592,12 @@ export const useApproveEquipmentReservationMutation = () => {
                                 variables.reservationPublicId
                             ) {
                                 const newApproval: EquipmentApprovalDTO = {
-                                    publicId: `optimistic-approval-${Date.now()}`, // Temporary client-side ID
+                                    publicId: `optimistic-approval-${Date.now()}`,
                                     status: "APPROVED",
-                                    remarks: variables.remarks ?? null,
+                                    remarks:
+                                        variables.remarks === undefined
+                                            ? null
+                                            : variables.remarks,
                                     signedByUser: currentUser,
                                     dateSigned: new Date().toISOString(),
                                     equipmentReservationPublicId:
@@ -626,7 +627,8 @@ export const useApproveEquipmentReservationMutation = () => {
                 );
             }
         },
-        onSuccess: (_message, variables) => {
+        onSuccess: (_data, variables) => {
+            // Invalidate and refetch
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.allEquipmentOwner(),
             });
@@ -657,10 +659,7 @@ export const useRejectEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: rejectEquipmentReservation,
-        onMutate: async (variables: {
-            reservationPublicId: string;
-            remarks: string;
-        }) => {
+        onMutate: async (variables: EquipmentActionInput) => {
             await queryClient.cancelQueries({
                 queryKey: equipmentReservationKeys.allEquipmentOwner(),
             });
@@ -689,7 +688,10 @@ export const useRejectEquipmentReservationMutation = () => {
                                 const newApproval: EquipmentApprovalDTO = {
                                     publicId: `optimistic-rejection-${Date.now()}`,
                                     status: "REJECTED",
-                                    remarks: variables.remarks,
+                                    remarks:
+                                        variables.remarks === undefined
+                                            ? null
+                                            : variables.remarks,
                                     signedByUser: currentUser,
                                     dateSigned: new Date().toISOString(),
                                     equipmentReservationPublicId:
@@ -719,7 +721,7 @@ export const useRejectEquipmentReservationMutation = () => {
                 );
             }
         },
-        onSuccess: (_message, variables) => {
+        onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.allEquipmentOwner(),
             });
@@ -756,7 +758,7 @@ export const useCancelEquipmentReservationMutation = () => {
             eventId: string;
         }) => {
             const { reservationId, eventId } = variables;
-            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+            // Cancel any outgoing refetches
             await queryClient.cancelQueries({
                 queryKey: equipmentReservationKeys.byEvent(eventId),
             });
@@ -770,50 +772,36 @@ export const useCancelEquipmentReservationMutation = () => {
             if (previousReservations) {
                 queryClient.setQueryData<EquipmentReservationDTO[]>(
                     equipmentReservationKeys.byEvent(eventId),
-                    previousReservations.filter(
-                        (reservation) => reservation.publicId !== reservationId,
-                    ),
+                    (oldData = []) =>
+                        oldData.map((reservation) => {
+                            if (reservation.publicId === reservationId) {
+                                return {
+                                    ...reservation,
+                                    status: "CANCELED",
+                                };
+                            }
+                            return reservation;
+                        }),
                 );
             }
-
-            // Return a context object with the snapshotted value
             return { previousReservations, eventId };
         },
-        onError: (
-            _error,
-            _variables,
-            context?: {
-                previousReservations?: EquipmentReservationDTO[];
-                eventId?: string;
-            },
-        ) => {
-            // Rollback to the previous value if mutation fails
+        onError: (_err, _variables, context) => {
             if (context?.previousReservations && context?.eventId) {
                 queryClient.setQueryData(
                     equipmentReservationKeys.byEvent(context.eventId),
                     context.previousReservations,
                 );
             }
-            // Consider showing an error toast here if not handled by the component
         },
         onSuccess: (_data, variables) => {
-            // `data` is the result of `cancelEquipmentReservation`
-            // `variables` is { reservationId, eventId }
-            // Invalidate related queries to ensure data consistency
-            // The specific event's list is already optimistically updated,
-            // but invalidating ensures it refetches if needed, or if other views depend on it.
+            const { reservationId, eventId } = variables;
+            // Invalidate and refetch
             queryClient.invalidateQueries({
-                queryKey: equipmentReservationKeys.byEvent(variables.eventId),
+                queryKey: equipmentReservationKeys.byEvent(eventId),
             });
-        },
-        onSettled: (_data, _error, variables) => {
-            // This function runs after the mutation is either successful or errors.
-            // Good place for invalidations that should happen regardless of outcome,
-            // or to ensure specific details are fresh.
             queryClient.invalidateQueries({
-                queryKey: equipmentReservationKeys.detail(
-                    variables.reservationId,
-                ),
+                queryKey: equipmentReservationKeys.detail(reservationId),
             });
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.lists(),
@@ -823,11 +811,6 @@ export const useCancelEquipmentReservationMutation = () => {
             });
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.own(),
-            });
-            // Also ensure the byEvent list is refetched to be certain it's up-to-date,
-            // especially if the optimistic update logic might have edge cases or server modifies data further.
-            queryClient.invalidateQueries({
-                queryKey: equipmentReservationKeys.byEvent(variables.eventId),
             });
         },
     });

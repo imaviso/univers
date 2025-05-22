@@ -49,7 +49,7 @@ export function useWebSocketNotifications() {
 
                 const userDestination = "/user/queue/notifications";
                 client.subscribe(userDestination, (message: IMessage) => {
-                    try {
+                    const handleMessage = () => {
                         const receivedPayload: NotificationDTO = JSON.parse(
                             message.body,
                         );
@@ -63,7 +63,6 @@ export function useWebSocketNotifications() {
                         const entityType =
                             receivedPayload.relatedEntityType?.toUpperCase(); // Top-level entity type
                         const entityId = receivedPayload.relatedEntityPublicId; // Top-level entity ID (NOW ALWAYS EVENT ID)
-                        // const eventId = receivedPayload.message?.eventId; // REMOVED - entityId is now the eventId
 
                         // --- Invalidate Notification Queries --- Always do this
                         queryClient.invalidateQueries({
@@ -78,54 +77,15 @@ export function useWebSocketNotifications() {
                             // Only proceed if we have an event ID (which entityId now is)
                             // Always invalidate the related event's details and approvals
                             queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.detail(entityId),
+                                queryKey: eventsQueryKeys.all,
                             });
-                            queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.approvals(entityId),
-                            });
-                            // Also invalidate general event lists as status might change
-                            queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.lists(),
-                            }); // Covers all, approved, etc.
-                            queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.own(),
-                            });
-                            queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.pending(),
-                            });
-                            queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.pendingVenueOwner(),
-                            });
-                            queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.pendingDeptHead(),
-                            });
-
                             // Invalidate specific lists based on the original trigger type
-                            if (
-                                entityType === "EQUIPMENT_RESERVATION" ||
-                                entityType ===
-                                    "EQUIPMENT_RESERVATION_REQUEST" ||
-                                entityType ===
-                                    "EQUIPMENT_RESERVATION_CANCELED" ||
-                                entityType === "EQUIPMENT_RESERVATION_APPROVED"
-                            ) {
+                            if (entityType?.includes("EQUIPMENT")) {
                                 // Invalidate equipment reservation lists (cannot invalidate detail without reservation ID)
                                 queryClient.invalidateQueries({
-                                    queryKey: equipmentReservationKeys.lists(),
-                                });
-                                queryClient.invalidateQueries({
-                                    queryKey: equipmentReservationKeys.own(),
-                                });
-                                queryClient.invalidateQueries({
-                                    queryKey:
-                                        equipmentReservationKeys.pending(),
-                                });
-                                queryClient.invalidateQueries({
-                                    queryKey:
-                                        equipmentReservationKeys.pendingEquipmentOwner(),
+                                    queryKey: equipmentReservationKeys.all,
                                 });
                             }
-                            // No special list invalidation needed if entityType was just "EVENT"
                         }
 
                         // --- End Conditional Invalidation ---
@@ -172,10 +132,14 @@ export function useWebSocketNotifications() {
                             });
                         }
                         // --- End Toast Logic ---
-                    } catch (e) {
+                    };
+
+                    try {
+                        handleMessage();
+                    } catch (error) {
                         console.error(
                             "!!! ERROR IN WS MESSAGE CALLBACK !!!",
-                            e,
+                            error,
                         );
                         console.error(
                             "Failed WS message body was:",
@@ -185,7 +149,7 @@ export function useWebSocketNotifications() {
                     }
                 });
             },
-            onStompError: (frame) => {
+            onStompError(frame) {
                 console.error(
                     `Broker error: ${frame.headers.message}`,
                     frame.body,
@@ -195,13 +159,13 @@ export function useWebSocketNotifications() {
                     description: frame.headers.message || "Check console.",
                 });
             },
-            onWebSocketError: () => {
+            onWebSocketError() {
                 setStatus("error");
                 toast.error("You are offline!", {
                     description: "Attempting to reconnect...",
                 });
             },
-            onDisconnect: () => {
+            onDisconnect() {
                 if (!intentionalDisconnect.current) {
                     setStatus("disconnected");
                 } else {
