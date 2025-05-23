@@ -155,16 +155,19 @@ export const Route = createFileRoute("/app/dashboard")({
 });
 
 function Dashboard() {
-    const [visibleEventStatuses, setVisibleEventStatuses] = useState<
+    const [visibleEventStatuses, setVisibleEventStatuses] = usePersistentState<
         Record<string, boolean>
-    >(() =>
-        Object.keys(EVENT_STATUSES).reduce(
-            (acc, key) => {
-                acc[key] = true; // Initially all statuses visible
-                return acc;
-            },
-            {} as Record<string, boolean>,
-        ),
+    >(
+        "eventsOverviewVisibleStatuses", // Key for localStorage
+        {
+            // Default: only APPROVED is true
+            approved: true,
+            pending: false,
+            canceled: false,
+            rejected: false,
+            ongoing: false,
+            completed: false,
+        },
     );
 
     const handleEventStatusToggle = (statusKey: string) => {
@@ -451,6 +454,7 @@ function Dashboard() {
                                 <EventsOverviewChart
                                     dateRange={dateRange}
                                     visibleStatuses={visibleEventStatuses}
+                                    onToggleStatus={handleEventStatusToggle}
                                 />
                             </CardContent>
                         </Card>
