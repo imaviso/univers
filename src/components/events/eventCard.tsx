@@ -8,9 +8,18 @@ import {
     CardHeader,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useCurrentUser } from "@/lib/query";
 import type { EventDTO } from "@/lib/types";
 import { formatDateRange, getInitials, getStatusColor } from "@/lib/utils";
+import { format } from "date-fns";
 import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
+import { useMemo } from "react";
 
 // Helper component for rendering a single event card
 export function EventCard({
@@ -23,6 +32,23 @@ export function EventCard({
     venueMap: Map<string, string>;
     onNavigate: (eventId: string | undefined) => void;
 }) {
+    const { data: currentUser } = useCurrentUser();
+
+    // Get current user's approval status for this event
+    const currentUserApproval = useMemo(() => {
+        if (
+            !currentUser?.publicId ||
+            !event?.approvals ||
+            !Array.isArray(event.approvals)
+        ) {
+            return null;
+        }
+        return event.approvals.find(
+            (approval) =>
+                approval.signedByUser?.publicId === currentUser.publicId,
+        );
+    }, [event?.approvals, currentUser]);
+
     let dateDisplayString = "Date not available";
 
     if (
@@ -61,13 +87,62 @@ export function EventCard({
         >
             <CardHeader>
                 <div className="flex items-start justify-between">
-                    <h3 className="font-medium">{event.eventName}</h3>
-                    <Badge className={`${getStatusColor(event.status)}`}>
-                        {event.status
-                            ? event.status.charAt(0).toUpperCase() +
-                              event.status.slice(1).toLowerCase()
-                            : "Unknown"}
-                    </Badge>
+                    {currentUserApproval ? (
+                        <TooltipProvider>
+                            <Tooltip delayDuration={500}>
+                                <TooltipTrigger asChild>
+                                    <h3
+                                        className={`font-medium ${
+                                            currentUserApproval.status ===
+                                            "APPROVED"
+                                                ? "text-green-600"
+                                                : currentUserApproval.status ===
+                                                    "REJECTED"
+                                                  ? "text-red-600"
+                                                  : "text-yellow-600"
+                                        }`}
+                                    >
+                                        {event.eventName}
+                                    </h3>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="font-medium">
+                                            You{" "}
+                                            {currentUserApproval.status.toLowerCase()}{" "}
+                                            this event
+                                        </span>
+                                        {currentUserApproval.dateSigned && (
+                                            <span className="text-xs text-primary-foreground">
+                                                on{" "}
+                                                {format(
+                                                    new Date(
+                                                        currentUserApproval.dateSigned,
+                                                    ),
+                                                    "MMM d, yyyy 'at' h:mm a",
+                                                )}
+                                            </span>
+                                        )}
+                                        {currentUserApproval.remarks && (
+                                            <span className="text-xs text-primary-foreground italic">
+                                                "{currentUserApproval.remarks}"
+                                            </span>
+                                        )}
+                                    </div>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    ) : (
+                        <h3 className="font-medium">{event.eventName}</h3>
+                    )}
+                    <div className="flex flex-col items-end gap-1">
+                        <Badge className={`${getStatusColor(event.status)}`}>
+                            {event.status
+                                ? event.status.charAt(0).toUpperCase() +
+                                  event.status.slice(1).toLowerCase()
+                                : "Unknown"}
+                        </Badge>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="flex-grow">

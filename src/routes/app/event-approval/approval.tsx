@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { DataTableFilter } from "@/components/data-table-filter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,14 +19,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
     Table,
     TableBody,
@@ -35,22 +27,22 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { approveEvent, rejectEvent } from "@/lib/api";
-import { allNavigation } from "@/lib/navigation";
 import {
-    eventsQueryKeys,
-    pendingVenueOwnerEventsQueryOptions,
-    venuesQueryOptions,
-} from "@/lib/query";
-import type { EventApprovalDTO, EventDTO, UserRole } from "@/lib/types";
-import { getStatusBadgeClass } from "@/lib/utils";
+    getAllEvents, // Import generic API function to fetch all events
+} from "@/lib/api";
+import { defineMeta, filterFn } from "@/lib/filters";
+import { allNavigation } from "@/lib/navigation";
+import { allEventsQueryOptions, eventsQueryKeys } from "@/lib/query";
+import type { Event, EventApprovalDTO, EventDTO, UserRole } from "@/lib/types";
+import { getApproverStatusBadge } from "@/lib/utils";
 import {
     useMutation,
     useQueryClient,
     useSuspenseQuery,
 } from "@tanstack/react-query";
+import type { QueryFunction, UseQueryOptions } from "@tanstack/react-query";
 import {
     createFileRoute,
     redirect,
@@ -59,6 +51,7 @@ import {
 } from "@tanstack/react-router";
 import {
     type ColumnDef,
+    type ColumnMeta,
     type RowSelectionState,
     type SortingState,
     type VisibilityState,
@@ -71,19 +64,153 @@ import {
 import { format } from "date-fns";
 import {
     ArrowUpDown,
+    Building,
     Calendar,
     Check,
     CheckCircle2,
     ChevronDown,
-    Download,
+    Clock,
     Eye,
+    FileText,
+    HelpCircle,
     MoreHorizontal,
-    Search,
+    Tag,
+    UserCheck,
+    UserCircle,
     X,
     XCircle,
 } from "lucide-react";
 import React, { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
+
+// Define approval types
+type ApprovalType = "VENUE_OWNER" | "DEPT_HEAD" | "ADMIN";
+
+// Update ApprovalConfig to use array query keys
+type QueryKeyType =
+    | "pendingVenueOwner"
+    | "pendingDeptHead"
+    | "pendingAdmin"
+    | "pending"; // Added pendingAdmin
+
+type ApprovalEvent = Event | EventDTO;
+
+// Create a type-safe query function that handles both Event[] and EventDTO[] return types
+function createApprovalQueryFn(
+    originalQueryFn: QueryFunction<EventDTO[] | Event[], readonly unknown[]>,
+): QueryFunction<ApprovalEvent[], readonly unknown[]> {
+    return async (...args) => {
+        const result = await originalQueryFn(...args);
+        return result as ApprovalEvent[];
+    };
+}
+
+interface ApprovalConfig {
+    type: ApprovalType;
+    title: string;
+    description: string;
+    queryKey: QueryKeyType;
+    getQueryOptions: () => UseQueryOptions<
+        ApprovalEvent[],
+        Error,
+        ApprovalEvent[],
+        readonly unknown[]
+    >;
+    isApprover: (
+        event: ApprovalEvent,
+        currentUserId: string | undefined,
+    ) => boolean;
+    getApprovalStatus: (
+        event: ApprovalEvent,
+        currentUserId: string | undefined,
+    ) => EventApprovalDTO | undefined;
+}
+
+const approvalConfigs: Record<ApprovalType, ApprovalConfig> = {
+    VENUE_OWNER: {
+        type: "VENUE_OWNER",
+        title: "Venue Event Approval",
+        description: "Approve or reject events for your venues",
+        queryKey: "pendingVenueOwner",
+        getQueryOptions: () => ({
+            queryKey: eventsQueryKeys.lists(),
+            queryFn: createApprovalQueryFn(
+                getAllEvents as QueryFunction<
+                    EventDTO[] | Event[],
+                    readonly unknown[]
+                >,
+            ),
+            staleTime: 1000 * 60 * 2,
+        }),
+        isApprover: (event, currentUserId) =>
+            !!currentUserId &&
+            event.eventVenue?.venueOwner?.publicId === currentUserId,
+        getApprovalStatus: (event, currentUserId) => {
+            if (!currentUserId || !("approvals" in event) || !event.approvals)
+                return undefined;
+            return event.approvals.find(
+                (approval) =>
+                    approval.signedByUser.publicId === currentUserId &&
+                    approval.signedByUser.roles.includes("VENUE_OWNER"),
+            );
+        },
+    },
+    DEPT_HEAD: {
+        type: "DEPT_HEAD",
+        title: "Department Event Approval",
+        description: "Approve or reject events for your department",
+        queryKey: "pendingDeptHead",
+        getQueryOptions: () => ({
+            queryKey: eventsQueryKeys.lists(),
+            queryFn: createApprovalQueryFn(
+                getAllEvents as QueryFunction<
+                    EventDTO[] | Event[],
+                    readonly unknown[]
+                >,
+            ),
+            staleTime: 1000 * 60 * 2,
+        }),
+        isApprover: (event, currentUserId) =>
+            !!currentUserId &&
+            event.department?.deptHead?.publicId === currentUserId,
+        getApprovalStatus: (event, currentUserId) => {
+            if (!currentUserId || !("approvals" in event) || !event.approvals)
+                return undefined;
+            return event.approvals.find(
+                (approval) =>
+                    approval.signedByUser.publicId === currentUserId &&
+                    approval.signedByUser.roles.includes("DEPT_HEAD"),
+            );
+        },
+    },
+    ADMIN: {
+        type: "ADMIN",
+        title: "Admin Event Approval",
+        description: "Approve or reject events as an administrator",
+        queryKey: "pendingAdmin",
+        getQueryOptions: () => ({
+            queryKey: eventsQueryKeys.lists(),
+            queryFn: createApprovalQueryFn(
+                getAllEvents as QueryFunction<
+                    EventDTO[] | Event[],
+                    readonly unknown[]
+                >,
+            ),
+            staleTime: 1000 * 60 * 2,
+        }),
+        isApprover: (_event: ApprovalEvent, _currentUserId?: string) => true,
+        getApprovalStatus: (event, currentUserId) => {
+            if (!currentUserId || !("approvals" in event) || !event.approvals)
+                return undefined;
+            return event.approvals.find(
+                (approval) =>
+                    approval.signedByUser.publicId === currentUserId &&
+                    (approval.signedByUser.roles.includes("ADMIN") ||
+                        approval.signedByUser.roles.includes("SUPER_ADMIN")),
+            );
+        },
+    },
+};
 
 // Custom hook for persistent state
 function usePersistentState<T>(
@@ -118,8 +245,8 @@ function usePersistentState<T>(
     return [state, setState];
 }
 
-export const Route = createFileRoute("/app/venue-approval/approval")({
-    component: VenueReservationApproval,
+export const Route = createFileRoute("/app/event-approval/approval")({
+    component: EventApproval,
     beforeLoad: async ({ location, context }) => {
         const navigationItem = allNavigation.find(
             (item) => item.href === location.pathname,
@@ -139,61 +266,77 @@ export const Route = createFileRoute("/app/venue-approval/approval")({
                 replace: true,
             });
         }
+
+        // Determine approval type based on user roles
+        const userRoles = context.authState.roles;
+        let approvalType: ApprovalType | null = null;
+
+        if (userRoles.includes("VENUE_OWNER")) {
+            approvalType = "VENUE_OWNER";
+        } else if (userRoles.includes("DEPT_HEAD")) {
+            approvalType = "DEPT_HEAD";
+        } else if (
+            userRoles.includes("ADMIN") ||
+            userRoles.includes("SUPER_ADMIN")
+        ) {
+            approvalType = "ADMIN";
+        }
+
+        if (!approvalType) {
+            throw redirect({
+                to: "/app/dashboard",
+                replace: true,
+            });
+        }
+
+        return { approvalType };
     },
-    loader: ({ context: { queryClient } }) => {
-        return Promise.all([
-            queryClient.ensureQueryData(pendingVenueOwnerEventsQueryOptions),
-        ]);
+    loader: async ({ context: { queryClient }, context: { approvalType } }) => {
+        const config = approvalConfigs[approvalType];
+        const queryOptions = config.getQueryOptions();
+        await queryClient.ensureQueryData(queryOptions);
+        return null;
     },
 });
-
-type ViewMode = "all" | "pending" | "approved" | "rejected";
 
 type SingleActionInfo = {
     eventId: string | null;
     type: "approve" | "reject" | null;
 };
 
-export function VenueReservationApproval() {
+export function EventApproval() {
     const navigate = useNavigate();
-    const context = useRouteContext({ from: "/app/venue-approval/approval" });
+    const context = useRouteContext({ from: "/app/event-approval/approval" });
     const currentUserId = context.authState?.publicId;
+    const approvalType = context.approvalType as ApprovalType;
+    const config = approvalConfigs[approvalType];
     const queryClient = useQueryClient();
 
-    const { data: fetchedEvents } = useSuspenseQuery(
-        pendingVenueOwnerEventsQueryOptions,
-    );
-    const { data: venues } = useSuspenseQuery(venuesQueryOptions);
+    const { data: fetchedEvents } = useSuspenseQuery(allEventsQueryOptions);
 
     const [searchQuery, setSearchQuery] = usePersistentState<string>(
-        "venueApprovalSearchQuery_v1",
+        "venueApprovalSearchQuery_v2",
         "",
-    );
-    const [statusFilter] = usePersistentState<string | null>(
-        "venueApprovalStatusFilter_v1",
-        null,
-    );
-    const [venueFilter, setVenueFilter] = usePersistentState<string | null>(
-        "venueApprovalVenueFilter_v1",
-        null,
-    );
-    const [viewMode, setViewMode] = usePersistentState<ViewMode>(
-        "venueApprovalViewMode_v1",
-        "pending",
     );
 
     const [sorting, setSorting] = usePersistentState<SortingState>(
-        "venueApprovalTableSorting_v1",
+        "venueApprovalTableSorting_v2",
         [],
     );
     const [columnVisibility, setColumnVisibility] =
         usePersistentState<VisibilityState>(
-            "venueApprovalTableColumnVisibility_v1",
+            "venueApprovalTableColumnVisibility_v2",
+            {
+                createdAt: false,
+                updatedAt: false,
+                publicId: false,
+            },
+        );
+    const [rowSelection, setRowSelection] =
+        usePersistentState<RowSelectionState>(
+            "venueApprovalTableRowSelection_v2",
             {},
         );
-    const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
-        {},
-    );
 
     const [singleActionInfo, setSingleActionInfo] = useState<SingleActionInfo>({
         eventId: null,
@@ -277,28 +420,30 @@ export function VenueReservationApproval() {
         },
     });
 
-    const preFilteredEvents = useMemo(() => {
-        return (fetchedEvents ?? []).filter((event: EventDTO) => {
-            const matchesStatus = statusFilter
-                ? event.status.toLowerCase() === statusFilter.toLowerCase()
-                : true;
-            const matchesVenue = venueFilter
-                ? event.eventVenue.publicId === venueFilter
-                : true;
-            const matchesViewMode =
-                viewMode === "all"
-                    ? true
-                    : viewMode === "pending"
-                      ? event.status.toLowerCase() === "pending"
-                      : viewMode === "approved"
-                        ? event.status.toLowerCase() === "approved"
-                        : viewMode === "rejected"
-                          ? event.status.toLowerCase() === "rejected" ||
-                            event.status.toLowerCase() === "cancelled"
-                          : true;
-            return matchesStatus && matchesVenue && matchesViewMode;
-        });
-    }, [fetchedEvents, statusFilter, venueFilter, viewMode]);
+    const eventsForUserRole = useMemo(() => {
+        if (!fetchedEvents) return [];
+        return fetchedEvents.filter((event: ApprovalEvent) =>
+            config.isApprover(event, currentUserId),
+        );
+    }, [fetchedEvents, config, currentUserId]);
+
+    const finalFilteredEvents = useMemo(() => {
+        let filtered = eventsForUserRole;
+
+        // Apply search filter
+        if (searchQuery && filtered) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(
+                (event: ApprovalEvent) =>
+                    event.eventName.toLowerCase().includes(query) ||
+                    event.eventType.toLowerCase().includes(query) ||
+                    event.eventVenue?.name.toLowerCase().includes(query) || // Use optional chaining
+                    event.department?.name.toLowerCase().includes(query), // Use optional chaining
+            );
+        }
+
+        return filtered || [];
+    }, [eventsForUserRole, searchQuery]);
 
     const handleViewDetails = React.useCallback(
         (eventId: string) => {
@@ -314,7 +459,7 @@ export function VenueReservationApproval() {
         [navigate],
     );
 
-    const openSingleApproveDialog = React.useCallback((event: EventDTO) => {
+    const openSingleApproveDialog = React.useCallback((event: Event) => {
         if (!event.publicId) {
             toast.error("Event ID is missing for this event.");
             return;
@@ -326,7 +471,7 @@ export function VenueReservationApproval() {
         setSingleActionRemarks("");
     }, []);
 
-    const openSingleRejectDialog = React.useCallback((event: EventDTO) => {
+    const openSingleRejectDialog = React.useCallback((event: Event) => {
         if (!event.publicId) {
             toast.error("Event ID is missing for this event.");
             return;
@@ -399,21 +544,17 @@ export function VenueReservationApproval() {
         const selectedRows = table.getFilteredSelectedRowModel().rows;
         const eligibleEventPayloads = selectedRows
             .filter((row) => {
-                const event = row.original;
+                const event = row.original as ApprovalEvent;
                 const isPending = event.status === "PENDING";
-                const isVenueOwner =
-                    currentUserId &&
-                    event.eventVenue?.venueOwner?.publicId === currentUserId;
-                const hasCurrentUserActedOnEvent =
-                    isVenueOwner &&
-                    event.approvals?.some(
-                        (approval: EventApprovalDTO) =>
-                            approval.signedByUser.publicId === currentUserId,
-                    );
+                const isApprover = config.isApprover(event, currentUserId);
+                const currentUserApproval = config.getApprovalStatus(
+                    event,
+                    currentUserId,
+                );
                 return (
                     isPending &&
-                    isVenueOwner &&
-                    !hasCurrentUserActedOnEvent &&
+                    isApprover &&
+                    !currentUserApproval &&
                     event.publicId
                 );
             })
@@ -465,21 +606,17 @@ export function VenueReservationApproval() {
 
         const eligibleEventPayloads = selectedRows
             .filter((row) => {
-                const event = row.original;
+                const event = row.original as ApprovalEvent;
                 const isPending = event.status === "PENDING";
-                const isVenueOwner =
-                    currentUserId &&
-                    event.eventVenue?.venueOwner?.publicId === currentUserId;
-                const hasCurrentUserActedOnEvent =
-                    isVenueOwner &&
-                    event.approvals?.some(
-                        (approval: EventApprovalDTO) =>
-                            approval.signedByUser.publicId === currentUserId,
-                    );
+                const isApprover = config.isApprover(event, currentUserId);
+                const currentUserApproval = config.getApprovalStatus(
+                    event,
+                    currentUserId,
+                );
                 return (
                     isPending &&
-                    isVenueOwner &&
-                    !hasCurrentUserActedOnEvent &&
+                    isApprover &&
+                    !currentUserApproval &&
                     event.publicId
                 );
             })
@@ -521,7 +658,7 @@ export function VenueReservationApproval() {
         });
     };
 
-    const columns = useMemo<ColumnDef<EventDTO>[]>(
+    const columns = useMemo<ColumnDef<ApprovalEvent>[]>(
         () => [
             {
                 id: "select",
@@ -549,6 +686,67 @@ export function VenueReservationApproval() {
                 ),
                 enableSorting: false,
                 enableHiding: false,
+                meta: {
+                    type: "option",
+                    displayName: "Select",
+                    options: [
+                        { value: "true", label: "Selected" },
+                        { value: "false", label: "Not Selected" },
+                    ],
+                } as ColumnMeta<ApprovalEvent, unknown>,
+            },
+            {
+                accessorKey: "eventName",
+                header: ({ column }) => (
+                    <Button
+                        variant="ghost"
+                        onClick={() =>
+                            column.toggleSorting(column.getIsSorted() === "asc")
+                        }
+                    >
+                        Event Name
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
+                cell: ({ row }) => {
+                    const event = row.original;
+                    return (
+                        <Button
+                            variant="link"
+                            className="p-0 h-auto font-medium"
+                            onClick={() => handleViewDetails(event.publicId)}
+                        >
+                            {event.eventName}
+                        </Button>
+                    );
+                },
+                filterFn: filterFn("text"),
+                meta: defineMeta((row: Event) => row.eventName, {
+                    displayName: "Event Name",
+                    type: "text",
+                    icon: FileText,
+                }) as ColumnMeta<Event, unknown>,
+            },
+            {
+                accessorKey: "eventType",
+                header: ({ column }) => (
+                    <Button
+                        variant="ghost"
+                        onClick={() =>
+                            column.toggleSorting(column.getIsSorted() === "asc")
+                        }
+                    >
+                        Event Type
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
+                cell: ({ row }) => row.original.eventType,
+                filterFn: filterFn("text"),
+                meta: defineMeta((row: Event) => row.eventType, {
+                    displayName: "Event Type",
+                    type: "text",
+                    icon: Tag,
+                }) as ColumnMeta<Event, unknown>,
             },
             {
                 accessorKey: "venueName",
@@ -577,95 +775,15 @@ export function VenueReservationApproval() {
                         </Button>
                     );
                 },
+                filterFn: filterFn("text"),
+                meta: defineMeta((row: Event) => row.eventVenue.name, {
+                    displayName: "Venue",
+                    type: "text",
+                    icon: Building,
+                }) as ColumnMeta<Event, unknown>,
             },
             {
                 accessorKey: "departmentName",
-                header: "Department",
-                cell: ({ row }) => row.original.department?.name ?? "N/A",
-            },
-            {
-                accessorKey: "startTime",
-                header: "Date",
-                cell: ({ row }) =>
-                    format(row.original.startTime, "MMM d, yyyy"),
-            },
-            {
-                id: "timeRange",
-                header: "Time",
-                cell: ({ row }) =>
-                    `${format(row.original.startTime, "h:mm a")} - ${format(row.original.endTime, "h:mm a")}`,
-            },
-            {
-                id: "requesterName",
-                accessorFn: (row) =>
-                    `${row.organizer?.firstName ?? ""} ${row.organizer?.lastName ?? ""}`.trim() ||
-                    "N/A",
-                header: "Organizer",
-            },
-            {
-                accessorKey: "status",
-                header: "Status",
-                cell: ({ row }) => (
-                    <Badge className={getStatusBadgeClass(row.original.status)}>
-                        {row.original.status}
-                    </Badge>
-                ),
-            },
-            {
-                id: "yourAction",
-                header: "Your Action",
-                cell: ({ row }) => {
-                    const event = row.original;
-                    const isVenueOwner =
-                        currentUserId &&
-                        event.eventVenue?.venueOwner?.publicId ===
-                            currentUserId;
-
-                    let currentUserEventApproval: EventApprovalDTO | undefined =
-                        undefined;
-                    if (isVenueOwner) {
-                        currentUserEventApproval = event.approvals?.find(
-                            (approval: EventApprovalDTO) =>
-                                approval.signedByUser.publicId ===
-                                currentUserId,
-                        );
-                    }
-
-                    if (!isVenueOwner) {
-                        return (
-                            <span className="text-muted-foreground">
-                                Not Venue Owner
-                            </span>
-                        );
-                    }
-                    if (!currentUserEventApproval) {
-                        return <span className="text-muted-foreground">-</span>;
-                    }
-
-                    if (currentUserEventApproval.status === "APPROVED") {
-                        return (
-                            <div className="flex items-center justify-center text-green-600">
-                                <Check className="h-4 w-4" />
-                                <span className="sr-only">Approved by you</span>
-                            </div>
-                        );
-                    }
-
-                    if (currentUserEventApproval.status === "REJECTED") {
-                        return (
-                            <div className="flex items-center justify-center text-red-600">
-                                <XCircle className="h-4 w-4" />
-                                <span className="sr-only">Rejected by you</span>
-                            </div>
-                        );
-                    }
-
-                    return <span className="text-muted-foreground">-</span>;
-                },
-                enableSorting: false,
-            },
-            {
-                accessorKey: "createdAt",
                 header: ({ column }) => (
                     <Button
                         variant="ghost"
@@ -673,35 +791,179 @@ export function VenueReservationApproval() {
                             column.toggleSorting(column.getIsSorted() === "asc")
                         }
                     >
-                        Submitted
+                        Department
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
+                cell: ({ row }) => row.original.department?.name ?? "N/A",
+                filterFn: filterFn("text"),
+                meta: defineMeta((row: Event) => row.department?.name ?? "", {
+                    displayName: "Department",
+                    type: "text",
+                    icon: Building,
+                }) as ColumnMeta<Event, unknown>,
+            },
+            {
+                accessorKey: "startTime",
+                header: ({ column }) => (
+                    <Button
+                        variant="ghost"
+                        onClick={() =>
+                            column.toggleSorting(column.getIsSorted() === "asc")
+                        }
+                    >
+                        Date
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                 ),
                 cell: ({ row }) =>
-                    format(row.original.createdAt, "MMM d, yyyy"),
+                    format(row.original.startTime, "MMM d, yyyy"),
+                filterFn: filterFn("date"),
+                meta: defineMeta((row: Event) => row.startTime, {
+                    displayName: "Date",
+                    type: "date",
+                    icon: Calendar,
+                }) as ColumnMeta<Event, unknown>,
+            },
+            {
+                id: "timeRange",
+                header: "Time",
+                cell: ({ row }) =>
+                    `${format(row.original.startTime, "h:mm a")} - ${format(row.original.endTime, "h:mm a")}`,
+                enableSorting: false,
+                filterFn: filterFn("text"),
+                meta: defineMeta(
+                    (row: ApprovalEvent) =>
+                        `${format(row.startTime, "h:mm a")} - ${format(row.endTime, "h:mm a")}`,
+                    {
+                        displayName: "Time",
+                        type: "text",
+                        icon: Clock,
+                    },
+                ) as ColumnMeta<ApprovalEvent, unknown>,
+            },
+            {
+                id: "requesterName",
+                accessorFn: (row) =>
+                    `${row.organizer?.firstName ?? ""} ${row.organizer?.lastName ?? ""}`.trim() ||
+                    "N/A",
+                header: ({ column }) => (
+                    <Button
+                        variant="ghost"
+                        onClick={() =>
+                            column.toggleSorting(column.getIsSorted() === "asc")
+                        }
+                    >
+                        Organizer
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
+                filterFn: filterFn("text"),
+                meta: defineMeta(
+                    (row: Event) =>
+                        `${row.organizer?.firstName ?? ""} ${row.organizer?.lastName ?? ""}`.trim() ||
+                        "N/A",
+                    {
+                        displayName: "Organizer",
+                        type: "text",
+                        icon: UserCircle,
+                    },
+                ) as ColumnMeta<Event, unknown>,
+            },
+            {
+                id: "status",
+                header: "Event Status",
+                cell: ({ row }: { row: { original: ApprovalEvent } }) => {
+                    const event = row.original;
+                    return getApproverStatusBadge(event.status);
+                },
+                accessorFn: (row) => row.status,
+                filterFn: filterFn("option"),
+                meta: defineMeta((row: Event) => row.status, {
+                    displayName: "Event Status",
+                    type: "option",
+                    icon: HelpCircle,
+                    options: [
+                        { value: "PENDING", label: "Pending" },
+                        { value: "APPROVED", label: "Approved" },
+                        { value: "REJECTED", label: "Rejected" },
+                        { value: "CANCELLED", label: "Cancelled" },
+                    ],
+                }) as ColumnMeta<Event, unknown>,
+            },
+            {
+                id: "createdAt",
+                header: "Created At",
+                cell: ({ row }) => {
+                    const event = row.original as ApprovalEvent;
+                    return "createdAt" in event
+                        ? new Date(event.createdAt).toLocaleDateString()
+                        : "-";
+                },
+                filterFn: filterFn("date"),
+                meta: defineMeta(
+                    (row: ApprovalEvent) => (row as EventDTO).createdAt,
+                    {
+                        displayName: "Created At",
+                        type: "date",
+                        icon: Calendar,
+                    },
+                ) as ColumnMeta<ApprovalEvent, unknown>,
+            },
+            {
+                id: "yourAction",
+                header: "Your Approval",
+                cell: ({ row }) => {
+                    const event = row.original as ApprovalEvent;
+                    const currentUserApproval = config.getApprovalStatus(
+                        event,
+                        currentUserId,
+                    );
+                    const statusToDisplay =
+                        currentUserApproval?.status || "PENDING";
+                    return getApproverStatusBadge(statusToDisplay);
+                },
+                accessorFn: (row) => {
+                    const event = row as ApprovalEvent;
+                    const currentUserApproval = config.getApprovalStatus(
+                        event,
+                        currentUserId,
+                    );
+                    return currentUserApproval?.status || "PENDING";
+                },
+                enableSorting: false,
+                filterFn: filterFn("option"),
+                meta: defineMeta(
+                    (row: ApprovalEvent) =>
+                        config.getApprovalStatus(row, currentUserId)?.status ||
+                        "PENDING",
+                    {
+                        displayName: "Your Approval",
+                        type: "option",
+                        icon: UserCheck,
+                        options: [
+                            { value: "PENDING", label: "Pending" },
+                            { value: "APPROVED", label: "Approved" },
+                            { value: "REJECTED", label: "Rejected" },
+                        ],
+                    },
+                ) as ColumnMeta<ApprovalEvent, unknown>,
             },
             {
                 id: "actions",
                 header: () => <div className="text-center">Actions</div>,
                 cell: ({ row }) => {
-                    const event = row.original;
+                    const event = row.original as ApprovalEvent;
                     const isPending = event.status === "PENDING";
-                    const isVenueOwner =
-                        currentUserId &&
-                        event.eventVenue?.venueOwner?.publicId ===
-                            currentUserId;
-                    let currentUserEventApproval: EventApprovalDTO | undefined =
-                        undefined;
-                    if (isVenueOwner) {
-                        currentUserEventApproval = event.approvals?.find(
-                            (approval: EventApprovalDTO) =>
-                                approval.signedByUser.publicId ===
-                                currentUserId,
-                        );
-                    }
-                    const hasCurrentUserActed = !!currentUserEventApproval;
-                    const showApprovalActions =
-                        isPending && isVenueOwner && !hasCurrentUserActed;
+                    const isApprover = config.isApprover(event, currentUserId);
+                    const currentUserApproval = config.getApprovalStatus(
+                        event,
+                        currentUserId,
+                    );
+                    const canTakeAction =
+                        isPending &&
+                        isApprover &&
+                        currentUserApproval?.status === "PENDING";
 
                     return (
                         <div className="text-center">
@@ -737,7 +999,7 @@ export function VenueReservationApproval() {
                                         <Calendar className="mr-2 h-4 w-4" />
                                         View Venue
                                     </DropdownMenuItem>
-                                    {showApprovalActions && (
+                                    {canTakeAction && (
                                         <>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
@@ -771,25 +1033,27 @@ export function VenueReservationApproval() {
                                             </DropdownMenuItem>
                                         </>
                                     )}
-                                    {hasCurrentUserActed && (
-                                        <>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                                disabled
-                                                className="text-muted-foreground italic"
-                                            >
-                                                {currentUserEventApproval?.status ===
-                                                "APPROVED" ? (
-                                                    <Check className="mr-2 h-4 w-4 text-green-600" />
-                                                ) : (
-                                                    <XCircle className="mr-2 h-4 w-4 text-red-600" />
-                                                )}
-                                                You have already{" "}
-                                                {currentUserEventApproval?.status.toLowerCase()}{" "}
-                                                this event approval
-                                            </DropdownMenuItem>
-                                        </>
-                                    )}
+                                    {currentUserApproval &&
+                                        currentUserApproval.status !==
+                                            "PENDING" && (
+                                            <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    disabled
+                                                    className="text-muted-foreground italic"
+                                                >
+                                                    {currentUserApproval.status ===
+                                                    "APPROVED" ? (
+                                                        <Check className="mr-2 h-4 w-4 text-green-600" />
+                                                    ) : (
+                                                        <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                                                    )}
+                                                    You have already{" "}
+                                                    {currentUserApproval.status.toLowerCase()}{" "}
+                                                    this event
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -797,21 +1061,31 @@ export function VenueReservationApproval() {
                 },
                 enableSorting: false,
                 enableHiding: false,
+                meta: {
+                    type: "option",
+                    displayName: "Actions",
+                    options: [
+                        { value: "view", label: "View Details" },
+                        { value: "approve", label: "Approve" },
+                        { value: "reject", label: "Reject" },
+                    ],
+                } as ColumnMeta<ApprovalEvent, unknown>,
             },
         ],
         [
+            config,
+            currentUserId,
             approveEventMutation.isPending,
             rejectEventMutation.isPending,
-            currentUserId,
+            handleViewDetails,
             handleNavigateToVenue,
             openSingleApproveDialog,
-            handleViewDetails,
             openSingleRejectDialog,
         ],
     );
 
     const table = useReactTable({
-        data: preFilteredEvents,
+        data: finalFilteredEvents,
         columns,
         state: {
             sorting,
@@ -830,224 +1104,148 @@ export function VenueReservationApproval() {
         getRowId: (row) => row.publicId.toString(),
     });
 
-    const stats = useMemo(() => {
-        const allEvents = fetchedEvents ?? [];
+    const statistics = useMemo(() => {
+        if (!fetchedEvents)
+            return { total: 0, pending: 0, approved: 0, rejected: 0 };
+        const events = fetchedEvents.filter((event: ApprovalEvent) =>
+            config.isApprover(event, currentUserId),
+        );
         return {
-            total: allEvents.length,
-            pending: allEvents.filter(
-                (r) => r.status.toLowerCase() === "pending",
+            total: events.length,
+            pending: events.filter(
+                (event: ApprovalEvent) => event.status === "PENDING",
             ).length,
-            approved: allEvents.filter(
-                (r) => r.status.toLowerCase() === "approved",
+            approved: events.filter(
+                (event: ApprovalEvent) => event.status === "APPROVED",
             ).length,
-            rejected: allEvents.filter(
-                (r) =>
-                    r.status.toLowerCase() === "rejected" ||
-                    r.status.toLowerCase() === "cancelled",
+            rejected: events.filter(
+                (event: ApprovalEvent) => event.status === "REJECTED",
             ).length,
         };
-    }, [fetchedEvents]);
+    }, [fetchedEvents, config, currentUserId]);
 
-    const numSelected = table.getFilteredSelectedRowModel().rows.length;
+    // const numSelected = table.getFilteredSelectedRowModel().rows.length;
     const numEligibleSelected = table
         .getFilteredSelectedRowModel()
         .rows.filter((row) => {
-            const event = row.original;
+            const event = row.original as ApprovalEvent;
             const isPending = event.status === "PENDING";
-            const isVenueOwner =
-                currentUserId &&
-                event.eventVenue?.venueOwner?.publicId === currentUserId;
-            const hasCurrentUserActed =
-                isVenueOwner &&
-                event.approvals?.some(
-                    (approval: EventApprovalDTO) =>
-                        approval.signedByUser.publicId === currentUserId,
-                );
-            return isPending && isVenueOwner && !hasCurrentUserActed;
+            const isApprover = config.isApprover(event, currentUserId);
+            const currentUserApproval = config.getApprovalStatus(
+                event,
+                currentUserId,
+            );
+            return (
+                isPending &&
+                isApprover &&
+                currentUserApproval?.status === "PENDING"
+            );
         }).length;
 
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
                 <header className="flex items-center justify-between border-b px-6 h-[65px]">
-                    <h1 className="text-xl font-semibold">
-                        Venue Event Approval
-                    </h1>
-                    <div className="flex items-center gap-2">
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search events..."
-                                className="w-64 pl-8"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
+                    <div>
+                        <h1 className="text-xl font-semibold">
+                            {config.title}
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            {config.description}
+                        </p>
                     </div>
+                    {numEligibleSelected > 0 && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                                {numEligibleSelected} eligible event(s) selected
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 border-green-600"
+                                onClick={() => setIsBulkApproveDialogOpen(true)}
+                                disabled={
+                                    approveEventMutation.isPending ||
+                                    rejectEventMutation.isPending
+                                }
+                            >
+                                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                Approve
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => setIsBulkRejectDialogOpen(true)}
+                                disabled={
+                                    approveEventMutation.isPending ||
+                                    rejectEventMutation.isPending
+                                }
+                            >
+                                <X className="h-4 w-4" />
+                                Reject
+                            </Button>
+                        </div>
+                    )}
                 </header>
 
-                <div className="grid grid-cols-4 gap-4 p-6 pb-0">
-                    <Card
-                        className="hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => setViewMode("all")}
-                    >
-                        <CardHeader>
+                <div className="grid grid-cols-4 gap-4 p-6 pb-4 border-b">
+                    <Card>
+                        <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium">
                                 Total Events for Approval
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {stats.total}
+                                {statistics.total}
                             </div>
                         </CardContent>
                     </Card>
-                    <Card
-                        className="hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => setViewMode("pending")}
-                    >
-                        <CardHeader>
+                    <Card>
+                        <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium">
                                 Pending Approval
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-yellow-500">
-                                {stats.pending}
+                                {statistics.pending}
                             </div>
                         </CardContent>
                     </Card>
-                    <Card
-                        className="hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => setViewMode("approved")}
-                    >
-                        <CardHeader>
+                    <Card>
+                        <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium">
                                 Approved
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-green-500">
-                                {stats.approved}
+                                {statistics.approved}
                             </div>
                         </CardContent>
                     </Card>
-                    <Card
-                        className="hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => setViewMode("rejected")}
-                    >
-                        <CardHeader>
+                    <Card>
+                        <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium">
                                 Rejected/Cancelled
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-red-500">
-                                {stats.rejected}
+                                {statistics.rejected}
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                <div className="flex items-center justify-between border-b px-6 py-2">
-                    <div className="flex items-center gap-2">
-                        <Tabs
-                            value={viewMode}
-                            onValueChange={(value) =>
-                                setViewMode(value as ViewMode)
-                            }
-                        >
-                            <TabsList>
-                                <TabsTrigger value="all">All</TabsTrigger>
-                                <TabsTrigger value="pending">
-                                    Pending
-                                </TabsTrigger>
-                                <TabsTrigger value="approved">
-                                    Approved
-                                </TabsTrigger>
-                                <TabsTrigger value="rejected">
-                                    Rejected/Cancelled
-                                </TabsTrigger>
-                            </TabsList>
-                        </Tabs>
-                        {numEligibleSelected > 0 && (
-                            <div className="flex items-center gap-2 border-l pl-2 ml-2">
-                                <span className="text-sm text-muted-foreground">
-                                    {numEligibleSelected} eligible event(s)
-                                    selected
-                                </span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1"
-                                    onClick={() =>
-                                        setIsBulkApproveDialogOpen(true)
-                                    }
-                                    disabled={
-                                        approveEventMutation.isPending ||
-                                        rejectEventMutation.isPending
-                                    }
-                                >
-                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                    Approve
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/50 hover:border-destructive/50"
-                                    onClick={() =>
-                                        setIsBulkRejectDialogOpen(true)
-                                    }
-                                    disabled={
-                                        approveEventMutation.isPending ||
-                                        rejectEventMutation.isPending
-                                    }
-                                >
-                                    <X className="h-4 w-4" />
-                                    Reject
-                                </Button>
-                            </div>
-                        )}
-                        {numSelected > 0 &&
-                            numSelected !== numEligibleSelected && (
-                                <div className="flex items-center gap-2 border-l pl-2 ml-2">
-                                    <span className="text-sm text-muted-foreground">
-                                        ({numSelected} total selected)
-                                    </span>
-                                </div>
-                            )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Select
-                            value={venueFilter || "all"}
-                            onValueChange={(value) =>
-                                setVenueFilter(value === "all" ? null : value)
-                            }
-                        >
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Filter by venue" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Venues</SelectItem>
-                                {(venues ?? []).map((venue) => (
-                                    <SelectItem
-                                        key={venue.publicId}
-                                        value={venue.publicId}
-                                    >
-                                        {venue.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
+                <div className="flex items-center justify-between p-6 pt-4 pb-2">
+                    <div className="flex items-center gap-4 flex-1">
+                        <DataTableFilter table={table} />
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    className="ml-auto"
-                                    size="sm"
-                                >
+                                <Button variant="outline" size="sm">
                                     Columns{" "}
                                     <ChevronDown className="ml-2 h-4 w-4" />
                                 </Button>
@@ -1057,6 +1255,13 @@ export function VenueReservationApproval() {
                                     .getAllColumns()
                                     .filter((column) => column.getCanHide())
                                     .map((column) => {
+                                        const columnMeta = column.columnDef
+                                            .meta as
+                                            | { displayName?: string }
+                                            | undefined;
+                                        const displayName =
+                                            columnMeta?.displayName ||
+                                            column.id;
                                         return (
                                             <DropdownMenuCheckboxItem
                                                 key={column.id}
@@ -1068,45 +1273,46 @@ export function VenueReservationApproval() {
                                                     )
                                                 }
                                             >
-                                                {typeof column.columnDef
-                                                    .header === "string"
-                                                    ? column.columnDef.header
-                                                    : column.id === "yourAction"
-                                                      ? "Your Action"
-                                                      : column.id}
+                                                {displayName}
                                             </DropdownMenuCheckboxItem>
                                         );
                                     })}
                             </DropdownMenuContent>
                         </DropdownMenu>
-
-                        <Button variant="outline" size="sm" className="gap-1">
+                        {/* <Button variant="outline" size="sm" className="gap-1">
                             <Download className="h-4 w-4" />
                             Export
-                        </Button>
+                        </Button> */}
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-auto p-6">
+                <div className="flex-1 overflow-auto p-6 pt-0">
                     <div className="rounded-md border overflow-y-auto max-h-[60vh]">
                         <Table>
                             <TableHeader>
                                 {table.getHeaderGroups().map((headerGroup) => (
                                     <TableRow key={headerGroup.id}>
-                                        {headerGroup.headers.map((header) => {
-                                            return (
-                                                <TableHead key={header.id}>
-                                                    {header.isPlaceholder
-                                                        ? null
-                                                        : flexRender(
-                                                              header.column
-                                                                  .columnDef
-                                                                  .header,
-                                                              header.getContext(),
-                                                          )}
-                                                </TableHead>
-                                            );
-                                        })}
+                                        {headerGroup.headers.map((header) => (
+                                            <TableHead
+                                                key={header.id}
+                                                colSpan={header.colSpan}
+                                                className="text-secondary-foreground bg-secondary font-medium"
+                                                style={{
+                                                    width:
+                                                        header.getSize() !== 150
+                                                            ? `${header.getSize()}px`
+                                                            : undefined,
+                                                }}
+                                            >
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                          header.column
+                                                              .columnDef.header,
+                                                          header.getContext(),
+                                                      )}
+                                            </TableHead>
+                                        ))}
                                     </TableRow>
                                 ))}
                             </TableHeader>
@@ -1114,7 +1320,7 @@ export function VenueReservationApproval() {
                                 {table.getRowModel().rows?.length ? (
                                     table.getRowModel().rows.map((row) => (
                                         <TableRow
-                                            key={row.original.publicId}
+                                            key={row.id}
                                             data-state={
                                                 row.getIsSelected() &&
                                                 "selected"
@@ -1123,7 +1329,16 @@ export function VenueReservationApproval() {
                                             {row
                                                 .getVisibleCells()
                                                 .map((cell) => (
-                                                    <TableCell key={cell.id}>
+                                                    <TableCell
+                                                        key={cell.id}
+                                                        style={{
+                                                            width:
+                                                                cell.column.getSize() !==
+                                                                150
+                                                                    ? `${cell.column.getSize()}px`
+                                                                    : undefined,
+                                                        }}
+                                                    >
                                                         {flexRender(
                                                             cell.column
                                                                 .columnDef.cell,

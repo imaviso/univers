@@ -288,18 +288,15 @@ export function VenueDataTable({
                     const isCurrentRowBeingDeleted =
                         isDeletingVenue && venueToDeleteId === venue.publicId;
 
-                    // SUPER_ADMIN can edit/delete. VENUE_OWNER can only edit/delete their own.
-                    const canManage =
-                        currentUser?.roles?.includes("SUPER_ADMIN") ||
-                        (currentUser?.roles?.includes("VENUE_OWNER") &&
-                            venue.venueOwner?.publicId ===
-                                currentUser?.publicId);
+                    // Only SUPER_ADMIN can edit venues
+                    const canEdit = currentUser?.roles?.includes("SUPER_ADMIN");
+                    const canDelete =
+                        currentUser?.roles?.includes("SUPER_ADMIN");
 
                     if (
-                        !canManage &&
+                        !canEdit &&
                         !currentUser?.roles?.includes("SUPER_ADMIN")
                     ) {
-                        // Adjusted condition slightly for clarity
                         // View action for non-managers or non-privileged users
                         return (
                             <Button
@@ -341,20 +338,16 @@ export function VenueDataTable({
                                 >
                                     <Eye className="mr-2 h-4 w-4" /> View
                                 </DropdownMenuItem>
-                                {(canManage ||
-                                    currentUser?.roles?.includes(
-                                        "SUPER_ADMIN",
-                                    )) && (
+                                {canEdit && (
+                                    <DropdownMenuItem
+                                        onClick={() => handleEditVenue(venue)}
+                                        disabled={isCurrentRowBeingDeleted}
+                                    >
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </DropdownMenuItem>
+                                )}
+                                {canDelete && (
                                     <>
-                                        <DropdownMenuItem
-                                            onClick={() =>
-                                                handleEditVenue(venue)
-                                            }
-                                            disabled={isCurrentRowBeingDeleted}
-                                        >
-                                            <Edit className="mr-2 h-4 w-4" />{" "}
-                                            Edit
-                                        </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem
                                             className="text-destructive focus:text-destructive"
@@ -420,12 +413,12 @@ export function VenueDataTable({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
                 <DataTableFilter table={table} />
                 {currentUser?.roles.includes("SUPER_ADMIN") &&
                     onBulkDelete &&
                     selectedRows.length > 0 && (
-                        <div className="flex items-center justify-between px-6 py-2">
+                        <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Button
                                     variant="destructive"
@@ -435,7 +428,7 @@ export function VenueDataTable({
                                     }
                                     disabled={isDeletingVenue}
                                 >
-                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <Trash2 className="h-4 w-4" />
                                     Delete ({selectedRows.length})
                                 </Button>
                             </div>

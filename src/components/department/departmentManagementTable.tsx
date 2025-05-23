@@ -109,9 +109,6 @@ export function DepartmentDataTable() {
     const [editDialogOpen, setEditDialogOpen] = useAtom(
         editDepartmentDialogAtom,
     );
-    // const [deleteDialogOpen, setDeleteDialogOpen] = useAtom(
-    //     deleteDepartmentDialogAtom,
-    // ); // Replaced by bulkDeleteDialogOpen state
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
         React.useState(false);
     // const [assignHeadOpen, setAssignHeadOpen] = useAtom(assignHeadDialogAtom);

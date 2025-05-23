@@ -16,7 +16,6 @@ import type {
     EquipmentCategoryDTO,
     EquipmentReservationDTO,
     Event,
-    EventApprovalDTO,
     EventCountDTO,
     EventDTO,
     EventDTOPayload,
@@ -555,31 +554,6 @@ export const approveEvent = async ({
         throw new Error(
             `An unexpected error occurred during approving event ${eventId}.`,
         );
-    }
-};
-
-export const getAllApprovalsOfEvent = async (
-    eventId: string,
-): Promise<EventApprovalDTO[]> => {
-    try {
-        const response = await fetchWithAuth(
-            `${API_BASE_URL}/event-approval/${eventId}`,
-            {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            },
-        );
-        const data = await handleApiResponse<EventApprovalDTO[]>(
-            response,
-            true,
-        );
-        return data || [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  `An unexpected error occurred during fetching approvals for event ${eventId}.`,
-              );
     }
 };
 

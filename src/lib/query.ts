@@ -9,7 +9,6 @@ import {
     deleteEquipmentCategory,
     deleteEquipmentReservation,
     deleteNotifications,
-    getAllApprovalsOfEvent,
     getAllDepartments,
     getAllEquipmentCategories,
     getAllEquipmentOwnerReservations,
@@ -62,7 +61,6 @@ import type {
     EquipmentApprovalDTO,
     EquipmentCategoryDTO, // Import EquipmentCategoryDTO
     EquipmentReservationDTO,
-    EventApprovalDTO,
     EventCountDTO,
     EventDTO,
     EventTypeStatusDistributionDTO, // For event types chart with status breakdown
@@ -208,15 +206,6 @@ export const eventByIdQueryOptions = (eventId: number | string) =>
         queryKey: eventsQueryKeys.detail(eventId), // Use the new key structure
         queryFn: () => getEventById(String(eventId)), // Ensure ID is string if needed by API
         staleTime: 1000 * 60 * 5,
-    });
-
-// Updated eventApprovalsQueryOptions
-export const eventApprovalsQueryOptions = (eventId: number | string) =>
-    queryOptions<EventApprovalDTO[]>({
-        // Specify return type
-        queryKey: eventsQueryKeys.approvals(eventId), // Use the new key structure
-        queryFn: () => getAllApprovalsOfEvent(String(eventId)),
-        staleTime: 1000 * 60 * 2, // 2 minutes stale time
     });
 
 export const venuesQueryOptions = {
