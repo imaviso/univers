@@ -332,11 +332,8 @@ export function EquipmentDataTable({
                                 className="h-10 w-10 rounded object-cover"
                                 loading="lazy"
                             />
-                            <div className="flex-1 text-center"> 
+                            <div className="flex-1 text-center">
                                 <div className="font-medium">{item.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                    Brand: {item.brand}
-                                </div>
                             </div>
                         </div>
                     );
@@ -648,14 +645,14 @@ export function EquipmentDataTable({
             </div>
             <div className="rounded-md border overflow-y-auto max-h-[58vh]">
                 <Table>
-                    <TableHeader >
+                    <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => (
                                     <TableHead
                                         key={header.id}
                                         colSpan={header.colSpan}
-                                        className="text-primary-foreground bg-primary text-center font-medium"
+                                        className="text-secondary-foreground   bg-secondary text-center font-medium"
                                         style={{
                                             width:
                                                 header.getSize() !== 150
@@ -687,7 +684,7 @@ export function EquipmentDataTable({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
-                                            className="text-center" 
+                                            className="text-center"
                                             style={{
                                                 width:
                                                     cell.column.getSize() !==

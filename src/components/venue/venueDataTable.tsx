@@ -443,6 +443,7 @@ export function VenueDataTable({
                                     <TableHead
                                         key={header.id}
                                         colSpan={header.colSpan}
+                                        className="text-secondary-foreground bg-secondary font-medium"
                                         style={{
                                             width:
                                                 header.getSize() !== 150

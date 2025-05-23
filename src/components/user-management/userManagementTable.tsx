@@ -929,28 +929,30 @@ export function UserDataTable() {
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow 
-                                key={headerGroup.id} 
-                                className="bg-primary hover:bg-primary"
+                            <TableRow
+                                key={headerGroup.id}
+                                className="bg-secondary"
                             >
                                 {headerGroup.headers.map((header) => (
-                                    <TableHead 
-                                        key={header.id} 
+                                    <TableHead
+                                        key={header.id}
                                         colSpan={header.colSpan}
-                                        className="text-primary-foreground font-medium h-11 text-center" 
+                                        className="text-secondary-foreground font-medium h-11 text-center"
                                         style={{
-                                            width: header.getSize() !== 150
-                                                ? `${header.getSize()}px`
-                                                : undefined,
+                                            width:
+                                                header.getSize() !== 150
+                                                    ? `${header.getSize()}px`
+                                                    : undefined,
                                         }}
                                     >
                                         <div className="flex justify-center">
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
-                                                    header.column.columnDef.header,
-                                                    header.getContext(),
-                                                )}
+                                                      header.column.columnDef
+                                                          .header,
+                                                      header.getContext(),
+                                                  )}
                                         </div>
                                     </TableHead>
                                 ))}

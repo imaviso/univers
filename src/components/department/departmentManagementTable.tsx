@@ -580,7 +580,17 @@ export function DepartmentDataTable() {
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id}>
+                                    <TableHead
+                                        key={header.id}
+                                        colSpan={header.colSpan}
+                                        className="text-secondary-foreground bg-secondary text-center font-medium"
+                                        style={{
+                                            width:
+                                                header.getSize() !== 150
+                                                    ? `${header.getSize()}px`
+                                                    : undefined,
+                                        }}
+                                    >
                                         {header.isPlaceholder
                                             ? null
                                             : flexRender(
