@@ -302,20 +302,48 @@ export interface ApiResponse<T> {
     };
 }
 
+export interface EventTypeStatusDistributionDTO {
+    name: string; // Event Type Name
+    totalCount: number;
+    approvedCount: number;
+    pendingCount: number;
+    canceledCount: number;
+    rejectedCount: number;
+    ongoingCount: number;
+    completedCount: number;
+}
+
 // Dashboard-specific DTOs
 export interface TopVenueDTO {
     venueName: string;
-    eventCount: number;
+    totalEventCount: number;
+    pendingCount: number;
+    approvedCount: number;
+    rejectedCount: number;
+    canceledCount: number;
+    ongoingCount: number;
+    completedCount: number;
 }
 
 export interface TopEquipmentDTO {
     equipmentName: string;
-    reservationCount: number;
+    totalReservationCount: number;
+    pendingCount: number;
+    approvedCount: number;
+    rejectedCount: number;
+    canceledCount: number;
+    ongoingCount: number;
+    completedCount: number;
 }
 
 export interface EventCountDTO {
-    date: string;
-    eventCount: number;
+    date: string; // LocalDate is typically string "YYYY-MM-DD"
+    pendingCount?: number;
+    approvedCount?: number;
+    rejectedCount?: number;
+    canceledCount?: number;
+    ongoingCount?: number;
+    completedCount?: number;
 }
 
 export interface CancellationRateDTO {
@@ -335,6 +363,19 @@ export interface UserActivityDTO {
     userFirstName: string;
     userLastName: string;
     eventCount: number;
+}
+
+export interface UserReservationActivityDTO {
+    userPublicId: string; // UUID is string
+    userFirstName: string;
+    userLastName: string;
+    totalReservationCount: number;
+    pendingCount: number;
+    approvedCount: number;
+    rejectedCount: number;
+    canceledCount: number;
+    ongoingCount: number;
+    completedCount: number;
 }
 
 export type RecentActivityItemDTO = {

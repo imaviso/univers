@@ -19,6 +19,14 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Added DropdownMenu components
+import {
     Popover,
     PopoverContent,
     PopoverTrigger,
@@ -30,12 +38,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { EVENT_STATUSES } from "@/lib/constants"; // Added EVENT_STATUSES
 import { allNavigation } from "@/lib/navigation";
 import type { UserRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { addDays, format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, ListFilter } from "lucide-react"; // Added ListFilter
 import { useEffect, useState } from "react";
 import type { DateRange } from "react-day-picker";
 
@@ -146,6 +155,25 @@ export const Route = createFileRoute("/app/dashboard")({
 });
 
 function Dashboard() {
+    const [visibleEventStatuses, setVisibleEventStatuses] = useState<
+        Record<string, boolean>
+    >(() =>
+        Object.keys(EVENT_STATUSES).reduce(
+            (acc, key) => {
+                acc[key] = true; // Initially all statuses visible
+                return acc;
+            },
+            {} as Record<string, boolean>,
+        ),
+    );
+
+    const handleEventStatusToggle = (statusKey: string) => {
+        setVisibleEventStatuses((prev) => ({
+            ...prev,
+            [statusKey]: !prev[statusKey],
+        }));
+    };
+
     // const context = useRouteContext({ from: "/app/dashboard" });
     // const { data: venues } = useSuspenseQuery(venuesQueryOptions);
     const [dateRange, setDateRange] = usePersistentState<DateRange | undefined>(
@@ -346,7 +374,7 @@ function Dashboard() {
                 </header>
                 <main className="flex-1 overflow-auto p-6">
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        <div className="grid gap-6 col-span-1">
+                        <div className="grid gap-6 col-span-2">
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Recent Activity</CardTitle>
@@ -370,9 +398,65 @@ function Dashboard() {
                                 <UpcomingEvents />
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="col-span-3">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <div>
+                                    <CardTitle>Events Overview</CardTitle>
+                                    <CardDescription>
+                                        Toggle event statuses to filter the
+                                        chart below.
+                                    </CardDescription>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 gap-1"
+                                        >
+                                            <ListFilter className="h-3.5 w-3.5" />
+                                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                                                Filter Statuses
+                                            </span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>
+                                            Toggle event statuses
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {Object.entries(EVENT_STATUSES).map(
+                                            ([statusKey, statusConfig]) => (
+                                                <DropdownMenuCheckboxItem
+                                                    key={statusKey}
+                                                    checked={
+                                                        visibleEventStatuses[
+                                                            statusKey
+                                                        ]
+                                                    }
+                                                    onCheckedChange={() =>
+                                                        handleEventStatusToggle(
+                                                            statusKey,
+                                                        )
+                                                    }
+                                                >
+                                                    {statusConfig.label}
+                                                </DropdownMenuCheckboxItem>
+                                            ),
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </CardHeader>
+                            <CardContent className="pl-2">
+                                <EventsOverviewChart
+                                    dateRange={dateRange}
+                                    visibleStatuses={visibleEventStatuses}
+                                />
+                            </CardContent>
+                        </Card>
+                        <Card className="col-span-2">
                             <CardHeader>
-                                <CardTitle>Event Type</CardTitle>
+                                <CardTitle>Event Types</CardTitle>
                                 <CardDescription>
                                     Distribution by event type
                                 </CardDescription>
@@ -381,22 +465,6 @@ function Dashboard() {
                                 <EventTypesChart dateRange={dateRange} />
                             </CardContent>
                         </Card>
-                        <div className="grid gap-6 col-span-3">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Events Overview</CardTitle>
-                                    <CardDescription>
-                                        Number of events over time
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="pl-2">
-                                    <EventsOverviewChart
-                                        dateRange={dateRange}
-                                    />
-                                </CardContent>
-                            </Card>
-                        </div>
-
                         <Card>
                             <CardHeader>
                                 <CardTitle>Peak Reservation Hours</CardTitle>
@@ -418,7 +486,7 @@ function Dashboard() {
                             </CardContent>
                         </Card>
 
-                        <div className="grid gap-6 col-span-2">
+                        <div className="grid gap-6 col-span-3">
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Cancellation Rate</CardTitle>

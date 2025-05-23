@@ -42,6 +42,7 @@ import {
     getUpcomingApprovedEventsApi,
     getUpcomingApprovedEventsCountNextDaysApi,
     getUserActivity,
+    getUserReservationActivity,
     markAllNotificationsRead,
     markNotificationsRead,
     rejectEquipmentReservation,
@@ -61,8 +62,8 @@ import type {
     EquipmentReservationDTO,
     EventApprovalDTO,
     EventCountDTO,
-    EventDTO, // Already here, but good to ensure
-    EventTypeSummaryDTO,
+    EventDTO,
+    EventTypeStatusDistributionDTO, // For event types chart with status breakdown
     PeakHourDTO,
     RecentActivityItemDTO,
     TopEquipmentDTO,
@@ -70,6 +71,7 @@ import type {
     TopVenueDTO,
     UserActivityDTO,
     UserDTO,
+    UserReservationActivityDTO,
     UserRole,
 } from "@/lib/types"; // Import UserRole and Event (aliased)
 import {
@@ -935,7 +937,44 @@ export const dashboardQueryKeys = {
             "eventTypesSummary",
             { startDate, endDate, limit },
         ] as const,
+    userReservationActivity: (
+        startDate?: string,
+        endDate?: string,
+        userFilter?: string,
+        limit?: number,
+    ) =>
+        [
+            ...dashboardQueryKeys.all,
+            "userReservationActivity",
+            { startDate, endDate, userFilter, limit },
+        ] as const,
 };
+
+export const userReservationActivityQueryOptions = (
+    startDate?: string,
+    endDate?: string,
+    userFilter?: string,
+    limit = 10,
+) =>
+    queryOptions<UserReservationActivityDTO[]>({
+        queryKey: dashboardQueryKeys.userReservationActivity(
+            startDate,
+            endDate,
+            userFilter,
+            limit,
+        ),
+        queryFn: () => {
+            if (!startDate || !endDate) return Promise.resolve([]); // Or handle error appropriately
+            return getUserReservationActivity(
+                startDate,
+                endDate,
+                userFilter,
+                limit,
+            );
+        },
+        enabled: !!startDate && !!endDate, // Only enable if dates are provided
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
 
 export const topVenuesQueryOptions = (
     startDate?: string,
@@ -1065,7 +1104,7 @@ export const eventTypeSummaryQueryOptions = (
     endDate?: string,
     limit = 10, // Default limit, consistent with API
 ) =>
-    queryOptions<EventTypeSummaryDTO[]>({
+    queryOptions<EventTypeStatusDistributionDTO[]>({
         queryKey: dashboardQueryKeys.eventTypesSummary(
             startDate,
             endDate,
