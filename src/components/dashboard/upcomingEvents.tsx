@@ -1,11 +1,11 @@
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { upcomingApprovedEventsQueryOptions } from "@/lib/query";
 import type { EventDTO } from "@/lib/types";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { CalendarDays } from "lucide-react";
+import { Scroller } from "../ui/scroller";
 import { Skeleton } from "../ui/skeleton";
 
 export function UpcomingEvents() {
@@ -18,7 +18,7 @@ export function UpcomingEvents() {
 
     if (isLoading) {
         return (
-            <ScrollArea className="h-[300px]">
+            <Scroller className="h-[300px]">
                 <div className="space-y-4 p-1">
                     {[...Array(3)].map((_, index) => (
                         <div
@@ -40,7 +40,7 @@ export function UpcomingEvents() {
                         </div>
                     ))}
                 </div>
-            </ScrollArea>
+            </Scroller>
         );
     }
     if (error)
@@ -61,7 +61,7 @@ export function UpcomingEvents() {
         );
 
     return (
-        <ScrollArea className="h-[300px]">
+        <Scroller className="h-[300px]" withNavigation hideScrollbar>
             <div className="space-y-4 p-1">
                 {events.map((event: EventDTO) => (
                     <Link
@@ -103,6 +103,6 @@ export function UpcomingEvents() {
                     </Link>
                 ))}
             </div>
-        </ScrollArea>
+        </Scroller>
     );
 }

@@ -6,30 +6,28 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart";
+// Removed usePersistentState import as it's now in parent
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
-// Removed useState, DropdownMenu components, Button, ListFilter as they will be in parent
 import type { DateRange } from "react-day-picker";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { EVENT_STATUSES } from "../../lib/constants";
 import { eventsOverviewQueryOptions } from "../../lib/query";
-import type { EventCountDTO } from "../../lib/types"; // Explicit import
+import type { EventCountDTO } from "../../lib/types";
 import { Skeleton } from "../ui/skeleton";
 
 interface EventsOverviewChartProps {
     dateRange?: DateRange;
-    visibleStatuses: Record<string, boolean>; // Added visibleStatuses prop
+    visibleStatuses: Record<string, boolean>;
+    onToggleStatus: (statusKey: string) => void;
 }
 
 export function EventsOverviewChart({
     dateRange,
     visibleStatuses,
 }: EventsOverviewChartProps) {
-    // visibleStatuses state and handler are now managed by the parent component
-
-    // Dynamically create chartConfig based on VISIBLE EVENT_STATUSES from props
     const activeChartConfig = Object.entries(EVENT_STATUSES)
-        .filter(([statusKey]) => visibleStatuses[statusKey]) // Use prop here
+        .filter(([statusKey]) => visibleStatuses[statusKey])
         .reduce((acc, [statusKey, statusValue]) => {
             acc[statusKey] = {
                 label: statusValue.label,
@@ -89,12 +87,7 @@ export function EventsOverviewChart({
     });
 
     return (
-        // Removed the DropdownMenu UI from here
-        // The main wrapping div <div className="w-full"> might also be redundant if parent handles layout
-        // For now, let's keep it to ensure chart takes full width of its direct container.
-        <div className="w-full h-[300px]">
-            {" "}
-            {/* Ensure chart has a defined height */}
+        <div className="h-[300px]">
             <ChartContainer
                 config={activeChartConfig}
                 className="h-full w-full"

@@ -1,11 +1,11 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { recentActivityQueryOptions } from "@/lib/query";
 import type { RecentActivityItemDTO } from "@/lib/types";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { formatDistanceToNow } from "date-fns";
 import { Building, CalendarCheck, CalendarClock } from "lucide-react";
+import { Scroller } from "../ui/scroller";
 import { Skeleton } from "../ui/skeleton";
 
 function getActivityIcon(type: string) {
@@ -27,7 +27,7 @@ export function RecentActivity() {
 
     if (isLoading) {
         return (
-            <ScrollArea className="h-[300px]">
+            <Scroller className="h-[300px]">
                 <div className="space-y-4 p-1">
                     {[...Array(3)].map((_, index) => (
                         <div
@@ -47,7 +47,7 @@ export function RecentActivity() {
                         </div>
                     ))}
                 </div>
-            </ScrollArea>
+            </Scroller>
         );
     }
     if (error)
@@ -66,7 +66,7 @@ export function RecentActivity() {
         );
 
     return (
-        <ScrollArea className="h-[300px]">
+        <Scroller className="h-[300px]" withNavigation hideScrollbar>
             <div className="space-y-4 p-1">
                 {activities.map((activity: RecentActivityItemDTO) => (
                     <div key={activity.id} className="flex items-start gap-3">
@@ -113,6 +113,6 @@ export function RecentActivity() {
                     </div>
                 ))}
             </div>
-        </ScrollArea>
+        </Scroller>
     );
 }
