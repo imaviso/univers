@@ -929,25 +929,31 @@ export function UserDataTable() {
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
+                            <TableRow
+                                key={headerGroup.id}
+                                className="bg-secondary"
+                            >
                                 {headerGroup.headers.map((header) => (
                                     <TableHead
                                         key={header.id}
                                         colSpan={header.colSpan}
+                                        className="text-secondary-foreground font-medium h-11 text-center"
                                         style={{
                                             width:
                                                 header.getSize() !== 150
                                                     ? `${header.getSize()}px`
                                                     : undefined,
-                                        }} // Apply width if not default
+                                        }}
                                     >
-                                        {header.isPlaceholder
-                                            ? null
-                                            : flexRender(
-                                                  header.column.columnDef
-                                                      .header,
-                                                  header.getContext(),
-                                              )}
+                                        <div className="flex justify-center">
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(
+                                                      header.column.columnDef
+                                                          .header,
+                                                      header.getContext(),
+                                                  )}
+                                        </div>
                                     </TableHead>
                                 ))}
                             </TableRow>

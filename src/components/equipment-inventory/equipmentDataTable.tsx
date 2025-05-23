@@ -332,11 +332,8 @@ export function EquipmentDataTable({
                                 className="h-10 w-10 rounded object-cover"
                                 loading="lazy"
                             />
-                            <div>
+                            <div className="flex-1 text-center">
                                 <div className="font-medium">{item.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                    Brand: {item.brand}
-                                </div>
                             </div>
                         </div>
                     );
@@ -351,6 +348,11 @@ export function EquipmentDataTable({
             {
                 accessorKey: "brand",
                 header: "Brand",
+                cell: ({ row }) => (
+                    <div className="text-center w-full">
+                        {row.getValue("brand")}
+                    </div>
+                ),
                 filterFn: filterFn("text"),
                 meta: defineMeta((row: Equipment) => row.brand, {
                     displayName: "Brand",
@@ -384,7 +386,7 @@ export function EquipmentDataTable({
                         }),
                     );
                     return (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1 justify-center w-full">
                             {categoriesArray.map((category) => (
                                 <Badge
                                     key={category.id}
@@ -650,6 +652,7 @@ export function EquipmentDataTable({
                                     <TableHead
                                         key={header.id}
                                         colSpan={header.colSpan}
+                                        className="text-secondary-foreground   bg-secondary text-center font-medium"
                                         style={{
                                             width:
                                                 header.getSize() !== 150
@@ -681,6 +684,7 @@ export function EquipmentDataTable({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
+                                            className="text-center"
                                             style={{
                                                 width:
                                                     cell.column.getSize() !==

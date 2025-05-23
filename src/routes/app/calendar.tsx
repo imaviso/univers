@@ -800,7 +800,7 @@ function Calendar() {
                             </Button>
                         </div>
                         <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             onClick={() => setCurrentDate(new Date())}
                         >

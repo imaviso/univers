@@ -144,8 +144,8 @@ export const eventSchema = v.pipe(
             v.nonEmpty("Department is required"),
             v.uuid("Department Public ID must be a valid UUID"),
         ),
-        startTime: v.date("Start-date is required"),
-        endTime: v.date("End-date is required"),
+        startTime: v.date("Start date is required"),
+        endTime: v.date("End date is required"),
         approvedLetter: v.pipe(
             v.instance(File, "Approved letter is required."),
             v.mimeType(
