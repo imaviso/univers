@@ -18,6 +18,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
+import { bulkDeleteEquipment } from "@/lib/api";
 import { type FilterValue, defineMeta, filterFn } from "@/lib/filters";
 import type { Equipment, UserDTO } from "@/lib/types";
 import { usePersistentState } from "@/lib/utils";
@@ -56,6 +57,7 @@ import {
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Checkbox } from "../ui/checkbox";
 
 function categoryTextArrayFilterFn<TData>(
     row: Row<TData>,
@@ -92,40 +94,16 @@ interface EquipmentDataTableProps {
     isPrivilegedUser: boolean;
     currentUser?: UserDTO | null;
     handleEditEquipment: (equipment: Equipment) => void;
-    setEquipmentToDelete: (id: string | null) => void;
-    setIsDeleteDialogOpen: (isOpen: boolean) => void;
     isEditMutating: boolean;
     isDeleteMutating: boolean;
-    deleteMutationVariables?: { equipmentId: string; userId: string } | null;
+    deleteMutationVariables?: { equipmentIds: string[]; userId: string } | null;
 }
-
-// Placeholder for the actual API function
-// import { bulkDeleteEquipment } from '@/lib/api';
-const bulkDeleteEquipment = async (params: {
-    equipmentIds: string[];
-    userId: string;
-}) => {
-    // This is a placeholder. Implement the actual API call in @/lib/api.ts
-    console.log(
-        "Attempting to bulk delete equipment:",
-        params.equipmentIds,
-        "by user:",
-        params.userId,
-    );
-    // Simulate API delay and potential errors for testing
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    // Simulate success/failure
-    // if (params.equipmentIds.length === 1 && params.equipmentIds[0] === "fail_me") throw new Error("Simulated bulk delete failure");
-    return Promise.resolve();
-};
 
 export function EquipmentDataTable({
     data,
     isPrivilegedUser,
     currentUser,
     handleEditEquipment,
-    setEquipmentToDelete,
-    setIsDeleteDialogOpen,
     isEditMutating,
     isDeleteMutating,
     deleteMutationVariables,
@@ -156,7 +134,12 @@ export function EquipmentDataTable({
     const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
 
     // Bulk delete mutation
-    const bulkDeleteMutation = useMutation({
+    const bulkDeleteMutation = useMutation<
+        Record<string, string>,
+        Error,
+        { equipmentIds: string[]; userId: string },
+        { previousEquipment: Equipment[] | undefined }
+    >({
         mutationFn: bulkDeleteEquipment,
         onMutate: async ({ equipmentIds }) => {
             await queryClient.cancelQueries({
@@ -187,8 +170,20 @@ export function EquipmentDataTable({
             toast.error(`Failed to delete equipment: ${error.message}`);
             setIsBulkDeleteDialogOpen(false);
         },
-        onSuccess: () => {
-            toast.success("Selected equipment deleted successfully.");
+        onSuccess: (results: Record<string, string>) => {
+            const successCount = Object.values(results).filter(
+                (result) => result === "Successfully deleted",
+            ).length;
+            const errorCount = Object.keys(results).length - successCount;
+
+            if (successCount > 0) {
+                toast.success(
+                    `Successfully deleted ${successCount} equipment(s).`,
+                );
+            }
+            if (errorCount > 0) {
+                toast.error(`Failed to delete ${errorCount} equipment(s).`);
+            }
             setIsBulkDeleteDialogOpen(false);
             setRowSelection({}); // Clear selection
         },
@@ -202,20 +197,15 @@ export function EquipmentDataTable({
     const handleBulkDelete = () => {
         if (!currentUser || table.getSelectedRowModel().rows.length === 0)
             return;
-        setIsBulkDeleteDialogOpen(true);
-    };
 
-    const confirmBulkDelete = () => {
-        if (!currentUser) return;
-        const selectedEquipmentIds = table
+        const selectedIds = table
             .getSelectedRowModel()
             .rows.map((row) => row.original.publicId);
-        if (selectedEquipmentIds.length > 0) {
-            bulkDeleteMutation.mutate({
-                equipmentIds: selectedEquipmentIds,
-                userId: currentUser.publicId,
-            });
-        }
+
+        bulkDeleteMutation.mutate({
+            equipmentIds: selectedIds,
+            userId: currentUser.publicId,
+        });
     };
 
     const getStatusBadge = useCallback((status: Equipment["status"]) => {
@@ -274,50 +264,54 @@ export function EquipmentDataTable({
 
     const columns: ColumnDef<Equipment>[] = useMemo(
         () => [
-            // ...(isPrivilegedUser
-            //     ? [
-            //           {
-            //               id: "select",
-            //               header: ({ table }) => (
-            //                   <Checkbox
-            //                       checked={
-            //                           table.getIsAllPageRowsSelected() ||
-            //                           (table.getIsSomePageRowsSelected() &&
-            //                               "indeterminate")
-            //                       }
-            //                       onCheckedChange={(value) =>
-            //                           table.toggleAllPageRowsSelected(!!value)
-            //                       }
-            //                       aria-label="Select all"
-            //                   />
-            //               ),
-            //               cell: ({ row }) => (
-            //                   <Checkbox
-            //                       checked={row.getIsSelected()}
-            //                       onCheckedChange={(value) =>
-            //                           row.toggleSelected(!!value)
-            //                       }
-            //                       aria-label="Select row"
-            //                       disabled={
-            //                           !(
-            //                               currentUser?.role === "SUPER_ADMIN" ||
-            //                               ([
-            //                                   "EQUIPMENT_OWNER",
-            //                                   "MSDO",
-            //                                   "OPC",
-            //                               ].includes(currentUser?.role ?? "") &&
-            //                                   row.original.equipmentOwner
-            //                                       ?.publicId ===
-            //                                       currentUser?.publicId)
-            //                           )
-            //                       }
-            //                   />
-            //               ),
-            //               enableSorting: false,
-            //               enableHiding: false,
-            //           } as ColumnDef<Equipment>,
-            //       ]
-            //     : []),
+            ...(isPrivilegedUser
+                ? [
+                      {
+                          id: "select",
+                          header: ({ table }) => (
+                              <Checkbox
+                                  checked={
+                                      table.getIsAllPageRowsSelected() ||
+                                      (table.getIsSomePageRowsSelected() &&
+                                          "indeterminate")
+                                  }
+                                  onCheckedChange={(value) =>
+                                      table.toggleAllPageRowsSelected(!!value)
+                                  }
+                                  aria-label="Select all"
+                              />
+                          ),
+                          cell: ({ row }) => (
+                              <Checkbox
+                                  checked={row.getIsSelected()}
+                                  onCheckedChange={(value) =>
+                                      row.toggleSelected(!!value)
+                                  }
+                                  aria-label="Select row"
+                                  disabled={
+                                      !(
+                                          currentUser?.roles?.includes(
+                                              "SUPER_ADMIN",
+                                          ) ||
+                                          ([
+                                              "EQUIPMENT_OWNER",
+                                              "MSDO",
+                                              "OPC",
+                                          ].includes(
+                                              currentUser?.roles?.[0] ?? "",
+                                          ) &&
+                                              row.original.equipmentOwner
+                                                  ?.publicId ===
+                                                  currentUser?.publicId)
+                                      )
+                                  }
+                              />
+                          ),
+                          enableSorting: false,
+                          enableHiding: false,
+                      } as ColumnDef<Equipment>,
+                  ]
+                : []),
             {
                 accessorKey: "name",
                 header: "Name",
@@ -503,8 +497,9 @@ export function EquipmentDataTable({
 
                               const isMutatingThisItem =
                                   (isDeleteMutating &&
-                                      deleteMutationVariables?.equipmentId ===
-                                          item.publicId) ||
+                                      deleteMutationVariables?.equipmentIds.includes(
+                                          item.publicId,
+                                      )) ||
                                   (isEditMutating &&
                                       /* logic to check if this item is being edited, needs editingEquipment prop */ false);
 
@@ -534,15 +529,22 @@ export function EquipmentDataTable({
                                           <DropdownMenuItem
                                               className="text-destructive"
                                               onClick={() => {
-                                                  setEquipmentToDelete(
-                                                      item.publicId,
-                                                  );
-                                                  setIsDeleteDialogOpen(true);
+                                                  if (currentUser) {
+                                                      // Select only this row
+                                                      const newSelection: RowSelectionState =
+                                                          {};
+                                                      newSelection[row.id] =
+                                                          true;
+                                                      setRowSelection(
+                                                          newSelection,
+                                                      );
+                                                      setIsBulkDeleteDialogOpen(
+                                                          true,
+                                                      );
+                                                  }
                                               }}
                                               disabled={
-                                                  isDeleteMutating &&
-                                                  deleteMutationVariables?.equipmentId ===
-                                                      item.publicId
+                                                  bulkDeleteMutation.isPending
                                               }
                                           >
                                               <Trash2 className="mr-2 h-4 w-4" />
@@ -561,13 +563,13 @@ export function EquipmentDataTable({
             currentUser,
             getStatusBadge,
             handleEditEquipment,
-            setEquipmentToDelete,
-            setIsDeleteDialogOpen,
             AVAILABILITY_OPTIONS,
             STATUS_OPTIONS,
             isEditMutating,
             isDeleteMutating,
             deleteMutationVariables,
+            bulkDeleteMutation,
+            setRowSelection,
         ],
     );
 
@@ -602,7 +604,7 @@ export function EquipmentDataTable({
                             <Button
                                 variant="destructive"
                                 size="sm"
-                                onClick={handleBulkDelete}
+                                onClick={() => setIsBulkDeleteDialogOpen(true)}
                                 disabled={bulkDeleteMutation.isPending}
                             >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -717,8 +719,11 @@ export function EquipmentDataTable({
             {isPrivilegedUser && (
                 <DeleteConfirmDialog
                     isOpen={isBulkDeleteDialogOpen}
-                    onClose={() => setIsBulkDeleteDialogOpen(false)}
-                    onConfirm={confirmBulkDelete}
+                    onClose={() => {
+                        setIsBulkDeleteDialogOpen(false);
+                        setRowSelection({}); // Clear selection when dialog is closed
+                    }}
+                    onConfirm={handleBulkDelete}
                     isLoading={bulkDeleteMutation.isPending}
                     title={`Delete ${table.getSelectedRowModel().rows.length} Equipment Item(s)`}
                     description={`Are you sure you want to permanently delete ${table.getSelectedRowModel().rows.length} selected equipment item(s)? This action cannot be undone.`}

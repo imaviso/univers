@@ -1,5 +1,6 @@
 import { DataTableFilter } from "@/components/data-table-filter";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -18,20 +19,11 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
-import { deleteDepartment } from "@/lib/api";
-import {
-    deleteDepartmentDialogAtom,
-    editDepartmentDialogAtom,
-    selectedDepartmentAtom,
-} from "@/lib/atoms";
+import { editDepartmentDialogAtom, selectedDepartmentAtom } from "@/lib/atoms";
 import { defineMeta, filterFn } from "@/lib/filters";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import type { DepartmentDTO } from "@/lib/types";
-import {
-    useMutation,
-    useQueryClient,
-    useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
     type ColumnDef,
     type ColumnFiltersState,
@@ -52,14 +44,16 @@ import {
     Building,
     CalendarIcon,
     ChevronDown,
-    MoreHorizontal,
+    Loader2, // For loading states
+    MoreHorizontal, // For create buttons
     TextIcon, // For Description
-    Trash2, // For Assign Head
+    Trash2, // For Assign Head action
     UserIcon,
 } from "lucide-react";
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useBulkDeleteDepartmentsMutation } from "../../lib/query";
 import { EditDepartmentFormDialog } from "./editDepartmentFormDialog";
 
 // Custom hook for persistent state
@@ -96,7 +90,6 @@ function usePersistentState<T>(
 }
 
 export function DepartmentDataTable() {
-    const queryClient = useQueryClient();
     const [sorting, setSorting] = usePersistentState<SortingState>(
         "departmentTableSorting_v1",
         [],
@@ -116,9 +109,11 @@ export function DepartmentDataTable() {
     const [editDialogOpen, setEditDialogOpen] = useAtom(
         editDepartmentDialogAtom,
     );
-    const [deleteDialogOpen, setDeleteDialogOpen] = useAtom(
-        deleteDepartmentDialogAtom,
-    );
+    // const [deleteDialogOpen, setDeleteDialogOpen] = useAtom(
+    //     deleteDepartmentDialogAtom,
+    // ); // Replaced by bulkDeleteDialogOpen state
+    const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
+        React.useState(false);
     // const [assignHeadOpen, setAssignHeadOpen] = useAtom(assignHeadDialogAtom);
     const [selectedDepartment, setSelectedDepartment] = useAtom(
         selectedDepartmentAtom,
@@ -138,46 +133,7 @@ export function DepartmentDataTable() {
     const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
     const { data: usersData } = useSuspenseQuery(usersQueryOptions);
 
-    const deleteDepartmentMutation = useMutation({
-        mutationFn: deleteDepartment, // Expects departmentId (number)
-        onMutate: async (departmentId: string) => {
-            await queryClient.cancelQueries({
-                queryKey: departmentsQueryOptions.queryKey,
-            });
-            const previousDepartments = queryClient.getQueryData<
-                DepartmentDTO[]
-            >(departmentsQueryOptions.queryKey);
-            queryClient.setQueryData<DepartmentDTO[]>(
-                departmentsQueryOptions.queryKey,
-                (old = []) =>
-                    old.filter((dept) => dept.publicId !== departmentId),
-            );
-            return { previousDepartments };
-        },
-        onError: (err, _departmentId, context) => {
-            if (context?.previousDepartments) {
-                queryClient.setQueryData(
-                    departmentsQueryOptions.queryKey,
-                    context.previousDepartments,
-                );
-            }
-            toast.error(
-                err instanceof Error
-                    ? err.message
-                    : "Failed to delete department",
-            );
-        },
-        onSuccess: (data) => {
-            toast.success(data || "Department deleted successfully");
-            setDeleteDialogOpen(false);
-            setSelectedDepartment(null);
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({
-                queryKey: departmentsQueryOptions.queryKey,
-            });
-        },
-    });
+    const bulkDeleteDepartmentsMutation = useBulkDeleteDepartmentsMutation();
 
     // const assignHeadMutation = useMutation({
     // 	mutationFn: ({
@@ -245,11 +201,16 @@ export function DepartmentDataTable() {
     // });
 
     // --- Event Handlers ---
-    const handleDeleteDepartment = () => {
-        if (selectedDepartment) {
-            deleteDepartmentMutation.mutate(selectedDepartment.publicId);
+    const handleBulkDelete = () => {
+        const selectedRows = table.getFilteredSelectedRowModel().rows;
+        if (selectedRows.length === 0) {
+            toast.info("No departments selected for deletion.");
+            return;
         }
+        setBulkDeleteDialogOpen(true);
     };
+
+    // const handleDeleteDepartment = () => { ... }; // Removed for bulk delete
 
     // Handler for Assign Head Dialog submission
     // const handleAssignHead = (userId: number) => {
@@ -261,17 +222,46 @@ export function DepartmentDataTable() {
     // 	}
     // };
 
-    // --- Columns ---
-    const columns = React.useMemo<ColumnDef<DepartmentDTO>[]>(
+    const handleConfirmBulkDelete = () => {
+        const selectedRows = table.getFilteredSelectedRowModel().rows;
+        if (selectedRows.length > 0) {
+            const selectedPublicIds = selectedRows.map(
+                (row) => row.original.publicId,
+            );
+            bulkDeleteDepartmentsMutation.mutate(selectedPublicIds);
+        }
+        setBulkDeleteDialogOpen(false);
+    };
+
+    const columns: ColumnDef<DepartmentDTO>[] = React.useMemo(
         () => [
-            // Optional: Select column for bulk actions
-            // {
-            //     id: "select",
-            //     header: ({ table }) => (...),
-            //     cell: ({ row }) => (...),
-            //     enableSorting: false,
-            //     enableHiding: false,
-            // },
+            {
+                id: "select",
+                header: ({ table }) => (
+                    <Checkbox
+                        checked={
+                            table.getIsAllPageRowsSelected() ||
+                            (table.getIsSomePageRowsSelected() &&
+                                "indeterminate")
+                        }
+                        onCheckedChange={(value) =>
+                            table.toggleAllPageRowsSelected(!!value)
+                        }
+                        aria-label="Select all"
+                        className="translate-y-[2px]"
+                    />
+                ),
+                cell: ({ row }) => (
+                    <Checkbox
+                        checked={row.getIsSelected()}
+                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        aria-label="Select row"
+                        className="translate-y-[2px]"
+                    />
+                ),
+                enableSorting: false,
+                enableHiding: false,
+            },
             {
                 id: "id",
                 accessorFn: (row: DepartmentDTO) => String(row.publicId),
@@ -445,7 +435,7 @@ export function DepartmentDataTable() {
             },
             {
                 id: "actions",
-                cell: ({ row }) => {
+                cell: ({ row, cell }) => {
                     const department = row.original;
                     return (
                         <DropdownMenu>
@@ -466,19 +456,23 @@ export function DepartmentDataTable() {
                                     <Building className="mr-2 h-4 w-4" /> Edit
                                 </DropdownMenuItem>
                                 {/* <DropdownMenuItem
-									onClick={() => {
-										setSelectedDepartment(department);
-										setAssignHeadOpen(true);
-									}}
-								>
-									<UserCog className="mr-2 h-4 w-4" /> Assign Head
-								</DropdownMenuItem> */}
+                                    onClick={() => {
+                                        setSelectedDepartment(department);
+                                        // setAssignHeadOpen(true); // TODO: Re-enable if needed
+                                    }}
+                                >
+                                    <UserCog className="mr-2 h-4 w-4" /> Assign Head
+                                </DropdownMenuItem> */}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     className="text-destructive"
                                     onClick={() => {
-                                        setSelectedDepartment(department);
-                                        setDeleteDialogOpen(true);
+                                        // event.stopPropagation(); // Optional: if you want to prevent other click handlers on the row
+                                        const { table } = cell.getContext(); // Access table instance
+                                        table.resetRowSelection(true); // Clear other selections
+                                        row.toggleSelected(true); // Select current row
+                                        setSelectedDepartment(department); // Still useful for context if dialog shows name
+                                        setBulkDeleteDialogOpen(true);
                                     }}
                                 >
                                     <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -490,13 +484,15 @@ export function DepartmentDataTable() {
                 enableHiding: false,
             },
         ],
-        [setEditDialogOpen, setDeleteDialogOpen, setSelectedDepartment],
+        [setEditDialogOpen, setSelectedDepartment],
     );
 
     // --- Table Instance ---
     const table = useReactTable({
         data: departmentsData ?? [],
         columns,
+        enableRowSelection: true,
+        onRowSelectionChange: setRowSelection,
         state: {
             sorting,
             columnVisibility,
@@ -507,11 +503,10 @@ export function DepartmentDataTable() {
             //     pageSize,
             // },
         },
-        enableRowSelection: true, // Enable if using select column
+
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         onColumnVisibilityChange: setColumnVisibility,
-        onRowSelectionChange: setRowSelection,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         // getPaginationRowModel: getPaginationRowModel(),
@@ -536,9 +531,27 @@ export function DepartmentDataTable() {
     return (
         <div className="w-full space-y-4">
             {/* Filters */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-1 items-center space-x-2">
                 <DataTableFilter table={table} />
-                {/* Column Visibility Dropdown */}
+                <div className="ml-auto flex items-center space-x-2">
+                    {table.getFilteredSelectedRowModel().rows.length > 0 && (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            className="h-8"
+                            onClick={handleBulkDelete}
+                            disabled={bulkDeleteDepartmentsMutation.isPending}
+                        >
+                            {bulkDeleteDepartmentsMutation.isPending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Trash2 className="mr-2 h-4 w-4" />
+                            )}
+                            Delete (
+                            {table.getFilteredSelectedRowModel().rows.length})
+                        </Button>
+                    )}
+                </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="h-8 gap ml-2">
@@ -723,7 +736,17 @@ export function DepartmentDataTable() {
                     users={usersData ?? []}
                 />
             )}
-            {selectedDepartment && (
+            {bulkDeleteDialogOpen && (
+                <DeleteConfirmDialog
+                    isOpen={bulkDeleteDialogOpen}
+                    onClose={() => setBulkDeleteDialogOpen(false)}
+                    title={`Delete ${table.getFilteredSelectedRowModel().rows.length} Department(s)`}
+                    description={`Are you sure you want to delete the selected ${table.getFilteredSelectedRowModel().rows.length} department(s)? This action cannot be undone.`}
+                    onConfirm={handleConfirmBulkDelete}
+                    isLoading={bulkDeleteDepartmentsMutation.isPending}
+                />
+            )}
+            {/* {selectedDepartment && (
                 <DeleteConfirmDialog
                     isOpen={deleteDialogOpen}
                     onClose={() => {
@@ -733,9 +756,9 @@ export function DepartmentDataTable() {
                     title="Delete Department"
                     description={`Are you sure you want to delete the department "${selectedDepartment.name}"? This action cannot be undone.`}
                     onConfirm={handleDeleteDepartment}
-                    isLoading={deleteDepartmentMutation.isPending}
+                    isLoading={deleteDepartmentMutation.isPending} // This would need to be updated if re-enabled
                 />
-            )}
+            )} */}
             {/* {selectedDepartment && (
 				<AssignHeadDialog
 					isOpen={assignHeadOpen}

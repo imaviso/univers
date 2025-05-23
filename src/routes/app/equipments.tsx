@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
-import { addEquipment, deleteEquipment, editEquipment } from "@/lib/api";
+import { addEquipment, bulkDeleteEquipment, editEquipment } from "@/lib/api";
 import { allNavigation } from "@/lib/navigation";
 import {
     allEquipmentCategoriesQueryOptions,
@@ -113,14 +113,14 @@ function EquipmentInventory() {
     const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(
         null,
     );
-    const [equipmentToDelete, setEquipmentToDelete] = useState<string | null>(
-        null,
-    );
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [viewMode, setViewMode] = useState<"table" | "grid" | "reservations">(
         isPrivilegedUser ? "table" : "grid",
     );
     const [addDialogKey, setAddDialogKey] = useState(0);
+    const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>(
+        [],
+    );
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const { data: equipment = [] } = useSuspenseQuery(
         equipmentsQueryOptions(currentUser),
@@ -171,26 +171,35 @@ function EquipmentInventory() {
     });
 
     const deleteMutation = useMutation<
-        void,
+        Record<string, string>,
         Error,
-        { equipmentId: string; userId: string }
+        { equipmentIds: string[]; userId: string }
     >({
-        mutationFn: async ({ equipmentId, userId }) => {
-            await deleteEquipment(equipmentId, userId);
-            return Promise.resolve(undefined);
-        },
-        onSuccess: () => {
-            toast.success("Equipment deleted successfully.");
+        mutationFn: bulkDeleteEquipment,
+        onSuccess: (results) => {
+            const successCount = Object.values(results).filter(
+                (result) => result === "Successfully deleted",
+            ).length;
+            const errorCount = Object.keys(results).length - successCount;
+
+            if (successCount > 0) {
+                toast.success(
+                    `Successfully deleted ${successCount} equipment(s).`,
+                );
+            }
+            if (errorCount > 0) {
+                toast.error(`Failed to delete ${errorCount} equipment(s).`);
+            }
             queryClient.invalidateQueries({
                 queryKey: equipmentsQueryOptions(currentUser).queryKey,
             });
             setIsDeleteDialogOpen(false);
-            setEquipmentToDelete(null);
+            setSelectedEquipmentIds([]);
         },
-        onError: () => {
-            toast.error("Failed to delete equipment");
+        onError: (error) => {
+            toast.error(`Failed to delete equipment: ${error.message}`);
             setIsDeleteDialogOpen(false);
-            setEquipmentToDelete(null);
+            setSelectedEquipmentIds([]);
         },
     });
 
@@ -199,15 +208,17 @@ function EquipmentInventory() {
         setIsAddEquipmentOpen(true);
     }, []);
 
-    const confirmDelete = () => {
-        if (!currentUser) return;
+    const handleDeleteEquipment = (equipmentId: string) => {
+        setSelectedEquipmentIds([equipmentId]);
+        setIsDeleteDialogOpen(true);
+    };
 
-        if (equipmentToDelete) {
-            deleteMutation.mutate({
-                equipmentId: equipmentToDelete,
-                userId: currentUser.publicId,
-            });
-        }
+    const confirmDelete = () => {
+        if (!currentUser || selectedEquipmentIds.length === 0) return;
+        deleteMutation.mutate({
+            equipmentIds: selectedEquipmentIds,
+            userId: currentUser.publicId,
+        });
     };
 
     const handleFormSubmit = (data: EquipmentDTOInput) => {
@@ -433,8 +444,6 @@ function EquipmentInventory() {
                             isPrivilegedUser={isPrivilegedUser}
                             currentUser={currentUser}
                             handleEditEquipment={handleEditEquipment}
-                            setEquipmentToDelete={setEquipmentToDelete}
-                            setIsDeleteDialogOpen={setIsDeleteDialogOpen}
                             isEditMutating={editMutation.isPending}
                             isDeleteMutating={deleteMutation.isPending}
                             deleteMutationVariables={deleteMutation.variables}
@@ -454,8 +463,9 @@ function EquipmentInventory() {
                                             currentUser?.publicId);
                                 const isMutatingItem =
                                     deleteMutation.isPending &&
-                                    deleteMutation.variables?.equipmentId ===
-                                        item.publicId;
+                                    deleteMutation.variables?.equipmentIds.includes(
+                                        item.publicId,
+                                    );
                                 return (
                                     <Card
                                         key={item.publicId}
@@ -525,25 +535,22 @@ function EquipmentInventory() {
                                                                     editMutation.isPending
                                                                 }
                                                             >
-                                                                <Edit className="mr-2 h-4 w-4" />{" "}
+                                                                <Edit className="mr-2 h-4 w-4" />
                                                                 Edit
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem
                                                                 className="text-destructive"
-                                                                onClick={() => {
-                                                                    setEquipmentToDelete(
+                                                                onClick={() =>
+                                                                    handleDeleteEquipment(
                                                                         item.publicId,
-                                                                    );
-                                                                    setIsDeleteDialogOpen(
-                                                                        true,
-                                                                    );
-                                                                }}
+                                                                    )
+                                                                }
                                                                 disabled={
                                                                     isMutatingItem
                                                                 }
                                                             >
-                                                                <Trash2 className="mr-2 h-4 w-4" />{" "}
+                                                                <Trash2 className="mr-2 h-4 w-4" />
                                                                 Delete
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
@@ -628,20 +635,12 @@ function EquipmentInventory() {
                         isOpen={isDeleteDialogOpen}
                         onClose={() => {
                             setIsDeleteDialogOpen(false);
-                            setEquipmentToDelete(null);
+                            setSelectedEquipmentIds([]);
                         }}
                         onConfirm={confirmDelete}
                         isLoading={deleteMutation.isPending}
-                        title={
-                            equipmentToDelete
-                                ? "Delete Equipment"
-                                : "Delete Selected Equipment"
-                        }
-                        description={
-                            equipmentToDelete
-                                ? "Are you sure you want to permanently delete this equipment?"
-                                : "Are you sure you want to permanently delete the selected equipment items?"
-                        }
+                        title={`Delete ${selectedEquipmentIds.length} Equipment Item(s)`}
+                        description={`Are you sure you want to permanently delete ${selectedEquipmentIds.length} selected equipment item(s)? This action cannot be undone.`}
                     />
                 )}
             </div>

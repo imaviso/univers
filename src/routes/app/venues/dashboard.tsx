@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { VenueDataTable } from "@/components/venue/venueDataTable";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
-import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
+import { bulkDeleteVenues, createVenue, updateVenue } from "@/lib/api";
 import {
     departmentsQueryOptions,
     ownEventsQueryOptions,
@@ -162,20 +162,16 @@ export function VenueManagement() {
         },
     });
 
-    const deleteVenueMutation = useMutation({
-        mutationFn: deleteVenue,
+    const bulkDeleteVenuesMutation = useMutation({
+        mutationFn: bulkDeleteVenues,
         onSuccess: () => {
-            toast.success("Venue deleted successfully.");
+            toast.success("Selected venues deleted successfully.");
             queryClient.invalidateQueries({
                 queryKey: venuesQueryOptions.queryKey,
             });
-            setIsDeleteDialogOpen(false);
-            setVenueToDelete(null);
         },
         onError: () => {
-            toast.error("Failed to delete venue.");
-            setIsDeleteDialogOpen(false);
-            setVenueToDelete(null);
+            toast.error("Failed to delete selected venues.");
         },
     });
 
@@ -206,7 +202,7 @@ export function VenueManagement() {
 
     const handleDeleteConfirm = () => {
         if (venueToDelete) {
-            deleteVenueMutation.mutate(venueToDelete);
+            bulkDeleteVenuesMutation.mutate(venueToDelete.split(","));
         }
     };
 
@@ -276,7 +272,7 @@ export function VenueManagement() {
     const isMutating =
         createVenueMutation.isPending ||
         updateVenueMutation.isPending ||
-        deleteVenueMutation.isPending;
+        bulkDeleteVenuesMutation.isPending;
 
     return (
         <div className="bg-background">
@@ -417,14 +413,25 @@ export function VenueManagement() {
                                 data={filteredVenues}
                                 currentUser={currentUser}
                                 venueOwners={venueOwners}
-                                handleEditVenue={(venue) => {
-                                    setEditingVenue(venue);
-                                    setIsAddVenueOpen(true);
-                                }}
+                                handleEditVenue={setEditingVenue}
                                 setVenueToDelete={setVenueToDelete}
                                 setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-                                isDeletingVenue={deleteVenueMutation.isPending}
+                                isDeletingVenue={
+                                    bulkDeleteVenuesMutation.isPending
+                                }
                                 venueToDeleteId={venueToDelete}
+                                onBulkDelete={
+                                    role.includes("SUPER_ADMIN")
+                                        ? (ids) => {
+                                              if (ids.length > 0) {
+                                                  setVenueToDelete(
+                                                      ids.join(","),
+                                                  );
+                                                  setIsDeleteDialogOpen(true);
+                                              }
+                                          }
+                                        : undefined
+                                }
                             />
                         )}
 
@@ -504,9 +511,10 @@ export function VenueManagement() {
                                                                     );
                                                                 }}
                                                                 disabled={
-                                                                    deleteVenueMutation.isPending &&
-                                                                    deleteVenueMutation.variables ===
-                                                                        venue.publicId
+                                                                    bulkDeleteVenuesMutation.isPending &&
+                                                                    bulkDeleteVenuesMutation.variables.includes(
+                                                                        venue.publicId,
+                                                                    )
                                                                 }
                                                             >
                                                                 <Trash2 className="mr-2 h-4 w-4" />{" "}
@@ -756,10 +764,28 @@ export function VenueManagement() {
                             setIsDeleteDialogOpen(false);
                             setVenueToDelete(null);
                         }}
-                        onConfirm={handleDeleteConfirm}
-                        title="Delete Venue"
-                        description={`Are you sure you want to delete the venue "${venues.find((v) => v.publicId === venueToDelete)?.name}"? This action cannot be undone.`}
-                        isLoading={deleteVenueMutation.isPending}
+                        onConfirm={() => {
+                            if (venueToDelete?.includes(",")) {
+                                // Bulk delete
+                                bulkDeleteVenuesMutation.mutate(
+                                    venueToDelete.split(","),
+                                );
+                            } else {
+                                // Single delete
+                                handleDeleteConfirm();
+                            }
+                        }}
+                        title={
+                            venueToDelete?.includes(",")
+                                ? "Delete Venues"
+                                : "Delete Venue"
+                        }
+                        description={
+                            venueToDelete?.includes(",")
+                                ? `Are you sure you want to delete ${venueToDelete.split(",").length} selected venues? This action cannot be undone.`
+                                : `Are you sure you want to delete the venue "${venues.find((v) => v.publicId === venueToDelete)?.name}"? This action cannot be undone.`
+                        }
+                        isLoading={bulkDeleteVenuesMutation.isPending}
                     />
                 </>
             )}

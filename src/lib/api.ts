@@ -317,22 +317,24 @@ export const updateUser = async ({
     }
 };
 
-export const deactivateUser = async (userId: string): Promise<string> => {
+export const bulkDeactivateUsersAsAdmin = async (
+    userPublicIds: string[],
+): Promise<string[]> => {
     try {
-        const response = await fetchWithAuth(
-            `${API_BASE_URL}/admin/users/${userId}`,
-            {
-                method: "DELETE",
-            },
-        );
-        const data = await handleApiResponse<string>(response, false);
-        return data || "User deactivated successfully";
+        const response = await fetchWithAuth(`${API_BASE_URL}/admin/users`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(userPublicIds),
+        });
+        const data = await handleApiResponse<string[]>(response, true);
+        return data || [];
     } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred during deactivating user.",
-              );
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw new Error(
+            `An unexpected error occurred during bulk deactivating users. ${error instanceof Error ? error.message : String(error)}`,
+        );
     }
 };
 
@@ -742,21 +744,23 @@ export const updateVenue = async ({
     }
 };
 
-export const deleteVenue = async (venueId: string): Promise<string> => {
+export const bulkDeleteVenues = async (venueIds: string[]): Promise<string> => {
     try {
         const response = await fetchWithAuth(
-            `${API_BASE_URL}/admin/venues/${venueId}`,
+            `${API_BASE_URL}/admin/venues/bulk`,
             {
                 method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(venueIds),
             },
         );
         const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Venue deleted successfully";
+        return responseData || "Venues deleted successfully";
     } catch (error) {
         throw error instanceof Error
             ? error
             : new Error(
-                  `An unexpected error occurred during deleting venue ${venueId}.`,
+                  "An unexpected error occurred during bulk deleting venues.",
               );
     }
 };
@@ -960,28 +964,6 @@ export const editEquipment = async ({
     }
 };
 
-export const deleteEquipment = async (
-    equipmentId: string,
-    userId: string,
-): Promise<string> => {
-    try {
-        const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`);
-        url.searchParams.append("userId", userId);
-
-        const response = await fetchWithAuth(url.toString(), {
-            method: "DELETE",
-        });
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Equipment deleted successfully";
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  `An unexpected error occurred during deleting equipment ${equipmentId}.`,
-              );
-    }
-};
-
 export const getAllDepartments = async (): Promise<DepartmentDTO[]> => {
     try {
         const response = await fetchWithAuth(`${API_BASE_URL}/departments`, {
@@ -1093,25 +1075,36 @@ export const assignDepartmentHead = async (
     }
 };
 
-export const deleteDepartment = async (
-    departmentId: string,
-): Promise<string> => {
+export const bulkDeleteDepartments = async (
+    departmentPublicIds: string[],
+): Promise<string[]> => {
+    if (!departmentPublicIds || departmentPublicIds.length === 0) {
+        // Optional: Add client-side validation to prevent empty requests
+        // Or rely on backend validation, which is already in place.
+        // For now, let the backend handle this to keep API consistent.
+    }
     try {
         const response = await fetchWithAuth(
-            `${API_BASE_URL}/admin/department/${departmentId}`,
+            `${API_BASE_URL}/admin/departments`, // Updated endpoint for bulk deletion
             {
                 method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(departmentPublicIds),
             },
         );
 
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Department deleted successfully";
+        // Backend returns ApiResponse<List<String>>, so expect string[] and JSON true
+        const responseData = await handleApiResponse<string[]>(response, true);
+        return responseData || []; // Return empty array if no specific messages
     } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  `An unexpected error occurred during deleting department ${departmentId}.`,
-              );
+        // Propagate the error for the calling code (e.g., React Query mutation) to handle
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        // Create a generic error message if it's not an ApiError
+        throw new Error(
+            `An unexpected error occurred during bulk deleting departments. ${error instanceof Error ? error.message : String(error)}`,
+        );
     }
 };
 
@@ -1984,6 +1977,36 @@ export const deleteEquipmentCategory = async (
             ? error
             : new Error(
                   `An unexpected error occurred while deleting equipment category ${publicId}.`,
+              );
+    }
+};
+
+export const bulkDeleteEquipment = async ({
+    equipmentIds,
+    userId,
+}: {
+    equipmentIds: string[];
+    userId: string;
+}): Promise<Record<string, string>> => {
+    try {
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/equipments/bulk?userId=${userId}`,
+            {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ equipmentIds }),
+            },
+        );
+        const responseData = await handleApiResponse<Record<string, string>>(
+            response,
+            true,
+        );
+        return responseData || {};
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while deleting equipments.",
               );
     }
 };
