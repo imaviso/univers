@@ -13,19 +13,21 @@ import type {
     Equipment,
     EquipmentActionInput,
     EquipmentApprovalDTO,
+    EquipmentCategoryDTO,
     EquipmentReservationDTO,
     Event,
     EventApprovalDTO,
     EventCountDTO,
     EventDTO,
     EventDTOPayload,
-    EventTypeSummaryDTO,
+    EventTypeStatusDistributionDTO,
     PeakHourDTO,
     RecentActivityItemDTO,
     TopEquipmentDTO,
     TopVenueDTO,
     UserActivityDTO,
     UserDTO,
+    UserReservationActivityDTO,
     VenueDTO,
 } from "./types";
 
@@ -833,7 +835,8 @@ export const addEquipment = async ({
     try {
         const formData = new FormData();
 
-        const { ownerId, ...restOfEquipmentData } = equipmentData;
+        const { ownerId, categoryIds, ...restOfEquipmentData } = equipmentData;
+
         const equipmentJsonPayload: Partial<
             Omit<
                 Equipment,
@@ -842,15 +845,20 @@ export const addEquipment = async ({
                 | "imagePath"
                 | "createdAt"
                 | "updatedAt"
+                | "categories"
             >
         > & {
             equipmentOwner?: { publicId: string };
-        } = { ...restOfEquipmentData };
+            categoryIds?: string[];
+        } = {
+            ...restOfEquipmentData,
+        };
 
         if (ownerId) {
-            equipmentJsonPayload.equipmentOwner = {
-                publicId: ownerId as unknown as string,
-            };
+            equipmentJsonPayload.equipmentOwner = { publicId: ownerId };
+        }
+        if (categoryIds && categoryIds.length > 0) {
+            equipmentJsonPayload.categoryIds = categoryIds;
         }
 
         formData.append(
@@ -894,7 +902,8 @@ export const editEquipment = async ({
     try {
         const formData = new FormData();
 
-        const { ownerId, ...restOfEquipmentData } = equipmentData;
+        const { ownerId, categoryIds, ...restOfEquipmentData } = equipmentData;
+
         const equipmentJsonPayload: Partial<
             Omit<
                 Equipment,
@@ -903,15 +912,23 @@ export const editEquipment = async ({
                 | "imagePath"
                 | "createdAt"
                 | "updatedAt"
+                | "categories"
             >
         > & {
-            equipmentOwner?: { publicId: string };
-        } = { ...restOfEquipmentData };
+            equipmentOwner?: { publicId: string } | null;
+            categoryIds?: string[];
+        } = {
+            ...restOfEquipmentData,
+        };
 
-        if (ownerId) {
-            equipmentJsonPayload.equipmentOwner = {
-                publicId: ownerId as unknown as string,
-            };
+        if (Object.prototype.hasOwnProperty.call(equipmentData, "ownerId")) {
+            equipmentJsonPayload.equipmentOwner = ownerId
+                ? { publicId: ownerId }
+                : null;
+        }
+
+        if (categoryIds) {
+            equipmentJsonPayload.categoryIds = categoryIds;
         }
 
         formData.append(
@@ -1229,32 +1246,33 @@ export const deleteAllNotifications = async (): Promise<void> => {
 const EQUIPMENT_RESERVATIONS_BASE_URL = `${API_BASE_URL}/equipment-reservations`;
 
 export const createEquipmentReservation = async (
-    reservationInput: CreateEquipmentReservationInput,
-): Promise<EquipmentReservationDTO> => {
-    const formData = new FormData();
-    formData.append(
-        "reservation",
-        new Blob([JSON.stringify(reservationInput)], {
-            type: "application/json",
-        }),
-    );
-
+    reservationsInput: CreateEquipmentReservationInput[],
+): Promise<EquipmentReservationDTO[]> => {
     try {
         const response = await fetchWithAuth(EQUIPMENT_RESERVATIONS_BASE_URL, {
             method: "POST",
-            body: formData,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(reservationsInput),
         });
-        const responseData = await handleApiResponse<EquipmentReservationDTO>(
+        const responseData = await handleApiResponse<EquipmentReservationDTO[]>(
             response,
             true,
         );
-        return responseData || ({} as EquipmentReservationDTO);
+        return responseData || []; // Return empty array if responseData is null/undefined
     } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred creating equipment reservation.",
-              );
+        // Log the detailed error for better debugging
+        console.error("Error in createEquipmentReservation:", error);
+        // Re-throw a more specific error or the original error if it's already an ApiError
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw new Error(
+            error instanceof Error
+                ? error.message
+                : "An unexpected error occurred while creating equipment reservations.",
+        );
     }
 };
 
@@ -1333,23 +1351,29 @@ export const getEquipmentReservationById = async (
     }
 };
 
-// PATCH /equipment-reservations/{reservationId}/approve
+// PATCH /equipment-reservations/approve
 export const approveEquipmentReservation = async ({
     reservationPublicId,
     remarks,
-}: EquipmentActionInput): Promise<string> => {
+}: EquipmentActionInput): Promise<Map<string, string>> => {
     try {
-        const payload = { remarks: remarks || "" };
+        const payload = {
+            reservationIds: [reservationPublicId],
+            remarks: remarks || "",
+        };
         const response = await fetchWithAuth(
-            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationPublicId}/approve`,
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/approve`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             },
         );
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Equipment reservation approved successfully";
+        const responseData = await handleApiResponse<Map<string, string>>(
+            response,
+            true,
+        );
+        return responseData || new Map();
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1359,26 +1383,32 @@ export const approveEquipmentReservation = async ({
     }
 };
 
-// PATCH /equipment-reservations/{reservationId}/reject
+// PATCH /equipment-reservations/reject
 export const rejectEquipmentReservation = async ({
     reservationPublicId,
     remarks,
-}: EquipmentActionInput): Promise<string> => {
+}: EquipmentActionInput): Promise<Map<string, string>> => {
     if (!remarks || remarks.trim() === "") {
         throw new Error("Rejection remarks are required.");
     }
     try {
-        const payload = { remarks };
+        const payload = {
+            reservationIds: [reservationPublicId],
+            remarks,
+        };
         const response = await fetchWithAuth(
-            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationPublicId}/reject`,
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/reject`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             },
         );
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Equipment reservation rejected successfully";
+        const responseData = await handleApiResponse<Map<string, string>>(
+            response,
+            true,
+        );
+        return responseData || new Map();
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1388,19 +1418,27 @@ export const rejectEquipmentReservation = async ({
     }
 };
 
-// PATCH /equipment-reservations/{reservationId}/cancel
+// PATCH /equipment-reservations/cancel
 export const cancelEquipmentReservation = async (
     reservationId: string,
-): Promise<string> => {
+): Promise<Map<string, string>> => {
     try {
+        const payload = {
+            reservationIds: [reservationId],
+        };
         const response = await fetchWithAuth(
-            `${EQUIPMENT_RESERVATIONS_BASE_URL}/${reservationId}/cancel`,
+            `${EQUIPMENT_RESERVATIONS_BASE_URL}/cancel`,
             {
                 method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
             },
         );
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Equipment reservation cancelled successfully";
+        const responseData = await handleApiResponse<Map<string, string>>(
+            response,
+            true,
+        );
+        return responseData || new Map();
     } catch (error) {
         throw error instanceof Error
             ? error
@@ -1796,7 +1834,7 @@ export const getEventTypesSummary = async (
     startDate: string,
     endDate: string,
     limit = 10, // Default limit, can be adjusted or made optional
-): Promise<EventTypeSummaryDTO[]> => {
+): Promise<EventTypeStatusDistributionDTO[]> => {
     const params = new URLSearchParams({
         startDate,
         endDate,
@@ -1809,5 +1847,143 @@ export const getEventTypesSummary = async (
             headers: { "Content-Type": "application/json" },
         },
     );
-    return handleApiResponse<EventTypeSummaryDTO[]>(response, true);
+    return handleApiResponse<EventTypeStatusDistributionDTO[]>(response, true);
+};
+
+export const getUserReservationActivity = async (
+    startDate: string,
+    endDate: string,
+    userFilter?: string,
+    limit = 10,
+): Promise<UserReservationActivityDTO[]> => {
+    const params = new URLSearchParams({
+        startDate,
+        endDate,
+        limit: limit.toString(),
+    });
+    if (userFilter) {
+        params.append("userFilter", userFilter);
+    }
+    const response = await fetchWithAuth(
+        `${DASHBOARD_BASE_URL}/user-reservation-activity?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        },
+    );
+    return handleApiResponse<UserReservationActivityDTO[]>(response, true);
+};
+
+// --- Equipment Category API ---
+
+const EQUIPMENT_CATEGORY_BASE_URL = `${API_BASE_URL}/equipment-categories`;
+
+export const createEquipmentCategory = async (
+    categoryDTO: Omit<
+        EquipmentCategoryDTO,
+        "publicId" | "createdAt" | "updatedAt"
+    >,
+): Promise<EquipmentCategoryDTO> => {
+    try {
+        const response = await fetchWithAuth(EQUIPMENT_CATEGORY_BASE_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(categoryDTO),
+        });
+        return await handleApiResponse<EquipmentCategoryDTO>(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while creating equipment category.",
+              );
+    }
+};
+
+export const getAllEquipmentCategories = async (): Promise<
+    EquipmentCategoryDTO[]
+> => {
+    try {
+        const response = await fetchWithAuth(EQUIPMENT_CATEGORY_BASE_URL, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+        const data = await handleApiResponse<EquipmentCategoryDTO[]>(
+            response,
+            true,
+        );
+        return data || [];
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  "An unexpected error occurred while fetching all equipment categories.",
+              );
+    }
+};
+
+export const getEquipmentCategoryByPublicId = async (
+    publicId: string,
+): Promise<EquipmentCategoryDTO> => {
+    try {
+        const response = await fetchWithAuth(
+            `${EQUIPMENT_CATEGORY_BASE_URL}/${publicId}`,
+            {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+            },
+        );
+        return await handleApiResponse<EquipmentCategoryDTO>(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred while fetching equipment category ${publicId}.`,
+              );
+    }
+};
+
+export const updateEquipmentCategory = async (
+    publicId: string,
+    categoryDTO: Partial<
+        Omit<EquipmentCategoryDTO, "publicId" | "createdAt" | "updatedAt">
+    >,
+): Promise<EquipmentCategoryDTO> => {
+    try {
+        const response = await fetchWithAuth(
+            `${EQUIPMENT_CATEGORY_BASE_URL}/${publicId}`,
+            {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(categoryDTO),
+            },
+        );
+        return await handleApiResponse<EquipmentCategoryDTO>(response, true);
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred while updating equipment category ${publicId}.`,
+              );
+    }
+};
+
+export const deleteEquipmentCategory = async (
+    publicId: string,
+): Promise<string> => {
+    try {
+        const response = await fetchWithAuth(
+            `${EQUIPMENT_CATEGORY_BASE_URL}/${publicId}`,
+            {
+                method: "DELETE",
+            },
+        );
+        return await handleApiResponse<string>(response, false); // Expects text response
+    } catch (error) {
+        throw error instanceof Error
+            ? error
+            : new Error(
+                  `An unexpected error occurred while deleting equipment category ${publicId}.`,
+              );
+    }
 };

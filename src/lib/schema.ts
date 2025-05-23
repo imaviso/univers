@@ -530,8 +530,11 @@ export const equipmentDataSchema = v.object({
     serialNo: v.pipe(v.string(), v.nonEmpty("Serial Number is required")),
     ownerId: v.optional(
         v.pipe(v.string(), v.uuid("Owner ID must be a valid UUID")),
-    ), // For SUPER_ADMIN to assign owner
+    ),
     image: v.optional(ImageSchema),
+    categoryIds: v.optional(
+        v.array(v.pipe(v.string(), v.uuid("Category ID must be a valid UUID"))),
+    ),
 });
 
 export type EquipmentDTOInput = v.InferInput<typeof equipmentDataSchema>;

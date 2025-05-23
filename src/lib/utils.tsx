@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { type ClassValue, clsx } from "clsx";
 import { format, setHours, setMinutes } from "date-fns";
+import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import type { Equipment, UserRole } from "./types";
 
@@ -186,3 +187,43 @@ export const getBadgeVariant = (role: UserRole): string => {
             return "bg-gray-100 text-gray-800";
     }
 };
+
+export function usePersistentState<T>(
+    key: string,
+    initialValue: T,
+): [T, React.Dispatch<React.SetStateAction<T>>] {
+    const [state, setState] = useState<T>(() => {
+        try {
+            const storedValue = localStorage.getItem(key);
+            if (!storedValue) return initialValue;
+
+            try {
+                const parsed = JSON.parse(storedValue);
+                return parsed ?? initialValue;
+            } catch (parseError) {
+                console.warn(
+                    `Invalid JSON in localStorage for key "${key}":`,
+                    parseError,
+                );
+                return initialValue;
+            }
+        } catch (error) {
+            console.error("Error reading from localStorage:", error);
+            return initialValue;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            if (state === undefined) {
+                localStorage.removeItem(key);
+            } else {
+                localStorage.setItem(key, JSON.stringify(state));
+            }
+        } catch (error) {
+            console.error("Error writing to localStorage:", error);
+        }
+    }, [key, state]);
+
+    return [state, setState];
+}

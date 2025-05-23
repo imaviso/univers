@@ -63,6 +63,7 @@ export type Equipment = {
     equipmentOwner: UserDTO;
     imagePath: string;
     status: "DEFECT" | "MAINTENANCE" | "NEED_REPLACEMENT" | "NEW";
+    categories: EquipmentCategoryDTO[];
     serialNo: string;
     createdAt: string;
     updatedAt: string;
@@ -267,10 +268,10 @@ export type EquipmentReservationDTO = {
 export type CreateEquipmentReservationInput = {
     event: { publicId: string };
     equipment: { publicId: string };
+    department: { publicId: string };
     quantity: number;
-    department?: { publicId: string };
-    startTime?: string;
-    endTime?: string;
+    startTime: string;
+    endTime: string;
 };
 
 export type EquipmentActionInput = {
@@ -301,24 +302,52 @@ export interface ApiResponse<T> {
     };
 }
 
+export interface EventTypeStatusDistributionDTO {
+    name: string; // Event Type Name
+    totalCount: number;
+    approvedCount: number;
+    pendingCount: number;
+    canceledCount: number;
+    rejectedCount: number;
+    ongoingCount: number;
+    completedCount: number;
+}
+
 // Dashboard-specific DTOs
 export interface TopVenueDTO {
     venueName: string;
-    eventCount: number;
+    totalEventCount: number;
+    pendingCount: number;
+    approvedCount: number;
+    rejectedCount: number;
+    canceledCount: number;
+    ongoingCount: number;
+    completedCount: number;
 }
 
 export interface TopEquipmentDTO {
     equipmentName: string;
-    reservationCount: number;
+    totalReservationCount: number;
+    pendingCount: number;
+    approvedCount: number;
+    rejectedCount: number;
+    canceledCount: number;
+    ongoingCount: number;
+    completedCount: number;
 }
 
 export interface EventCountDTO {
     date: string; // LocalDate is typically string "YYYY-MM-DD"
-    eventCount: number;
+    pendingCount?: number;
+    approvedCount?: number;
+    rejectedCount?: number;
+    canceledCount?: number;
+    ongoingCount?: number;
+    completedCount?: number;
 }
 
 export interface CancellationRateDTO {
-    date: string; // LocalDate is typically string "YYYY-MM-DD"
+    date: string;
     cancellationRate: number;
     canceledCount: number;
     totalCreatedCount: number;
@@ -336,6 +365,19 @@ export interface UserActivityDTO {
     eventCount: number;
 }
 
+export interface UserReservationActivityDTO {
+    userPublicId: string; // UUID is string
+    userFirstName: string;
+    userLastName: string;
+    totalReservationCount: number;
+    pendingCount: number;
+    approvedCount: number;
+    rejectedCount: number;
+    canceledCount: number;
+    ongoingCount: number;
+    completedCount: number;
+}
+
 export type RecentActivityItemDTO = {
     id: string;
     type: string; // e.g., "Event", "Equipment Reservation"
@@ -351,4 +393,10 @@ export type EventTypeSummaryDTO = {
     value: number; // Count of events for this type (using number for frontend consistency with charts)
 };
 
-// --- Notification System Types ---
+export type EquipmentCategoryDTO = {
+    publicId: string;
+    name: string;
+    description: string | null;
+    createdAt: string;
+    updatedAt: string | null;
+};

@@ -2,20 +2,14 @@ import {
     type ChartConfig,
     ChartContainer,
     ChartTooltip,
-    ChartTooltipContent,
 } from "@/components/ui/chart";
+import { topEquipmentQueryOptions } from "@/lib/query"; // Corrected path
+import type { TopEquipmentDTO } from "@/lib/types"; // Import for explicit typing
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import * as React from "react"; // Added React import
 import type { DateRange } from "react-day-picker";
-import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    LabelList,
-    XAxis,
-    YAxis,
-} from "recharts";
-import { topEquipmentQueryOptions } from "../../lib/query";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Skeleton } from "../ui/skeleton";
 
 interface TopEquipmentChartProps {
@@ -23,12 +17,21 @@ interface TopEquipmentChartProps {
     equipmentTypeFilter?: string;
 }
 
-const chartConfig = {
-    count: {
-        label: "Reservations",
-        color: "var(--chart-3)",
+// Define statuses (same as in UserActivityChart)
+const RESERVATION_STATUSES = [
+    { key: "pendingCount", label: "Pending", color: "var(--chart-1)" },
+    { key: "approvedCount", label: "Approved", color: "var(--chart-2)" },
+    { key: "ongoingCount", label: "Ongoing", color: "var(--chart-3)" },
+    { key: "completedCount", label: "Completed", color: "var(--chart-4)" },
+    { key: "rejectedCount", label: "Rejected", color: "var(--chart-5)" },
+    {
+        key: "canceledCount",
+        label: "Canceled",
+        color: "var(--chart-6, var(--muted-foreground))",
     },
-} satisfies ChartConfig;
+] as const;
+
+// chartConfig will be generated dynamically based on statuses and data
 
 export function TopEquipmentChart({
     dateRange,
@@ -43,7 +46,7 @@ export function TopEquipmentChart({
     const limit = 7; // Fetch top 7 equipment types
 
     const {
-        data: topEquipmentData,
+        data: rawTopEquipmentData, // Rename to avoid conflict with typed variable
         isLoading,
         isError,
         error,
@@ -56,8 +59,37 @@ export function TopEquipmentChart({
         ),
     );
 
+    const topEquipmentData = rawTopEquipmentData as
+        | TopEquipmentDTO[]
+        | undefined;
+
     // console.log("TopEquipmentChart received filters:", { dateRange, equipmentTypeFilter });
     // console.log("Top Equipment Data:", topEquipmentData);
+
+    const chartData = React.useMemo(() => {
+        if (!topEquipmentData) return [];
+        return topEquipmentData
+            .map((equip) => ({
+                name: equip.equipmentName,
+                pendingCount: equip.pendingCount || 0,
+                approvedCount: equip.approvedCount || 0,
+                ongoingCount: equip.ongoingCount || 0,
+                completedCount: equip.completedCount || 0,
+                rejectedCount: equip.rejectedCount || 0,
+                canceledCount: equip.canceledCount || 0,
+                totalReservationCount: equip.totalReservationCount || 0,
+            }))
+            .sort((a, b) => b.totalReservationCount - a.totalReservationCount);
+    }, [topEquipmentData]);
+
+    const chartConfig = React.useMemo(() => {
+        const config: ChartConfig = {};
+        for (const status of RESERVATION_STATUSES) {
+            config[status.key] = { label: status.label, color: status.color };
+        }
+        config.totalReservationCount = { label: "Total Reservations" };
+        return config;
+    }, []);
 
     if (isLoading) {
         return (
@@ -76,7 +108,8 @@ export function TopEquipmentChart({
         );
     }
 
-    if (!topEquipmentData || topEquipmentData.length === 0) {
+    if (!chartData || chartData.length === 0) {
+        // Check chartData instead
         return (
             <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
                 <p>
@@ -88,48 +121,109 @@ export function TopEquipmentChart({
         );
     }
 
-    const chartData = topEquipmentData
-        .map((item) => ({
-            name: item.equipmentName,
-            count: item.reservationCount,
-        }))
-        .sort((a, b) => b.count - a.count); // Ensure descending order
-
     return (
         <div className="h-[300px] w-full">
             <ChartContainer config={chartConfig} className="h-full w-full">
                 <BarChart
+                    layout="vertical" // Changed to vertical
                     data={chartData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    margin={{ top: 5, right: 50, left: 20, bottom: 5 }} // Adjusted margins
                     accessibilityLayer
                 >
-                    <CartesianGrid vertical={false} />
+                    <CartesianGrid horizontal={false} strokeDasharray="3 3" />
                     <XAxis
-                        dataKey="name"
-                        type="category"
+                        type="number"
+                        stroke="var(--muted-foreground)"
+                        fontSize={12}
                         tickLine={false}
-                        tickMargin={10}
                         axisLine={false}
-                        interval={0}
-                        tick={{ fontSize: 12 }}
                     />
                     <YAxis
-                        dataKey="count"
-                        type="number"
-                        allowDecimals={false}
+                        type="category"
+                        dataKey="name"
+                        stroke="var(--muted-foreground)"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        width={120} // Adjust width for names
+                        tickFormatter={(value: string) =>
+                            value.length > 15
+                                ? `${value.substring(0, 13)}...`
+                                : value
+                        }
                     />
                     <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent hideLabel />}
+                        cursor={{ fill: "var(--muted)" }}
+                        content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                                const data = payload[0]
+                                    .payload as (typeof chartData)[number];
+                                return (
+                                    <div className="min-w-[180px] rounded-lg border bg-background p-2 shadow-sm text-xs">
+                                        <div className="font-bold mb-1 text-foreground">
+                                            {label} {/* Equipment's name */}
+                                        </div>
+                                        <div className="space-y-1">
+                                            {RESERVATION_STATUSES.map(
+                                                (status) => {
+                                                    const count =
+                                                        data[status.key];
+                                                    if (count > 0) {
+                                                        return (
+                                                            <div
+                                                                key={status.key}
+                                                                className="flex items-center justify-between"
+                                                            >
+                                                                <div className="flex items-center">
+                                                                    <span
+                                                                        className="w-2.5 h-2.5 rounded-full mr-2"
+                                                                        style={{
+                                                                            backgroundColor:
+                                                                                status.color,
+                                                                        }}
+                                                                    />
+                                                                    <span className="text-muted-foreground">
+                                                                        {
+                                                                            status.label
+                                                                        }
+                                                                        :
+                                                                    </span>
+                                                                </div>
+                                                                <span className="font-semibold text-foreground">
+                                                                    {count.toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                },
+                                            )}
+                                            <hr className="my-1" />
+                                            <div className="flex items-center justify-between font-medium">
+                                                <span className="text-muted-foreground">
+                                                    Total:
+                                                </span>
+                                                <span className="text-foreground">
+                                                    {data.totalReservationCount.toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        }}
                     />
-                    <Bar dataKey="count" fill="var(--color-count)" radius={8}>
-                        <LabelList
-                            position="top"
-                            offset={12}
-                            className="fill-foreground"
-                            fontSize={12}
+                    {RESERVATION_STATUSES.map((status) => (
+                        <Bar
+                            key={status.key}
+                            dataKey={status.key}
+                            stackId="a"
+                            fill={status.color}
+                            radius={0}
+                            barSize={30}
                         />
-                    </Bar>
+                    ))}
                 </BarChart>
             </ChartContainer>
         </div>

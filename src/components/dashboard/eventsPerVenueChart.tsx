@@ -2,10 +2,11 @@
 
 import {
     type ChartConfig,
-    ChartStyle,
+    ChartStyle, // Re-added import
     ChartTooltip,
 } from "@/components/ui/chart";
 import { topVenuesQueryOptions } from "@/lib/query";
+import type { TopVenueDTO } from "@/lib/types"; // Import for explicit typing
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as React from "react";
@@ -14,8 +15,6 @@ import {
     Bar,
     BarChart,
     CartesianGrid,
-    Cell,
-    LabelList,
     ResponsiveContainer,
     XAxis,
     YAxis,
@@ -26,13 +25,21 @@ interface EventsPerVenueChartProps {
     dateRange?: DateRange;
 }
 
-const BASE_CHART_COLORS_HSL = [
-    "var(--chart-1)",
-    "var(--chart-2)",
-    "var(--chart-3)",
-    "var(--chart-4)",
-    "var(--chart-5)",
-];
+// const BASE_CHART_COLORS_HSL = ...; // No longer needed
+
+// Define statuses (same as in UserActivityChart and TopEquipmentChart)
+const RESERVATION_STATUSES = [
+    { key: "pendingCount", label: "Pending", color: "var(--chart-1)" },
+    { key: "approvedCount", label: "Approved", color: "var(--chart-2)" },
+    { key: "ongoingCount", label: "Ongoing", color: "var(--chart-3)" },
+    { key: "completedCount", label: "Completed", color: "var(--chart-4)" },
+    { key: "rejectedCount", label: "Rejected", color: "var(--chart-5)" },
+    {
+        key: "canceledCount",
+        label: "Canceled",
+        color: "var(--chart-6, var(--muted-foreground))",
+    },
+] as const;
 
 export function EventsPerVenueChart({ dateRange }: EventsPerVenueChartProps) {
     const id = "bar-events-per-venue";
@@ -45,47 +52,40 @@ export function EventsPerVenueChart({ dateRange }: EventsPerVenueChartProps) {
     const limit = 7;
 
     const {
-        data: topVenuesData,
+        data: rawTopVenuesData, // Rename to avoid conflict
         isLoading,
         isError,
         error,
     } = useQuery(topVenuesQueryOptions(startDate, endDate, limit));
 
-    const totalEvents = React.useMemo(() => {
-        if (!topVenuesData) return 0;
-        return topVenuesData.reduce((sum, item) => sum + item.eventCount, 0);
-    }, [topVenuesData]);
+    const topVenuesData = rawTopVenuesData as TopVenueDTO[] | undefined;
+
+    // const totalEvents = ...; // No longer needed directly here, can be derived in tooltip if necessary
 
     const chartData = React.useMemo(() => {
         if (!topVenuesData) return [];
-        return topVenuesData.map((item, index) => ({
-            name: item.venueName,
-            value: item.eventCount,
-            fill: BASE_CHART_COLORS_HSL[index % BASE_CHART_COLORS_HSL.length],
-            percentage:
-                totalEvents > 0
-                    ? Number.parseFloat(
-                          ((item.eventCount / totalEvents) * 100).toFixed(1),
-                      )
-                    : 0,
-        }));
-    }, [topVenuesData, totalEvents]);
+        return topVenuesData
+            .map((venue) => ({
+                name: venue.venueName,
+                pendingCount: venue.pendingCount || 0,
+                approvedCount: venue.approvedCount || 0,
+                ongoingCount: venue.ongoingCount || 0,
+                completedCount: venue.completedCount || 0,
+                rejectedCount: venue.rejectedCount || 0,
+                canceledCount: venue.canceledCount || 0,
+                totalEventCount: venue.totalEventCount || 0,
+            }))
+            .sort((a, b) => b.totalEventCount - a.totalEventCount);
+    }, [topVenuesData]);
 
     const chartConfig = React.useMemo(() => {
-        const config: ChartConfig = {
-            events: {
-                label: "Events",
-            },
-        };
-        for (const item of chartData) {
-            const key = item.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-            config[key] = {
-                label: item.name,
-                color: item.fill,
-            };
+        const config: ChartConfig = {};
+        for (const status of RESERVATION_STATUSES) {
+            config[status.key] = { label: status.label, color: status.color };
         }
+        config.totalEventCount = { label: "Total Events" };
         return config;
-    }, [chartData]);
+    }, []);
 
     if (isLoading) {
         return (
@@ -160,23 +160,78 @@ export function EventsPerVenueChart({ dateRange }: EventsPerVenueChartProps) {
                             tickLine={false}
                             axisLine={false}
                         />
-                        <YAxis type="category" dataKey="name" hide />
+                        <YAxis
+                            type="category"
+                            dataKey="name"
+                            stroke="var(--muted-foreground)"
+                            fontSize={12}
+                            tickLine={false}
+                            axisLine={false}
+                            width={120} // Adjust width for names
+                            tickFormatter={(value: string) =>
+                                value.length > 15
+                                    ? `${value.substring(0, 13)}...`
+                                    : value
+                            }
+                        />
                         <ChartTooltip
                             cursor={{ fill: "var(--muted)" }}
-                            content={({ active, payload }) => {
+                            content={({ active, payload, label }) => {
                                 if (active && payload && payload.length) {
-                                    const data = payload[0].payload;
+                                    const data = payload[0]
+                                        .payload as (typeof chartData)[number];
                                     return (
-                                        <div className="rounded-lg border bg-background p-2 shadow-sm text-xs">
-                                            <div className="font-bold mb-1">
-                                                {data.name}
+                                        <div className="min-w-[180px] rounded-lg border bg-background p-2 shadow-sm text-xs">
+                                            <div className="font-bold mb-1 text-foreground">
+                                                {label} {/* Venue's name */}
                                             </div>
-                                            <div>
-                                                Events:{" "}
-                                                {data.value.toLocaleString()}
-                                            </div>
-                                            <div>
-                                                Percentage: {data.percentage}%
+                                            <div className="space-y-1">
+                                                {RESERVATION_STATUSES.map(
+                                                    (status) => {
+                                                        const count =
+                                                            data[status.key];
+                                                        if (count > 0) {
+                                                            // Only show statuses with counts
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        status.key
+                                                                    }
+                                                                    className="flex items-center justify-between"
+                                                                >
+                                                                    <div className="flex items-center">
+                                                                        <span
+                                                                            className="w-2.5 h-2.5 rounded-full mr-2"
+                                                                            style={{
+                                                                                backgroundColor:
+                                                                                    status.color,
+                                                                            }}
+                                                                        />
+                                                                        <span className="text-muted-foreground">
+                                                                            {
+                                                                                status.label
+                                                                            }
+                                                                            :
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="font-semibold text-foreground">
+                                                                        {count.toLocaleString()}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    },
+                                                )}
+                                                <hr className="my-1" />
+                                                <div className="flex items-center justify-between font-medium">
+                                                    <span className="text-muted-foreground">
+                                                        Total:
+                                                    </span>
+                                                    <span className="text-foreground">
+                                                        {data.totalEventCount.toLocaleString()}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -184,50 +239,16 @@ export function EventsPerVenueChart({ dateRange }: EventsPerVenueChartProps) {
                                 return null;
                             }}
                         />
-                        <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
-                            {chartData.map((entry) => (
-                                <Cell
-                                    key={`cell-${entry.name}`}
-                                    fill={entry.fill}
-                                />
-                            ))}
-                            <LabelList
-                                dataKey="name"
-                                position="insideLeft"
-                                offset={8}
-                                className="fill-background dark:fill-foreground font-medium"
-                                style={{ fontSize: "12px" }}
-                                formatter={(value: string) =>
-                                    value.length > 20
-                                        ? `${value.substring(0, 18)}...`
-                                        : value
-                                }
+                        {RESERVATION_STATUSES.map((status) => (
+                            <Bar
+                                key={status.key}
+                                dataKey={status.key}
+                                stackId="a" // All bars in the same stack
+                                fill={status.color}
+                                radius={0} // Stacked bars typically don't have individual radius
+                                barSize={30}
                             />
-                            <LabelList
-                                dataKey="value"
-                                position="right"
-                                offset={8}
-                                className="fill-foreground"
-                                style={{ fontSize: "12px" }}
-                                formatter={(
-                                    value: number,
-                                    entry: {
-                                        name: string;
-                                        value: number;
-                                        percentage: number;
-                                        fill: string;
-                                    },
-                                ) => {
-                                    if (
-                                        entry &&
-                                        typeof entry.percentage === "number"
-                                    ) {
-                                        return `${value.toLocaleString()} (${entry.percentage}%)`;
-                                    }
-                                    return value.toLocaleString();
-                                }}
-                            />
-                        </Bar>
+                        ))}
                     </BarChart>
                 </ResponsiveContainer>
             </div>

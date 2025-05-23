@@ -8,26 +8,24 @@ import {
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart";
+import { EVENT_STATUSES } from "@/lib/constants";
 import { eventTypeSummaryQueryOptions } from "@/lib/query";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    XAxis,
+    YAxis,
+} from "recharts";
 import { Skeleton } from "../ui/skeleton";
 
 interface EventTypesChartProps {
     dateRange?: DateRange;
-    // Filters like venueFilter, equipmentTypeFilter are not used by this specific endpoint
 }
-
-// Consistent color palette for charts
-const CHART_COLORS = [
-    "var(--chart-1)",
-    "var(--chart-2)",
-    "var(--chart-3)",
-    "var(--chart-4)",
-    "var(--chart-5)",
-];
 
 export function EventTypesChart({ dateRange }: EventTypesChartProps) {
     const startDate = dateRange?.from
@@ -38,11 +36,11 @@ export function EventTypesChart({ dateRange }: EventTypesChartProps) {
         : undefined;
 
     const {
-        data: eventTypesData,
+        data: eventTypesData, // This is EventTypeStatusDistributionDTO[]
         isLoading,
         isError,
         error,
-    } = useQuery(eventTypeSummaryQueryOptions(startDate, endDate, 7)); // Limit to 7 to match colors, or adjust logic
+    } = useQuery(eventTypeSummaryQueryOptions(startDate, endDate)); // Removed limit
 
     if (isLoading) {
         return (
@@ -69,18 +67,12 @@ export function EventTypesChart({ dateRange }: EventTypesChartProps) {
         );
     }
 
-    const chartData = eventTypesData.map((item, index) => ({
-        name: item.name,
-        value: item.value,
-        fill: CHART_COLORS[index % CHART_COLORS.length],
-    }));
-
     const chartConfig = Object.fromEntries(
-        chartData.map((item) => [
-            item.name, // Using item.name as key, ensure it's a valid key for ChartConfig
+        Object.entries(EVENT_STATUSES).map(([statusKey, statusValue]) => [
+            `${statusKey.toLowerCase()}Count`, // e.g., "pendingCount"
             {
-                label: item.name,
-                color: item.fill,
+                label: statusValue.label,
+                color: statusValue.color,
             },
         ]),
     ) satisfies ChartConfig;
@@ -88,43 +80,52 @@ export function EventTypesChart({ dateRange }: EventTypesChartProps) {
     return (
         <div className="h-[300px] w-full">
             <ChartContainer config={chartConfig} className="h-full w-full">
-                {/* ResponsiveContainer might be redundant if ChartContainer handles it, but PieChart often needs it explicitly */}
                 <ResponsiveContainer width="100%" height="100%">
-                    <PieChart
-                        margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+                    <BarChart
+                        data={eventTypesData}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                     >
+                        <CartesianGrid
+                            horizontal={false}
+                            strokeDasharray="3 3"
+                        />
+                        <XAxis
+                            type="number"
+                            stroke="#888888"
+                            fontSize={12}
+                            tickLine={false}
+                            axisLine={false}
+                            allowDecimals={false}
+                        />
+                        <YAxis
+                            type="category"
+                            dataKey="name" // Event type names on Y-axis
+                            stroke="#888888"
+                            fontSize={12}
+                            tickLine={false}
+                            axisLine={false}
+                            width={120} // Adjust for longer event type names
+                            interval={0} // Ensure all labels are shown
+                        />
                         <ChartTooltip
-                            cursor={true}
-                            content={
-                                <ChartTooltipContent hideLabel nameKey="name" />
-                            }
+                            cursor={{ fill: "hsl(var(--muted))" }}
+                            content={<ChartTooltipContent hideLabel />}
                         />
-                        <Pie
-                            data={chartData}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            labelLine={false}
-                            label={(
-                                { name, percent, value }, // Access value directly from item
-                            ) =>
-                                `${name}: ${(percent * 100).toFixed(0)}% (${value})`
-                            }
-                            strokeWidth={1.5} // Add stroke for better separation
-                        >
-                            {chartData.map((entry) => (
-                                <Cell
-                                    key={`cell-${entry.name}`}
-                                    fill={entry.fill}
+                        <ChartLegend content={<ChartLegendContent />} />
+                        {Object.entries(EVENT_STATUSES).map(
+                            ([statusKey, statusValue]) => (
+                                <Bar
+                                    key={statusKey}
+                                    dataKey={`${statusKey.toLowerCase()}Count`}
+                                    stackId="a"
+                                    fill={statusValue.color}
+                                    name={statusValue.label}
+                                    radius={[0, 4, 4, 0]} // Rounded right corners for horizontal bars
                                 />
-                            ))}
-                        </Pie>
-                        <ChartLegend
-                            content={<ChartLegendContent nameKey="name" />}
-                        />
-                    </PieChart>
+                            ),
+                        )}
+                    </BarChart>
                 </ResponsiveContainer>
             </ChartContainer>
         </div>

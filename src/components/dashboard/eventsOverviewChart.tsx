@@ -1,36 +1,43 @@
 import {
     type ChartConfig,
     ChartContainer,
+    ChartLegend,
+    ChartLegendContent,
     ChartTooltip,
     ChartTooltipContent,
 } from "@/components/ui/chart";
 import { useQuery } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
+// Removed useState, DropdownMenu components, Button, ListFilter as they will be in parent
 import type { DateRange } from "react-day-picker";
-import {
-    Area,
-    AreaChart,
-    CartesianGrid,
-    // ResponsiveContainer, // ChartContainer handles responsiveness
-    XAxis,
-    // YAxis, // Removed to match example more closely
-} from "recharts";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { EVENT_STATUSES } from "../../lib/constants";
 import { eventsOverviewQueryOptions } from "../../lib/query";
+import type { EventCountDTO } from "../../lib/types"; // Explicit import
 import { Skeleton } from "../ui/skeleton";
 
 interface EventsOverviewChartProps {
     dateRange?: DateRange;
+    visibleStatuses: Record<string, boolean>; // Added visibleStatuses prop
 }
 
-// Updated chartConfig based on the new Area Chart example
-const chartConfig = {
-    events: {
-        label: "Events",
-        color: "var(--chart-1)",
-    },
-} satisfies ChartConfig;
+export function EventsOverviewChart({
+    dateRange,
+    visibleStatuses,
+}: EventsOverviewChartProps) {
+    // visibleStatuses state and handler are now managed by the parent component
 
-export function EventsOverviewChart({ dateRange }: EventsOverviewChartProps) {
+    // Dynamically create chartConfig based on VISIBLE EVENT_STATUSES from props
+    const activeChartConfig = Object.entries(EVENT_STATUSES)
+        .filter(([statusKey]) => visibleStatuses[statusKey]) // Use prop here
+        .reduce((acc, [statusKey, statusValue]) => {
+            acc[statusKey] = {
+                label: statusValue.label,
+                color: statusValue.color,
+            };
+            return acc;
+        }, {} as ChartConfig);
+
     const startDate = dateRange?.from
         ? format(dateRange.from, "yyyy-MM-dd")
         : undefined;
@@ -47,15 +54,15 @@ export function EventsOverviewChart({ dateRange }: EventsOverviewChartProps) {
 
     if (isLoading) {
         return (
-            <div className="h-[200px] w-full flex items-center justify-center">
-                <Skeleton className="h-[230px] w-[95%]" />
+            <div className="h-[250px] w-full flex items-center justify-center">
+                <Skeleton className="h-full w-[95%]" />
             </div>
         );
     }
 
     if (isError) {
         return (
-            <div className="h-[200px] w-full flex flex-col items-center justify-center text-red-500">
+            <div className="h-[250px] w-full flex flex-col items-center justify-center text-red-500">
                 <p>Error loading events overview data.</p>
                 <p className="text-sm">{error?.message}</p>
             </div>
@@ -64,56 +71,82 @@ export function EventsOverviewChart({ dateRange }: EventsOverviewChartProps) {
 
     if (!eventsOverviewData || eventsOverviewData.length === 0) {
         return (
-            <div className="h-[200px] w-full flex items-center justify-center text-muted-foreground">
+            <div className="h-[250px] w-full flex items-center justify-center text-muted-foreground">
                 <p>No event overview data available for the selected period.</p>
             </div>
         );
     }
 
-    const chartData = eventsOverviewData.map((item) => ({
-        date: format(parseISO(item.date), "MMM dd"),
-        events: item.eventCount,
-    }));
+    const chartData = eventsOverviewData.map((item: EventCountDTO) => {
+        const dataPoint: { [key: string]: string | number } = {
+            date: format(parseISO(item.date), "MMM dd"),
+        };
+        for (const statusKey in EVENT_STATUSES) {
+            const dataKey = EVENT_STATUSES[statusKey].dataKey;
+            dataPoint[statusKey] = item[dataKey] ?? 0;
+        }
+        return dataPoint;
+    });
 
     return (
-        <div className="h-[250px] w-full">
-            <ChartContainer config={chartConfig} className="h-full w-full">
-                <AreaChart
+        // Removed the DropdownMenu UI from here
+        // The main wrapping div <div className="w-full"> might also be redundant if parent handles layout
+        // For now, let's keep it to ensure chart takes full width of its direct container.
+        <div className="w-full h-[300px]">
+            {" "}
+            {/* Ensure chart has a defined height */}
+            <ChartContainer
+                config={activeChartConfig}
+                className="h-full w-full"
+            >
+                <LineChart
                     accessibilityLayer
                     data={chartData}
                     margin={{
                         left: 12,
                         right: 12,
-                        top: 20, // Added top margin for a bit of space
-                        bottom: 0,
+                        top: 12,
+                        bottom: 12,
                     }}
                 >
-                    <CartesianGrid vertical={true} />
+                    <CartesianGrid vertical={false} />
                     <XAxis
-                        dataKey="date" // Our date is already 'MMM dd'
-                        tickLine={true}
-                        axisLine={true}
+                        dataKey="date"
+                        tickLine={false}
+                        axisLine={false}
                         tickMargin={8}
-                        minTickGap={32} // Keep or adjust if needed after adding interval
-                        interval={0} // Added to show all ticks
-                        padding={{ left: 20, right: 20 }} // Added padding
-                        // tickFormatter={(value) => value.slice(0, 3)} // Not needed for 'MMM dd'
+                        padding={{ left: 10, right: 10 }}
                         tick={{ fontSize: 12 }}
                     />
-                    {/* YAxis component removed to match example style, Recharts might add a default one */}
+                    <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        tick={{ fontSize: 12 }}
+                    />
                     <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent indicator="line" />}
+                        cursor={true}
+                        content={
+                            <ChartTooltipContent indicator="dot" hideLabel />
+                        }
                     />
-                    <Area
-                        dataKey="events"
-                        type="natural"
-                        fill={chartConfig.events.color}
-                        fillOpacity={0.4}
-                        stroke={chartConfig.events.color}
-                        label={{ value: "Events", position: "top", dy: 0 }}
+                    {Object.entries(EVENT_STATUSES)
+                        .filter(([statusKey]) => visibleStatuses[statusKey])
+                        .map(([statusKey, statusConfig]) => (
+                            <Line
+                                key={statusKey}
+                                dataKey={statusKey}
+                                type="natural"
+                                stroke={statusConfig.color}
+                                strokeWidth={2}
+                                dot={false}
+                            />
+                        ))}
+                    <ChartLegend
+                        verticalAlign="top"
+                        content={<ChartLegendContent />}
                     />
-                </AreaChart>
+                </LineChart>
             </ChartContainer>
         </div>
     );

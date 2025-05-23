@@ -24,6 +24,7 @@ import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmD
 import { addEquipment, deleteEquipment, editEquipment } from "@/lib/api";
 import { allNavigation } from "@/lib/navigation";
 import {
+    allEquipmentCategoriesQueryOptions,
     equipmentsQueryOptions,
     useCurrentUser,
     usersQueryOptions,
@@ -90,6 +91,7 @@ export const Route = createFileRoute("/app/equipments")({
         context.queryClient.ensureQueryData(
             equipmentsQueryOptions(context.authState),
         );
+        context.queryClient.ensureQueryData(allEquipmentCategoriesQueryOptions);
     },
 });
 
@@ -228,6 +230,7 @@ function EquipmentInventory() {
                     status: data.status,
                     serialNo: data.serialNo,
                     ownerId: data.ownerId,
+                    categoryIds: data.categoryIds,
                 },
                 imageFile: imageFile,
             });
@@ -246,6 +249,7 @@ function EquipmentInventory() {
                     status: data.status,
                     serialNo: data.serialNo,
                     ownerId: data.ownerId,
+                    categoryIds: data.categoryIds,
                 },
                 imageFile: imageFile as File,
             });
@@ -305,7 +309,7 @@ function EquipmentInventory() {
     return (
         <div className="bg-background">
             <div className="flex flex-col flex-1 overflow-hidden">
-                <header className="flex items-center justify-between border-b px-6 py-3.5 h-16">
+                <header className="flex items-center justify-between border-b px-6 h-[65px]">
                     <h1 className="text-xl font-semibold">Equipments</h1>
                     <div className="flex items-center gap-2">
                         {isPrivilegedUser && (
@@ -550,6 +554,18 @@ function EquipmentInventory() {
                                                 Brand: {item.brand} | Qty:{" "}
                                                 {item.quantity}
                                             </CardDescription>
+                                            {item.categories &&
+                                                item.categories.length > 0 && (
+                                                    <CardDescription className="text-xs mt-1">
+                                                        Categories:{" "}
+                                                        {item.categories
+                                                            .map(
+                                                                (category) =>
+                                                                    category.name,
+                                                            )
+                                                            .join(", ")}
+                                                    </CardDescription>
+                                                )}
                                             {role?.includes("SUPER_ADMIN") &&
                                                 item.equipmentOwner && (
                                                     <CardDescription className="text-xs mt-1">
