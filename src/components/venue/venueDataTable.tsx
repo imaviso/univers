@@ -46,6 +46,7 @@ import {
     Users,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Checkbox } from "../ui/checkbox";
 
 // Custom hook for persistent state (can be moved to a shared utility)
 function usePersistentState<T>(
@@ -89,6 +90,7 @@ interface VenueDataTableProps {
     setIsDeleteDialogOpen: (isOpen: boolean) => void;
     isDeletingVenue: boolean; // To disable actions during delete
     venueToDeleteId?: string | null; // Added to know which item is pending deletion
+    onBulkDelete?: (ids: string[]) => void; // Add bulk delete handler
 }
 
 export function VenueDataTable({
@@ -99,7 +101,8 @@ export function VenueDataTable({
     setVenueToDelete,
     setIsDeleteDialogOpen,
     isDeletingVenue,
-    venueToDeleteId, // Added prop
+    venueToDeleteId,
+    onBulkDelete,
 }: VenueDataTableProps) {
     const navigate = useNavigate();
     const [sorting, setSorting] = usePersistentState<SortingState>(
@@ -144,27 +147,38 @@ export function VenueDataTable({
 
     const columns: ColumnDef<VenueDTO>[] = useMemo(
         () => [
-            // Select column (Only for SUPER_ADMIN for bulk actions, if implemented)
-            // For now, bulk actions are not part of this refactor for venues, so commented out
-            // ...(currentUser?.role === "SUPER_ADMIN" ? [{
-            //     id: "select",
-            //     header: ({ table }) => (
-            //         <Checkbox
-            //             checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-            //             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            //             aria-label="Select all"
-            //         />
-            //     ),
-            //     cell: ({ row }) => (
-            //         <Checkbox
-            //             checked={row.getIsSelected()}
-            //             onCheckedChange={(value) => row.toggleSelected(!!value)}
-            //             aria-label="Select row"
-            //         />
-            //     ),
-            //     enableSorting: false,
-            //     enableHiding: false,
-            // }] : []) as ColumnDef<VenueDTO>[],
+            // Select column (Only for SUPER_ADMIN for bulk actions)
+            ...((currentUser?.roles.includes("SUPER_ADMIN") && onBulkDelete
+                ? [
+                      {
+                          id: "select",
+                          header: ({ table }) => (
+                              <Checkbox
+                                  checked={
+                                      table.getIsAllPageRowsSelected() ||
+                                      (table.getIsSomePageRowsSelected() &&
+                                          "indeterminate")
+                                  }
+                                  onCheckedChange={(value) =>
+                                      table.toggleAllPageRowsSelected(!!value)
+                                  }
+                                  aria-label="Select all"
+                              />
+                          ),
+                          cell: ({ row }) => (
+                              <Checkbox
+                                  checked={row.getIsSelected()}
+                                  onCheckedChange={(value) =>
+                                      row.toggleSelected(!!value)
+                                  }
+                                  aria-label="Select row"
+                              />
+                          ),
+                          enableSorting: false,
+                          enableHiding: false,
+                      },
+                  ]
+                : []) as ColumnDef<VenueDTO>[]),
             {
                 accessorKey: "name",
                 header: "Name",
@@ -274,18 +288,15 @@ export function VenueDataTable({
                     const isCurrentRowBeingDeleted =
                         isDeletingVenue && venueToDeleteId === venue.publicId;
 
-                    // SUPER_ADMIN can edit/delete. VENUE_OWNER can only edit/delete their own.
-                    const canManage =
-                        currentUser?.roles?.includes("SUPER_ADMIN") ||
-                        (currentUser?.roles?.includes("VENUE_OWNER") &&
-                            venue.venueOwner?.publicId ===
-                                currentUser?.publicId);
+                    // Only SUPER_ADMIN can edit venues
+                    const canEdit = currentUser?.roles?.includes("SUPER_ADMIN");
+                    const canDelete =
+                        currentUser?.roles?.includes("SUPER_ADMIN");
 
                     if (
-                        !canManage &&
+                        !canEdit &&
                         !currentUser?.roles?.includes("SUPER_ADMIN")
                     ) {
-                        // Adjusted condition slightly for clarity
                         // View action for non-managers or non-privileged users
                         return (
                             <Button
@@ -327,20 +338,16 @@ export function VenueDataTable({
                                 >
                                     <Eye className="mr-2 h-4 w-4" /> View
                                 </DropdownMenuItem>
-                                {(canManage ||
-                                    currentUser?.roles?.includes(
-                                        "SUPER_ADMIN",
-                                    )) && (
+                                {canEdit && (
+                                    <DropdownMenuItem
+                                        onClick={() => handleEditVenue(venue)}
+                                        disabled={isCurrentRowBeingDeleted}
+                                    >
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </DropdownMenuItem>
+                                )}
+                                {canDelete && (
                                     <>
-                                        <DropdownMenuItem
-                                            onClick={() =>
-                                                handleEditVenue(venue)
-                                            }
-                                            disabled={isCurrentRowBeingDeleted}
-                                        >
-                                            <Edit className="mr-2 h-4 w-4" />{" "}
-                                            Edit
-                                        </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem
                                             className="text-destructive focus:text-destructive"
@@ -374,6 +381,7 @@ export function VenueDataTable({
             isDeletingVenue,
             venueToDeleteId,
             navigate,
+            onBulkDelete,
         ],
     );
 
@@ -386,7 +394,8 @@ export function VenueDataTable({
             rowSelection,
             columnFilters,
         },
-        // enableRowSelection: currentUser?.role === "SUPER_ADMIN", // If bulk actions are added
+        enableRowSelection:
+            currentUser?.roles.includes("SUPER_ADMIN") && !!onBulkDelete,
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         onColumnVisibilityChange: setColumnVisibility,
@@ -398,10 +407,33 @@ export function VenueDataTable({
         getFacetedUniqueValues: getFacetedUniqueValues(),
     });
 
+    // Add bulk actions toolbar
+    const selectedRows = table.getSelectedRowModel().rows;
+    const selectedVenueIds = selectedRows.map((row) => row.original.publicId);
+
     return (
-        <div className="w-full space-y-4">
-            <div className="flex items-center justify-between">
+        <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
                 <DataTableFilter table={table} />
+                {currentUser?.roles.includes("SUPER_ADMIN") &&
+                    onBulkDelete &&
+                    selectedRows.length > 0 && (
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() =>
+                                        onBulkDelete(selectedVenueIds)
+                                    }
+                                    disabled={isDeletingVenue}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete ({selectedRows.length})
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="ml-auto">

@@ -174,9 +174,13 @@ export function AddDepartmentFormDialog() {
                                     </FormLabel>
                                     <Select
                                         onValueChange={(value) =>
-                                            field.onChange(Number(value))
-                                        } // Ensure value is number
-                                        value={field.value?.toString()}
+                                            field.onChange(
+                                                value
+                                                    ? Number(value)
+                                                    : undefined,
+                                            )
+                                        }
+                                        value={field.value?.toString() ?? ""}
                                     >
                                         <FormControl>
                                             <SelectTrigger className="w-full">

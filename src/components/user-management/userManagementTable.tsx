@@ -55,7 +55,7 @@ import {
 } from "@/components/ui/table";
 
 import { DataTableFilter } from "@/components/data-table-filter";
-import { activateUser, deactivateUser, updateUser } from "@/lib/api";
+import { activateUser, updateUser } from "@/lib/api";
 import {
     deleteDialogAtom,
     editDialogAtom,
@@ -63,7 +63,11 @@ import {
 } from "@/lib/atoms";
 import { defineMeta } from "@/lib/filters";
 import { filterFn } from "@/lib/filters";
-import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
+import {
+    departmentsQueryOptions,
+    useBulkDeactivateUsersAsAdminMutation,
+    usersQueryOptions,
+} from "@/lib/query";
 import type { EditUserFormInput } from "@/lib/schema";
 import { ROLES, type UserDTO, type UserRole } from "@/lib/types";
 import { getBadgeVariant } from "@/lib/utils";
@@ -243,55 +247,6 @@ export function UserDataTable() {
         },
     });
 
-    const deactivateUserMutation = useMutation({
-        mutationFn: deactivateUser,
-        onMutate: async (userId: string) => {
-            await queryClient.cancelQueries({
-                queryKey: usersQueryOptions.queryKey,
-            });
-            const previousUsers = queryClient.getQueryData<UserDTO[]>(
-                usersQueryOptions.queryKey,
-            );
-            queryClient.setQueryData<UserDTO[]>(
-                usersQueryOptions.queryKey,
-                (old = []) =>
-                    old.map((user) =>
-                        user.publicId === userId
-                            ? {
-                                  ...user,
-                                  active: false,
-                                  updatedAt: new Date().toISOString(),
-                              }
-                            : user,
-                    ),
-            );
-            return { previousUsers };
-        },
-        onError: (err, _userId, context) => {
-            if (context?.previousUsers) {
-                queryClient.setQueryData(
-                    usersQueryOptions.queryKey,
-                    context.previousUsers,
-                );
-            }
-            const errorMessage =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to deactivate user";
-            toast.error(errorMessage);
-        },
-        onSuccess: () => {
-            toast.success("User deactivated successfully");
-            setDeleteDialogOpen(false);
-            setSelectedUser(null);
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({
-                queryKey: usersQueryOptions.queryKey,
-            });
-        },
-    });
-
     const activateUserMutation = useMutation({
         mutationFn: activateUser,
         onMutate: async (userId: string) => {
@@ -338,6 +293,70 @@ export function UserDataTable() {
             });
         },
     });
+
+    const bulkDeactivateUsersMutation = useBulkDeactivateUsersAsAdminMutation({
+        onMutate: async (userIds: string[]) => {
+            await queryClient.cancelQueries({
+                queryKey: usersQueryOptions.queryKey,
+            });
+            const previousUsers = queryClient.getQueryData<UserDTO[]>(
+                usersQueryOptions.queryKey,
+            );
+            queryClient.setQueryData<UserDTO[]>(
+                usersQueryOptions.queryKey,
+                (old = []) =>
+                    old.map((user) =>
+                        userIds.includes(user.publicId)
+                            ? {
+                                  ...user,
+                                  active: false,
+                                  updatedAt: new Date().toISOString(),
+                              }
+                            : user,
+                    ),
+            );
+            return { previousUsers };
+        },
+        onError: (
+            err: Error,
+            _userIds: string[],
+            context?: { previousUsers?: UserDTO[] },
+        ) => {
+            if (context?.previousUsers) {
+                queryClient.setQueryData(
+                    usersQueryOptions.queryKey,
+                    context.previousUsers,
+                );
+            }
+            const errorMessage =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to deactivate user(s)";
+            toast.error(errorMessage);
+        },
+        onSuccess: (
+            data: string[],
+            _userIds: string[],
+            _context?: { previousUsers?: UserDTO[] },
+        ) => {
+            if (
+                data?.some((msg: string) => msg.startsWith("Cannot deactivate"))
+            ) {
+                toast.warning(
+                    `Some users could not be deactivated. ${data.join("; ")}`,
+                );
+            } else {
+                toast.success("User(s) processed for deactivation.");
+            }
+            setDeleteDialogOpen(false);
+            setSelectedUser(null);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({
+                queryKey: usersQueryOptions.queryKey,
+            });
+        },
+    });
     // --- End Mutations ---
 
     // --- Event Handlers ---
@@ -356,7 +375,7 @@ export function UserDataTable() {
 
     const handleDeactivateUser = () => {
         if (selectedUser) {
-            deactivateUserMutation.mutate(selectedUser.publicId);
+            bulkDeactivateUsersMutation.mutate([selectedUser.publicId]);
         }
     };
 
@@ -364,6 +383,44 @@ export function UserDataTable() {
         if (selectedUser) {
             activateUserMutation.mutate(selectedUser.publicId);
         }
+    };
+
+    const handleBulkDeactivateSelectedUsers = () => {
+        const selectedRows = table.getFilteredSelectedRowModel().rows;
+        if (selectedRows.length === 0) {
+            toast.info("No users selected for deactivation.");
+            return;
+        }
+        const selectedPublicIds = selectedRows.map(
+            (row) => row.original.publicId,
+        );
+        bulkDeactivateUsersMutation.mutate(selectedPublicIds, {
+            onSuccess: (data, _variables, _context) => {
+                if (
+                    data?.some((msg: string) =>
+                        msg.startsWith("Cannot deactivate"),
+                    )
+                ) {
+                    toast.warning(
+                        `Some selected users could not be deactivated. ${data.join("; ")}`,
+                    );
+                } else {
+                    toast.success(
+                        `${selectedPublicIds.length} user(s) processed for deactivation.`,
+                    );
+                }
+                setDeleteDialogOpen(false);
+                setSelectedUser(null);
+                table.resetRowSelection();
+            },
+            onError: (error) => {
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : `Failed to deactivate ${selectedPublicIds.length} user(s)`;
+                toast.error(errorMessage);
+            },
+        });
     };
 
     // --- Filter Options ---
@@ -779,7 +836,7 @@ export function UserDataTable() {
                                             setDeleteDialogOpen(true);
                                         }}
                                         disabled={
-                                            deactivateUserMutation.isPending
+                                            bulkDeactivateUsersMutation.isPending
                                         }
                                     >
                                         <UserX className="mr-2 h-4 w-4" />{" "}
@@ -812,7 +869,7 @@ export function UserDataTable() {
             DEPARTMENT_OPTIONS, // Use derived options
             ACTIVE_OPTIONS,
             VERIFIED_OPTIONS,
-            deactivateUserMutation.isPending,
+            bulkDeactivateUsersMutation.isPending,
             activateUserMutation.isPending,
         ],
     );
@@ -869,21 +926,12 @@ export function UserDataTable() {
                     {Object.keys(table.getState().rowSelection).length > 0 && (
                         <Button
                             variant="destructive"
-                            size="sm" // Use size prop
-                            className="h-8" // Keep height consistent if needed
-                            onClick={() => {
-                                const selectedUsers = table
-                                    .getSelectedRowModel()
-                                    .rows.map((row) => row.original);
-                                console.log("Deleting users:", selectedUsers);
-                                // TODO: Implement bulk delete mutation
-                                // bulkDeleteMutation.mutate(selectedUsers.map(u => u.id));
-                                toast.warning(
-                                    "Bulk delete not yet implemented.",
-                                );
-                            }}
+                            size="sm"
+                            className="ml-2 h-8"
+                            onClick={handleBulkDeactivateSelectedUsers}
+                            disabled={bulkDeactivateUsersMutation.isPending}
                         >
-                            Delete (
+                            Deactivate (
                             {Object.keys(table.getState().rowSelection).length})
                         </Button>
                     )}
@@ -1110,7 +1158,7 @@ export function UserDataTable() {
                     title="Deactivate User"
                     description={`Are you sure you want to deactivate user ${selectedUser.firstName} ${selectedUser.lastName}? This action will mark the user as inactive.`}
                     onConfirm={handleDeactivateUser}
-                    isLoading={deactivateUserMutation.isPending}
+                    isLoading={bulkDeactivateUsersMutation.isPending}
                 />
             )}
 

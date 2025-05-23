@@ -4,7 +4,7 @@ import { allNavigation } from "@/lib/navigation";
 import type { UserRole } from "@/lib/types";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/app/venue-approval")({
+export const Route = createFileRoute("/app/event-approval")({
     component: RouteComponent,
     beforeLoad: async ({ location, context }) => {
         if (context.authState == null) {
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/app/venue-approval")({
         }
 
         const navigationItem = allNavigation.find(
-            (item) => item.href === "/app/venue-approval/approval",
+            (item) => item.href === "/app/event-approval/approval",
         );
 
         const allowedRoles: string[] = navigationItem

@@ -1,9 +1,18 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useCurrentUser } from "@/lib/query";
 import type { EventDTO } from "@/lib/types";
 import { formatDateRange, getInitials, getStatusColor } from "@/lib/utils";
+import { format } from "date-fns";
 import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
+import { useMemo } from "react";
 
 interface EventListItemProps {
     event: EventDTO;
@@ -16,6 +25,23 @@ export function EventListItem({
     venueMap,
     onNavigate,
 }: EventListItemProps) {
+    const { data: currentUser } = useCurrentUser();
+
+    // Get current user's approval status for this event
+    const currentUserApproval = useMemo(() => {
+        if (
+            !currentUser?.publicId ||
+            !event?.approvals ||
+            !Array.isArray(event.approvals)
+        ) {
+            return null;
+        }
+        return event.approvals.find(
+            (approval) =>
+                approval.signedByUser?.publicId === currentUser.publicId,
+        );
+    }, [event?.approvals, currentUser]);
+
     const organizerName = event.organizer
         ? `${event.organizer.firstName} ${event.organizer.lastName}`
         : "Unknown Organizer";
@@ -56,9 +82,60 @@ export function EventListItem({
                     </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate" title={event.eventName}>
-                        {event.eventName}
-                    </p>
+                    {currentUserApproval ? (
+                        <TooltipProvider>
+                            <Tooltip delayDuration={500}>
+                                <TooltipTrigger asChild>
+                                    <p
+                                        className={`font-medium truncate ${
+                                            currentUserApproval.status ===
+                                            "APPROVED"
+                                                ? "text-green-600"
+                                                : currentUserApproval.status ===
+                                                    "REJECTED"
+                                                  ? "text-red-600"
+                                                  : "text-yellow-600"
+                                        }`}
+                                        title={event.eventName}
+                                    >
+                                        {event.eventName}
+                                    </p>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="font-medium">
+                                            You{" "}
+                                            {currentUserApproval.status.toLowerCase()}{" "}
+                                            this event
+                                        </span>
+                                        {currentUserApproval.dateSigned && (
+                                            <span className="text-xs text-primary-foreground">
+                                                on{" "}
+                                                {format(
+                                                    new Date(
+                                                        currentUserApproval.dateSigned,
+                                                    ),
+                                                    "MMM d, yyyy 'at' h:mm a",
+                                                )}
+                                            </span>
+                                        )}
+                                        {currentUserApproval.remarks && (
+                                            <span className="text-xs text-primary-foreground italic">
+                                                "{currentUserApproval.remarks}"
+                                            </span>
+                                        )}
+                                    </div>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    ) : (
+                        <p
+                            className="font-medium truncate"
+                            title={event.eventName}
+                        >
+                            {event.eventName}
+                        </p>
+                    )}
                     <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                         <Tag className="h-4 w-4 flex-shrink-0" />
                         <span

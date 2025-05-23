@@ -69,10 +69,10 @@ export const allNavigation: NavigationItem[] = [
         ],
     },
     {
-        name: "Venue Approval",
-        href: "/app/venue-approval/approval",
+        name: "Event Approval",
+        href: "/app/event-approval/approval",
         icon: BookCheck,
-        roles: ["VENUE_OWNER"],
+        roles: ["VENUE_OWNER", "VP_ADMIN", "ADMIN", "DEPT_HEAD"],
     },
     {
         name: "Users",

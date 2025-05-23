@@ -62,7 +62,6 @@ import {
     equipmentReservationKeys,
     equipmentReservationsByEventIdQueryOptions,
     equipmentsQueryOptions,
-    eventApprovalsQueryOptions,
     eventByIdQueryOptions,
     eventsQueryKeys,
     useCancelEquipmentReservationMutation,
@@ -119,7 +118,6 @@ export const Route = createFileRoute("/app/events/$eventId")({
         if (!event || Object.keys(event).length === 0) {
             throw notFound();
         }
-        await queryClient.ensureQueryData(eventApprovalsQueryOptions(eventId));
         await queryClient.ensureQueryData(venuesQueryOptions);
         await queryClient.ensureQueryData(equipmentsQueryOptions(authState));
         await queryClient.ensureQueryData(
@@ -139,9 +137,6 @@ export function EventDetailsPage() {
     const onBack = () => router.history.back();
 
     const loadedEventData = Route.useLoaderData();
-    const { data: approvals } = useSuspenseQuery(
-        eventApprovalsQueryOptions(loadedEventData.publicId),
-    );
     const { data: event } = useSuspenseQuery<EventDTO>(
         eventByIdQueryOptions(loadedEventData.publicId),
     );
@@ -195,16 +190,20 @@ export function EventDetailsPage() {
     const isSuperAdmin = currentUser?.roles?.includes("SUPER_ADMIN");
     const isEventPending = event.status === "PENDING";
 
-    // Find the specific approval record for the current logged-in user
+    // Update currentUserApprovalRecord to use event.approvals
     const currentUserApprovalRecord = useMemo(() => {
-        if (!currentUser?.publicId || !approvals || !Array.isArray(approvals)) {
+        if (
+            !currentUser?.publicId ||
+            !event?.approvals ||
+            !Array.isArray(event.approvals)
+        ) {
             return null;
         }
-        return approvals.find(
+        return event.approvals.find(
             (appr: EventApprovalDTO) =>
                 appr.signedByUser?.publicId === currentUser.publicId,
         );
-    }, [approvals, currentUser]);
+    }, [event?.approvals, currentUser]);
 
     // User can approve if the event is pending AND their specific approval record is pending
     const canUserApprove = useMemo(() => {
@@ -239,30 +238,25 @@ export function EventDetailsPage() {
         onSuccess: () => {
             toast.success("Event approved successfully.");
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.approvals(event.publicId),
-            });
-            // Invalidate the detail query for this event
-            queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.detail(event.publicId),
             });
-            // Invalidate general event lists (all, approved, pending, own)
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.lists(), // General list
+                queryKey: eventsQueryKeys.lists(),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.approved(), // Approved list
+                queryKey: eventsQueryKeys.approved(),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pending(), // General pending list
+                queryKey: eventsQueryKeys.pending(),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pendingVenueOwner(), // Specific pending list
+                queryKey: eventsQueryKeys.pendingVenueOwner(),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pendingDeptHead(), // Specific pending list
+                queryKey: eventsQueryKeys.pendingDeptHead(),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.own(), // Own events list
+                queryKey: eventsQueryKeys.own(),
             });
             setIsApprovalDialogOpen(false);
             setApprovalRemarks("");
@@ -276,9 +270,6 @@ export function EventDetailsPage() {
         mutationFn: rejectEvent,
         onSuccess: () => {
             toast.success("Event rejected successfully.");
-            queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.approvals(event.publicId),
-            });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.detail(event.publicId),
             });
@@ -310,11 +301,9 @@ export function EventDetailsPage() {
         mutationFn: cancelEvent,
         onSuccess: () => {
             toast.success("Event canceled successfully.");
-            // Invalidate event details and list
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.detail(event.publicId),
             });
-            // Invalidate relevant lists
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.lists(),
             });
@@ -325,7 +314,7 @@ export function EventDetailsPage() {
                 queryKey: eventsQueryKeys.own(),
             });
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pending(), // Also invalidate pending lists
+                queryKey: eventsQueryKeys.pending(),
             });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.pendingVenueOwner(),
@@ -526,7 +515,6 @@ export function EventDetailsPage() {
         mutationFn: deleteEvent,
         onSuccess: () => {
             toast.success("Event deleted successfully."); // Changed message for clarity
-            // Invalidate relevant lists
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.lists(),
             });
@@ -696,18 +684,17 @@ export function EventDetailsPage() {
     };
 
     const approvalTableRows = useMemo(() => {
-        if (!event || !approvals) return [];
+        if (!event || !event.approvals) return [];
 
-        const currentApprovals = Array.isArray(approvals) ? approvals : [];
+        const currentApprovals = Array.isArray(event.approvals)
+            ? event.approvals
+            : [];
 
-        // Directly map backend approvals. No more frontend placeholder generation.
-        // The EventApprovalDTO from backend will have PENDING status for awaiting approvals.
+        // Directly map backend approvals from event.approvals
         return currentApprovals.map((approval) => ({
             ...approval,
-            // The `isPlaceholder` property is no longer needed as all data comes from backend.
-            // Table rendering logic will rely on status and dateSigned from the DTO.
         }));
-    }, [approvals, event]);
+    }, [event]);
 
     return (
         <div className="flex h-screen bg-background">
@@ -1427,15 +1414,24 @@ export function EventDetailsPage() {
                                                                 : ""}
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge
-                                                                className={getBadgeVariant(
-                                                                    approvalRow.userRole as UserRole,
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {approvalRow.signedByUser.roles.map(
+                                                                    (role) => (
+                                                                        <Badge
+                                                                            key={
+                                                                                role
+                                                                            }
+                                                                            className={getBadgeVariant(
+                                                                                role as UserRole,
+                                                                            )}
+                                                                        >
+                                                                            {formatRole(
+                                                                                role as UserRole,
+                                                                            )}
+                                                                        </Badge>
+                                                                    ),
                                                                 )}
-                                                            >
-                                                                {formatRole(
-                                                                    approvalRow.userRole as UserRole,
-                                                                )}
-                                                            </Badge>
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell>
                                                             {

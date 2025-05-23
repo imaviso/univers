@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { VenueDataTable } from "@/components/venue/venueDataTable";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
-import { createVenue, deleteVenue, updateVenue } from "@/lib/api";
+import { bulkDeleteVenues, createVenue, updateVenue } from "@/lib/api";
 import {
     departmentsQueryOptions,
     ownEventsQueryOptions,
@@ -44,7 +44,7 @@ import {
     UserCheck,
     UserCircle,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 // Custom hook for persistent state
@@ -92,7 +92,7 @@ export const Route = createFileRoute("/app/venues/dashboard")({
 export function VenueManagement() {
     const context = useRouteContext({ from: "/app/venues" });
     const role = context.authState?.roles || [];
-    const currentUser = context.authState; // Get full user object
+    const currentUser = context.authState;
     const queryClient = context.queryClient;
     const navigate = useNavigate();
     // State variables
@@ -103,7 +103,7 @@ export function VenueManagement() {
     const [isAddVenueOpen, setIsAddVenueOpen] = useState(false);
     const [editingVenue, setEditingVenue] = useState<VenueDTO | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [venueToDelete, setVenueToDelete] = useState<string | null>(null);
+    const [selectedVenueIds, setSelectedVenueIds] = useState<string[]>([]);
     const [viewMode, setViewMode] = usePersistentState<
         "table" | "grid" | "events"
     >(
@@ -162,20 +162,16 @@ export function VenueManagement() {
         },
     });
 
-    const deleteVenueMutation = useMutation({
-        mutationFn: deleteVenue,
+    const bulkDeleteVenuesMutation = useMutation({
+        mutationFn: bulkDeleteVenues,
         onSuccess: () => {
-            toast.success("Venue deleted successfully.");
+            toast.success("Selected venues deleted successfully.");
             queryClient.invalidateQueries({
                 queryKey: venuesQueryOptions.queryKey,
             });
-            setIsDeleteDialogOpen(false);
-            setVenueToDelete(null);
         },
         onError: () => {
-            toast.error("Failed to delete venue.");
-            setIsDeleteDialogOpen(false);
-            setVenueToDelete(null);
+            toast.error("Failed to delete selected venues.");
         },
     });
 
@@ -205,10 +201,20 @@ export function VenueManagement() {
     };
 
     const handleDeleteConfirm = () => {
-        if (venueToDelete) {
-            deleteVenueMutation.mutate(venueToDelete);
+        if (selectedVenueIds.length > 0) {
+            bulkDeleteVenuesMutation.mutate(selectedVenueIds);
         }
     };
+
+    // Create a wrapper function that matches the VenueDataTable interface
+    const handleSetVenueToDelete = useCallback((id: string | null) => {
+        if (id) {
+            setSelectedVenueIds([id]);
+            setIsDeleteDialogOpen(true);
+        } else {
+            setSelectedVenueIds([]);
+        }
+    }, []);
 
     const formatDateTime = (dateString: string | null | undefined): string => {
         if (!dateString) return "—";
@@ -276,7 +282,12 @@ export function VenueManagement() {
     const isMutating =
         createVenueMutation.isPending ||
         updateVenueMutation.isPending ||
-        deleteVenueMutation.isPending;
+        bulkDeleteVenuesMutation.isPending;
+
+    const handleEditVenue = useCallback((venue: VenueDTO) => {
+        setEditingVenue(venue);
+        setIsAddVenueOpen(true);
+    }, []);
 
     return (
         <div className="bg-background">
@@ -417,14 +428,23 @@ export function VenueManagement() {
                                 data={filteredVenues}
                                 currentUser={currentUser}
                                 venueOwners={venueOwners}
-                                handleEditVenue={(venue) => {
-                                    setEditingVenue(venue);
-                                    setIsAddVenueOpen(true);
-                                }}
-                                setVenueToDelete={setVenueToDelete}
+                                handleEditVenue={handleEditVenue}
+                                setVenueToDelete={handleSetVenueToDelete}
                                 setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-                                isDeletingVenue={deleteVenueMutation.isPending}
-                                venueToDeleteId={venueToDelete}
+                                isDeletingVenue={
+                                    bulkDeleteVenuesMutation.isPending
+                                }
+                                venueToDeleteId={selectedVenueIds[0] ?? null}
+                                onBulkDelete={
+                                    role.includes("SUPER_ADMIN")
+                                        ? (ids) => {
+                                              if (ids.length > 0) {
+                                                  setSelectedVenueIds(ids);
+                                                  setIsDeleteDialogOpen(true);
+                                              }
+                                          }
+                                        : undefined
+                                }
                             />
                         )}
 
@@ -480,14 +500,14 @@ export function VenueManagement() {
                                                     ) && (
                                                         <>
                                                             <DropdownMenuItem
-                                                                onClick={() => {
-                                                                    setEditingVenue(
+                                                                onClick={() =>
+                                                                    handleEditVenue(
                                                                         venue,
-                                                                    );
-                                                                    setIsAddVenueOpen(
-                                                                        true,
-                                                                    );
-                                                                }}
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isMutating
+                                                                }
                                                             >
                                                                 <Edit className="mr-2 h-4 w-4" />{" "}
                                                                 Edit
@@ -495,18 +515,16 @@ export function VenueManagement() {
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem
                                                                 className="text-destructive focus:text-destructive"
-                                                                onClick={() => {
-                                                                    setVenueToDelete(
+                                                                onClick={() =>
+                                                                    handleSetVenueToDelete(
                                                                         venue.publicId,
-                                                                    );
-                                                                    setIsDeleteDialogOpen(
-                                                                        true,
-                                                                    );
-                                                                }}
+                                                                    )
+                                                                }
                                                                 disabled={
-                                                                    deleteVenueMutation.isPending &&
-                                                                    deleteVenueMutation.variables ===
-                                                                        venue.publicId
+                                                                    bulkDeleteVenuesMutation.isPending &&
+                                                                    selectedVenueIds.includes(
+                                                                        venue.publicId,
+                                                                    )
                                                                 }
                                                             >
                                                                 <Trash2 className="mr-2 h-4 w-4" />{" "}
@@ -731,7 +749,7 @@ export function VenueManagement() {
                 </div>
             </div>
 
-            {role.includes("SUPER_ADMIN") && (
+            {currentUser?.roles.includes("SUPER_ADMIN") && (
                 <>
                     <VenueFormDialog
                         isOpen={isAddVenueOpen}
@@ -746,20 +764,30 @@ export function VenueManagement() {
                             updateVenueMutation.isPending
                         }
                         venueOwners={
-                            role.includes("SUPER_ADMIN") ? venueOwners : []
+                            currentUser?.roles.includes("SUPER_ADMIN")
+                                ? venueOwners
+                                : []
                         }
-                        currentUserRole={role}
+                        currentUserRole={currentUser?.roles}
                     />
                     <DeleteConfirmDialog
                         isOpen={isDeleteDialogOpen}
                         onClose={() => {
                             setIsDeleteDialogOpen(false);
-                            setVenueToDelete(null);
+                            setSelectedVenueIds([]);
                         }}
                         onConfirm={handleDeleteConfirm}
-                        title="Delete Venue"
-                        description={`Are you sure you want to delete the venue "${venues.find((v) => v.publicId === venueToDelete)?.name}"? This action cannot be undone.`}
-                        isLoading={deleteVenueMutation.isPending}
+                        title={
+                            selectedVenueIds.length > 1
+                                ? "Delete Venues"
+                                : "Delete Venue"
+                        }
+                        description={
+                            selectedVenueIds.length > 1
+                                ? `Are you sure you want to delete ${selectedVenueIds.length} selected venues? This action cannot be undone.`
+                                : `Are you sure you want to delete the venue "${venues.find((v) => v.publicId === selectedVenueIds[0])?.name}"? This action cannot be undone.`
+                        }
+                        isLoading={bulkDeleteVenuesMutation.isPending}
                     />
                 </>
             )}

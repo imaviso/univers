@@ -331,9 +331,9 @@ export function AccountSettings() {
         },
     });
 
-    const handleDeleteAccount = () => {
-        toast.error("Delete account feature is not implemented yet.");
-    };
+    // const handleDeleteAccount = () => {
+    //     toast.error("Delete account feature is not implemented yet.");
+    // };
 
     const handleProfileChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -982,7 +982,7 @@ export function AccountSettings() {
             </Card> */}
 
             {/* Delete Account Card */}
-            <Card>
+            {/* <Card>
                 <CardHeader>
                     <CardTitle>Delete Account</CardTitle>
                     <CardDescription>
@@ -1001,7 +1001,7 @@ export function AccountSettings() {
                         Delete Account
                     </Button>
                 </CardFooter>
-            </Card>
+            </Card> */}
 
             {/* Change Password Dialog */}
             <Dialog

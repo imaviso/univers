@@ -1,5 +1,7 @@
 import {
     approveEquipmentReservation,
+    bulkDeactivateUsersAsAdmin, // Added for bulk user deactivation by admin
+    bulkDeleteDepartments,
     cancelEquipmentReservation,
     // Equipment Category API imports
     createEquipmentCategory,
@@ -7,7 +9,6 @@ import {
     deleteEquipmentCategory,
     deleteEquipmentReservation,
     deleteNotifications,
-    getAllApprovalsOfEvent,
     getAllDepartments,
     getAllEquipmentCategories,
     getAllEquipmentOwnerReservations,
@@ -60,7 +61,6 @@ import type {
     EquipmentApprovalDTO,
     EquipmentCategoryDTO, // Import EquipmentCategoryDTO
     EquipmentReservationDTO,
-    EventApprovalDTO,
     EventCountDTO,
     EventDTO,
     EventTypeStatusDistributionDTO, // For event types chart with status breakdown
@@ -75,6 +75,7 @@ import type {
     UserRole,
 } from "@/lib/types"; // Import UserRole and Event (aliased)
 import {
+    type UseMutationOptions, // Added for typed mutation options
     queryOptions,
     useMutation,
     useQuery,
@@ -207,15 +208,6 @@ export const eventByIdQueryOptions = (eventId: number | string) =>
         staleTime: 1000 * 60 * 5,
     });
 
-// Updated eventApprovalsQueryOptions
-export const eventApprovalsQueryOptions = (eventId: number | string) =>
-    queryOptions<EventApprovalDTO[]>({
-        // Specify return type
-        queryKey: eventsQueryKeys.approvals(eventId), // Use the new key structure
-        queryFn: () => getAllApprovalsOfEvent(String(eventId)),
-        staleTime: 1000 * 60 * 2, // 2 minutes stale time
-    });
-
 export const venuesQueryOptions = {
     queryKey: ["venues"],
     queryOptions: {
@@ -250,6 +242,60 @@ export const departmentsQueryOptions = queryOptions({
     queryFn: getAllDepartments,
     staleTime: 1000 * 60 * 60,
 });
+
+export const useBulkDeleteDepartmentsMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: bulkDeleteDepartments,
+        onSuccess: (_data) => {
+            // data here will be the array of strings (messages) from the backend
+            // Invalidate the departments query to refetch the list
+            queryClient.invalidateQueries({ queryKey: ["departments"] });
+            // Optionally, you can show a success notification with messages from `data`
+            // For example, using a toast library:
+            // data.forEach(message => toast.success(message));
+            // If some deletions failed, they might be in `data` too, or handle errors in onError
+        },
+        onError: (_error) => {
+            // Handle any errors from the API call
+            // For example, show an error notification
+            // toast.error(error.message || "Failed to delete departments.");
+            console.error("Bulk delete departments error:", _error);
+        },
+    });
+};
+
+export const useBulkDeactivateUsersAsAdminMutation = (
+    options?: Omit<
+        UseMutationOptions<
+            string[],
+            Error,
+            string[],
+            { previousUsers?: UserDTO[] }
+        >,
+        "mutationFn"
+    >,
+) => {
+    const queryClient = useQueryClient();
+    return useMutation<
+        string[],
+        Error,
+        string[],
+        { previousUsers?: UserDTO[] }
+    >({
+        mutationFn: bulkDeactivateUsersAsAdmin,
+        onSettled: (data, error, variables, context) => {
+            // Always invalidate users query on settlement
+            queryClient.invalidateQueries({
+                queryKey: usersQueryOptions.queryKey,
+            });
+            // Call component's onSettled if provided
+            options?.onSettled?.(data, error, variables, context);
+        },
+        // Spread all other options from the component, including onSuccess, onError, onMutate
+        ...options,
+    });
+};
 
 export const notificationsQueryKeys = {
     all: ["notifications"] as const,
