@@ -5,7 +5,8 @@ import {
     ChartStyle,
     ChartTooltip,
 } from "@/components/ui/chart"; // Assuming ChartTooltipContent is also here or not needed for basic
-import { userActivityQueryOptions } from "@/lib/query";
+import { userReservationActivityQueryOptions } from "@/lib/query";
+import type { UserReservationActivityDTO } from "@/lib/types"; // Import for explicit typing
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as React from "react";
@@ -14,8 +15,6 @@ import {
     Bar,
     BarChart,
     CartesianGrid,
-    Cell,
-    LabelList,
     ResponsiveContainer,
     XAxis,
     YAxis,
@@ -27,13 +26,20 @@ interface UserActivityChartProps {
     limit?: number;
 }
 
-const BASE_CHART_COLORS_HSL = [
-    "var(--chart-1)",
-    "var(--chart-2)",
-    "var(--chart-3)",
-    "var(--chart-4)",
-    "var(--chart-5)",
-];
+// const BASE_CHART_COLORS_HSL = ...; // No longer needed directly here
+
+const RESERVATION_STATUSES = [
+    { key: "pendingCount", label: "Pending", color: "var(--chart-1)" },
+    { key: "approvedCount", label: "Approved", color: "var(--chart-2)" },
+    { key: "ongoingCount", label: "Ongoing", color: "var(--chart-3)" },
+    { key: "completedCount", label: "Completed", color: "var(--chart-4)" },
+    { key: "rejectedCount", label: "Rejected", color: "var(--chart-5)" },
+    {
+        key: "canceledCount",
+        label: "Canceled",
+        color: "var(--chart-6, var(--muted-foreground))",
+    },
+] as const;
 
 export function UserActivityChart({
     dateRange,
@@ -52,36 +58,48 @@ export function UserActivityChart({
         isLoading,
         isError,
         error,
-    } = useQuery(userActivityQueryOptions(startDate, endDate, limit));
+    } = useQuery(
+        userReservationActivityQueryOptions(
+            startDate,
+            endDate,
+            undefined,
+            limit,
+        ),
+    );
+    // Explicitly type userActivityData for clarity with UserReservationActivityDTO
+    const typedUserActivityData = userActivityData as
+        | UserReservationActivityDTO[]
+        | undefined;
 
     const chartData = React.useMemo(() => {
-        if (!userActivityData) return [];
-        return userActivityData.map((user, index) => ({
-            name: `${user.userFirstName} ${user.userLastName}`.trim(),
-            value: user.eventCount,
-            fill: BASE_CHART_COLORS_HSL[index % BASE_CHART_COLORS_HSL.length],
-        }));
-    }, [userActivityData]);
+        if (!typedUserActivityData) return [];
+        return typedUserActivityData
+            .map((user) => ({
+                name: `${user.userFirstName} ${user.userLastName}`.trim(),
+                pendingCount: user.pendingCount || 0,
+                approvedCount: user.approvedCount || 0,
+                ongoingCount: user.ongoingCount || 0,
+                completedCount: user.completedCount || 0,
+                rejectedCount: user.rejectedCount || 0,
+                canceledCount: user.canceledCount || 0,
+                totalReservationCount: user.totalReservationCount || 0,
+            }))
+            .sort((a, b) => b.totalReservationCount - a.totalReservationCount); // Sort by total
+    }, [typedUserActivityData]);
 
     const chartConfig = React.useMemo(() => {
-        const config: ChartConfig = {
-            eventCount: {
-                label: "Events Organized",
-            },
-        };
-        for (const item of chartData) {
-            // Create a unique key for config, e.g., from user name (slugified)
-            const key = item.name
-                .toLowerCase()
-                .replace(/\s+/g, "-")
-                .replace(/[^a-z0-9-]/g, "");
-            config[key] = {
-                label: item.name,
-                color: item.fill,
-            };
+        const config: ChartConfig = {};
+        for (const status of RESERVATION_STATUSES) {
+            config[status.key] = { label: status.label, color: status.color };
         }
+        config.totalReservationCount = { label: "Total Reservations" }; // For tooltip or labels
+        // Add individual user names to config if needed for specific styling, though not typical for stacked bars
+        // chartData.forEach(item => {
+        //     const userKey = item.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+        //     config[userKey] = { label: item.name };
+        // });
         return config;
-    }, [chartData]);
+    }, []); // chartData dependency removed as colors are from RESERVATION_STATUSES
 
     if (isLoading) {
         return (
@@ -152,28 +170,76 @@ export function UserActivityChart({
                         <YAxis
                             type="category"
                             dataKey="name"
-                            hide // Names will be on bars
+                            stroke="var(--muted-foreground)"
+                            fontSize={12}
+                            tickLine={false}
+                            axisLine={false}
+                            width={120} // Adjust width for names
+                            tickFormatter={(value) =>
+                                value.length > 15
+                                    ? `${value.substring(0, 13)}...`
+                                    : value
+                            }
                         />
                         <ChartTooltip
                             cursor={{ fill: "var(--muted)" }}
-                            content={({ active, payload }) => {
-                                // Removed label as it's not typically used with dataKey on YAxis when hidden
+                            content={({ active, payload, label }) => {
                                 if (active && payload && payload.length) {
-                                    const data = payload[0].payload as {
-                                        name: string;
-                                        value: number;
-                                        fill: string;
-                                    }; // Cast for safety
+                                    const data = payload[0]
+                                        .payload as (typeof chartData)[number];
                                     return (
-                                        <div className="rounded-lg border bg-background p-2 shadow-sm text-xs text-foreground">
+                                        <div className="min-w-[180px] rounded-lg border bg-background p-2 shadow-sm text-xs">
                                             <div className="font-bold mb-1 text-foreground">
-                                                {data.name}
+                                                {label}{" "}
+                                                {/* User's name from YAxis dataKey */}
                                             </div>
-                                            <div className="text-muted-foreground">
-                                                Events Organized:{" "}
-                                                <span className="font-semibold text-foreground">
-                                                    {data.value.toLocaleString()}
-                                                </span>
+                                            <div className="space-y-1">
+                                                {RESERVATION_STATUSES.map(
+                                                    (status) => {
+                                                        const count =
+                                                            data[status.key];
+                                                        if (count > 0) {
+                                                            // Only show statuses with counts
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        status.key
+                                                                    }
+                                                                    className="flex items-center justify-between"
+                                                                >
+                                                                    <div className="flex items-center">
+                                                                        <span
+                                                                            className="w-2.5 h-2.5 rounded-full mr-2"
+                                                                            style={{
+                                                                                backgroundColor:
+                                                                                    status.color,
+                                                                            }}
+                                                                        />
+                                                                        <span className="text-muted-foreground">
+                                                                            {
+                                                                                status.label
+                                                                            }
+                                                                            :
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="font-semibold text-foreground">
+                                                                        {count.toLocaleString()}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    },
+                                                )}
+                                                <hr className="my-1" />
+                                                <div className="flex items-center justify-between font-medium">
+                                                    <span className="text-muted-foreground">
+                                                        Total:
+                                                    </span>
+                                                    <span className="text-foreground">
+                                                        {data.totalReservationCount.toLocaleString()}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -181,36 +247,18 @@ export function UserActivityChart({
                                 return null;
                             }}
                         />
-                        <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
-                            {chartData.map((entry) => (
-                                <Cell
-                                    key={`cell-user-${entry.name.replace(/\s+/g, "-")}`}
-                                    fill={entry.fill}
-                                />
-                            ))}
-                            <LabelList
-                                dataKey="name"
-                                position="insideLeft"
-                                offset={8}
-                                className="fill-background dark:fill-foreground font-medium"
-                                style={{ fontSize: "12px" }}
-                                formatter={(value: string) =>
-                                    value.length > 25
-                                        ? `${value.substring(0, 22)}...`
-                                        : value
-                                } // Adjusted truncation
+                        {RESERVATION_STATUSES.map((status) => (
+                            <Bar
+                                key={status.key}
+                                dataKey={status.key}
+                                stackId="a" // All bars in the same stack
+                                fill={status.color}
+                                radius={0} // Stacked bars typically don't have individual radius
+                                barSize={30}
                             />
-                            <LabelList
-                                dataKey="value"
-                                position="right"
-                                offset={8}
-                                className="fill-foreground"
-                                style={{ fontSize: "12px" }}
-                                formatter={(value: number) =>
-                                    value.toLocaleString()
-                                }
-                            />
-                        </Bar>
+                        ))}
+                        {/* Optional: LabelList for total on top of the stack */}
+                        {/* <LabelList dataKey="totalReservationCount" position="right" offset={8} className="fill-foreground" style={{ fontSize: "12px" }} formatter={(value: number) => value.toLocaleString()} /> */}
                     </BarChart>
                 </ResponsiveContainer>
             </div>

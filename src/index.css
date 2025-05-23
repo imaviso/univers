@@ -56,6 +56,18 @@
     --chart-3: hsl(197 37% 24%);
     --chart-4: hsl(43 74% 66%);
     --chart-5: hsl(27 87% 67%);
+    --chart-6: hsl(250, 50%, 45%);
+    --chart-7: hsl(75, 55%, 40%);
+    --chart-8: hsl(300, 45%, 55%);
+    --chart-9: hsl(20, 80%, 50%);
+    --chart-10: hsl(290, 70%, 30%);
+    --chart-11: hsl(100, 50%, 45%);
+    --chart-12: hsl(210, 60%, 40%);
+
+    --maroon: hsl(356, 58%, 34%);
+    --maroon-foreground: hsl(0 0% 100%);
+    --cityellow: hsl(47, 91%, 55%);
+    --cityellow-foreground: hsl(0, 0%, 2%);
 }
 
 .dark {
@@ -100,6 +112,18 @@
     --chart-3: hsl(30 80% 55%);
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
+    --chart-6: hsl(260, 70%, 65%);
+    --chart-7: hsl(85, 60%, 50%);
+    --chart-8: hsl(310, 70%, 70%);
+    --chart-9: hsl(50, 90%, 60%);
+    --chart-10: hsl(200, 80%, 50%);
+    --chart-11: hsl(10, 80%, 65%);
+    --chart-12: hsl(140, 70%, 40%);
+
+    --maroon: hsl(356, 58%, 34%);
+    --maroon-foreground: hsl(0 0% 100%);
+    --cityellow: hsl(47, 91%, 55%);
+    --cityellow-foreground: hsl(0, 0%, 2%);
 }
 
 @theme inline {
@@ -127,6 +151,13 @@
     --color-chart-3: var(--chart-3);
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
+    --color-chart-6: var(--chart-6);
+    --color-chart-7: var(--chart-7);
+    --color-chart-8: var(--chart-8);
+    --color-chart-9: var(--chart-9);
+    --color-chart-10: var(--chart-10);
+    --color-chart-11: var(--chart-11);
+    --color-chart-12: var(--chart-12);
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);

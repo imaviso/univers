@@ -20,13 +20,14 @@ import type {
     EventCountDTO,
     EventDTO,
     EventDTOPayload,
-    EventTypeSummaryDTO,
+    EventTypeStatusDistributionDTO,
     PeakHourDTO,
     RecentActivityItemDTO,
     TopEquipmentDTO,
     TopVenueDTO,
     UserActivityDTO,
     UserDTO,
+    UserReservationActivityDTO,
     VenueDTO,
 } from "./types";
 
@@ -1833,7 +1834,7 @@ export const getEventTypesSummary = async (
     startDate: string,
     endDate: string,
     limit = 10, // Default limit, can be adjusted or made optional
-): Promise<EventTypeSummaryDTO[]> => {
+): Promise<EventTypeStatusDistributionDTO[]> => {
     const params = new URLSearchParams({
         startDate,
         endDate,
@@ -1846,7 +1847,31 @@ export const getEventTypesSummary = async (
             headers: { "Content-Type": "application/json" },
         },
     );
-    return handleApiResponse<EventTypeSummaryDTO[]>(response, true);
+    return handleApiResponse<EventTypeStatusDistributionDTO[]>(response, true);
+};
+
+export const getUserReservationActivity = async (
+    startDate: string,
+    endDate: string,
+    userFilter?: string,
+    limit = 10,
+): Promise<UserReservationActivityDTO[]> => {
+    const params = new URLSearchParams({
+        startDate,
+        endDate,
+        limit: limit.toString(),
+    });
+    if (userFilter) {
+        params.append("userFilter", userFilter);
+    }
+    const response = await fetchWithAuth(
+        `${DASHBOARD_BASE_URL}/user-reservation-activity?${params.toString()}`,
+        {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        },
+    );
+    return handleApiResponse<UserReservationActivityDTO[]>(response, true);
 };
 
 // --- Equipment Category API ---
