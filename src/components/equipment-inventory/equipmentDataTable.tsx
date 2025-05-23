@@ -325,19 +325,17 @@ export function EquipmentDataTable({
                     const item = row.original;
                     const imageUrl = item.imagePath;
                     return (
-                        <div className="flex items-center justify-center gap-3 w-full">
-                            <div className="flex items-center gap-3">
-                                <img
-                                    src={imageUrl}
-                                    alt={item.name}
-                                    className="h-10 w-10 rounded object-cover"
-                                    loading="lazy"
-                                />
-                                <div className="text-center">
-                                    <div className="font-medium">{item.name}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                        Brand: {item.brand}
-                                    </div>
+                        <div className="flex items-center gap-3">
+                            <img
+                                src={imageUrl}
+                                alt={item.name}
+                                className="h-10 w-10 rounded object-cover"
+                                loading="lazy"
+                            />
+                            <div className="flex-1 text-center"> 
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                    Brand: {item.brand}
                                 </div>
                             </div>
                         </div>
@@ -391,7 +389,7 @@ export function EquipmentDataTable({
                         }),
                     );
                     return (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1 justify-center w-full">
                             {categoriesArray.map((category) => (
                                 <Badge
                                     key={category.id}
