@@ -238,10 +238,22 @@ function Events() {
                                                     checked
                                                         ? "recency"
                                                         : "default",
-                                                ); // Toggle between recency and default
+                                                );
                                             }}
                                         >
                                             Most Recent
+                                        </DropdownMenuCheckboxItem>
+                                        <DropdownMenuCheckboxItem
+                                            checked={sortBy === "date"}
+                                            onCheckedChange={(checked) => {
+                                                setSortBy(
+                                                    checked
+                                                        ? "date"
+                                                        : "default",
+                                                );
+                                            }}
+                                        >
+                                            Event Date
                                         </DropdownMenuCheckboxItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -957,10 +969,22 @@ function Events() {
                                                     checked
                                                         ? "recency"
                                                         : "default",
-                                                ); // Toggle between recency and default
+                                                );
                                             }}
                                         >
                                             Most Recent
+                                        </DropdownMenuCheckboxItem>
+                                        <DropdownMenuCheckboxItem
+                                            checked={sortBy === "date"}
+                                            onCheckedChange={(checked) => {
+                                                setSortBy(
+                                                    checked
+                                                        ? "date"
+                                                        : "default",
+                                                );
+                                            }}
+                                        >
+                                            Event Date
                                         </DropdownMenuCheckboxItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>

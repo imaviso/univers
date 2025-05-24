@@ -385,7 +385,7 @@ export type RecentActivityItemDTO = {
     description: string;
     timestamp: string; // ISO Date string
     actorName: string; // User who performed the action or "System"
-    link?: string; // Optional link to the item
+    entityPath: string; // Path to the entity (e.g., event ID) for linking
 };
 
 export type EventTypeSummaryDTO = {

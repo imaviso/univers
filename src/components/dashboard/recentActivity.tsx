@@ -18,6 +18,22 @@ function getActivityIcon(type: string) {
     return <Building className="h-5 w-5 text-muted-foreground" />;
 }
 
+function getActivityTitle(type: string, description: string): string {
+    if (type.toLowerCase().includes("event")) {
+        if (description.toLowerCase().includes("created")) {
+            return "New Event Created";
+        }
+        return "Event Status Updated";
+    }
+    if (type.toLowerCase().includes("reservation")) {
+        if (description.toLowerCase().includes("created")) {
+            return "New Equipment Reservation";
+        }
+        return "Reservation Status Updated";
+    }
+    return type;
+}
+
 export function RecentActivity() {
     const {
         data: activities,
@@ -71,20 +87,24 @@ export function RecentActivity() {
                 {activities.map((activity: RecentActivityItemDTO) => (
                     <div key={activity.id} className="flex items-start gap-3">
                         <Avatar className="h-9 w-9 border">
-                            {/* Placeholder for user/system avatar based on actorName if available */}
-                            {/* <AvatarImage src={activity.actorAvatarUrl} alt={activity.actorName} /> */}
                             <AvatarFallback>
                                 {activity.actorName
                                     ? activity.actorName
-                                          .substring(0, 2)
+                                          .split(" ")
+                                          .map((n) => n[0])
+                                          .join("")
                                           .toUpperCase()
+                                          .substring(0, 2)
                                     : "SY"}
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 space-y-1">
                             <div className="flex items-center justify-between">
                                 <p className="text-sm font-medium leading-none">
-                                    {activity.title}
+                                    {getActivityTitle(
+                                        activity.type,
+                                        activity.description,
+                                    )}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                     {formatDistanceToNow(
@@ -94,18 +114,20 @@ export function RecentActivity() {
                                 </p>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                                {activity.description} - by{" "}
-                                <span className="font-medium">
-                                    {activity.actorName || "System"}
-                                </span>
+                                {activity.description}
                             </p>
-                            <Link
-                                to={"/app/events/$eventId"}
-                                params={{ eventId: activity.id }}
-                                className="text-xs text-primary hover:underline"
-                            >
-                                View Details
-                            </Link>
+                            <div className="flex items-center justify-between">
+                                <Link
+                                    to="/app/events/$eventId"
+                                    params={{ eventId: activity.entityPath }}
+                                    className="text-xs text-primary hover:underline"
+                                >
+                                    View Details
+                                </Link>
+                                <span className="text-xs text-muted-foreground">
+                                    by {activity.actorName || "System"}
+                                </span>
+                            </div>
                         </div>
                         <div className="self-center">
                             {getActivityIcon(activity.type)}
