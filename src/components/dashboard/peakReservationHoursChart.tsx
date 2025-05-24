@@ -17,6 +17,14 @@ interface PeakReservationHoursChartProps {
     equipmentTypeFilter?: string;
 }
 
+// Convert UTC hour to local hour using native Date methods
+const convertToLocalHour = (utcHour: number): number => {
+    // Create a date object for today at the given UTC hour
+    const date = new Date();
+    date.setUTCHours(utcHour, 0, 0, 0);
+    return date.getHours();
+};
+
 const formatHour = (hour: number): string => {
     if (hour === 0) return "12 AM";
     if (hour === 12) return "12 PM";
@@ -89,13 +97,22 @@ export function PeakReservationHoursChart({
         );
     }
 
-    const chartData = peakHoursData
-        .map((item) => ({
-            time: formatHour(item.hourOfDay),
-            hourValue: item.hourOfDay, // Keep original hour for sorting
-            reservations: item.eventCount, // Corrected from item.count based on typical DTOs
+    // Convert UTC hours to local hours and aggregate counts
+    const localHourMap = new Map<number, number>();
+
+    for (const item of peakHoursData) {
+        const localHour = convertToLocalHour(item.hourOfDay);
+        const currentCount = localHourMap.get(localHour) || 0;
+        localHourMap.set(localHour, currentCount + item.eventCount);
+    }
+
+    const chartData = Array.from(localHourMap.entries())
+        .map(([hour, count]) => ({
+            time: formatHour(hour),
+            hourValue: hour,
+            reservations: count,
         }))
-        .sort((a, b) => a.hourValue - b.hourValue); // Sort by hour of day
+        .sort((a, b) => a.hourValue - b.hourValue);
 
     // Removed Card, CardHeader, CardContent, CardFooter wrappers
     // The title and description can be handled by the parent component if needed

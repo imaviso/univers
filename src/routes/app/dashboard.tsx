@@ -160,13 +160,12 @@ function Dashboard() {
     >(
         "eventsOverviewVisibleStatuses", // Key for localStorage
         {
-            // Default: only APPROVED is true
             approved: true,
             pending: false,
             canceled: false,
             rejected: false,
-            ongoing: false,
-            completed: false,
+            ongoing: true,
+            completed: true,
         },
     );
 
@@ -419,7 +418,7 @@ function Dashboard() {
                                         >
                                             <ListFilter className="h-3.5 w-3.5" />
                                             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                                                Filter Statuses
+                                                Status
                                             </span>
                                         </Button>
                                     </DropdownMenuTrigger>
@@ -473,8 +472,7 @@ function Dashboard() {
                             <CardHeader>
                                 <CardTitle>Peak Reservation Hours</CardTitle>
                                 <CardDescription>
-                                    Most common times for venue and equipment
-                                    bookings
+                                    Most common times for event reservations
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
