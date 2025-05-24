@@ -258,6 +258,19 @@ export function EventDetailsPage() {
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.own(),
             });
+
+            if (currentUser?.roles?.includes("EQUIPMENT_OWNER")) {
+                queryClient.invalidateQueries({
+                    queryKey: equipmentReservationKeys.byEvent(event.publicId),
+                });
+                queryClient.invalidateQueries({
+                    queryKey: equipmentReservationKeys.allEquipmentOwner(),
+                });
+                queryClient.invalidateQueries({
+                    queryKey: equipmentReservationKeys.pendingEquipmentOwner(),
+                });
+            }
+
             setIsApprovalDialogOpen(false);
             setApprovalRemarks("");
         },

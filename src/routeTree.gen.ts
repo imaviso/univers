@@ -39,7 +39,6 @@ import { Route as AppEventsTimelineImport } from './routes/app/events/timeline'
 import { Route as AppEventsEventIdImport } from './routes/app/events/$eventId'
 import { Route as AppEventApprovalApprovalImport } from './routes/app/event-approval/approval'
 import { Route as AppEquipmentApprovalApprovalImport } from './routes/app/equipment-approval/approval'
-import { Route as AppEquipmentApprovalApprovalIdImport } from './routes/app/equipment-approval/$approvalId'
 import { Route as AppDepartmentsDashboardImport } from './routes/app/departments/dashboard'
 
 // Create/Update Routes
@@ -212,13 +211,6 @@ const AppEquipmentApprovalApprovalRoute =
     getParentRoute: () => AppEquipmentApprovalRouteRoute,
   } as any)
 
-const AppEquipmentApprovalApprovalIdRoute =
-  AppEquipmentApprovalApprovalIdImport.update({
-    id: '/$approvalId',
-    path: '/$approvalId',
-    getParentRoute: () => AppEquipmentApprovalRouteRoute,
-  } as any)
-
 const AppDepartmentsDashboardRoute = AppDepartmentsDashboardImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -369,13 +361,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDepartmentsDashboardImport
       parentRoute: typeof AppDepartmentsRouteImport
     }
-    '/app/equipment-approval/$approvalId': {
-      id: '/app/equipment-approval/$approvalId'
-      path: '/$approvalId'
-      fullPath: '/app/equipment-approval/$approvalId'
-      preLoaderRoute: typeof AppEquipmentApprovalApprovalIdImport
-      parentRoute: typeof AppEquipmentApprovalRouteImport
-    }
     '/app/equipment-approval/approval': {
       id: '/app/equipment-approval/approval'
       path: '/approval'
@@ -476,13 +461,11 @@ const AppDepartmentsRouteRouteWithChildren =
   AppDepartmentsRouteRoute._addFileChildren(AppDepartmentsRouteRouteChildren)
 
 interface AppEquipmentApprovalRouteRouteChildren {
-  AppEquipmentApprovalApprovalIdRoute: typeof AppEquipmentApprovalApprovalIdRoute
   AppEquipmentApprovalApprovalRoute: typeof AppEquipmentApprovalApprovalRoute
 }
 
 const AppEquipmentApprovalRouteRouteChildren: AppEquipmentApprovalRouteRouteChildren =
   {
-    AppEquipmentApprovalApprovalIdRoute: AppEquipmentApprovalApprovalIdRoute,
     AppEquipmentApprovalApprovalRoute: AppEquipmentApprovalApprovalRoute,
   }
 
@@ -611,7 +594,6 @@ export interface FileRoutesByFullPath {
   '/app/equipments': typeof AppEquipmentsRoute
   '/app/notifications': typeof AppNotificationsRoute
   '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
-  '/app/equipment-approval/$approvalId': typeof AppEquipmentApprovalApprovalIdRoute
   '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
   '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
   '/app/events/$eventId': typeof AppEventsEventIdRoute
@@ -643,7 +625,6 @@ export interface FileRoutesByTo {
   '/app/equipments': typeof AppEquipmentsRoute
   '/app/notifications': typeof AppNotificationsRoute
   '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
-  '/app/equipment-approval/$approvalId': typeof AppEquipmentApprovalApprovalIdRoute
   '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
   '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
   '/app/events/$eventId': typeof AppEventsEventIdRoute
@@ -677,7 +658,6 @@ export interface FileRoutesById {
   '/app/equipments': typeof AppEquipmentsRoute
   '/app/notifications': typeof AppNotificationsRoute
   '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
-  '/app/equipment-approval/$approvalId': typeof AppEquipmentApprovalApprovalIdRoute
   '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
   '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
   '/app/events/$eventId': typeof AppEventsEventIdRoute
@@ -711,7 +691,6 @@ export interface FileRouteTypes {
     | '/app/equipments'
     | '/app/notifications'
     | '/app/departments/dashboard'
-    | '/app/equipment-approval/$approvalId'
     | '/app/equipment-approval/approval'
     | '/app/event-approval/approval'
     | '/app/events/$eventId'
@@ -742,7 +721,6 @@ export interface FileRouteTypes {
     | '/app/equipments'
     | '/app/notifications'
     | '/app/departments/dashboard'
-    | '/app/equipment-approval/$approvalId'
     | '/app/equipment-approval/approval'
     | '/app/event-approval/approval'
     | '/app/events/$eventId'
@@ -774,7 +752,6 @@ export interface FileRouteTypes {
     | '/app/equipments'
     | '/app/notifications'
     | '/app/departments/dashboard'
-    | '/app/equipment-approval/$approvalId'
     | '/app/equipment-approval/approval'
     | '/app/event-approval/approval'
     | '/app/events/$eventId'
@@ -854,7 +831,6 @@ export const routeTree = rootRoute
       "filePath": "app/equipment-approval/route.tsx",
       "parent": "/app",
       "children": [
-        "/app/equipment-approval/$approvalId",
         "/app/equipment-approval/approval"
       ]
     },
@@ -935,10 +911,6 @@ export const routeTree = rootRoute
     "/app/departments/dashboard": {
       "filePath": "app/departments/dashboard.tsx",
       "parent": "/app/departments"
-    },
-    "/app/equipment-approval/$approvalId": {
-      "filePath": "app/equipment-approval/$approvalId.tsx",
-      "parent": "/app/equipment-approval"
     },
     "/app/equipment-approval/approval": {
       "filePath": "app/equipment-approval/approval.tsx",
