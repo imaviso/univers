@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card"; // Added CardContent
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
-import { approvedEventsQueryOptions } from "@/lib/query";
+import { searchEventsQueryOptions } from "@/lib/query";
 import type { EventDTO, UserRole } from "@/lib/types"; // Use the shared Event type
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query"; // Import useQuery
@@ -331,7 +331,9 @@ export const Route = createFileRoute("/app/calendar")({
     },
     loader: async ({ context }) => {
         // Ensure data is fetched or being fetched before component renders
-        context.queryClient.ensureQueryData(approvedEventsQueryOptions);
+        context.queryClient.ensureQueryData(
+            searchEventsQueryOptions("ALL", "APPROVED"),
+        );
         // context.queryClient.ensureQueryData(venuesQueryOptions);
     },
     errorComponent: () => <ErrorPage />,
@@ -341,17 +343,10 @@ export const Route = createFileRoute("/app/calendar")({
 function Calendar() {
     // Fetch events using useQuery
     const { data: eventsData, isLoading: isLoadingEvents } = useQuery(
-        approvedEventsQueryOptions, // This returns AppEvent[] (aliased Event[])
+        searchEventsQueryOptions("ALL", "APPROVED"),
     );
     // Adapt AppEvent[] to EventDTO[] to satisfy component's internal types
-    const events: EventDTO[] = (eventsData || []).map((event) => ({
-        ...event, // Spread fields from AppEvent (Event)
-        approvals: null, // Add missing EventDTO fields with default values
-        cancellationReason: null,
-        createdAt: "", // Placeholder, ideally this comes from API
-        updatedAt: "", // Placeholder, ideally this comes from API
-        // severity: null, // If severity is needed, add here
-    }));
+    const events: EventDTO[] = eventsData || [];
 
     const [currentDate, setCurrentDate] = usePersistentState<Date>(
         "calendarCurrentDate",

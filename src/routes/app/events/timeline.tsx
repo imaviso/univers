@@ -62,21 +62,35 @@ const EventStatus = {
 
 function Events() {
     const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
-    const { data: currentUser } = useCurrentUser(); // Get current user
+    const { data: currentUser } = useCurrentUser();
     const [view, setView] = usePersistentState<"list" | "timeline">(
         "eventView",
         "list",
     );
     const userRoles = currentUser?.roles || [];
-    const [activeTab, setActiveTab] = usePersistentState<"all" | "mine">(
-        "eventActiveTab",
-        userRoles.includes("SUPER_ADMIN") ||
-            userRoles.includes("VP_ADMIN") ||
-            userRoles.includes("ADMIN") ||
-            userRoles.includes("DEPT_HEAD") ||
-            userRoles.includes("VENUE_OWNER")
-            ? "all"
-            : "mine",
+
+    const isSuperAdmin = userRoles.includes("SUPER_ADMIN");
+    const isAdmin =
+        userRoles.includes("VP_ADMIN") ||
+        userRoles.includes("ADMIN") ||
+        userRoles.includes("DEPT_HEAD") ||
+        userRoles.includes("VENUE_OWNER") ||
+        userRoles.includes("EQUIPMENT_OWNER");
+
+    let defaultActiveTab: "all" | "mine" | "related";
+    if (isSuperAdmin) {
+        defaultActiveTab = "all";
+    } else if (isAdmin) {
+        defaultActiveTab = "related";
+    } else {
+        defaultActiveTab = "mine";
+    }
+
+    const [activeTab, setActiveTab] = usePersistentState<
+        "all" | "mine" | "related"
+    >(
+        "eventActiveTab_v3", // Updated key for new default logic
+        defaultActiveTab,
     );
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [eventStatusFilter, setEventStatusFilter] =
@@ -100,21 +114,16 @@ function Events() {
         "card",
     ); // State for display view
 
-    const isAuthorized =
-        userRoles.includes("SUPER_ADMIN") ||
-        userRoles.includes("VP_ADMIN") ||
-        userRoles.includes("ADMIN") ||
-        userRoles.includes("DEPT_HEAD") ||
-        userRoles.includes("VENUE_OWNER");
+    const isAuthorized = isSuperAdmin || isAdmin; // Simplified: SUPER_ADMIN or any other Admin role can see tabs
 
     return (
         <div className="bg-background flex flex-col overflow-hidden h-full">
-            {/* Use Tabs only if SUPER_ADMIN and view is list, otherwise just render content */}
+            {/* Show Tabs if user is SUPER_ADMIN or an Admin, and view is list */}
             {isAuthorized && view === "list" ? (
                 <Tabs
                     value={activeTab}
                     onValueChange={(value) =>
-                        setActiveTab(value as "all" | "mine")
+                        setActiveTab(value as "all" | "mine" | "related")
                     }
                     className="flex flex-col flex-1 overflow-hidden"
                 >
@@ -394,9 +403,18 @@ function Events() {
                                 </Popover>
                             )}
 
-                            {/* TabsList only shown for these authorized roles in list view */}
-                            <TabsList className="grid grid-cols-2 h-9">
-                                <TabsTrigger value="all">Events</TabsTrigger>
+                            {/* TabsList for authorized users */}
+                            <TabsList className={cn("h-9 grid grid-cols-2")}>
+                                {isSuperAdmin && (
+                                    <TabsTrigger value="all">
+                                        All Events
+                                    </TabsTrigger>
+                                )}
+                                {!isSuperAdmin && isAdmin && (
+                                    <TabsTrigger value="related">
+                                        Related Events
+                                    </TabsTrigger>
+                                )}
                                 <TabsTrigger value="mine">
                                     My Events
                                 </TabsTrigger>
@@ -408,33 +426,65 @@ function Events() {
                     </header>
 
                     <main className="flex-1 pl-6 pr-6 overflow-hidden">
-                        {/* Both TabsContent rendered for SUPER_ADMIN */}
-                        <TabsContent value="all" className="mt-0 h-full">
-                            <EventList
-                                activeTab="all"
-                                eventStatusFilter={eventStatusFilter}
-                                sortBy={sortBy}
-                                startDateISO={
-                                    listSelectedDateRange?.from
-                                        ? formatISO(
-                                              startOfDay(
-                                                  listSelectedDateRange.from,
-                                              ),
-                                          )
-                                        : undefined
-                                }
-                                endDateISO={
-                                    listSelectedDateRange?.to
-                                        ? formatISO(
-                                              endOfDay(
-                                                  listSelectedDateRange.to,
-                                              ),
-                                          )
-                                        : undefined
-                                }
-                                displayView={displayView}
-                            />
-                        </TabsContent>
+                        {isSuperAdmin && (
+                            <TabsContent value="all" className="mt-0 h-full">
+                                <EventList
+                                    activeTab="all"
+                                    eventStatusFilter={eventStatusFilter}
+                                    sortBy={sortBy}
+                                    startDateISO={
+                                        listSelectedDateRange?.from
+                                            ? formatISO(
+                                                  startOfDay(
+                                                      listSelectedDateRange.from,
+                                                  ),
+                                              )
+                                            : undefined
+                                    }
+                                    endDateISO={
+                                        listSelectedDateRange?.to
+                                            ? formatISO(
+                                                  endOfDay(
+                                                      listSelectedDateRange.to,
+                                                  ),
+                                              )
+                                            : undefined
+                                    }
+                                    displayView={displayView}
+                                />
+                            </TabsContent>
+                        )}
+                        {!isSuperAdmin && isAdmin && (
+                            <TabsContent
+                                value="related"
+                                className="mt-0 h-full"
+                            >
+                                <EventList
+                                    activeTab="related"
+                                    eventStatusFilter={eventStatusFilter}
+                                    sortBy={sortBy}
+                                    startDateISO={
+                                        listSelectedDateRange?.from
+                                            ? formatISO(
+                                                  startOfDay(
+                                                      listSelectedDateRange.from,
+                                                  ),
+                                              )
+                                            : undefined
+                                    }
+                                    endDateISO={
+                                        listSelectedDateRange?.to
+                                            ? formatISO(
+                                                  endOfDay(
+                                                      listSelectedDateRange.to,
+                                                  ),
+                                              )
+                                            : undefined
+                                    }
+                                    displayView={displayView}
+                                />
+                            </TabsContent>
+                        )}
                         <TabsContent value="mine" className="mt-0 h-full">
                             <EventList
                                 activeTab="mine"
@@ -464,7 +514,7 @@ function Events() {
                     </main>
                 </Tabs>
             ) : (
-                // Non-SUPER_ADMIN or timeline view structure
+                // Non-Authorized users (Organizers) or timeline view structure
                 <div className="flex flex-col flex-1 overflow-hidden">
                     <header className="flex items-center justify-between border-b px-6 h-[65px]">
                         <div className="flex items-center gap-4">
@@ -923,9 +973,9 @@ function Events() {
                     <main className="flex-1 p-6 overflow-hidden">
                         {/* Conditionally render based on view */}
                         {view === "list" ? (
-                            // Non-SUPER_ADMIN only sees 'mine'
+                            // Organizers only see 'mine'
                             <EventList
-                                activeTab="mine"
+                                activeTab="mine" // Default to 'mine' for organizers
                                 eventStatusFilter={eventStatusFilter}
                                 sortBy={sortBy}
                                 startDateISO={

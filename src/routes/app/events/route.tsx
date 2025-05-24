@@ -1,13 +1,7 @@
 import ErrorPage from "@/components/ErrorPage";
 import PendingPage from "@/components/PendingPage";
 import { allNavigation } from "@/lib/navigation";
-import {
-    allEventsQueryOptions,
-    approvedEventsQueryOptions,
-    ownEventsQueryOptions,
-    pendingVenueOwnerEventsQueryOptions,
-    venuesQueryOptions,
-} from "@/lib/query";
+import { venuesQueryOptions } from "@/lib/query";
 import type { UserRole } from "@/lib/types";
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 
@@ -59,21 +53,7 @@ export const Route = createFileRoute("/app/events")({
     errorComponent: () => <ErrorPage />,
     pendingComponent: () => <PendingPage />,
     loader: async ({ context }) => {
-        if (
-            context.authState?.roles.includes("SUPER_ADMIN") ||
-            context.authState?.roles.includes("ADMIN") ||
-            context.authState?.roles.includes("DEPT_HEAD")
-        ) {
-            context.queryClient.ensureQueryData(allEventsQueryOptions);
-        }
-        if (context.authState?.roles.includes("VENUE_OWNER")) {
-            context.queryClient.ensureQueryData(
-                pendingVenueOwnerEventsQueryOptions,
-            );
-        }
         context.queryClient.ensureQueryData(venuesQueryOptions);
-        context.queryClient.ensureQueryData(ownEventsQueryOptions);
-        context.queryClient.ensureQueryData(approvedEventsQueryOptions);
     },
 });
 

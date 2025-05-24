@@ -369,21 +369,6 @@ export const getAllVenues = async (): Promise<VenueDTO[]> => {
     }
 };
 
-export const getAllEvents = async (): Promise<Event[]> => {
-    try {
-        const response = await fetchWithAuth(`${API_BASE_URL}/events`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-        });
-        const data = await handleApiResponse<Event[]>(response, true);
-        return data || [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error("An unexpected error occurred during fetching events.");
-    }
-};
-
 export const getEventById = async (eventId: string): Promise<EventDTO> => {
     try {
         const response = await fetchWithAuth(
@@ -534,19 +519,25 @@ export const approveEvent = async ({
     remarks: string;
 }): Promise<string> => {
     try {
-        const url = `${API_BASE_URL}/event-approval/${eventId}/action`;
+        const url = `${API_BASE_URL}/event-approval/action`;
 
-        const payload = { status: "APPROVED", remarks: remarks || "" };
+        const payload = {
+            eventPublicIds: [eventId],
+            status: "APPROVED",
+            remarks: remarks || "",
+        };
 
         const response = await fetchWithAuth(url, {
-            method: "PUT",
+            method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
         });
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Event approved successfully";
+        const responseData = await handleApiResponse<unknown[]>(response, true);
+        return responseData && responseData.length > 0
+            ? "Event approved successfully"
+            : "Approval processed";
     } catch (error) {
         if (error instanceof Error) {
             throw error;
@@ -554,86 +545,6 @@ export const approveEvent = async ({
         throw new Error(
             `An unexpected error occurred during approving event ${eventId}.`,
         );
-    }
-};
-
-export const getOwnEvents = async (): Promise<Event[]> => {
-    try {
-        const response = await fetchWithAuth(
-            `${API_BASE_URL}/users/me/events`,
-            {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            },
-        );
-        const data = await handleApiResponse<Event[]>(response, true);
-        return data || [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred during fetching own events.",
-              );
-    }
-};
-
-export const getApprovedEvents = async (): Promise<Event[]> => {
-    try {
-        const response = await fetchWithAuth(
-            `${API_BASE_URL}/events/approved`,
-            {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            },
-        );
-        const data = await handleApiResponse<Event[]>(response, true);
-        return data || [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred during fetching own events.",
-              );
-    }
-};
-
-export const getPendingVenueOwnerEvents = async (): Promise<EventDTO[]> => {
-    try {
-        const response = await fetchWithAuth(
-            `${API_BASE_URL}/events/pending/venue-owner`,
-            {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            },
-        );
-        const data = await handleApiResponse<EventDTO[]>(response, true);
-        return data || [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred while fetching pending events for venue owner.",
-              );
-    }
-};
-
-export const getPendingDeptHeadEvents = async (): Promise<Event[]> => {
-    try {
-        const response = await fetchWithAuth(
-            `${API_BASE_URL}/events/pending/department-head`,
-            {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            },
-        );
-        const data = await handleApiResponse<Event[]>(response, true);
-        return data || [];
-    } catch (error) {
-        throw error instanceof Error
-            ? error
-            : new Error(
-                  "An unexpected error occurred while fetching pending events for department head.",
-              );
     }
 };
 
@@ -1521,19 +1432,23 @@ export const rejectEvent = async (data: {
     remarks: string;
 }): Promise<string> => {
     try {
-        const response = await fetchWithAuth(
-            `${API_BASE_URL}/event-approval/${data.eventId}/action`,
-            {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    status: "REJECTED",
-                    remarks: data.remarks,
-                }),
-            },
-        );
-        const responseData = await handleApiResponse<string>(response, false);
-        return responseData || "Event rejected successfully";
+        const url = `${API_BASE_URL}/event-approval/action`;
+
+        const payload = {
+            eventPublicIds: [data.eventId],
+            status: "REJECTED",
+            remarks: data.remarks,
+        };
+
+        const response = await fetchWithAuth(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const responseData = await handleApiResponse<unknown[]>(response, true);
+        return responseData && responseData.length > 0
+            ? "Event rejected successfully"
+            : "Rejection processed";
     } catch (error) {
         throw error instanceof Error
             ? error

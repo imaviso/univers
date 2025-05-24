@@ -74,16 +74,22 @@ export function useWebSocketNotifications() {
 
                         // --- Conditional Invalidation based on Payload ---
                         if (entityId) {
-                            // Only proceed if we have an event ID (which entityId now is)
-                            // Always invalidate the related event's details and approvals
+                            // Invalidate all related event queries
                             queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.all,
+                                queryKey: eventsQueryKeys.listsRelated(),
+                            });
+                            // Also invalidate the specific search query with all possible parameters
+                            queryClient.invalidateQueries({
+                                queryKey: [
+                                    ...eventsQueryKeys.listsRelated(),
+                                    { scope: "related" },
+                                ],
                             });
                             // Invalidate specific lists based on the original trigger type
                             if (entityType?.includes("EQUIPMENT")) {
                                 // Invalidate equipment reservation lists (cannot invalidate detail without reservation ID)
                                 queryClient.invalidateQueries({
-                                    queryKey: equipmentReservationKeys.all,
+                                    queryKey: equipmentReservationKeys.lists(),
                                 });
                             }
                         }

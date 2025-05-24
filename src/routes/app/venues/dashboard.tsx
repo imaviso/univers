@@ -16,12 +16,12 @@ import { VenueFormDialog } from "@/components/venue/venueFormDialog";
 import { bulkDeleteVenues, createVenue, updateVenue } from "@/lib/api";
 import {
     departmentsQueryOptions,
-    ownEventsQueryOptions,
+    searchEventsQueryOptions,
     usersQueryOptions,
     venuesQueryOptions,
 } from "@/lib/query";
 import type { VenueInput } from "@/lib/schema";
-import type { UserDTO, VenueDTO } from "@/lib/types";
+import type { EventDTO, UserDTO, VenueDTO } from "@/lib/types";
 import { getStatusBadgeClass } from "@/lib/utils";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
@@ -84,7 +84,6 @@ export const Route = createFileRoute("/app/venues/dashboard")({
     component: VenueManagement,
     loader: ({ context: { queryClient } }) => {
         queryClient.ensureQueryData(venuesQueryOptions);
-        queryClient.ensureQueryData(ownEventsQueryOptions);
         queryClient.ensureQueryData(departmentsQueryOptions);
     },
 });
@@ -123,8 +122,17 @@ export function VenueManagement() {
         enabled: role.includes("SUPER_ADMIN"),
     });
 
-    const { data: ownEvents = [], isLoading: isLoadingOwnEvents } = useQuery({
-        ...ownEventsQueryOptions,
+    const {
+        data: ownEvents = [] as EventDTO[],
+        isLoading: isLoadingOwnEvents,
+    } = useQuery({
+        ...searchEventsQueryOptions(
+            "mine",
+            activeEventTab === "all" ? undefined : activeEventTab.toUpperCase(),
+            undefined,
+            undefined,
+            undefined,
+        ),
         enabled: viewMode === "events" && !role.includes("SUPER_ADMIN"),
     });
 
@@ -256,11 +264,11 @@ export function VenueManagement() {
 
     // Filter user's own events for the "My Events" tab
     const filteredOwnEvents = useMemo(() => {
-        if (!ownEvents) return [];
-        return ownEvents.filter((event) => {
-            if (activeEventTab === "all") return true;
-            return event.status.toLowerCase() === activeEventTab.toLowerCase();
-        });
+        if (!ownEvents) return [] as EventDTO[];
+        // If activeEventTab is "all", we don't need to filter since the query handles it
+        if (activeEventTab === "all") return ownEvents;
+        // For other tabs, the query already filters by status
+        return ownEvents;
     }, [ownEvents, activeEventTab]);
 
     // Stats
