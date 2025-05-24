@@ -89,7 +89,10 @@ export function useWebSocketNotifications() {
                             if (entityType?.includes("EQUIPMENT")) {
                                 // Invalidate equipment reservation lists (cannot invalidate detail without reservation ID)
                                 queryClient.invalidateQueries({
-                                    queryKey: equipmentReservationKeys.lists(),
+                                    queryKey: equipmentReservationKeys.all,
+                                });
+                                queryClient.invalidateQueries({
+                                    queryKey: eventsQueryKeys.lists(),
                                 });
                             }
                         }

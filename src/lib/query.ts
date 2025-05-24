@@ -429,10 +429,19 @@ export const useCreateEquipmentReservationMutation = () => {
         {
             previousLists?: EquipmentReservationDTO[];
             previousOwn?: EquipmentReservationDTO[];
+            previousEventApprovals?: EventDTO[];
         }
     >({
         mutationFn: createEquipmentReservation,
         onMutate: async (newReservationsInput) => {
+            // Get the event ID from the first reservation (assuming all reservations are for the same event)
+            const eventId = newReservationsInput[0]?.event?.publicId;
+            if (!eventId) {
+                throw new Error(
+                    "Event ID is required for equipment reservation",
+                );
+            }
+
             // 1. Cancel ongoing queries to prevent them from overwriting our optimistic update
             await queryClient.cancelQueries({
                 queryKey: equipmentReservationKeys.lists(),
@@ -440,15 +449,20 @@ export const useCreateEquipmentReservationMutation = () => {
             await queryClient.cancelQueries({
                 queryKey: equipmentReservationKeys.own(),
             });
-            // Example: await queryClient.cancelQueries({ queryKey: equipmentReservationKeys.byEvent(eventId) });
+            await queryClient.cancelQueries({
+                queryKey: eventsQueryKeys.approvals(eventId),
+            });
 
-            // 2. Snapshot the previous value
+            // 2. Snapshot the previous values
             const previousLists = queryClient.getQueryData<
                 EquipmentReservationDTO[]
             >(equipmentReservationKeys.lists());
             const previousOwn = queryClient.getQueryData<
                 EquipmentReservationDTO[]
             >(equipmentReservationKeys.own());
+            const previousEventApprovals = queryClient.getQueryData<EventDTO[]>(
+                eventsQueryKeys.approvals(eventId),
+            );
 
             // 3. Optimistically update to the new value
             const currentUser = queryClient.getQueryData<UserDTO>(
@@ -494,7 +508,7 @@ export const useCreateEquipmentReservationMutation = () => {
             if (previousLists) {
                 queryClient.setQueryData<EquipmentReservationDTO[]>(
                     equipmentReservationKeys.lists(),
-                    [...optimisticReservations, ...previousLists], // Prepend optimistic items
+                    [...optimisticReservations, ...previousLists],
                 );
             } else {
                 queryClient.setQueryData<EquipmentReservationDTO[]>(
@@ -507,7 +521,7 @@ export const useCreateEquipmentReservationMutation = () => {
             if (previousOwn) {
                 queryClient.setQueryData<EquipmentReservationDTO[]>(
                     equipmentReservationKeys.own(),
-                    [...optimisticReservations, ...previousOwn], // Prepend optimistic items
+                    [...optimisticReservations, ...previousOwn],
                 );
             } else {
                 queryClient.setQueryData<EquipmentReservationDTO[]>(
@@ -516,10 +530,9 @@ export const useCreateEquipmentReservationMutation = () => {
                 );
             }
 
-            // Return a context object with the snapshotted value
-            return { previousLists, previousOwn };
+            // Return a context object with all snapshotted values
+            return { previousLists, previousOwn, previousEventApprovals };
         },
-        // If the mutation fails, use the context returned from onMutate to roll back
         onError: (err, _newReservations, context) => {
             if (context?.previousLists) {
                 queryClient.setQueryData<EquipmentReservationDTO[]>(
@@ -533,15 +546,35 @@ export const useCreateEquipmentReservationMutation = () => {
                     context.previousOwn,
                 );
             }
+            if (context?.previousEventApprovals) {
+                const eventId = _newReservations[0]?.event?.publicId;
+                if (eventId) {
+                    queryClient.setQueryData<EventDTO[]>(
+                        eventsQueryKeys.approvals(eventId),
+                        context.previousEventApprovals,
+                    );
+                }
+            }
             console.error(
                 "Error creating equipment reservations (optimistic update failed):",
                 err,
             );
-            // Toast notification for error is likely handled by the component calling the mutation
         },
-        // Always refetch after error or success to ensure consistency
         onSuccess: (newlyCreatedReservations, _variables, _context) => {
-            // Invalidate queries to refetch fresh data from the server.
+            // Get the event ID from the first reservation
+            const eventId = newlyCreatedReservations[0]?.event?.publicId;
+            if (eventId) {
+                // Invalidate event approvals
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.approvals(eventId),
+                });
+                // Also invalidate the event details since approvals are part of the event
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.detail(eventId),
+                });
+            }
+
+            // Invalidate equipment reservation queries
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.lists(),
             });
@@ -550,7 +583,6 @@ export const useCreateEquipmentReservationMutation = () => {
             });
 
             // Update details cache with server-confirmed data
-            // This replaces any optimistic items in detail views if they were navigated to
             for (const reservation of newlyCreatedReservations) {
                 queryClient.setQueryData(
                     equipmentReservationKeys.detail(reservation.publicId),
@@ -558,10 +590,17 @@ export const useCreateEquipmentReservationMutation = () => {
                 );
             }
         },
-        onSettled: (_data, _error, _variables, _context) => {
-            // This runs after success or error.
-            // Final invalidation to ensure data consistency beyond what onSuccess might cover.
-            // Using 'all' can be a bit broad but ensures all related reservation queries are fresh.
+        onSettled: (_data, _error, variables, _context) => {
+            const eventId = variables[0]?.event?.publicId;
+            if (eventId) {
+                // Final invalidation to ensure all related queries are fresh
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.approvals(eventId),
+                });
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.detail(eventId),
+                });
+            }
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.all,
             });
@@ -574,6 +613,12 @@ export const useApproveEquipmentReservationMutation = () => {
     return useMutation({
         mutationFn: approveEquipmentReservation,
         onMutate: async (variables: EquipmentActionInput) => {
+            // Get the event ID from the reservation
+            const reservation = await getEquipmentReservationById(
+                variables.reservationPublicId,
+            );
+            const eventId = reservation?.event?.publicId;
+
             // Cancel any outgoing refetches
             await queryClient.cancelQueries({
                 queryKey: equipmentReservationKeys.allEquipmentOwner(),
@@ -583,16 +628,30 @@ export const useApproveEquipmentReservationMutation = () => {
                     variables.reservationPublicId,
                 ),
             });
+            if (eventId) {
+                await queryClient.cancelQueries({
+                    queryKey: eventsQueryKeys.approvals(eventId),
+                });
+                await queryClient.cancelQueries({
+                    queryKey: eventsQueryKeys.detail(eventId),
+                });
+            }
 
-            // Snapshot the previous value
+            // Snapshot the previous values
             const previousReservations = queryClient.getQueryData<
                 EquipmentReservationDTO[]
             >(equipmentReservationKeys.allEquipmentOwner());
+            const previousEventApprovals = eventId
+                ? queryClient.getQueryData<EventDTO[]>(
+                      eventsQueryKeys.approvals(eventId),
+                  )
+                : undefined;
+
+            // Rest of the optimistic update code remains the same...
             const currentUser = queryClient.getQueryData<UserDTO>(
                 userQueryOptions.queryKey,
             );
 
-            // Optimistically update to the new value
             if (previousReservations && currentUser) {
                 queryClient.setQueryData<EquipmentReservationDTO[]>(
                     equipmentReservationKeys.allEquipmentOwner(),
@@ -628,7 +687,7 @@ export const useApproveEquipmentReservationMutation = () => {
                         }),
                 );
             }
-            return { previousReservations };
+            return { previousReservations, previousEventApprovals, eventId };
         },
         onError: (_err, _variables, context) => {
             if (context?.previousReservations) {
@@ -637,8 +696,14 @@ export const useApproveEquipmentReservationMutation = () => {
                     context.previousReservations,
                 );
             }
+            if (context?.previousEventApprovals && context?.eventId) {
+                queryClient.setQueryData(
+                    eventsQueryKeys.approvals(context.eventId),
+                    context.previousEventApprovals,
+                );
+            }
         },
-        onSuccess: (_data, variables) => {
+        onSuccess: (_data, variables, context) => {
             // Invalidate and refetch
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.allEquipmentOwner(),
@@ -662,6 +727,16 @@ export const useApproveEquipmentReservationMutation = () => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.own(),
             });
+
+            // Invalidate event-related queries if we have an event ID
+            if (context?.eventId) {
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.approvals(context.eventId),
+                });
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.detail(context.eventId),
+                });
+            }
         },
     });
 };
@@ -671,6 +746,12 @@ export const useRejectEquipmentReservationMutation = () => {
     return useMutation({
         mutationFn: rejectEquipmentReservation,
         onMutate: async (variables: EquipmentActionInput) => {
+            // Get the event ID from the reservation
+            const reservation = await getEquipmentReservationById(
+                variables.reservationPublicId,
+            );
+            const eventId = reservation?.event?.publicId;
+
             await queryClient.cancelQueries({
                 queryKey: equipmentReservationKeys.allEquipmentOwner(),
             });
@@ -679,10 +760,24 @@ export const useRejectEquipmentReservationMutation = () => {
                     variables.reservationPublicId,
                 ),
             });
+            if (eventId) {
+                await queryClient.cancelQueries({
+                    queryKey: eventsQueryKeys.approvals(eventId),
+                });
+                await queryClient.cancelQueries({
+                    queryKey: eventsQueryKeys.detail(eventId),
+                });
+            }
 
             const previousReservations = queryClient.getQueryData<
                 EquipmentReservationDTO[]
             >(equipmentReservationKeys.allEquipmentOwner());
+            const previousEventApprovals = eventId
+                ? queryClient.getQueryData<EventDTO[]>(
+                      eventsQueryKeys.approvals(eventId),
+                  )
+                : undefined;
+
             const currentUser = queryClient.getQueryData<UserDTO>(
                 userQueryOptions.queryKey,
             );
@@ -722,7 +817,7 @@ export const useRejectEquipmentReservationMutation = () => {
                         }),
                 );
             }
-            return { previousReservations };
+            return { previousReservations, previousEventApprovals, eventId };
         },
         onError: (_err, _variables, context) => {
             if (context?.previousReservations) {
@@ -731,8 +826,14 @@ export const useRejectEquipmentReservationMutation = () => {
                     context.previousReservations,
                 );
             }
+            if (context?.previousEventApprovals && context?.eventId) {
+                queryClient.setQueryData(
+                    eventsQueryKeys.approvals(context.eventId),
+                    context.previousEventApprovals,
+                );
+            }
         },
-        onSuccess: (_data, variables) => {
+        onSuccess: (_data, variables, context) => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.allEquipmentOwner(),
             });
@@ -755,6 +856,16 @@ export const useRejectEquipmentReservationMutation = () => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.own(),
             });
+
+            // Invalidate event-related queries if we have an event ID
+            if (context?.eventId) {
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.approvals(context.eventId),
+                });
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.detail(context.eventId),
+                });
+            }
         },
     });
 };
@@ -769,15 +880,25 @@ export const useCancelEquipmentReservationMutation = () => {
             eventId: string;
         }) => {
             const { reservationId, eventId } = variables;
+
             // Cancel any outgoing refetches
             await queryClient.cancelQueries({
                 queryKey: equipmentReservationKeys.byEvent(eventId),
             });
+            await queryClient.cancelQueries({
+                queryKey: eventsQueryKeys.approvals(eventId),
+            });
+            await queryClient.cancelQueries({
+                queryKey: eventsQueryKeys.detail(eventId),
+            });
 
-            // Snapshot the previous value
+            // Snapshot the previous values
             const previousReservations = queryClient.getQueryData<
                 EquipmentReservationDTO[]
             >(equipmentReservationKeys.byEvent(eventId));
+            const previousEventApprovals = queryClient.getQueryData<EventDTO[]>(
+                eventsQueryKeys.approvals(eventId),
+            );
 
             // Optimistically update to the new value
             if (previousReservations) {
@@ -795,13 +916,19 @@ export const useCancelEquipmentReservationMutation = () => {
                         }),
                 );
             }
-            return { previousReservations, eventId };
+            return { previousReservations, previousEventApprovals, eventId };
         },
         onError: (_err, _variables, context) => {
             if (context?.previousReservations && context?.eventId) {
                 queryClient.setQueryData(
                     equipmentReservationKeys.byEvent(context.eventId),
                     context.previousReservations,
+                );
+            }
+            if (context?.previousEventApprovals && context?.eventId) {
+                queryClient.setQueryData(
+                    eventsQueryKeys.approvals(context.eventId),
+                    context.previousEventApprovals,
                 );
             }
         },
@@ -823,6 +950,14 @@ export const useCancelEquipmentReservationMutation = () => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.own(),
             });
+
+            // Invalidate event-related queries
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.approvals(eventId),
+            });
+            queryClient.invalidateQueries({
+                queryKey: eventsQueryKeys.detail(eventId),
+            });
         },
     });
 };
@@ -830,8 +965,15 @@ export const useCancelEquipmentReservationMutation = () => {
 export const useDeleteEquipmentReservationMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: deleteEquipmentReservation,
-        onSuccess: (_message, reservationId) => {
+        mutationFn: async (reservationId: string) => {
+            // Get the reservation first to get the event ID
+            const reservation =
+                await getEquipmentReservationById(reservationId);
+            const eventId = reservation?.event?.publicId;
+            await deleteEquipmentReservation(reservationId);
+            return { eventId };
+        },
+        onSuccess: (_data, reservationId) => {
             queryClient.removeQueries({
                 queryKey: equipmentReservationKeys.detail(reservationId),
             });
@@ -844,6 +986,16 @@ export const useDeleteEquipmentReservationMutation = () => {
             queryClient.invalidateQueries({
                 queryKey: equipmentReservationKeys.own(),
             });
+
+            // If we have an event ID, invalidate event-related queries
+            if (_data.eventId) {
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.approvals(_data.eventId),
+                });
+                queryClient.invalidateQueries({
+                    queryKey: eventsQueryKeys.detail(_data.eventId),
+                });
+            }
         },
     });
 };
