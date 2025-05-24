@@ -29,13 +29,10 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { approveEvent, rejectEvent } from "@/lib/api";
-import {
-    getAllEvents, // Import generic API function to fetch all events
-} from "@/lib/api";
 import { defineMeta, filterFn } from "@/lib/filters";
 import { allNavigation } from "@/lib/navigation";
-import { allEventsQueryOptions, eventsQueryKeys } from "@/lib/query";
-import type { Event, EventApprovalDTO, EventDTO, UserRole } from "@/lib/types";
+import { eventsQueryKeys, searchEventsQueryOptions } from "@/lib/query";
+import type { EventApprovalDTO, EventDTO, UserRole } from "@/lib/types";
 import { getApproverStatusBadge } from "@/lib/utils";
 import {
     useMutation,
@@ -86,30 +83,13 @@ import { toast } from "sonner";
 // Define approval types
 type ApprovalType = "VENUE_OWNER" | "DEPT_HEAD" | "ADMIN";
 
-// Update ApprovalConfig to use array query keys
-type QueryKeyType =
-    | "pendingVenueOwner"
-    | "pendingDeptHead"
-    | "pendingAdmin"
-    | "pending"; // Added pendingAdmin
-
-type ApprovalEvent = Event | EventDTO;
-
-// Create a type-safe query function that handles both Event[] and EventDTO[] return types
-function createApprovalQueryFn(
-    originalQueryFn: QueryFunction<EventDTO[] | Event[], readonly unknown[]>,
-): QueryFunction<ApprovalEvent[], readonly unknown[]> {
-    return async (...args) => {
-        const result = await originalQueryFn(...args);
-        return result as ApprovalEvent[];
-    };
-}
+// ApprovalEvent will be simplified to EventDTO directly
+type ApprovalEvent = EventDTO;
 
 interface ApprovalConfig {
     type: ApprovalType;
     title: string;
     description: string;
-    queryKey: QueryKeyType;
     getQueryOptions: () => UseQueryOptions<
         ApprovalEvent[],
         Error,
@@ -131,23 +111,12 @@ const approvalConfigs: Record<ApprovalType, ApprovalConfig> = {
         type: "VENUE_OWNER",
         title: "Venue Event Approval",
         description: "Approve or reject events for your venues",
-        queryKey: "pendingVenueOwner",
-        getQueryOptions: () => ({
-            queryKey: eventsQueryKeys.lists(),
-            queryFn: createApprovalQueryFn(
-                getAllEvents as QueryFunction<
-                    EventDTO[] | Event[],
-                    readonly unknown[]
-                >,
-            ),
-            staleTime: 1000 * 60 * 2,
-        }),
+        getQueryOptions: () => searchEventsQueryOptions("related", undefined),
         isApprover: (event, currentUserId) =>
             !!currentUserId &&
             event.eventVenue?.venueOwner?.publicId === currentUserId,
         getApprovalStatus: (event, currentUserId) => {
-            if (!currentUserId || !("approvals" in event) || !event.approvals)
-                return undefined;
+            if (!currentUserId || !event.approvals) return undefined;
             return event.approvals.find(
                 (approval) =>
                     approval.signedByUser.publicId === currentUserId &&
@@ -159,23 +128,12 @@ const approvalConfigs: Record<ApprovalType, ApprovalConfig> = {
         type: "DEPT_HEAD",
         title: "Department Event Approval",
         description: "Approve or reject events for your department",
-        queryKey: "pendingDeptHead",
-        getQueryOptions: () => ({
-            queryKey: eventsQueryKeys.lists(),
-            queryFn: createApprovalQueryFn(
-                getAllEvents as QueryFunction<
-                    EventDTO[] | Event[],
-                    readonly unknown[]
-                >,
-            ),
-            staleTime: 1000 * 60 * 2,
-        }),
+        getQueryOptions: () => searchEventsQueryOptions("related", undefined),
         isApprover: (event, currentUserId) =>
             !!currentUserId &&
             event.department?.deptHead?.publicId === currentUserId,
         getApprovalStatus: (event, currentUserId) => {
-            if (!currentUserId || !("approvals" in event) || !event.approvals)
-                return undefined;
+            if (!currentUserId || !event.approvals) return undefined;
             return event.approvals.find(
                 (approval) =>
                     approval.signedByUser.publicId === currentUserId &&
@@ -187,21 +145,10 @@ const approvalConfigs: Record<ApprovalType, ApprovalConfig> = {
         type: "ADMIN",
         title: "Admin Event Approval",
         description: "Approve or reject events as an administrator",
-        queryKey: "pendingAdmin",
-        getQueryOptions: () => ({
-            queryKey: eventsQueryKeys.lists(),
-            queryFn: createApprovalQueryFn(
-                getAllEvents as QueryFunction<
-                    EventDTO[] | Event[],
-                    readonly unknown[]
-                >,
-            ),
-            staleTime: 1000 * 60 * 2,
-        }),
+        getQueryOptions: () => searchEventsQueryOptions("related", undefined),
         isApprover: (_event: ApprovalEvent, _currentUserId?: string) => true,
         getApprovalStatus: (event, currentUserId) => {
-            if (!currentUserId || !("approvals" in event) || !event.approvals)
-                return undefined;
+            if (!currentUserId || !event.approvals) return undefined;
             return event.approvals.find(
                 (approval) =>
                     approval.signedByUser.publicId === currentUserId &&
@@ -312,7 +259,14 @@ export function EventApproval() {
     const config = approvalConfigs[approvalType];
     const queryClient = useQueryClient();
 
-    const { data: fetchedEvents } = useSuspenseQuery(allEventsQueryOptions);
+    const currentQueryOptions = config.getQueryOptions();
+    const { data: fetchedEvents } = useSuspenseQuery({
+        ...currentQueryOptions,
+        queryFn: currentQueryOptions.queryFn as QueryFunction<
+            ApprovalEvent[],
+            readonly unknown[]
+        >,
+    });
 
     const [searchQuery, setSearchQuery] = usePersistentState<string>(
         "venueApprovalSearchQuery_v2",
@@ -358,7 +312,7 @@ export function EventApproval() {
         ) => {
             toast.success("Event approved successfully.");
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pendingVenueOwner(),
+                queryKey: currentQueryOptions.queryKey,
             });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.detail(variables.eventId),
@@ -374,9 +328,6 @@ export function EventApproval() {
             });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.pending(),
-            });
-            queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pendingDeptHead(),
             });
             queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
         },
@@ -393,7 +344,7 @@ export function EventApproval() {
         ) => {
             toast.success("Event rejected successfully.");
             queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pendingVenueOwner(),
+                queryKey: currentQueryOptions.queryKey,
             });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.detail(variables.eventId),
@@ -409,9 +360,6 @@ export function EventApproval() {
             });
             queryClient.invalidateQueries({
                 queryKey: eventsQueryKeys.pending(),
-            });
-            queryClient.invalidateQueries({
-                queryKey: eventsQueryKeys.pendingDeptHead(),
             });
             queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
         },
@@ -459,19 +407,22 @@ export function EventApproval() {
         [navigate],
     );
 
-    const openSingleApproveDialog = React.useCallback((event: Event) => {
-        if (!event.publicId) {
-            toast.error("Event ID is missing for this event.");
-            return;
-        }
-        setSingleActionInfo({
-            eventId: event.publicId,
-            type: "approve",
-        });
-        setSingleActionRemarks("");
-    }, []);
+    const openSingleApproveDialog = React.useCallback(
+        (event: ApprovalEvent) => {
+            if (!event.publicId) {
+                toast.error("Event ID is missing for this event.");
+                return;
+            }
+            setSingleActionInfo({
+                eventId: event.publicId,
+                type: "approve",
+            });
+            setSingleActionRemarks("");
+        },
+        [],
+    );
 
-    const openSingleRejectDialog = React.useCallback((event: Event) => {
+    const openSingleRejectDialog = React.useCallback((event: ApprovalEvent) => {
         if (!event.publicId) {
             toast.error("Event ID is missing for this event.");
             return;
@@ -545,16 +496,19 @@ export function EventApproval() {
         const eligibleEventPayloads = selectedRows
             .filter((row) => {
                 const event = row.original as ApprovalEvent;
-                const isPending = event.status === "PENDING";
-                const isApprover = config.isApprover(event, currentUserId);
-                const currentUserApproval = config.getApprovalStatus(
+                const isOverallEventPending = event.status === "PENDING";
+                const isUserTheCorrectApproverType = config.isApprover(
+                    event,
+                    currentUserId,
+                );
+                const currentUserSpecificApproval = config.getApprovalStatus(
                     event,
                     currentUserId,
                 );
                 return (
-                    isPending &&
-                    isApprover &&
-                    !currentUserApproval &&
+                    isOverallEventPending &&
+                    isUserTheCorrectApproverType &&
+                    currentUserSpecificApproval?.status === "PENDING" &&
                     event.publicId
                 );
             })
@@ -607,16 +561,19 @@ export function EventApproval() {
         const eligibleEventPayloads = selectedRows
             .filter((row) => {
                 const event = row.original as ApprovalEvent;
-                const isPending = event.status === "PENDING";
-                const isApprover = config.isApprover(event, currentUserId);
-                const currentUserApproval = config.getApprovalStatus(
+                const isOverallEventPending = event.status === "PENDING";
+                const isUserTheCorrectApproverType = config.isApprover(
+                    event,
+                    currentUserId,
+                );
+                const currentUserSpecificApproval = config.getApprovalStatus(
                     event,
                     currentUserId,
                 );
                 return (
-                    isPending &&
-                    isApprover &&
-                    !currentUserApproval &&
+                    isOverallEventPending &&
+                    isUserTheCorrectApproverType &&
+                    currentUserSpecificApproval?.status === "PENDING" &&
                     event.publicId
                 );
             })
@@ -721,11 +678,11 @@ export function EventApproval() {
                     );
                 },
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: Event) => row.eventName, {
+                meta: defineMeta((row: ApprovalEvent) => row.eventName, {
                     displayName: "Event Name",
                     type: "text",
                     icon: FileText,
-                }) as ColumnMeta<Event, unknown>,
+                }) as ColumnMeta<ApprovalEvent, unknown>,
             },
             {
                 accessorKey: "eventType",
@@ -742,11 +699,11 @@ export function EventApproval() {
                 ),
                 cell: ({ row }) => row.original.eventType,
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: Event) => row.eventType, {
+                meta: defineMeta((row: ApprovalEvent) => row.eventType, {
                     displayName: "Event Type",
                     type: "text",
                     icon: Tag,
-                }) as ColumnMeta<Event, unknown>,
+                }) as ColumnMeta<ApprovalEvent, unknown>,
             },
             {
                 accessorKey: "venueName",
@@ -776,11 +733,11 @@ export function EventApproval() {
                     );
                 },
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: Event) => row.eventVenue.name, {
+                meta: defineMeta((row: ApprovalEvent) => row.eventVenue.name, {
                     displayName: "Venue",
                     type: "text",
                     icon: Building,
-                }) as ColumnMeta<Event, unknown>,
+                }) as ColumnMeta<ApprovalEvent, unknown>,
             },
             {
                 accessorKey: "departmentName",
@@ -797,11 +754,14 @@ export function EventApproval() {
                 ),
                 cell: ({ row }) => row.original.department?.name ?? "N/A",
                 filterFn: filterFn("text"),
-                meta: defineMeta((row: Event) => row.department?.name ?? "", {
-                    displayName: "Department",
-                    type: "text",
-                    icon: Building,
-                }) as ColumnMeta<Event, unknown>,
+                meta: defineMeta(
+                    (row: ApprovalEvent) => row.department?.name ?? "",
+                    {
+                        displayName: "Department",
+                        type: "text",
+                        icon: Building,
+                    },
+                ) as ColumnMeta<ApprovalEvent, unknown>,
             },
             {
                 accessorKey: "startTime",
@@ -819,11 +779,11 @@ export function EventApproval() {
                 cell: ({ row }) =>
                     format(row.original.startTime, "MMM d, yyyy"),
                 filterFn: filterFn("date"),
-                meta: defineMeta((row: Event) => row.startTime, {
+                meta: defineMeta((row: ApprovalEvent) => row.startTime, {
                     displayName: "Date",
                     type: "date",
                     icon: Calendar,
-                }) as ColumnMeta<Event, unknown>,
+                }) as ColumnMeta<ApprovalEvent, unknown>,
             },
             {
                 id: "timeRange",
@@ -860,7 +820,7 @@ export function EventApproval() {
                 ),
                 filterFn: filterFn("text"),
                 meta: defineMeta(
-                    (row: Event) =>
+                    (row: ApprovalEvent) =>
                         `${row.organizer?.firstName ?? ""} ${row.organizer?.lastName ?? ""}`.trim() ||
                         "N/A",
                     {
@@ -868,7 +828,7 @@ export function EventApproval() {
                         type: "text",
                         icon: UserCircle,
                     },
-                ) as ColumnMeta<Event, unknown>,
+                ) as ColumnMeta<ApprovalEvent, unknown>,
             },
             {
                 id: "status",
@@ -879,7 +839,7 @@ export function EventApproval() {
                 },
                 accessorFn: (row) => row.status,
                 filterFn: filterFn("option"),
-                meta: defineMeta((row: Event) => row.status, {
+                meta: defineMeta((row: ApprovalEvent) => row.status, {
                     displayName: "Event Status",
                     type: "option",
                     icon: HelpCircle,
@@ -889,7 +849,7 @@ export function EventApproval() {
                         { value: "REJECTED", label: "Rejected" },
                         { value: "CANCELLED", label: "Cancelled" },
                     ],
-                }) as ColumnMeta<Event, unknown>,
+                }) as ColumnMeta<ApprovalEvent, unknown>,
             },
             {
                 id: "createdAt",
@@ -1106,21 +1066,40 @@ export function EventApproval() {
 
     const statistics = useMemo(() => {
         if (!fetchedEvents)
-            return { total: 0, pending: 0, approved: 0, rejected: 0 };
-        const events = fetchedEvents.filter((event: ApprovalEvent) =>
-            config.isApprover(event, currentUserId),
+            return {
+                total: 0,
+                pendingAction: 0,
+                userApproved: 0,
+                userRejected: 0,
+            };
+
+        const eventsRelevantToView = fetchedEvents.filter(
+            (event: ApprovalEvent) => config.isApprover(event, currentUserId),
         );
+
         return {
-            total: events.length,
-            pending: events.filter(
-                (event: ApprovalEvent) => event.status === "PENDING",
-            ).length,
-            approved: events.filter(
-                (event: ApprovalEvent) => event.status === "APPROVED",
-            ).length,
-            rejected: events.filter(
-                (event: ApprovalEvent) => event.status === "REJECTED",
-            ).length,
+            total: eventsRelevantToView.length, // Total events shown in this view
+            pendingAction: eventsRelevantToView.filter((event) => {
+                const userApproval = config.getApprovalStatus(
+                    event,
+                    currentUserId,
+                );
+                return userApproval?.status === "PENDING";
+            }).length,
+            userApproved: eventsRelevantToView.filter((event) => {
+                const userApproval = config.getApprovalStatus(
+                    event,
+                    currentUserId,
+                );
+                return userApproval?.status === "APPROVED";
+            }).length,
+            userRejected: eventsRelevantToView.filter((event) => {
+                const userApproval = config.getApprovalStatus(
+                    event,
+                    currentUserId,
+                );
+                return userApproval?.status === "REJECTED";
+            }).length,
         };
     }, [fetchedEvents, config, currentUserId]);
 
@@ -1193,7 +1172,7 @@ export function EventApproval() {
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium">
-                                Total Events for Approval
+                                Total Events for Your Approval
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -1205,36 +1184,36 @@ export function EventApproval() {
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium">
-                                Pending Approval
+                                Events Pending Your Action
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-yellow-500">
-                                {statistics.pending}
+                                {statistics.pendingAction}
                             </div>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium">
-                                Approved
+                                Events You've Approved
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-green-500">
-                                {statistics.approved}
+                                {statistics.userApproved}
                             </div>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium">
-                                Rejected/Cancelled
+                                Events You've Rejected
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-red-500">
-                                {statistics.rejected}
+                                {statistics.userRejected}
                             </div>
                         </CardContent>
                     </Card>

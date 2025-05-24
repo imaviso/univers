@@ -40,6 +40,7 @@ import { type FileMetadata, useFileUpload } from "@/hooks/use-file-upload";
 import {
     allEquipmentCategoriesQueryOptions,
     useCreateEquipmentCategoryMutation,
+    useDeleteEquipmentCategoryMutation,
 } from "@/lib/query"; // Import query and mutation for categories
 import { type EquipmentDTOInput, equipmentDataSchema } from "@/lib/schema";
 import { type Equipment, STATUS_EQUIPMENT, type UserDTO } from "@/lib/types";
@@ -101,6 +102,7 @@ export function EquipmentFormDialog({
         refetch: refetchCategories,
     } = useQuery(allEquipmentCategoriesQueryOptions);
     const createCategoryMutation = useCreateEquipmentCategoryMutation();
+    const deleteCategoryMutation = useDeleteEquipmentCategoryMutation();
 
     const [popoverOpen, setPopoverOpen] = useState(false);
     const [categorySearchTerm, setCategorySearchTerm] = useState("");
@@ -237,6 +239,34 @@ export function EquipmentFormDialog({
                 },
             },
         );
+    };
+
+    const handleDeleteCategory = (categoryId: string, categoryName: string) => {
+        if (!isSuperAdmin) {
+            toast.error("Only super admins can delete categories.");
+            return;
+        }
+
+        // Check if category is in use
+        const isCategoryInUse = watchedCategoryIds.includes(categoryId);
+        if (isCategoryInUse) {
+            toast.error(
+                `Cannot delete category "${categoryName}" as it is currently in use.`,
+            );
+            return;
+        }
+
+        deleteCategoryMutation.mutate(categoryId, {
+            onSuccess: () => {
+                toast.success(
+                    `Category "${categoryName}" deleted successfully.`,
+                );
+                refetchCategories();
+            },
+            onError: (error) => {
+                toast.error(`Failed to delete category: ${error.message}`);
+            },
+        });
     };
 
     const processSubmit = (data: EquipmentDTOInput) => {
@@ -383,16 +413,16 @@ export function EquipmentFormDialog({
                                                     role="combobox"
                                                     aria-expanded={popoverOpen}
                                                     className={cn(
-                                                        "w-full justify-between",
+                                                        "w-full justify-between border-input",
                                                         !field.value?.length &&
-                                                            "text-muted-foreground",
+                                                            "text-muted-foreground border-input",
                                                     )}
                                                     disabled={
                                                         isMutating ||
                                                         isLoadingCategories
                                                     }
                                                 >
-                                                    <span className="truncate">
+                                                    <span className="truncate text-sm">
                                                         {selectedCategoryNames ||
                                                             "Select categories..."}
                                                     </span>
@@ -463,20 +493,47 @@ export function EquipmentFormDialog({
                                                                             },
                                                                         );
                                                                     }}
+                                                                    className="flex items-center justify-between group"
                                                                 >
-                                                                    <CheckIcon
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            watchedCategoryIds.includes(
-                                                                                category.publicId,
-                                                                            )
-                                                                                ? "opacity-100"
-                                                                                : "opacity-0",
-                                                                        )}
-                                                                    />
-                                                                    {
-                                                                        category.name
-                                                                    }
+                                                                    <div className="flex items-center">
+                                                                        <CheckIcon
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                watchedCategoryIds.includes(
+                                                                                    category.publicId,
+                                                                                )
+                                                                                    ? "opacity-100"
+                                                                                    : "opacity-0",
+                                                                            )}
+                                                                        />
+                                                                        {
+                                                                            category.name
+                                                                        }
+                                                                    </div>
+                                                                    {isSuperAdmin && (
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                            onClick={(
+                                                                                e,
+                                                                            ) => {
+                                                                                e.stopPropagation();
+                                                                                handleDeleteCategory(
+                                                                                    category.publicId,
+                                                                                    category.name,
+                                                                                );
+                                                                            }}
+                                                                            disabled={
+                                                                                deleteCategoryMutation.isPending ||
+                                                                                watchedCategoryIds.includes(
+                                                                                    category.publicId,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <X className="h-4 w-4" />
+                                                                        </Button>
+                                                                    )}
                                                                 </CommandItem>
                                                             ))}
                                                     </CommandGroup>

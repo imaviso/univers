@@ -19,7 +19,7 @@ export function EventList({
     endDateISO,
     displayView, // Add displayView prop
 }: {
-    activeTab: "all" | "mine";
+    activeTab: "all" | "mine" | "related"; // Updated type
     eventStatusFilter: string;
     sortBy?: string;
     startDateISO?: string;
@@ -34,34 +34,13 @@ export function EventList({
         venues.map((venue: VenueDTO) => [venue.publicId, venue.name]),
     );
 
-    let scope = "approved"; // Start with the most restrictive default for others
-
-    if (activeTab === "mine") {
-        scope = "mine";
-    } else if (currentUser) {
-        // Check user exists first
-        const role = currentUser.roles;
-        if (
-            role.includes("SUPER_ADMIN") ||
-            role.includes("VP_ADMIN") ||
-            role.includes("ADMIN") ||
-            role.includes("DEPT_HEAD")
-        ) {
-            scope = "all";
-        } else if (role.includes("VENUE_OWNER")) {
-            scope = "related"; // Venue owner sees related events
-        } else if (role.includes("DEPT_HEAD")) {
-            // Check DEPT_HEAD separately
-            scope = "related"; // Dept head sees related events
-        }
-    }
-    // If none of the above, scope remains "approved"
-    // If no currentUser, scope remains "approved" (safer default)
+    // Directly use activeTab as scope. Backend handles role-based access for each scope.
+    const scope = activeTab;
 
     // Fetch data using the single search query
     const { data: events = [] } = useSuspenseQuery(
         searchEventsQueryOptions(
-            scope,
+            scope, // Use the scope determined by activeTab
             eventStatusFilter,
             sortBy,
             startDateISO,

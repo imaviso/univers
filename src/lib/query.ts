@@ -15,11 +15,9 @@ import {
     getAllEquipmentReservations,
     getAllEquipmentsAdmin,
     getAllEquipmentsByOwner,
-    getAllEvents,
     getAllUsers,
     getAllVenues,
     getApprovalsForEquipmentReservation,
-    getApprovedEvents,
     getCancellationRates,
     getEquipmentCategoryByPublicId,
     getEquipmentReservationById,
@@ -29,11 +27,8 @@ import {
     getEventsOverview,
     getNotifications,
     getOwnEquipmentReservations,
-    getOwnEvents,
     getPeakReservationHours,
-    getPendingDeptHeadEvents,
     getPendingEquipmentOwnerReservations,
-    getPendingVenueOwnerEvents,
     getRecentActivityApi,
     getTimelineEventsByDateRange,
     getTopEquipment,
@@ -146,8 +141,9 @@ export const usersQueryOptions = {
 export const eventsQueryKeys = {
     all: ["events"] as const,
     lists: () => [...eventsQueryKeys.all, "list"] as const,
+    listsRelated: () => [...eventsQueryKeys.all, "list", "related"] as const,
     list: (filters: string) =>
-        [...eventsQueryKeys.lists(), { filters }] as const, // Example filter structure
+        [...eventsQueryKeys.lists(), { filters }] as const,
     details: () => [...eventsQueryKeys.all, "detail"] as const,
     detail: (id: number | string) =>
         [...eventsQueryKeys.details(), id] as const,
@@ -157,6 +153,8 @@ export const eventsQueryKeys = {
     pendingVenueOwner: () =>
         [...eventsQueryKeys.pending(), "venueOwner"] as const,
     pendingDeptHead: () => [...eventsQueryKeys.pending(), "deptHead"] as const,
+    requiringApproval: () =>
+        [...eventsQueryKeys.all, "requiringApproval"] as const,
     own: () => [...eventsQueryKeys.all, "own"] as const,
     approved: () => [...eventsQueryKeys.all, "approved"] as const,
     approvedByVenue: (venueId: string) =>
@@ -165,41 +163,6 @@ export const eventsQueryKeys = {
         [...eventsQueryKeys.all, "ongoingAndApprovedByVenue", venueId] as const,
 };
 
-export const allEventsQueryOptions = queryOptions<AppEvent[]>({
-    queryKey: eventsQueryKeys.lists(),
-    queryFn: getAllEvents,
-    staleTime: 1000 * 60 * 5,
-});
-
-// Replaces old getOwnEventsQueryOptions export
-export const ownEventsQueryOptions = queryOptions<AppEvent[]>({
-    queryKey: eventsQueryKeys.own(),
-    queryFn: getOwnEvents,
-    staleTime: 1000 * 60 * 5,
-});
-
-// Replaces old getApprovedEventsQuery export
-export const approvedEventsQueryOptions = queryOptions<AppEvent[]>({
-    queryKey: eventsQueryKeys.approved(),
-    queryFn: getApprovedEvents,
-    staleTime: 1000 * 60 * 5,
-});
-
-// Updated pendingVenueOwnerEventsQueryOptions
-export const pendingVenueOwnerEventsQueryOptions = queryOptions<EventDTO[]>({
-    queryKey: eventsQueryKeys.pendingVenueOwner(),
-    queryFn: getPendingVenueOwnerEvents,
-    staleTime: 1000 * 60 * 2,
-});
-
-// Updated pendingDeptHeadEventsQueryOptions
-export const pendingDeptHeadEventsQueryOptions = queryOptions<AppEvent[]>({
-    queryKey: eventsQueryKeys.pendingDeptHead(),
-    queryFn: getPendingDeptHeadEvents,
-    staleTime: 1000 * 60 * 2,
-});
-
-// Updated eventQueryOptions (now eventByIdQueryOptions for clarity)
 export const eventByIdQueryOptions = (eventId: number | string) =>
     queryOptions<EventDTO>({
         // Specify return type
@@ -894,7 +857,7 @@ export const searchEventsQueryOptions = (
 ) =>
     queryOptions<EventDTO[]>({
         queryKey: [
-            ...eventsQueryKeys.lists(),
+            ...eventsQueryKeys.listsRelated(),
             {
                 scope,
                 status: status ?? "ALL",

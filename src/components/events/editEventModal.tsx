@@ -36,7 +36,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { updateEvent } from "@/lib/api";
-import { allEventsQueryOptions, eventByIdQueryOptions } from "@/lib/query";
+import { eventByIdQueryOptions, searchEventsQueryOptions } from "@/lib/query";
 import {
     type EditEventInput,
     type EditEventOutput,
@@ -148,7 +148,13 @@ export function EditEventModal({
                 queryKey: eventByIdQueryOptions(event.publicId).queryKey,
             });
             queryClient.invalidateQueries({
-                queryKey: allEventsQueryOptions.queryKey,
+                queryKey: searchEventsQueryOptions(
+                    "all",
+                    "ALL",
+                    undefined,
+                    undefined,
+                    undefined,
+                ).queryKey,
             });
             onClose(); // Close modal on success
         },
