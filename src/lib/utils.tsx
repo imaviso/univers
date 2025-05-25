@@ -153,12 +153,17 @@ export const getApproverStatusBadge = (status: string | undefined) => {
 
 export function formatRole(role: UserRole): string {
     if (!role) return "N/A";
+
+    if (role === "VP_ADMIN") return "VP Admin";
+
+    if (role === "SUPER_ADMIN") return "Super Admin";
+
     return role
         .split("_")
-        .map(
-            (word) =>
-                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
-        )
+        .map((word) => {
+            if (word === "DEPT") return "Dept";
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
         .join(" ");
 }
 

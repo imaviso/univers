@@ -76,8 +76,11 @@ export function useWebSocketNotifications() {
                         if (entityId) {
                             // Invalidate all related event queries
                             queryClient.invalidateQueries({
-                                queryKey: eventsQueryKeys.listsRelated(),
+                                queryKey: eventsQueryKeys.all,
                             });
+                            // queryClient.invalidateQueries({
+                            //     queryKey: eventsQueryKeys.lists(),
+                            // });
                             // Also invalidate the specific search query with all possible parameters
                             queryClient.invalidateQueries({
                                 queryKey: [
@@ -91,9 +94,9 @@ export function useWebSocketNotifications() {
                                 queryClient.invalidateQueries({
                                     queryKey: equipmentReservationKeys.all,
                                 });
-                                queryClient.invalidateQueries({
-                                    queryKey: eventsQueryKeys.lists(),
-                                });
+                                // queryClient.invalidateQueries({
+                                //     queryKey: eventsQueryKeys.lists(),
+                                // });
                             }
                         }
 
