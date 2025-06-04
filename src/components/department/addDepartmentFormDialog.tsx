@@ -95,13 +95,7 @@ export function AddDepartmentFormDialog() {
     });
 
     const handleFormSubmit = (values: DepartmentInput) => {
-        const payload = {
-            ...values,
-            deptHeadId: values.deptHeadId
-                ? String(values.deptHeadId)
-                : undefined,
-        };
-        addMutation.mutate(payload);
+        addMutation.mutate(values);
     };
 
     // Close dialog handler
@@ -175,12 +169,12 @@ export function AddDepartmentFormDialog() {
                                     <Select
                                         onValueChange={(value) =>
                                             field.onChange(
-                                                value
-                                                    ? Number(value)
-                                                    : undefined,
+                                                value === "none"
+                                                    ? undefined
+                                                    : value,
                                             )
                                         }
-                                        value={field.value?.toString() ?? ""}
+                                        value={field.value ?? "none"}
                                     >
                                         <FormControl>
                                             <SelectTrigger className="w-full">
@@ -188,10 +182,13 @@ export function AddDepartmentFormDialog() {
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
+                                            <SelectItem value="none">
+                                                No department head
+                                            </SelectItem>
                                             {users?.map((user: UserDTO) => (
                                                 <SelectItem
                                                     key={user.publicId}
-                                                    value={user.publicId.toString()}
+                                                    value={user.publicId}
                                                 >
                                                     {user.firstName}{" "}
                                                     {user.lastName} (
