@@ -11,143 +11,116 @@ import type { DepartmentDTO } from "@/lib/types"; // Import DepartmentDTO type
 import { useQuery } from "@tanstack/react-query";
 
 interface SummaryStepProps {
-    onSubmit: () => void;
-    onBack: () => void;
+	onSubmit: () => void;
+	onBack: () => void;
 }
 
 export default function SummaryStep({ onSubmit, onBack }: SummaryStepProps) {
-    const [formData] = useAtom(registrationFormAtom);
-    const [isLoading] = useAtom(registrationLoadingAtom);
+	const [formData] = useAtom(registrationFormAtom);
+	const [isLoading] = useAtom(registrationLoadingAtom);
 
-    // Fetch departments data
-    const { data: departments = [] } = useQuery(departmentsQueryOptions);
+	// Fetch departments data
+	const { data: departments = [] } = useQuery(departmentsQueryOptions);
 
-    // Find the selected department name
-    const selectedDepartment = departments.find(
-        (dept: DepartmentDTO) => dept.publicId === formData.departmentPublicId,
-    );
-    const departmentName = selectedDepartment
-        ? selectedDepartment.name
-        : formData.departmentPublicId; // Fallback to ID if not found
+	// Find the selected department name
+	const selectedDepartment = departments.find(
+		(dept: DepartmentDTO) => dept.publicId === formData.departmentPublicId,
+	);
+	const departmentName = selectedDepartment
+		? selectedDepartment.name
+		: formData.departmentPublicId; // Fallback to ID if not found
 
-    return (
-        <div className="space-y-6">
-            <div className="space-y-4">
-                <h3 className="text-lg font-medium">Registration Summary</h3>
-                <p className="text-sm text-muted-foreground">
-                    Please review your information before submitting
-                </p>
+	return (
+		<div className="space-y-6">
+			<div className="space-y-4">
+				<h3 className="text-lg font-medium">Registration Summary</h3>
+				<p className="text-sm text-muted-foreground">
+					Please review your information before submitting
+				</p>
 
-                <Card>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                                <h4 className="text-sm font-medium text-muted-foreground">
-                                    Personal Information
-                                </h4>
-                                <div className="grid grid-cols-[120px_1fr] gap-y-3 text-sm">
-                                    <div className="font-medium">
-                                        ID Number:
-                                    </div>
-                                    <div className="break-all">
-                                        {formData.idNumber}
-                                    </div>
+				<Card>
+					<CardContent>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<div className="space-y-4">
+								<h4 className="text-sm font-medium text-muted-foreground">
+									Personal Information
+								</h4>
+								<div className="grid grid-cols-[120px_1fr] gap-y-3 text-sm">
+									<div className="font-medium">ID Number:</div>
+									<div className="break-all">{formData.idNumber}</div>
 
-                                    <div className="font-medium">
-                                        First Name:
-                                    </div>
-                                    <div className="break-all">
-                                        {formData.firstName}
-                                    </div>
+									<div className="font-medium">First Name:</div>
+									<div className="break-all">{formData.firstName}</div>
 
-                                    <div className="font-medium">
-                                        Last Name:
-                                    </div>
-                                    <div className="break-all">
-                                        {formData.lastName}
-                                    </div>
+									<div className="font-medium">Last Name:</div>
+									<div className="break-all">{formData.lastName}</div>
 
-                                    <div className="font-medium">
-                                        Department:
-                                    </div>
-                                    <div className="break-all">
-                                        {departmentName}
-                                    </div>
-                                </div>
-                            </div>
+									<div className="font-medium">Department:</div>
+									<div className="break-all">{departmentName}</div>
+								</div>
+							</div>
 
-                            <div className="space-y-4">
-                                <h4 className="text-sm font-medium text-muted-foreground">
-                                    Account Information
-                                </h4>
-                                <div className="grid grid-cols-[120px_1fr] gap-y-3 text-sm">
-                                    <div className="font-medium">Email:</div>
-                                    <div className="break-all">
-                                        {formData.email}
-                                    </div>
-                                    <div className="font-medium">
-                                        Telephone Number:
-                                    </div>
-                                    <div className="break-all">
-                                        {formData.telephoneNumber}
-                                    </div>
-                                    <div className="font-medium">
-                                        Phone Number:
-                                    </div>
-                                    <div className="break-all">
-                                        {formData.phoneNumber}
-                                    </div>
-                                    <div className="font-medium">Password:</div>
-                                    <div>••••••••</div>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+							<div className="space-y-4">
+								<h4 className="text-sm font-medium text-muted-foreground">
+									Account Information
+								</h4>
+								<div className="grid grid-cols-[120px_1fr] gap-y-3 text-sm">
+									<div className="font-medium">Email:</div>
+									<div className="break-all">{formData.email}</div>
+									<div className="font-medium">Telephone Number:</div>
+									<div className="break-all">{formData.telephoneNumber}</div>
+									<div className="font-medium">Phone Number:</div>
+									<div className="break-all">{formData.phoneNumber}</div>
+									<div className="font-medium">Password:</div>
+									<div>••••••••</div>
+								</div>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
 
-                <div className="rounded-md bg-green-50 p-4 dark:bg-green-950">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
-                            <CheckCircle2
-                                className="h-5 w-5 text-green-400"
-                                aria-hidden="true"
-                            />
-                        </div>
-                        <div className="ml-3">
-                            <h3 className="text-sm font-medium text-green-800 dark:text-green-300">
-                                All information is complete
-                            </h3>
-                            <div className="mt-2 text-sm text-green-700 dark:text-green-400">
-                                <p>
-                                    You're ready to create your account. Click
-                                    the button below to submit your
-                                    registration.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+				<div className="rounded-md bg-green-50 p-4 dark:bg-green-950">
+					<div className="flex">
+						<div className="flex-shrink-0">
+							<CheckCircle2
+								className="h-5 w-5 text-green-400"
+								aria-hidden="true"
+							/>
+						</div>
+						<div className="ml-3">
+							<h3 className="text-sm font-medium text-green-800 dark:text-green-300">
+								All information is complete
+							</h3>
+							<div className="mt-2 text-sm text-green-700 dark:text-green-400">
+								<p>
+									You're ready to create your account. Click the button below to
+									submit your registration.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 
-            <div className="flex justify-between">
-                <Button type="button" variant="outline" onClick={onBack}>
-                    Back
-                </Button>
-                <Button onClick={onSubmit} disabled={isLoading}>
-                    {isLoading ? (
-                        <>
-                            <LoaderCircleIcon
-                                className="-ms-1 animate-spin"
-                                size={16}
-                                aria-hidden="true"
-                            />
-                            Creating Account...
-                        </>
-                    ) : (
-                        "Create Account"
-                    )}
-                </Button>
-            </div>
-        </div>
-    );
+			<div className="flex justify-between">
+				<Button type="button" variant="outline" onClick={onBack}>
+					Back
+				</Button>
+				<Button onClick={onSubmit} disabled={isLoading}>
+					{isLoading ? (
+						<>
+							<LoaderCircleIcon
+								className="-ms-1 animate-spin"
+								size={16}
+								aria-hidden="true"
+							/>
+							Creating Account...
+						</>
+					) : (
+						"Create Account"
+					)}
+				</Button>
+			</div>
+		</div>
+	);
 }
