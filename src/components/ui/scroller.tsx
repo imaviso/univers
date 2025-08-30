@@ -2,7 +2,6 @@
 
 import { useComposedRefs } from "@/lib/composition";
 import { cn } from "@/lib/utils";
-import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
 import {
     ChevronDown,
@@ -10,6 +9,7 @@ import {
     ChevronRight,
     ChevronUp,
 } from "lucide-react";
+import { Slot as SlotPrimitive } from "radix-ui";
 import * as React from "react";
 
 const DATA_TOP_SCROLL = "data-top-scroll";
@@ -248,7 +248,7 @@ const Scroller = React.forwardRef<HTMLDivElement, ScrollerProps>(
                 : ["left", "right"];
         }, [orientation, withNavigation]);
 
-        const ScrollerPrimitive = asChild ? Slot : "div";
+        const ScrollerPrimitive = asChild ? SlotPrimitive.Slot : "div";
 
         const ScrollerImpl = (
             <ScrollerPrimitive

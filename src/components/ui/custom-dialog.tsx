@@ -1,6 +1,6 @@
 "use client";
 
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
 // Ensure X is NOT imported if you're removing it and it's not used elsewhere in this new file.
 // import { X } from "lucide-react"

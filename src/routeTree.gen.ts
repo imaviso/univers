@@ -8,426 +8,585 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as AppRouteRouteImport } from './routes/app/route'
+import { Route as authRouteRouteImport } from './routes/(auth)/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppNotificationsRouteImport } from './routes/app/notifications'
+import { Route as AppEquipmentsRouteImport } from './routes/app/equipments'
+import { Route as AppDashboardRouteImport } from './routes/app/dashboard'
+import { Route as AppCalendarRouteImport } from './routes/app/calendar'
+import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
+import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
+import { Route as authRegisterRouteImport } from './routes/(auth)/register'
+import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
+import { Route as AppVenuesRouteRouteImport } from './routes/app/venues/route'
+import { Route as AppUserManagementRouteRouteImport } from './routes/app/user-management/route'
+import { Route as AppSettingsRouteRouteImport } from './routes/app/settings/route'
+import { Route as AppEventsRouteRouteImport } from './routes/app/events/route'
+import { Route as AppEventApprovalRouteRouteImport } from './routes/app/event-approval/route'
+import { Route as AppEquipmentApprovalRouteRouteImport } from './routes/app/equipment-approval/route'
+import { Route as AppDepartmentsRouteRouteImport } from './routes/app/departments/route'
+import { Route as AppVenuesDashboardRouteImport } from './routes/app/venues/dashboard'
+import { Route as AppVenuesVenueIdRouteImport } from './routes/app/venues/$venueId'
+import { Route as AppUserManagementUsersRouteImport } from './routes/app/user-management/users'
+import { Route as AppSettingsNotificationsRouteImport } from './routes/app/settings/notifications'
+import { Route as AppSettingsAccountRouteImport } from './routes/app/settings/account'
+import { Route as AppEventsTimelineRouteImport } from './routes/app/events/timeline'
+import { Route as AppEventsEventIdRouteImport } from './routes/app/events/$eventId'
+import { Route as AppEventApprovalApprovalRouteImport } from './routes/app/event-approval/approval'
+import { Route as AppEquipmentApprovalApprovalRouteImport } from './routes/app/equipment-approval/approval'
+import { Route as AppDepartmentsDashboardRouteImport } from './routes/app/departments/dashboard'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as AppRouteImport } from './routes/app/route'
-import { Route as authRouteImport } from './routes/(auth)/route'
-import { Route as IndexImport } from './routes/index'
-import { Route as AppNotificationsImport } from './routes/app/notifications'
-import { Route as AppEquipmentsImport } from './routes/app/equipments'
-import { Route as AppDashboardImport } from './routes/app/dashboard'
-import { Route as AppCalendarImport } from './routes/app/calendar'
-import { Route as authVerifyEmailImport } from './routes/(auth)/verify-email'
-import { Route as authResetPasswordImport } from './routes/(auth)/reset-password'
-import { Route as authRegisterImport } from './routes/(auth)/register'
-import { Route as authLoginImport } from './routes/(auth)/login'
-import { Route as authForgotPasswordImport } from './routes/(auth)/forgot-password'
-import { Route as AppVenuesRouteImport } from './routes/app/venues/route'
-import { Route as AppUserManagementRouteImport } from './routes/app/user-management/route'
-import { Route as AppSettingsRouteImport } from './routes/app/settings/route'
-import { Route as AppEventsRouteImport } from './routes/app/events/route'
-import { Route as AppEventApprovalRouteImport } from './routes/app/event-approval/route'
-import { Route as AppEquipmentApprovalRouteImport } from './routes/app/equipment-approval/route'
-import { Route as AppDepartmentsRouteImport } from './routes/app/departments/route'
-import { Route as AppVenuesDashboardImport } from './routes/app/venues/dashboard'
-import { Route as AppVenuesVenueIdImport } from './routes/app/venues/$venueId'
-import { Route as AppUserManagementUsersImport } from './routes/app/user-management/users'
-import { Route as AppSettingsNotificationsImport } from './routes/app/settings/notifications'
-import { Route as AppSettingsAccountImport } from './routes/app/settings/account'
-import { Route as AppEventsTimelineImport } from './routes/app/events/timeline'
-import { Route as AppEventsEventIdImport } from './routes/app/events/$eventId'
-import { Route as AppEventApprovalApprovalImport } from './routes/app/event-approval/approval'
-import { Route as AppEquipmentApprovalApprovalImport } from './routes/app/equipment-approval/approval'
-import { Route as AppDepartmentsDashboardImport } from './routes/app/departments/dashboard'
-
-// Create/Update Routes
-
-const AppRouteRoute = AppRouteImport.update({
+const AppRouteRoute = AppRouteRouteImport.update({
   id: '/app',
   path: '/app',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const authRouteRoute = authRouteImport.update({
+const authRouteRoute = authRouteRouteImport.update({
   id: '/(auth)',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const AppNotificationsRoute = AppNotificationsImport.update({
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const AppEquipmentsRoute = AppEquipmentsImport.update({
+const AppEquipmentsRoute = AppEquipmentsRouteImport.update({
   id: '/equipments',
   path: '/equipments',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const AppDashboardRoute = AppDashboardImport.update({
+const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const AppCalendarRoute = AppCalendarImport.update({
+const AppCalendarRoute = AppCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const authVerifyEmailRoute = authVerifyEmailImport.update({
+const authVerifyEmailRoute = authVerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
   getParentRoute: () => authRouteRoute,
 } as any)
-
-const authResetPasswordRoute = authResetPasswordImport.update({
+const authResetPasswordRoute = authResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
   getParentRoute: () => authRouteRoute,
 } as any)
-
-const authRegisterRoute = authRegisterImport.update({
+const authRegisterRoute = authRegisterRouteImport.update({
   id: '/register',
   path: '/register',
   getParentRoute: () => authRouteRoute,
 } as any)
-
-const authLoginRoute = authLoginImport.update({
+const authLoginRoute = authLoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => authRouteRoute,
 } as any)
-
-const authForgotPasswordRoute = authForgotPasswordImport.update({
+const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
   getParentRoute: () => authRouteRoute,
 } as any)
-
-const AppVenuesRouteRoute = AppVenuesRouteImport.update({
+const AppVenuesRouteRoute = AppVenuesRouteRouteImport.update({
   id: '/venues',
   path: '/venues',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const AppUserManagementRouteRoute = AppUserManagementRouteImport.update({
+const AppUserManagementRouteRoute = AppUserManagementRouteRouteImport.update({
   id: '/user-management',
   path: '/user-management',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const AppSettingsRouteRoute = AppSettingsRouteImport.update({
+const AppSettingsRouteRoute = AppSettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const AppEventsRouteRoute = AppEventsRouteImport.update({
+const AppEventsRouteRoute = AppEventsRouteRouteImport.update({
   id: '/events',
   path: '/events',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const AppEventApprovalRouteRoute = AppEventApprovalRouteImport.update({
+const AppEventApprovalRouteRoute = AppEventApprovalRouteRouteImport.update({
   id: '/event-approval',
   path: '/event-approval',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const AppEquipmentApprovalRouteRoute = AppEquipmentApprovalRouteImport.update({
-  id: '/equipment-approval',
-  path: '/equipment-approval',
-  getParentRoute: () => AppRouteRoute,
-} as any)
-
-const AppDepartmentsRouteRoute = AppDepartmentsRouteImport.update({
+const AppEquipmentApprovalRouteRoute =
+  AppEquipmentApprovalRouteRouteImport.update({
+    id: '/equipment-approval',
+    path: '/equipment-approval',
+    getParentRoute: () => AppRouteRoute,
+  } as any)
+const AppDepartmentsRouteRoute = AppDepartmentsRouteRouteImport.update({
   id: '/departments',
   path: '/departments',
   getParentRoute: () => AppRouteRoute,
 } as any)
-
-const AppVenuesDashboardRoute = AppVenuesDashboardImport.update({
+const AppVenuesDashboardRoute = AppVenuesDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AppVenuesRouteRoute,
 } as any)
-
-const AppVenuesVenueIdRoute = AppVenuesVenueIdImport.update({
+const AppVenuesVenueIdRoute = AppVenuesVenueIdRouteImport.update({
   id: '/$venueId',
   path: '/$venueId',
   getParentRoute: () => AppVenuesRouteRoute,
 } as any)
-
-const AppUserManagementUsersRoute = AppUserManagementUsersImport.update({
+const AppUserManagementUsersRoute = AppUserManagementUsersRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AppUserManagementRouteRoute,
 } as any)
-
-const AppSettingsNotificationsRoute = AppSettingsNotificationsImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => AppSettingsRouteRoute,
-} as any)
-
-const AppSettingsAccountRoute = AppSettingsAccountImport.update({
+const AppSettingsNotificationsRoute =
+  AppSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AppSettingsRouteRoute,
+  } as any)
+const AppSettingsAccountRoute = AppSettingsAccountRouteImport.update({
   id: '/account',
   path: '/account',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
-
-const AppEventsTimelineRoute = AppEventsTimelineImport.update({
+const AppEventsTimelineRoute = AppEventsTimelineRouteImport.update({
   id: '/timeline',
   path: '/timeline',
   getParentRoute: () => AppEventsRouteRoute,
 } as any)
-
-const AppEventsEventIdRoute = AppEventsEventIdImport.update({
+const AppEventsEventIdRoute = AppEventsEventIdRouteImport.update({
   id: '/$eventId',
   path: '/$eventId',
   getParentRoute: () => AppEventsRouteRoute,
 } as any)
-
-const AppEventApprovalApprovalRoute = AppEventApprovalApprovalImport.update({
-  id: '/approval',
-  path: '/approval',
-  getParentRoute: () => AppEventApprovalRouteRoute,
-} as any)
-
+const AppEventApprovalApprovalRoute =
+  AppEventApprovalApprovalRouteImport.update({
+    id: '/approval',
+    path: '/approval',
+    getParentRoute: () => AppEventApprovalRouteRoute,
+  } as any)
 const AppEquipmentApprovalApprovalRoute =
-  AppEquipmentApprovalApprovalImport.update({
+  AppEquipmentApprovalApprovalRouteImport.update({
     id: '/approval',
     path: '/approval',
     getParentRoute: () => AppEquipmentApprovalRouteRoute,
   } as any)
-
-const AppDepartmentsDashboardRoute = AppDepartmentsDashboardImport.update({
+const AppDepartmentsDashboardRoute = AppDepartmentsDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AppDepartmentsRouteRoute,
 } as any)
 
-// Populate the FileRoutesByPath interface
+export interface FileRoutesByFullPath {
+  '/': typeof authRouteRouteWithChildren
+  '/app': typeof AppRouteRouteWithChildren
+  '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
+  '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
+  '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
+  '/app/events': typeof AppEventsRouteRouteWithChildren
+  '/app/settings': typeof AppSettingsRouteRouteWithChildren
+  '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
+  '/app/venues': typeof AppVenuesRouteRouteWithChildren
+  '/forgot-password': typeof authForgotPasswordRoute
+  '/login': typeof authLoginRoute
+  '/register': typeof authRegisterRoute
+  '/reset-password': typeof authResetPasswordRoute
+  '/verify-email': typeof authVerifyEmailRoute
+  '/app/calendar': typeof AppCalendarRoute
+  '/app/dashboard': typeof AppDashboardRoute
+  '/app/equipments': typeof AppEquipmentsRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
+  '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
+  '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
+  '/app/events/$eventId': typeof AppEventsEventIdRoute
+  '/app/events/timeline': typeof AppEventsTimelineRoute
+  '/app/settings/account': typeof AppSettingsAccountRoute
+  '/app/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/app/user-management/users': typeof AppUserManagementUsersRoute
+  '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/app/venues/dashboard': typeof AppVenuesDashboardRoute
+}
+export interface FileRoutesByTo {
+  '/': typeof authRouteRouteWithChildren
+  '/app': typeof AppRouteRouteWithChildren
+  '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
+  '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
+  '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
+  '/app/events': typeof AppEventsRouteRouteWithChildren
+  '/app/settings': typeof AppSettingsRouteRouteWithChildren
+  '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
+  '/app/venues': typeof AppVenuesRouteRouteWithChildren
+  '/forgot-password': typeof authForgotPasswordRoute
+  '/login': typeof authLoginRoute
+  '/register': typeof authRegisterRoute
+  '/reset-password': typeof authResetPasswordRoute
+  '/verify-email': typeof authVerifyEmailRoute
+  '/app/calendar': typeof AppCalendarRoute
+  '/app/dashboard': typeof AppDashboardRoute
+  '/app/equipments': typeof AppEquipmentsRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
+  '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
+  '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
+  '/app/events/$eventId': typeof AppEventsEventIdRoute
+  '/app/events/timeline': typeof AppEventsTimelineRoute
+  '/app/settings/account': typeof AppSettingsAccountRoute
+  '/app/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/app/user-management/users': typeof AppUserManagementUsersRoute
+  '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/app/venues/dashboard': typeof AppVenuesDashboardRoute
+}
+export interface FileRoutesById {
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/(auth)': typeof authRouteRouteWithChildren
+  '/app': typeof AppRouteRouteWithChildren
+  '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
+  '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
+  '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
+  '/app/events': typeof AppEventsRouteRouteWithChildren
+  '/app/settings': typeof AppSettingsRouteRouteWithChildren
+  '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
+  '/app/venues': typeof AppVenuesRouteRouteWithChildren
+  '/(auth)/forgot-password': typeof authForgotPasswordRoute
+  '/(auth)/login': typeof authLoginRoute
+  '/(auth)/register': typeof authRegisterRoute
+  '/(auth)/reset-password': typeof authResetPasswordRoute
+  '/(auth)/verify-email': typeof authVerifyEmailRoute
+  '/app/calendar': typeof AppCalendarRoute
+  '/app/dashboard': typeof AppDashboardRoute
+  '/app/equipments': typeof AppEquipmentsRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
+  '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
+  '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
+  '/app/events/$eventId': typeof AppEventsEventIdRoute
+  '/app/events/timeline': typeof AppEventsTimelineRoute
+  '/app/settings/account': typeof AppSettingsAccountRoute
+  '/app/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/app/user-management/users': typeof AppUserManagementUsersRoute
+  '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/app/venues/dashboard': typeof AppVenuesDashboardRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/app/departments'
+    | '/app/equipment-approval'
+    | '/app/event-approval'
+    | '/app/events'
+    | '/app/settings'
+    | '/app/user-management'
+    | '/app/venues'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/verify-email'
+    | '/app/calendar'
+    | '/app/dashboard'
+    | '/app/equipments'
+    | '/app/notifications'
+    | '/app/departments/dashboard'
+    | '/app/equipment-approval/approval'
+    | '/app/event-approval/approval'
+    | '/app/events/$eventId'
+    | '/app/events/timeline'
+    | '/app/settings/account'
+    | '/app/settings/notifications'
+    | '/app/user-management/users'
+    | '/app/venues/$venueId'
+    | '/app/venues/dashboard'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/app'
+    | '/app/departments'
+    | '/app/equipment-approval'
+    | '/app/event-approval'
+    | '/app/events'
+    | '/app/settings'
+    | '/app/user-management'
+    | '/app/venues'
+    | '/forgot-password'
+    | '/login'
+    | '/register'
+    | '/reset-password'
+    | '/verify-email'
+    | '/app/calendar'
+    | '/app/dashboard'
+    | '/app/equipments'
+    | '/app/notifications'
+    | '/app/departments/dashboard'
+    | '/app/equipment-approval/approval'
+    | '/app/event-approval/approval'
+    | '/app/events/$eventId'
+    | '/app/events/timeline'
+    | '/app/settings/account'
+    | '/app/settings/notifications'
+    | '/app/user-management/users'
+    | '/app/venues/$venueId'
+    | '/app/venues/dashboard'
+  id:
+    | '__root__'
+    | '/'
+    | '/(auth)'
+    | '/app'
+    | '/app/departments'
+    | '/app/equipment-approval'
+    | '/app/event-approval'
+    | '/app/events'
+    | '/app/settings'
+    | '/app/user-management'
+    | '/app/venues'
+    | '/(auth)/forgot-password'
+    | '/(auth)/login'
+    | '/(auth)/register'
+    | '/(auth)/reset-password'
+    | '/(auth)/verify-email'
+    | '/app/calendar'
+    | '/app/dashboard'
+    | '/app/equipments'
+    | '/app/notifications'
+    | '/app/departments/dashboard'
+    | '/app/equipment-approval/approval'
+    | '/app/event-approval/approval'
+    | '/app/events/$eventId'
+    | '/app/events/timeline'
+    | '/app/settings/account'
+    | '/app/settings/notifications'
+    | '/app/user-management/users'
+    | '/app/venues/$venueId'
+    | '/app/venues/dashboard'
+  fileRoutesById: FileRoutesById
+}
+export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
+  authRouteRoute: typeof authRouteRouteWithChildren
+  AppRouteRoute: typeof AppRouteRouteWithChildren
+}
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(auth)': {
       id: '/(auth)'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof authRouteImport
-      parentRoute: typeof rootRoute
+      preLoaderRoute: typeof authRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/app/departments': {
-      id: '/app/departments'
-      path: '/departments'
-      fullPath: '/app/departments'
-      preLoaderRoute: typeof AppDepartmentsRouteImport
-      parentRoute: typeof AppRouteImport
-    }
-    '/app/equipment-approval': {
-      id: '/app/equipment-approval'
-      path: '/equipment-approval'
-      fullPath: '/app/equipment-approval'
-      preLoaderRoute: typeof AppEquipmentApprovalRouteImport
-      parentRoute: typeof AppRouteImport
-    }
-    '/app/event-approval': {
-      id: '/app/event-approval'
-      path: '/event-approval'
-      fullPath: '/app/event-approval'
-      preLoaderRoute: typeof AppEventApprovalRouteImport
-      parentRoute: typeof AppRouteImport
-    }
-    '/app/events': {
-      id: '/app/events'
-      path: '/events'
-      fullPath: '/app/events'
-      preLoaderRoute: typeof AppEventsRouteImport
-      parentRoute: typeof AppRouteImport
-    }
-    '/app/settings': {
-      id: '/app/settings'
-      path: '/settings'
-      fullPath: '/app/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRouteImport
-    }
-    '/app/user-management': {
-      id: '/app/user-management'
-      path: '/user-management'
-      fullPath: '/app/user-management'
-      preLoaderRoute: typeof AppUserManagementRouteImport
-      parentRoute: typeof AppRouteImport
-    }
-    '/app/venues': {
-      id: '/app/venues'
-      path: '/venues'
-      fullPath: '/app/venues'
-      preLoaderRoute: typeof AppVenuesRouteImport
-      parentRoute: typeof AppRouteImport
-    }
-    '/(auth)/forgot-password': {
-      id: '/(auth)/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof authForgotPasswordImport
-      parentRoute: typeof authRouteImport
-    }
-    '/(auth)/login': {
-      id: '/(auth)/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof authLoginImport
-      parentRoute: typeof authRouteImport
-    }
-    '/(auth)/register': {
-      id: '/(auth)/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof authRegisterImport
-      parentRoute: typeof authRouteImport
-    }
-    '/(auth)/reset-password': {
-      id: '/(auth)/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof authResetPasswordImport
-      parentRoute: typeof authRouteImport
-    }
-    '/(auth)/verify-email': {
-      id: '/(auth)/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof authVerifyEmailImport
-      parentRoute: typeof authRouteImport
-    }
-    '/app/calendar': {
-      id: '/app/calendar'
-      path: '/calendar'
-      fullPath: '/app/calendar'
-      preLoaderRoute: typeof AppCalendarImport
-      parentRoute: typeof AppRouteImport
-    }
-    '/app/dashboard': {
-      id: '/app/dashboard'
-      path: '/dashboard'
-      fullPath: '/app/dashboard'
-      preLoaderRoute: typeof AppDashboardImport
-      parentRoute: typeof AppRouteImport
-    }
-    '/app/equipments': {
-      id: '/app/equipments'
-      path: '/equipments'
-      fullPath: '/app/equipments'
-      preLoaderRoute: typeof AppEquipmentsImport
-      parentRoute: typeof AppRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/notifications': {
       id: '/app/notifications'
       path: '/notifications'
       fullPath: '/app/notifications'
-      preLoaderRoute: typeof AppNotificationsImport
-      parentRoute: typeof AppRouteImport
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRouteRoute
     }
-    '/app/departments/dashboard': {
-      id: '/app/departments/dashboard'
+    '/app/equipments': {
+      id: '/app/equipments'
+      path: '/equipments'
+      fullPath: '/app/equipments'
+      preLoaderRoute: typeof AppEquipmentsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/dashboard': {
+      id: '/app/dashboard'
       path: '/dashboard'
-      fullPath: '/app/departments/dashboard'
-      preLoaderRoute: typeof AppDepartmentsDashboardImport
-      parentRoute: typeof AppDepartmentsRouteImport
+      fullPath: '/app/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRouteRoute
     }
-    '/app/equipment-approval/approval': {
-      id: '/app/equipment-approval/approval'
-      path: '/approval'
-      fullPath: '/app/equipment-approval/approval'
-      preLoaderRoute: typeof AppEquipmentApprovalApprovalImport
-      parentRoute: typeof AppEquipmentApprovalRouteImport
+    '/app/calendar': {
+      id: '/app/calendar'
+      path: '/calendar'
+      fullPath: '/app/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRouteRoute
     }
-    '/app/event-approval/approval': {
-      id: '/app/event-approval/approval'
-      path: '/approval'
-      fullPath: '/app/event-approval/approval'
-      preLoaderRoute: typeof AppEventApprovalApprovalImport
-      parentRoute: typeof AppEventApprovalRouteImport
+    '/(auth)/verify-email': {
+      id: '/(auth)/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof authVerifyEmailRouteImport
+      parentRoute: typeof authRouteRoute
     }
-    '/app/events/$eventId': {
-      id: '/app/events/$eventId'
-      path: '/$eventId'
-      fullPath: '/app/events/$eventId'
-      preLoaderRoute: typeof AppEventsEventIdImport
-      parentRoute: typeof AppEventsRouteImport
+    '/(auth)/reset-password': {
+      id: '/(auth)/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof authResetPasswordRouteImport
+      parentRoute: typeof authRouteRoute
     }
-    '/app/events/timeline': {
-      id: '/app/events/timeline'
-      path: '/timeline'
-      fullPath: '/app/events/timeline'
-      preLoaderRoute: typeof AppEventsTimelineImport
-      parentRoute: typeof AppEventsRouteImport
+    '/(auth)/register': {
+      id: '/(auth)/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof authRegisterRouteImport
+      parentRoute: typeof authRouteRoute
     }
-    '/app/settings/account': {
-      id: '/app/settings/account'
-      path: '/account'
-      fullPath: '/app/settings/account'
-      preLoaderRoute: typeof AppSettingsAccountImport
-      parentRoute: typeof AppSettingsRouteImport
+    '/(auth)/login': {
+      id: '/(auth)/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof authLoginRouteImport
+      parentRoute: typeof authRouteRoute
     }
-    '/app/settings/notifications': {
-      id: '/app/settings/notifications'
-      path: '/notifications'
-      fullPath: '/app/settings/notifications'
-      preLoaderRoute: typeof AppSettingsNotificationsImport
-      parentRoute: typeof AppSettingsRouteImport
+    '/(auth)/forgot-password': {
+      id: '/(auth)/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof authForgotPasswordRouteImport
+      parentRoute: typeof authRouteRoute
     }
-    '/app/user-management/users': {
-      id: '/app/user-management/users'
-      path: '/users'
-      fullPath: '/app/user-management/users'
-      preLoaderRoute: typeof AppUserManagementUsersImport
-      parentRoute: typeof AppUserManagementRouteImport
+    '/app/venues': {
+      id: '/app/venues'
+      path: '/venues'
+      fullPath: '/app/venues'
+      preLoaderRoute: typeof AppVenuesRouteRouteImport
+      parentRoute: typeof AppRouteRoute
     }
-    '/app/venues/$venueId': {
-      id: '/app/venues/$venueId'
-      path: '/$venueId'
-      fullPath: '/app/venues/$venueId'
-      preLoaderRoute: typeof AppVenuesVenueIdImport
-      parentRoute: typeof AppVenuesRouteImport
+    '/app/user-management': {
+      id: '/app/user-management'
+      path: '/user-management'
+      fullPath: '/app/user-management'
+      preLoaderRoute: typeof AppUserManagementRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/events': {
+      id: '/app/events'
+      path: '/events'
+      fullPath: '/app/events'
+      preLoaderRoute: typeof AppEventsRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/event-approval': {
+      id: '/app/event-approval'
+      path: '/event-approval'
+      fullPath: '/app/event-approval'
+      preLoaderRoute: typeof AppEventApprovalRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/equipment-approval': {
+      id: '/app/equipment-approval'
+      path: '/equipment-approval'
+      fullPath: '/app/equipment-approval'
+      preLoaderRoute: typeof AppEquipmentApprovalRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/departments': {
+      id: '/app/departments'
+      path: '/departments'
+      fullPath: '/app/departments'
+      preLoaderRoute: typeof AppDepartmentsRouteRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/app/venues/dashboard': {
       id: '/app/venues/dashboard'
       path: '/dashboard'
       fullPath: '/app/venues/dashboard'
-      preLoaderRoute: typeof AppVenuesDashboardImport
-      parentRoute: typeof AppVenuesRouteImport
+      preLoaderRoute: typeof AppVenuesDashboardRouteImport
+      parentRoute: typeof AppVenuesRouteRoute
+    }
+    '/app/venues/$venueId': {
+      id: '/app/venues/$venueId'
+      path: '/$venueId'
+      fullPath: '/app/venues/$venueId'
+      preLoaderRoute: typeof AppVenuesVenueIdRouteImport
+      parentRoute: typeof AppVenuesRouteRoute
+    }
+    '/app/user-management/users': {
+      id: '/app/user-management/users'
+      path: '/users'
+      fullPath: '/app/user-management/users'
+      preLoaderRoute: typeof AppUserManagementUsersRouteImport
+      parentRoute: typeof AppUserManagementRouteRoute
+    }
+    '/app/settings/notifications': {
+      id: '/app/settings/notifications'
+      path: '/notifications'
+      fullPath: '/app/settings/notifications'
+      preLoaderRoute: typeof AppSettingsNotificationsRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/app/settings/account': {
+      id: '/app/settings/account'
+      path: '/account'
+      fullPath: '/app/settings/account'
+      preLoaderRoute: typeof AppSettingsAccountRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/app/events/timeline': {
+      id: '/app/events/timeline'
+      path: '/timeline'
+      fullPath: '/app/events/timeline'
+      preLoaderRoute: typeof AppEventsTimelineRouteImport
+      parentRoute: typeof AppEventsRouteRoute
+    }
+    '/app/events/$eventId': {
+      id: '/app/events/$eventId'
+      path: '/$eventId'
+      fullPath: '/app/events/$eventId'
+      preLoaderRoute: typeof AppEventsEventIdRouteImport
+      parentRoute: typeof AppEventsRouteRoute
+    }
+    '/app/event-approval/approval': {
+      id: '/app/event-approval/approval'
+      path: '/approval'
+      fullPath: '/app/event-approval/approval'
+      preLoaderRoute: typeof AppEventApprovalApprovalRouteImport
+      parentRoute: typeof AppEventApprovalRouteRoute
+    }
+    '/app/equipment-approval/approval': {
+      id: '/app/equipment-approval/approval'
+      path: '/approval'
+      fullPath: '/app/equipment-approval/approval'
+      preLoaderRoute: typeof AppEquipmentApprovalApprovalRouteImport
+      parentRoute: typeof AppEquipmentApprovalRouteRoute
+    }
+    '/app/departments/dashboard': {
+      id: '/app/departments/dashboard'
+      path: '/dashboard'
+      fullPath: '/app/departments/dashboard'
+      preLoaderRoute: typeof AppDepartmentsDashboardRouteImport
+      parentRoute: typeof AppDepartmentsRouteRoute
     }
   }
 }
-
-// Create and export the route tree
 
 interface authRouteRouteChildren {
   authForgotPasswordRoute: typeof authForgotPasswordRoute
@@ -574,380 +733,11 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
 
-export interface FileRoutesByFullPath {
-  '/': typeof authRouteRouteWithChildren
-  '/app': typeof AppRouteRouteWithChildren
-  '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
-  '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
-  '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
-  '/app/events': typeof AppEventsRouteRouteWithChildren
-  '/app/settings': typeof AppSettingsRouteRouteWithChildren
-  '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
-  '/app/venues': typeof AppVenuesRouteRouteWithChildren
-  '/forgot-password': typeof authForgotPasswordRoute
-  '/login': typeof authLoginRoute
-  '/register': typeof authRegisterRoute
-  '/reset-password': typeof authResetPasswordRoute
-  '/verify-email': typeof authVerifyEmailRoute
-  '/app/calendar': typeof AppCalendarRoute
-  '/app/dashboard': typeof AppDashboardRoute
-  '/app/equipments': typeof AppEquipmentsRoute
-  '/app/notifications': typeof AppNotificationsRoute
-  '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
-  '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
-  '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
-  '/app/events/$eventId': typeof AppEventsEventIdRoute
-  '/app/events/timeline': typeof AppEventsTimelineRoute
-  '/app/settings/account': typeof AppSettingsAccountRoute
-  '/app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/app/user-management/users': typeof AppUserManagementUsersRoute
-  '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
-  '/app/venues/dashboard': typeof AppVenuesDashboardRoute
-}
-
-export interface FileRoutesByTo {
-  '/': typeof authRouteRouteWithChildren
-  '/app': typeof AppRouteRouteWithChildren
-  '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
-  '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
-  '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
-  '/app/events': typeof AppEventsRouteRouteWithChildren
-  '/app/settings': typeof AppSettingsRouteRouteWithChildren
-  '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
-  '/app/venues': typeof AppVenuesRouteRouteWithChildren
-  '/forgot-password': typeof authForgotPasswordRoute
-  '/login': typeof authLoginRoute
-  '/register': typeof authRegisterRoute
-  '/reset-password': typeof authResetPasswordRoute
-  '/verify-email': typeof authVerifyEmailRoute
-  '/app/calendar': typeof AppCalendarRoute
-  '/app/dashboard': typeof AppDashboardRoute
-  '/app/equipments': typeof AppEquipmentsRoute
-  '/app/notifications': typeof AppNotificationsRoute
-  '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
-  '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
-  '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
-  '/app/events/$eventId': typeof AppEventsEventIdRoute
-  '/app/events/timeline': typeof AppEventsTimelineRoute
-  '/app/settings/account': typeof AppSettingsAccountRoute
-  '/app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/app/user-management/users': typeof AppUserManagementUsersRoute
-  '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
-  '/app/venues/dashboard': typeof AppVenuesDashboardRoute
-}
-
-export interface FileRoutesById {
-  __root__: typeof rootRoute
-  '/': typeof IndexRoute
-  '/(auth)': typeof authRouteRouteWithChildren
-  '/app': typeof AppRouteRouteWithChildren
-  '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
-  '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
-  '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
-  '/app/events': typeof AppEventsRouteRouteWithChildren
-  '/app/settings': typeof AppSettingsRouteRouteWithChildren
-  '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
-  '/app/venues': typeof AppVenuesRouteRouteWithChildren
-  '/(auth)/forgot-password': typeof authForgotPasswordRoute
-  '/(auth)/login': typeof authLoginRoute
-  '/(auth)/register': typeof authRegisterRoute
-  '/(auth)/reset-password': typeof authResetPasswordRoute
-  '/(auth)/verify-email': typeof authVerifyEmailRoute
-  '/app/calendar': typeof AppCalendarRoute
-  '/app/dashboard': typeof AppDashboardRoute
-  '/app/equipments': typeof AppEquipmentsRoute
-  '/app/notifications': typeof AppNotificationsRoute
-  '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
-  '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
-  '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
-  '/app/events/$eventId': typeof AppEventsEventIdRoute
-  '/app/events/timeline': typeof AppEventsTimelineRoute
-  '/app/settings/account': typeof AppSettingsAccountRoute
-  '/app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/app/user-management/users': typeof AppUserManagementUsersRoute
-  '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
-  '/app/venues/dashboard': typeof AppVenuesDashboardRoute
-}
-
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/app'
-    | '/app/departments'
-    | '/app/equipment-approval'
-    | '/app/event-approval'
-    | '/app/events'
-    | '/app/settings'
-    | '/app/user-management'
-    | '/app/venues'
-    | '/forgot-password'
-    | '/login'
-    | '/register'
-    | '/reset-password'
-    | '/verify-email'
-    | '/app/calendar'
-    | '/app/dashboard'
-    | '/app/equipments'
-    | '/app/notifications'
-    | '/app/departments/dashboard'
-    | '/app/equipment-approval/approval'
-    | '/app/event-approval/approval'
-    | '/app/events/$eventId'
-    | '/app/events/timeline'
-    | '/app/settings/account'
-    | '/app/settings/notifications'
-    | '/app/user-management/users'
-    | '/app/venues/$venueId'
-    | '/app/venues/dashboard'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/app'
-    | '/app/departments'
-    | '/app/equipment-approval'
-    | '/app/event-approval'
-    | '/app/events'
-    | '/app/settings'
-    | '/app/user-management'
-    | '/app/venues'
-    | '/forgot-password'
-    | '/login'
-    | '/register'
-    | '/reset-password'
-    | '/verify-email'
-    | '/app/calendar'
-    | '/app/dashboard'
-    | '/app/equipments'
-    | '/app/notifications'
-    | '/app/departments/dashboard'
-    | '/app/equipment-approval/approval'
-    | '/app/event-approval/approval'
-    | '/app/events/$eventId'
-    | '/app/events/timeline'
-    | '/app/settings/account'
-    | '/app/settings/notifications'
-    | '/app/user-management/users'
-    | '/app/venues/$venueId'
-    | '/app/venues/dashboard'
-  id:
-    | '__root__'
-    | '/'
-    | '/(auth)'
-    | '/app'
-    | '/app/departments'
-    | '/app/equipment-approval'
-    | '/app/event-approval'
-    | '/app/events'
-    | '/app/settings'
-    | '/app/user-management'
-    | '/app/venues'
-    | '/(auth)/forgot-password'
-    | '/(auth)/login'
-    | '/(auth)/register'
-    | '/(auth)/reset-password'
-    | '/(auth)/verify-email'
-    | '/app/calendar'
-    | '/app/dashboard'
-    | '/app/equipments'
-    | '/app/notifications'
-    | '/app/departments/dashboard'
-    | '/app/equipment-approval/approval'
-    | '/app/event-approval/approval'
-    | '/app/events/$eventId'
-    | '/app/events/timeline'
-    | '/app/settings/account'
-    | '/app/settings/notifications'
-    | '/app/user-management/users'
-    | '/app/venues/$venueId'
-    | '/app/venues/dashboard'
-  fileRoutesById: FileRoutesById
-}
-
-export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  authRouteRoute: typeof authRouteRouteWithChildren
-  AppRouteRoute: typeof AppRouteRouteWithChildren
-}
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authRouteRoute: authRouteRouteWithChildren,
   AppRouteRoute: AppRouteRouteWithChildren,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/(auth)",
-        "/app"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/(auth)": {
-      "filePath": "(auth)/route.tsx",
-      "children": [
-        "/(auth)/forgot-password",
-        "/(auth)/login",
-        "/(auth)/register",
-        "/(auth)/reset-password",
-        "/(auth)/verify-email"
-      ]
-    },
-    "/app": {
-      "filePath": "app/route.tsx",
-      "children": [
-        "/app/departments",
-        "/app/equipment-approval",
-        "/app/event-approval",
-        "/app/events",
-        "/app/settings",
-        "/app/user-management",
-        "/app/venues",
-        "/app/calendar",
-        "/app/dashboard",
-        "/app/equipments",
-        "/app/notifications"
-      ]
-    },
-    "/app/departments": {
-      "filePath": "app/departments/route.tsx",
-      "parent": "/app",
-      "children": [
-        "/app/departments/dashboard"
-      ]
-    },
-    "/app/equipment-approval": {
-      "filePath": "app/equipment-approval/route.tsx",
-      "parent": "/app",
-      "children": [
-        "/app/equipment-approval/approval"
-      ]
-    },
-    "/app/event-approval": {
-      "filePath": "app/event-approval/route.tsx",
-      "parent": "/app",
-      "children": [
-        "/app/event-approval/approval"
-      ]
-    },
-    "/app/events": {
-      "filePath": "app/events/route.tsx",
-      "parent": "/app",
-      "children": [
-        "/app/events/$eventId",
-        "/app/events/timeline"
-      ]
-    },
-    "/app/settings": {
-      "filePath": "app/settings/route.tsx",
-      "parent": "/app",
-      "children": [
-        "/app/settings/account",
-        "/app/settings/notifications"
-      ]
-    },
-    "/app/user-management": {
-      "filePath": "app/user-management/route.tsx",
-      "parent": "/app",
-      "children": [
-        "/app/user-management/users"
-      ]
-    },
-    "/app/venues": {
-      "filePath": "app/venues/route.tsx",
-      "parent": "/app",
-      "children": [
-        "/app/venues/$venueId",
-        "/app/venues/dashboard"
-      ]
-    },
-    "/(auth)/forgot-password": {
-      "filePath": "(auth)/forgot-password.tsx",
-      "parent": "/(auth)"
-    },
-    "/(auth)/login": {
-      "filePath": "(auth)/login.tsx",
-      "parent": "/(auth)"
-    },
-    "/(auth)/register": {
-      "filePath": "(auth)/register.tsx",
-      "parent": "/(auth)"
-    },
-    "/(auth)/reset-password": {
-      "filePath": "(auth)/reset-password.tsx",
-      "parent": "/(auth)"
-    },
-    "/(auth)/verify-email": {
-      "filePath": "(auth)/verify-email.tsx",
-      "parent": "/(auth)"
-    },
-    "/app/calendar": {
-      "filePath": "app/calendar.tsx",
-      "parent": "/app"
-    },
-    "/app/dashboard": {
-      "filePath": "app/dashboard.tsx",
-      "parent": "/app"
-    },
-    "/app/equipments": {
-      "filePath": "app/equipments.tsx",
-      "parent": "/app"
-    },
-    "/app/notifications": {
-      "filePath": "app/notifications.tsx",
-      "parent": "/app"
-    },
-    "/app/departments/dashboard": {
-      "filePath": "app/departments/dashboard.tsx",
-      "parent": "/app/departments"
-    },
-    "/app/equipment-approval/approval": {
-      "filePath": "app/equipment-approval/approval.tsx",
-      "parent": "/app/equipment-approval"
-    },
-    "/app/event-approval/approval": {
-      "filePath": "app/event-approval/approval.tsx",
-      "parent": "/app/event-approval"
-    },
-    "/app/events/$eventId": {
-      "filePath": "app/events/$eventId.tsx",
-      "parent": "/app/events"
-    },
-    "/app/events/timeline": {
-      "filePath": "app/events/timeline.tsx",
-      "parent": "/app/events"
-    },
-    "/app/settings/account": {
-      "filePath": "app/settings/account.tsx",
-      "parent": "/app/settings"
-    },
-    "/app/settings/notifications": {
-      "filePath": "app/settings/notifications.tsx",
-      "parent": "/app/settings"
-    },
-    "/app/user-management/users": {
-      "filePath": "app/user-management/users.tsx",
-      "parent": "/app/user-management"
-    },
-    "/app/venues/$venueId": {
-      "filePath": "app/venues/$venueId.tsx",
-      "parent": "/app/venues"
-    },
-    "/app/venues/dashboard": {
-      "filePath": "app/venues/dashboard.tsx",
-      "parent": "/app/venues"
-    }
-  }
-}
-ROUTE_MANIFEST_END */

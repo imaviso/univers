@@ -34,7 +34,7 @@ import { useForm } from "react-hook-form";
 const defaultValues: VenueInput = {
     name: "",
     location: "",
-    venueOwnerId: undefined,
+    venueOwnerId: "",
     image: undefined,
 };
 
@@ -97,8 +97,6 @@ export function VenueFormDialog({
     const processSubmit = (data: VenueInput) => {
         const finalData = {
             ...data,
-            venueOwnerId:
-                data.venueOwnerId === undefined ? undefined : data.venueOwnerId,
         };
         onSubmit(finalData, data.image);
     };
@@ -446,7 +444,7 @@ export function VenueFormDialog({
                     <Button
                         type="submit"
                         form="venue-form"
-                        disabled={isLoading || !form.formState.isValid}
+                        //disabled={isLoading || !form.formState.isValid}
                     >
                         {isLoading ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
