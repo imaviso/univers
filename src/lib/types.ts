@@ -40,12 +40,13 @@ export type UserDTO = {
 
 export type UserRole =
     | "SUPER_ADMIN"
-    | "VP_ADMIN"
+    | "VP_ADMIN"    
     | "ADMIN"
     | "ORGANIZER"
     | "DEPT_HEAD"
     | "VENUE_OWNER"
-    | "EQUIPMENT_OWNER";
+    | "EQUIPMENT_OWNER"
+    | "VPAA";
 
 export const STATUS_EQUIPMENT = [
     { value: "DEFECT", label: "Defect" },
@@ -77,6 +78,7 @@ export type LoginResponse = {
 export const ROLES = [
     { value: "SUPER_ADMIN", label: "Super Admin" },
     { value: "VP_ADMIN", label: "VP Admin" },
+    { value: "VPAA", label: "VP Academic Affairs" },
     { value: "ADMIN", label: "Admin" },
     { value: "ORGANIZER", label: "Organizer" },
     { value: "DEPT_HEAD", label: "Department Head" },
@@ -282,6 +284,7 @@ export type EquipmentActionInput = {
 export type AUTHORIZED_ROLES =
     | "SUPER_ADMIN"
     | "VP_ADMIN"
+    | "VPAA"
     | "MSDO"
     | "OPC"
     | "CORE"
