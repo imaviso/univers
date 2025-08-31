@@ -364,20 +364,25 @@ const TimePicker = () => {
                         "flex items-center flex-col gap-1 h-full max-h-56 w-28 px-1 py-0.5",
                     )}
                 >
-                    {Array.from({ length: 24 }).map((_, i) => {
-                        const PM_AM = i >= 12 ? "PM" : "AM";
+                    {Array.from({ length: 18 }).map((_, i) => {
+                        const hour = i + 6;
+                        const PM_AM = hour >= 12 ? "PM" : "AM";
                         const formatIndex =
-                            i > 12 ? i % 12 : i === 0 || i === 12 ? 12 : i;
+                            hour > 12
+                                ? hour % 12
+                                : hour === 0 || hour === 12
+                                  ? 12
+                                  : hour;
                         return Array.from({ length: 2 }).map((_, part) => {
                             const minutes = part * timestamp;
-                            const trueIndex = i * 2 + part;
+                            const trueIndex = hour * 2 + part;
 
                             const diff = Math.abs(
                                 minutes - currentTime.minutes,
                             );
 
                             const isSelected =
-                                (currentTime.hours === i ||
+                                (currentTime.hours === hour ||
                                     currentTime.hours === formatIndex) &&
                                 Time.split(" ")[1] === PM_AM &&
                                 diff < 15;
@@ -405,7 +410,12 @@ const TimePicker = () => {
                                         "h-8 px-3 w-full text-sm focus-visible:outline-0 outline-0 focus-visible:border-0 cursor-default ring-0",
                                     )}
                                     onClick={() =>
-                                        handleClick(i, part, PM_AM, trueIndex)
+                                        handleClick(
+                                            hour,
+                                            part,
+                                            PM_AM,
+                                            trueIndex,
+                                        )
                                     }
                                     onKeyDown={(e) => {
                                         if (
@@ -413,7 +423,7 @@ const TimePicker = () => {
                                             e.key === " "
                                         ) {
                                             handleClick(
-                                                i,
+                                                hour,
                                                 part,
                                                 PM_AM,
                                                 trueIndex,
