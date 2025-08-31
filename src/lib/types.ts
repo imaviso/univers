@@ -40,7 +40,7 @@ export type UserDTO = {
 
 export type UserRole =
     | "SUPER_ADMIN"
-    | "VP_ADMIN"    
+    | "VP_ADMIN"
     | "ADMIN"
     | "ORGANIZER"
     | "DEPT_HEAD"
