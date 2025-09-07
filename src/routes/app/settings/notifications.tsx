@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -26,6 +26,7 @@ export function NotificationSettings() {
 		setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
 	};
 
+	const id = useId();
 	return (
 		<div className="space-y-6">
 			<div>
@@ -53,7 +54,7 @@ export function NotificationSettings() {
 							</p>
 						</div>
 						<Switch
-							id="event-reminders"
+							id={`${id}event-reminders`}
 							checked={notifications.eventReminders}
 							onCheckedChange={() => handleToggle("eventReminders")}
 						/>
@@ -67,7 +68,7 @@ export function NotificationSettings() {
 							</p>
 						</div>
 						<Switch
-							id="event-updates"
+							id={`${id}event-updates`}
 							checked={notifications.eventUpdates}
 							onCheckedChange={() => handleToggle("eventUpdates")}
 						/>
@@ -91,7 +92,7 @@ export function NotificationSettings() {
 							</p>
 						</div>
 						<Switch
-							id="weekly-digest"
+							id={`${id}weekly-digest`}
 							checked={notifications.weeklyDigest}
 							onCheckedChange={() => handleToggle("weeklyDigest")}
 						/>
@@ -105,7 +106,7 @@ export function NotificationSettings() {
 							</p>
 						</div>
 						<Switch
-							id="marketing-emails"
+							id={`${id}marketing-emails`}
 							checked={notifications.marketingEmails}
 							onCheckedChange={() => handleToggle("marketingEmails")}
 						/>

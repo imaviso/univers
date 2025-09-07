@@ -294,7 +294,7 @@ function Events() {
 														to: endOfMonth(now),
 													});
 												} else {
-													const numDays = Number.parseInt(value);
+													const numDays = Number.parseInt(value, 10);
 													if (!Number.isNaN(numDays)) {
 														setListSelectedDateRange({
 															from: startOfDay(addDays(now, -numDays)),

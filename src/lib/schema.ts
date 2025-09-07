@@ -460,7 +460,10 @@ export const venueSchema = v.object({
 		v.string("Location is required"),
 		v.nonEmpty("Location is required"),
 	),
-	venueOwnerId: v.optional(v.pipe(v.string())),
+	venueOwnerId: v.pipe(
+		v.string("Venue Owner ID is required"),
+		v.nonEmpty("Venue Owner ID is required"),
+	),
 	image: v.optional(
 		v.pipe(
 			v.instance(File, "Image must be a file."),

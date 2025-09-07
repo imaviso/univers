@@ -1,5 +1,5 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query"; // Import mutation hooks
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
 import { startOfDay } from "date-fns";
 import {
@@ -11,8 +11,8 @@ import {
 	Loader2,
 	XIcon,
 } from "lucide-react";
-import { useEffect } from "react"; // Import useEffect
-import { useForm } from "react-hook-form";
+import { useEffect } from "react";
+import { type Control, useController, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,13 +51,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useFileUpload } from "@/hooks/use-file-upload"; // Added useFileUpload import
+import { useFileUpload } from "@/hooks/use-file-upload";
 import { createEvent } from "@/lib/api";
 import {
 	departmentsQueryOptions,
 	eventsQueryKeys,
 	useCurrentUser,
-} from "@/lib/query"; // Import eventsQueryOptions
+} from "@/lib/query";
 import { type EventInput, type EventOutput, eventSchema } from "@/lib/schema";
 import type { DepartmentDTO, EventDTOPayload, VenueDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -75,6 +75,169 @@ export const eventTypes = [
 	"Admin",
 	"SSG/Advocay-based",
 ];
+
+// Extracted component to keep hooks at the top level.
+// This fixes the lint rule: hooks must not be called inside a nested render callback.
+function ApprovedLetterUploadField({
+	control,
+	disabled,
+}: {
+	control: Control<EventInput>;
+	disabled: boolean;
+}) {
+	const {
+		field,
+		fieldState: { error },
+	} = useController({
+		name: "approvedLetter",
+		control,
+	});
+
+	const maxSizeMB = 5;
+	const maxSize = maxSizeMB * 1024 * 1024;
+
+	const [hookState, hookActions] = useFileUpload({
+		accept:
+			"image/jpeg, image/png, image/webp, application/pdf, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		maxSize,
+		maxFiles: 1,
+		multiple: false,
+		onFilesChange: (uploadedFiles) => {
+			if (uploadedFiles.length > 0 && uploadedFiles[0].file instanceof File) {
+				field.onChange(uploadedFiles[0].file as File);
+			} else {
+				field.onChange(undefined);
+			}
+		},
+	});
+
+	const { files, isDragging, errors: uploadErrors } = hookState;
+	const {
+		handleDragEnter,
+		handleDragLeave,
+		handleDragOver,
+		handleDrop,
+		openFileDialog,
+		removeFile,
+		getInputProps,
+		clearFiles,
+	} = hookActions;
+
+	const currentFileObject = files[0]?.file;
+	const previewUrl = files[0]?.preview;
+
+	// When the RHF field value is cleared externally (e.g., form.reset()),
+	// ensure the internal upload state is also cleared.
+	useEffect(() => {
+		if (!field.value && files.length > 0) {
+			clearFiles();
+		}
+	}, [field.value, files.length, clearFiles]);
+
+	return (
+		<FormItem>
+			<FormLabel>Approved Letter</FormLabel>
+			<FormControl>
+				<div className="flex flex-col gap-2">
+					<div className="relative">
+						<button
+							type="button"
+							tabIndex={0}
+							onClick={openFileDialog}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") openFileDialog();
+							}}
+							onDragEnter={handleDragEnter}
+							onDragLeave={handleDragLeave}
+							onDragOver={handleDragOver}
+							onDrop={handleDrop}
+							data-dragging={isDragging || undefined}
+							className={cn(
+								"w-full border-input hover:bg-accent/50 data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50",
+								"relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed p-4 transition-colors",
+								disabled && "pointer-events-none opacity-50",
+								previewUrl && "has-[img]:border-none",
+							)}
+							aria-disabled={disabled}
+						>
+							<input
+								{...getInputProps({ disabled })}
+								className="sr-only"
+								aria-label="Upload approved letter"
+							/>
+							{previewUrl && currentFileObject?.type?.startsWith("image/") ? (
+								<div className="absolute inset-0">
+									<img
+										src={previewUrl}
+										alt={currentFileObject?.name || "Uploaded image"}
+										className="size-full object-cover"
+									/>
+								</div>
+							) : currentFileObject ? (
+								<div className="flex flex-col items-center justify-center text-center p-4">
+									<FileTextIcon className="size-12 text-muted-foreground mb-2" />
+									<p className="text-sm font-medium truncate max-w-full">
+										{currentFileObject.name}
+									</p>
+									{currentFileObject instanceof File && (
+										<p className="text-xs text-muted-foreground">
+											{Math.round(currentFileObject.size / 1024)} KB
+										</p>
+									)}
+								</div>
+							) : (
+								<div className="flex flex-col items-center justify-center px-4 py-3 text-center">
+									<div
+										className="bg-background mb-2 flex size-11 shrink-0 items-center justify-center rounded-full border"
+										aria-hidden="true"
+									>
+										<ImageUpIcon className="size-4 opacity-60" />
+									</div>
+									<p className="mb-1.5 text-sm font-medium">
+										Drop your file here or click to browse
+									</p>
+									<p className="text-muted-foreground text-xs">
+										Max size: {maxSizeMB}MB. Accepted: Images, PDF, DOCX
+									</p>
+								</div>
+							)}
+						</button>
+						{previewUrl && (
+							<div className="absolute top-4 right-4">
+								<Button
+									type="button"
+									variant="destructive"
+									size="icon"
+									className="z-50 flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:ring-[3px] hover:text-white"
+									onClick={(e) => {
+										e.stopPropagation();
+										removeFile(files[0]?.id);
+										field.onChange(undefined);
+									}}
+									aria-label="Remove file"
+									disabled={disabled}
+								>
+									<XIcon className="size-4" aria-hidden="true" />
+								</Button>
+							</div>
+						)}
+					</div>
+
+					{(uploadErrors.length > 0 || error) && (
+						<div
+							className="text-destructive flex items-center gap-1 text-xs"
+							role="alert"
+						>
+							<AlertCircleIcon className="size-3 shrink-0" />
+							<span>{uploadErrors[0] ?? error?.message}</span>
+						</div>
+					)}
+				</div>
+			</FormControl>
+			<FormMessage />
+		</FormItem>
+	);
+}
 
 export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 	const { data: currentUser } = useCurrentUser();
@@ -120,10 +283,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 			const previousOwnEvents =
 				queryClient.getQueryData<EventOutput[]>(ownEventsKey);
 
-			const optimisticEvent: EventOutput & {
-				id: number;
-				status: string;
-			} = {
+			const optimisticEvent: EventOutput & { id: number; status: string } = {
 				id: Date.now(),
 				eventName: eventDTO.eventName,
 				eventType: eventDTO.eventType,
@@ -146,7 +306,9 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 		onError: (err, _variables, context) => {
 			console.error("Mutation error", err);
 			toast.error(
-				`Failed to create event: ${err instanceof Error ? err.message : "Please try again."}`,
+				`Failed to create event: ${
+					err instanceof Error ? err.message : "Please try again."
+				}`,
 			);
 			if (context?.previousOwnEvents) {
 				queryClient.setQueryData(
@@ -158,15 +320,9 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: eventsQueryKeys.own() });
-			queryClient.invalidateQueries({
-				queryKey: eventsQueryKeys.approved(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: eventsQueryKeys.lists(),
-			});
-			queryClient.invalidateQueries({
-				queryKey: eventsQueryKeys.pending(),
-			});
+			queryClient.invalidateQueries({ queryKey: eventsQueryKeys.approved() });
+			queryClient.invalidateQueries({ queryKey: eventsQueryKeys.lists() });
+			queryClient.invalidateQueries({ queryKey: eventsQueryKeys.pending() });
 			queryClient.invalidateQueries({
 				queryKey: eventsQueryKeys.pendingVenueOwner(),
 			});
@@ -202,11 +358,9 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 
 			createEventMutation.mutate({
 				eventDTO,
-				approvedLetter: outputValues.approvedLetter,
+				approvedLetter: outputValues.approvedLetter as File,
 			});
 		} catch (validationError) {
-			// This catch is primarily for potential issues *before* mutation.mutate
-			// e.g., unexpected errors during DTO preparation, though unlikely here.
 			console.error("Pre-mutation error:", validationError);
 			toast.error("An unexpected error occurred before submitting.");
 		}
@@ -236,7 +390,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 												<Input
 													placeholder="Enter event name"
 													{...field}
-													// Use mutation pending state
 													disabled={createEventMutation.isPending}
 												/>
 											</FormControl>
@@ -256,7 +409,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 										<Select
 											onValueChange={field.onChange}
 											defaultValue={field.value}
-											// Use mutation pending state
 											disabled={createEventMutation.isPending}
 										>
 											<FormControl>
@@ -289,8 +441,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 												<FormControl>
 													<Button
 														variant="outline"
-														// role="combobox"
-														// Use mutation pending state
 														disabled={createEventMutation.isPending}
 														className={cn(
 															"w-full justify-between",
@@ -306,7 +456,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 												</FormControl>
 											</PopoverTrigger>
 											<PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-												{/* Command content remains the same */}
 												<Command>
 													<CommandInput placeholder="Search venue..." />
 													<CommandList>
@@ -320,9 +469,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 																		form.setValue(
 																			"venuePublicId",
 																			venue.publicId,
-																			{
-																				shouldValidate: true,
-																			},
+																			{ shouldValidate: true },
 																		);
 																	}}
 																>
@@ -347,6 +494,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 								)}
 							/>
 
+							{/* Department */}
 							<div className="col-span-2">
 								<FormField
 									control={form.control}
@@ -397,9 +545,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 																			form.setValue(
 																				"departmentPublicId",
 																				dept.publicId,
-																				{
-																					shouldValidate: true,
-																				},
+																				{ shouldValidate: true },
 																			);
 																		}}
 																	>
@@ -439,7 +585,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 													onValueChange={field.onChange}
 													disabled={(date) =>
 														date < startOfDay(new Date()) ||
-														// Use mutation pending state
 														createEventMutation.isPending
 													}
 													placeholder="Select start date and time"
@@ -465,7 +610,6 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 													onValueChange={field.onChange}
 													disabled={(date) =>
 														date < startOfDay(new Date()) ||
-														// Use mutation pending state
 														createEventMutation.isPending
 													}
 													placeholder="Select end date and time"
@@ -477,196 +621,11 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 								/>
 							</div>
 
-							{/* Approved Letter - Replaced with useFileUpload and comp-544 structure */}
+							{/* Approved Letter Upload */}
 							<div className="col-span-2">
-								<FormField
+								<ApprovedLetterUploadField
 									control={form.control}
-									name="approvedLetter"
-									render={({ field }) => {
-										const maxSizeMB = 5;
-										const maxSize = maxSizeMB * 1024 * 1024;
-
-										const [hookState, hookActions] = useFileUpload({
-											accept:
-												"image/jpeg, image/png, image/webp, application/pdf, .docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-											maxSize,
-											maxFiles: 1,
-											multiple: false,
-											onFilesChange: (uploadedFiles) => {
-												// Update react-hook-form field
-												if (
-													uploadedFiles.length > 0 &&
-													uploadedFiles[0].file instanceof File
-												) {
-													field.onChange(uploadedFiles[0].file as File);
-												} else {
-													field.onChange(undefined);
-												}
-											},
-										});
-
-										const {
-											files,
-											isDragging,
-											errors: uploadErrors,
-										} = hookState;
-										const {
-											handleDragEnter,
-											handleDragLeave,
-											handleDragOver,
-											handleDrop,
-											openFileDialog,
-											removeFile,
-											getInputProps,
-										} = hookActions;
-
-										const currentFileObject = files[0]?.file;
-										const previewUrl = files[0]?.preview;
-
-										// Sync RHF field value with useFileUpload state (e.g., on form.reset)
-										useEffect(() => {
-											if (field.value instanceof File && files.length === 0) {
-												// If RHF has a file, and useFileUpload doesn't (e.g. after external set), add it to hook.
-												// This is a bit complex as useFileUpload's addFiles expects FileList or File[]
-												// For now, let's focus on the clearing part for reset.
-											} else if (!field.value && files.length > 0) {
-												// If RHF is empty (e.g., after form.reset()), clear hook files.
-												hookActions.clearFiles();
-											}
-											// eslint-disable-next-line react-hooks/exhaustive-deps
-										}, [field.value, files.length, hookActions.clearFiles]); // files.length to prevent loop with files object itself
-
-										return (
-											<FormItem>
-												<FormLabel>Approved Letter</FormLabel>
-												<FormControl>
-													<div className="flex flex-col gap-2">
-														<div className="relative">
-															<div // Drop area div
-																// biome-ignore lint/a11y/useSemanticElements: <explanation>
-																role="button" // Accessibility: Consider using a <button> or ensuring keyboard focusability and interaction
-																tabIndex={0} // Make it focusable
-																onClick={openFileDialog}
-																onKeyDown={(e) => {
-																	if (e.key === "Enter" || e.key === " ")
-																		openFileDialog();
-																}}
-																onDragEnter={handleDragEnter}
-																onDragLeave={handleDragLeave}
-																onDragOver={handleDragOver}
-																onDrop={handleDrop}
-																data-dragging={isDragging || undefined}
-																className={cn(
-																	"border-input hover:bg-accent/50 data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50",
-																	"relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed p-4 transition-colors",
-																	(createEventMutation.isPending ||
-																		field.disabled) &&
-																		"pointer-events-none opacity-50",
-																	previewUrl && "has-[img]:border-none", // Original style from comp-544
-																)}
-																aria-disabled={
-																	createEventMutation.isPending ||
-																	field.disabled
-																}
-															>
-																<input
-																	{...getInputProps({
-																		disabled:
-																			createEventMutation.isPending ||
-																			field.disabled,
-																	})}
-																	className="sr-only"
-																	aria-label="Upload approved letter image"
-																/>
-																{previewUrl &&
-																currentFileObject?.type?.startsWith(
-																	"image/",
-																) ? (
-																	<div className="absolute inset-0">
-																		<img
-																			src={previewUrl}
-																			alt={
-																				currentFileObject?.name ||
-																				"Uploaded image"
-																			}
-																			className="size-full object-cover"
-																		/>
-																	</div>
-																) : currentFileObject ? (
-																	// Display for non-image files or if previewUrl isn't available but a file is selected
-																	<div className="flex flex-col items-center justify-center text-center p-4">
-																		<FileTextIcon className="size-12 text-muted-foreground mb-2" />
-																		<p className="text-sm font-medium truncate max-w-full">
-																			{currentFileObject.name}
-																		</p>
-																		{currentFileObject instanceof File && (
-																			<p className="text-xs text-muted-foreground">
-																				{Math.round(
-																					currentFileObject.size / 1024,
-																				)}{" "}
-																				KB
-																			</p>
-																		)}
-																	</div>
-																) : (
-																	<div className="flex flex-col items-center justify-center px-4 py-3 text-center">
-																		<div
-																			className="bg-background mb-2 flex size-11 shrink-0 items-center justify-center rounded-full border"
-																			aria-hidden="true"
-																		>
-																			<ImageUpIcon className="size-4 opacity-60" />
-																		</div>
-																		<p className="mb-1.5 text-sm font-medium">
-																			Drop your file here or click to browse
-																		</p>
-																		<p className="text-muted-foreground text-xs">
-																			Max size: {maxSizeMB}
-																			MB. Accepted: Images, PDF, DOCX
-																		</p>
-																	</div>
-																)}
-															</div>
-															{previewUrl && (
-																<div className="absolute top-4 right-4">
-																	<Button // Changed from <button> to ShadCN Button for consistent styling
-																		type="button"
-																		variant="destructive"
-																		size="icon"
-																		className="z-50 flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-[color,box-shadow] outline-none hover:bg-black/80 focus-visible:ring-[3px] hover:text-white"
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			removeFile(files[0]?.id);
-																		}}
-																		aria-label="Remove image"
-																		disabled={
-																			createEventMutation.isPending ||
-																			field.disabled
-																		}
-																	>
-																		<XIcon
-																			className="size-4"
-																			aria-hidden="true"
-																		/>
-																	</Button>
-																</div>
-															)}
-														</div>
-
-														{uploadErrors.length > 0 && (
-															<div
-																className="text-destructive flex items-center gap-1 text-xs"
-																role="alert"
-															>
-																<AlertCircleIcon className="size-3 shrink-0" />
-																<span>{uploadErrors[0]}</span>
-															</div>
-														)}
-													</div>
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										);
-									}}
+									disabled={createEventMutation.isPending}
 								/>
 							</div>
 
@@ -674,7 +633,7 @@ export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 							<DialogFooter className="col-span-2">
 								<Button
 									variant="outline"
-									type="button" // Ensure it doesn't submit form
+									type="button"
 									onClick={onClose}
 									disabled={createEventMutation.isPending}
 								>

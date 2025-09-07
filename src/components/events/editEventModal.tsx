@@ -77,6 +77,21 @@ interface EditEventModalProps {
 
 const eventTypes = ["External", "Program-based", "Admin", "SSG/Advocay-based"];
 
+/**
+ * Safely parse an ISO datetime string coming from backend.
+ * Backend example: 2025-09-18T02:30:00Z
+ * We ONLY append 'Z' if the string has no timezone designator.
+ */
+function parseAndValidateDate(
+	dateString: string | null | undefined,
+): Date | undefined {
+	if (!dateString) return undefined;
+	// If it already ends with Z or has an explicit offset (+hh:mm / -hh:mm), use as-is.
+	const hasTZ = /Z$|[+-]\d\d:\d\d$/.test(dateString);
+	// (Fixed lint: use template literal instead of concatenation)
+	const candidate = hasTZ ? new Date(dateString) : new Date(`${dateString}Z`);
+	return Number.isNaN(candidate.getTime()) ? undefined : candidate;
+}
 export function EditEventModal({
 	isOpen,
 	onClose,
@@ -101,18 +116,12 @@ export function EditEventModal({
 		mode: "onChange",
 	});
 
+	/**
+	 * When modal opens, populate the form with existing event values
+	 * Ensures Start/End Date & Time fields show existing values.
+	 */
 	useEffect(() => {
 		if (isOpen && event) {
-			const parseAndValidateDate = (
-				dateString: string | null | undefined,
-			): Date | undefined => {
-				if (!dateString) return undefined;
-				const date = new Date(`${dateString}Z`);
-				return date instanceof Date && !Number.isNaN(date.getTime())
-					? date
-					: undefined;
-			};
-
 			const startDate = parseAndValidateDate(event.startTime);
 			const endDate = parseAndValidateDate(event.endTime);
 
@@ -143,7 +152,6 @@ export function EditEventModal({
 		mutationFn: updateEvent,
 		onSuccess: () => {
 			toast.success("Event updated successfully.");
-			// Invalidate relevant queries
 			queryClient.refetchQueries({
 				queryKey: eventByIdQueryOptions(event.publicId).queryKey,
 			});
@@ -156,29 +164,23 @@ export function EditEventModal({
 					undefined,
 				).queryKey,
 			});
-			onClose(); // Close modal on success
+			onClose();
 		},
 		onError: (error) => {
 			console.error("Update Mutation error", error);
 			toast.error(
 				`Failed to update event: ${error instanceof Error ? error.message : "Please try again."}`,
 			);
-			// Optionally reset form state or specific fields on error
-			// form.setError("root.serverError", { message: error.message });
 		},
 	});
-	// --- End Mutation ---
 
-	// --- Submit Handler ---
 	async function onSubmit(values: EditEventInput) {
-		// The schema transforms approvedLetter: File[] to approvedLetter: File
 		const outputValues = values as unknown as EditEventOutput;
 
-		// Check if the file in the form is the placeholder or a new file
 		const letterFileToSend =
-			outputValues.approvedLetter && outputValues.approvedLetter.size > 0 // Real file has size > 0
+			outputValues.approvedLetter && outputValues.approvedLetter.size > 0
 				? outputValues.approvedLetter
-				: undefined; // Don't send placeholder or if no file
+				: undefined;
 
 		const eventData: Partial<EventDTOPayload> = {
 			eventName: outputValues.eventName,
@@ -192,7 +194,7 @@ export function EditEventModal({
 		updateEventMutation.mutate({
 			eventId: event.publicId,
 			eventData,
-			approvedLetter: letterFileToSend, // Send the actual file or undefined
+			approvedLetter: letterFileToSend,
 		});
 	}
 
@@ -238,7 +240,7 @@ export function EditEventModal({
 										<FormLabel>Event Type</FormLabel>
 										<Select
 											onValueChange={field.onChange}
-											value={field.value} // Use value for controlled component
+											value={field.value}
 											disabled={updateEventMutation.isPending}
 										>
 											<FormControl>
@@ -326,6 +328,7 @@ export function EditEventModal({
 								)}
 							/>
 
+							{/* Department */}
 							<div className="col-span-2">
 								<FormField
 									control={form.control}
@@ -338,10 +341,7 @@ export function EditEventModal({
 													<FormControl>
 														<Button
 															variant="outline"
-															disabled={
-																updateEventMutation.isPending
-																// || isLoadingDepartments
-															}
+															disabled={updateEventMutation.isPending}
 															className={cn(
 																"w-full justify-between",
 																!field.value && "text-muted-foreground",
@@ -349,7 +349,6 @@ export function EditEventModal({
 														>
 															{field.value
 																? departments.find(
-																		// Use depts if fetching inside
 																		(dept) => dept.publicId === field.value,
 																	)?.name
 																: "Select department"}
@@ -361,41 +360,33 @@ export function EditEventModal({
 													<Command>
 														<CommandInput placeholder="Search department..." />
 														<CommandList>
-															{/* {isLoadingDepartments && (
-                                                            <div className="p-2 text-center text-sm text-muted-foreground">
-                                                                Loading departments...
-                                                            </div>
-                                                        )} */}
 															<CommandEmpty>No department found.</CommandEmpty>
 															<CommandGroup>
-																{departments.map(
-																	// Use depts if fetching inside
-																	(dept) => (
-																		<CommandItem
-																			value={dept.name}
-																			key={dept.publicId}
-																			onSelect={() => {
-																				form.setValue(
-																					"departmentPublicId",
-																					dept.publicId,
-																					{
-																						shouldValidate: true,
-																					},
-																				);
-																			}}
-																		>
-																			<Check
-																				className={cn(
-																					"mr-2 h-4 w-4",
-																					dept.publicId === field.value
-																						? "opacity-100"
-																						: "opacity-0",
-																				)}
-																			/>
-																			{dept.name}
-																		</CommandItem>
-																	),
-																)}
+																{departments.map((dept) => (
+																	<CommandItem
+																		value={dept.name}
+																		key={dept.publicId}
+																		onSelect={() => {
+																			form.setValue(
+																				"departmentPublicId",
+																				dept.publicId,
+																				{
+																					shouldValidate: true,
+																				},
+																			);
+																		}}
+																	>
+																		<Check
+																			className={cn(
+																				"mr-2 h-4 w-4",
+																				dept.publicId === field.value
+																					? "opacity-100"
+																					: "opacity-0",
+																			)}
+																		/>
+																		{dept.name}
+																	</CommandItem>
+																))}
 															</CommandGroup>
 														</CommandList>
 													</Command>
@@ -406,6 +397,7 @@ export function EditEventModal({
 									)}
 								/>
 							</div>
+
 							{/* Start Date & Time */}
 							<div>
 								<FormField
@@ -474,6 +466,7 @@ export function EditEventModal({
 								/>
 							</div>
 
+							{/* Approved Letter */}
 							<div className="col-span-2">
 								<FormField
 									control={form.control}
@@ -512,9 +505,7 @@ export function EditEventModal({
 																value={file}
 																className="p-2"
 															>
-																<FileUploadItemPreview>
-																	{/* Default preview handles images/file icons */}
-																</FileUploadItemPreview>
+																<FileUploadItemPreview />
 																<FileUploadItemMetadata />
 																<FileUploadItemDelete asChild>
 																	<Button
@@ -536,6 +527,7 @@ export function EditEventModal({
 									)}
 								/>
 							</div>
+
 							{/* Footer */}
 							<DialogFooter className="col-span-2">
 								<Button

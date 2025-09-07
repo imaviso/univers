@@ -15,7 +15,7 @@ import {
 	User,
 	XCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -122,6 +122,7 @@ const getNotificationStyle = (
 
 function NotificationsPage() {
 	const navigate = useNavigate(); // Get navigation function
+	const selectAllId = useId();
 	const [currentPage, setCurrentPage] = useState(0);
 	const [filter, setFilter] = useState<"all" | "unread">("all");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -316,13 +317,13 @@ function NotificationsPage() {
 					{filteredNotifications.length > 0 && (
 						<div className="flex items-center gap-4 px-4 py-2 border-b">
 							<Checkbox
-								id="select-all"
+								id={selectAllId}
 								checked={selectAllCheckedState}
 								onCheckedChange={handleSelectAll}
 								aria-label="Select all notifications on this page"
 							/>
 							<label
-								htmlFor="select-all"
+								htmlFor={selectAllId}
 								className="text-sm font-medium cursor-pointer"
 							>
 								Select All ({selectedIds.size} selected)
@@ -410,7 +411,7 @@ function NotificationsPage() {
 											handleInteraction();
 										}
 									}}
-									aria-labelledby={`notification-title-${notification.publicId}`} // Link title for screen readers
+									aria-label={canNavigate ? title : undefined} // Link title for screen readers
 								>
 									{/* Checkbox */}
 									<Checkbox

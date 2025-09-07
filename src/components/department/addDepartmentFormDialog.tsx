@@ -193,10 +193,7 @@ export function AddDepartmentFormDialog() {
 							>
 								Cancel
 							</Button>
-							<Button
-								type="submit"
-								disabled={!form.formState.isValid || addMutation.isPending}
-							>
+							<Button type="submit" disabled={addMutation.isPending}>
 								{addMutation.isPending ? "Adding..." : "Add Department"}
 							</Button>
 						</DialogFooter>
