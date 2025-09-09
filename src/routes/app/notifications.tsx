@@ -397,21 +397,20 @@ function NotificationsPage() {
 							};
 
 							return (
-								<div
+								<button
+									type="button"
 									key={notification.publicId}
-									role={canNavigate ? "button" : undefined} // Make it a button if navigable
-									tabIndex={canNavigate ? 0 : undefined} // Make it focusable if navigable
-									className={`flex items-start gap-4 p-4 rounded-lg border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+									className={`flex w-full items-start gap-4 p-4 rounded-lg border text-left focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
 										notification.isRead ? "bg-background" : "bg-muted/50" // Slightly different background for unread
 									} ${canNavigate ? "cursor-pointer hover:bg-muted/80" : ""}`} // Add cursor and hover for navigable items
 									onClick={handleInteraction}
 									onKeyDown={(e) => {
-										if (canNavigate && (e.key === "Enter" || e.key === " ")) {
+										if (e.key === "Enter" || e.key === " ") {
 											e.preventDefault(); // Prevent spacebar scroll
 											handleInteraction();
 										}
 									}}
-									aria-label={canNavigate ? title : undefined} // Link title for screen readers
+									aria-label={title} // Link title for screen readers
 								>
 									{/* Checkbox */}
 									<Checkbox
@@ -498,7 +497,7 @@ function NotificationsPage() {
                                             Mark read
                                         </Button>
                                     )} */}
-								</div>
+								</button>
 							);
 						})}
 				</div>

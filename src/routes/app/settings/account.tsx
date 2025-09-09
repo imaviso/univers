@@ -16,7 +16,7 @@ import {
 	ZoomOutIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as v from "valibot";
 import ErrorPage from "@/components/ErrorPage";
@@ -94,7 +94,7 @@ type EditableProfile = {
 };
 
 const getInitialProfileState = (
-	user: UserDTO | undefined,
+	user: UserDTO | null | undefined,
 ): EditableProfile => ({
 	firstName: user?.firstName || "",
 	lastName: user?.lastName || "",
@@ -167,6 +167,12 @@ export function AccountSettings() {
 	const { data: user } = useCurrentUser();
 	const { queryClient } = useRouteContext({ from: "/app/settings" });
 
+	const firstNameId = useId();
+	const lastNameId = useId();
+	const profileEmailId = useId();
+	const newPasswordDialogId = useId();
+	const confirmPasswordDialogId = useId();
+
 	// File Upload Hook
 	const [
 		{ files: uploadedFiles, errors: uploadErrors },
@@ -187,10 +193,6 @@ export function AccountSettings() {
 	const uncroppedPreviewUrl = uploadedFiles[0]?.preview || null;
 	const uncroppedFileId = uploadedFiles[0]?.id;
 	const previousFileIdRef = useRef<string | undefined | null>(null);
-
-	if (!user) {
-		return <ErrorPage />;
-	}
 
 	const [profileForm, setProfileForm] = useState<EditableProfile>(() =>
 		getInitialProfileState(user),
@@ -713,6 +715,10 @@ export function AccountSettings() {
 		: false;
 	// --- End Derived State ---
 
+	if (!user) {
+		return <ErrorPage />;
+	}
+
 	return (
 		<div className="space-y-6">
 			<div>
@@ -775,10 +781,10 @@ export function AccountSettings() {
 							{/* Name Inputs */}
 							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 								<div>
-									<Label htmlFor="firstName">First Name</Label>
+									<Label htmlFor={firstNameId}>First Name</Label>
 									<Input
 										className="mt-1"
-										id="firstName"
+										id={firstNameId}
 										name="firstName"
 										value={profileForm.firstName}
 										onChange={handleProfileChange}
@@ -786,10 +792,10 @@ export function AccountSettings() {
 									/>
 								</div>
 								<div>
-									<Label htmlFor="lastName">Last Name</Label>
+									<Label htmlFor={lastNameId}>Last Name</Label>
 									<Input
 										className="mt-1"
-										id="lastName"
+										id={lastNameId}
 										name="lastName"
 										value={profileForm.lastName}
 										onChange={handleProfileChange}
@@ -813,9 +819,9 @@ export function AccountSettings() {
 							</div>
 							{/* Email Display & Change Button */}
 							<div className="grid gap-1">
-								<Label htmlFor="profileEmail">Email Address</Label>
+								<Label htmlFor={profileEmailId}>Email Address</Label>
 								<div className="flex items-center justify-between">
-									<p id="profileEmail" className="text-sm text-primary">
+									<p id={profileEmailId} className="text-sm text-primary">
 										{user.email}
 									</p>
 									<Button
@@ -1059,10 +1065,10 @@ export function AccountSettings() {
 							</DialogHeader>
 							<div className="space-y-4 py-4">
 								<div className="grid gap-2">
-									<Label htmlFor="newPasswordDialog">New Password</Label>
+									<Label htmlFor={newPasswordDialogId}>New Password</Label>
 									<div className="relative">
 										<Input
-											id="newPasswordDialog"
+											id={newPasswordDialogId}
 											name="newPassword"
 											type={showNewPassword ? "text" : "password"}
 											value={newPasswordForm.newPassword}
@@ -1090,12 +1096,12 @@ export function AccountSettings() {
 									)}
 								</div>
 								<div className="grid gap-2">
-									<Label htmlFor="confirmPasswordDialog">
+									<Label htmlFor={confirmPasswordDialogId}>
 										Confirm New Password
 									</Label>
 									<div className="relative">
 										<Input
-											id="confirmPasswordDialog"
+											id={confirmPasswordDialogId}
 											name="confirmPassword"
 											type={showConfirmNewPassword ? "text" : "password"}
 											value={newPasswordForm.confirmPassword}

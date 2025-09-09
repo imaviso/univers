@@ -103,7 +103,7 @@ export function UserActivityChart({
 					{[...Array(limit)].map((_, i) => (
 						<Skeleton
 							key={`skeleton-user-${
-								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+								// biome-ignore lint/suspicious/noArrayIndexKey: Using index for skeleton is acceptable as the list is static.
 								i
 							}`}
 							className="h-8 w-full rounded"

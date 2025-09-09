@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +38,7 @@ export function AssignHeadDialog({
 	onAssign,
 	isLoading,
 }: AssignHeadDialogProps) {
+	const userSelectId = useId();
 	// State to hold the selected user ID (as string from Select)
 	const [selectedUserId, setSelectedUserId] = useState<string>("");
 
@@ -81,13 +82,13 @@ export function AssignHeadDialog({
 				</DialogHeader>
 
 				<div className="py-4 space-y-2">
-					<Label htmlFor="user-select">Select User</Label>
+					<Label htmlFor={userSelectId}>Select User</Label>
 					<Select
 						value={selectedUserId}
 						onValueChange={setSelectedUserId}
 						disabled={isLoading}
 					>
-						<SelectTrigger id="user-select">
+						<SelectTrigger id={userSelectId}>
 							<SelectValue placeholder="Select a user..." />
 						</SelectTrigger>
 						<SelectContent>

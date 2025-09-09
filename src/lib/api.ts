@@ -88,7 +88,7 @@ export async function handleApiResponse<T>(
 						} else {
 							errorMessage = potentialMessage; // Use as is if not further parsable or no nested message
 						}
-					} catch (e) {
+					} catch (_e) {
 						// potentialMessage was not a stringified JSON, use it directly
 						errorMessage = potentialMessage;
 					}
@@ -100,7 +100,7 @@ export async function handleApiResponse<T>(
 				// errorData was not an object, or errorText is not JSON
 				errorMessage = errorText;
 			}
-		} catch (e) {
+		} catch (_e) {
 			// errorText wasn't valid JSON, or another parsing error occurred
 			errorMessage = errorText || `Server error: ${response.status}`;
 		}

@@ -131,7 +131,7 @@ function Events() {
 						<div className="flex items-center gap-4">
 							<h1 className="text-xl font-semibold">Events</h1>
 							<div className="flex items-center gap-2">
-								{/* biome-ignore lint/a11y/useButtonType: <explanation> */}
+								{/* biome-ignore lint/a11y/useButtonType: button type not needed for view toggle */}
 								<button
 									onClick={() => setView("list")}
 									className={`px-3 py-1 text-sm rounded-md ${
@@ -142,7 +142,7 @@ function Events() {
 								>
 									Overview
 								</button>
-								{/* biome-ignore lint/a11y/useButtonType: <explanation> */}
+								{/* biome-ignore lint/a11y/useButtonType: button type not needed for view toggle */}
 								<button
 									onClick={() => setView("timeline")}
 									className="px-3 py-1 text-sm rounded-md text-muted-foreground hover:bg-muted"
@@ -413,7 +413,7 @@ function Events() {
 							<h1 className="text-xl font-semibold">Events</h1>
 							{/* View switcher still available */}
 							<div className="flex items-center gap-2">
-								{/* biome-ignore lint/a11y/useButtonType: <explanation> */}
+								{/* biome-ignore lint/a11y/useButtonType: button type not needed for view toggle */}
 								<button
 									onClick={() => setView("list")}
 									className={`px-3 py-1 text-sm rounded-md ${
@@ -424,7 +424,7 @@ function Events() {
 								>
 									Overview
 								</button>
-								{/* biome-ignore lint/a11y/useButtonType: <explanation> */}
+								{/* biome-ignore lint/a11y/useButtonType: button type not needed for view toggle */}
 								<button
 									onClick={() => setView("timeline")}
 									className={`px-3 py-1 text-sm rounded-md ${
@@ -503,7 +503,7 @@ function Events() {
 														to: endOfMonth(now),
 													});
 												} else {
-													const numDays = Number.parseInt(value);
+													const numDays = Number.parseInt(value, 10);
 													if (!Number.isNaN(numDays)) {
 														setTimelineSelectedDateRange({
 															from: startOfDay(addDays(now, -numDays)),
@@ -599,7 +599,7 @@ function Events() {
 														to: endOfMonth(now),
 													});
 												} else {
-													const numDays = Number.parseInt(value);
+													const numDays = Number.parseInt(value, 10);
 													if (!Number.isNaN(numDays)) {
 														setListSelectedDateRange({
 															from: startOfDay(addDays(now, -numDays)),

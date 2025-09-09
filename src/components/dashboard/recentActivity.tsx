@@ -48,7 +48,7 @@ export function RecentActivity() {
 					{[...Array(3)].map((_, index) => (
 						<div
 							key={`recent-activity-skeleton-item-${
-								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+								// biome-ignore lint/suspicious/noArrayIndexKey: Using index for skeleton is acceptable as the list is static.
 								index
 							}`}
 							className="flex items-start gap-3"

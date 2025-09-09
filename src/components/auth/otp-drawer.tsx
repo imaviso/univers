@@ -44,7 +44,7 @@ export function OtpVerificationDrawer({
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const navigate = useNavigate();
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	// biome-ignore lint/correctness/useExhaustiveDependencies: This effect should only run when the drawer is opened.
 	useEffect(() => {
 		if (isOpen) {
 			const email = localStorage.getItem("userEmail");

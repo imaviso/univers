@@ -686,6 +686,48 @@ export function EventDetailsPage() {
 		}));
 	}, [event]);
 
+	const groupedReservedEquipment = useMemo(() => {
+		const groups = new Map<
+			string,
+			{
+				categoryName: string;
+				reservations: EquipmentReservationDTO[];
+			}
+		>();
+		for (const reservation of reservedEquipments || []) {
+			if (
+				reservation.equipment?.categories &&
+				reservation.equipment.categories.length > 0
+			) {
+				for (const category of reservation.equipment.categories) {
+					if (!groups.has(category.publicId)) {
+						groups.set(category.publicId, {
+							categoryName: category.name,
+							reservations: [],
+						});
+					}
+					const group = groups.get(category.publicId);
+					if (group) {
+						group.reservations.push(reservation);
+					}
+				}
+			} else {
+				const uncategorizedKey = "_uncategorized";
+				if (!groups.has(uncategorizedKey)) {
+					groups.set(uncategorizedKey, {
+						categoryName: "Uncategorized",
+						reservations: [],
+					});
+				}
+				const group = groups.get(uncategorizedKey);
+				if (group) {
+					group.reservations.push(reservation);
+				}
+			}
+		}
+		return Array.from(groups.values());
+	}, [reservedEquipments]);
+
 	return (
 		<div className="flex h-screen bg-background">
 			<div className="flex flex-col flex-1">
@@ -1064,133 +1106,81 @@ export function EventDetailsPage() {
 									)}
 							</CardHeader>
 							<CardContent>
-								{/* Group reserved equipment by category */}
-								{(() => {
-									const groupedReservedEquipment =
-										// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-										useMemo(() => {
-											const groups = new Map<
-												string,
-												{
-													categoryName: string;
-													reservations: EquipmentReservationDTO[];
-												}
-											>();
-											for (const reservation of reservedEquipments || []) {
-												if (
-													reservation.equipment?.categories &&
-													reservation.equipment.categories.length > 0
-												) {
-													for (const category of reservation.equipment
-														.categories) {
-														if (!groups.has(category.publicId)) {
-															groups.set(category.publicId, {
-																categoryName: category.name,
-																reservations: [],
-															});
-														}
-														const group = groups.get(category.publicId);
-														if (group) {
-															group.reservations.push(reservation);
-														}
-													}
-												} else {
-													const uncategorizedKey = "_uncategorized";
-													if (!groups.has(uncategorizedKey)) {
-														groups.set(uncategorizedKey, {
-															categoryName: "Uncategorized",
-															reservations: [],
-														});
-													}
-													const group = groups.get(uncategorizedKey);
-													if (group) {
-														group.reservations.push(reservation);
-													}
-												}
-											}
-											return Array.from(groups.values());
-										}, [reservedEquipments]);
-
-									return reservedEquipments && reservedEquipments.length > 0 ? (
-										<Table>
-											<TableHeader>
-												<TableRow>
-													<TableHead>Equipment</TableHead>
-													<TableHead>Quantity</TableHead>
-													<TableHead>Status</TableHead>
-													{canUserModifyEquipmentReservation && (
-														<TableHead className="text-right">
-															Actions
-														</TableHead>
-													)}
-												</TableRow>
-											</TableHeader>
-											<TableBody>
-												{groupedReservedEquipment.map((group) => (
-													<Fragment key={group.categoryName}>
-														<TableRow className="bg-muted/50 hover:bg-muted/50">
-															<TableCell
-																colSpan={
-																	canUserModifyEquipmentReservation ? 4 : 3
-																}
-																className="py-2 font-semibold px-3"
-															>
-																{group.categoryName}
+								{reservedEquipments && reservedEquipments.length > 0 ? (
+									<Table>
+										<TableHeader>
+											<TableRow>
+												<TableHead>Equipment</TableHead>
+												<TableHead>Quantity</TableHead>
+												<TableHead>Status</TableHead>
+												{canUserModifyEquipmentReservation && (
+													<TableHead className="text-right">Actions</TableHead>
+												)}
+											</TableRow>
+										</TableHeader>
+										<TableBody>
+											{groupedReservedEquipment.map((group) => (
+												<Fragment key={group.categoryName}>
+													<TableRow className="bg-muted/50 hover:bg-muted/50">
+														<TableCell
+															colSpan={
+																canUserModifyEquipmentReservation ? 4 : 3
+															}
+															className="py-2 font-semibold px-3"
+														>
+															{group.categoryName}
+														</TableCell>
+													</TableRow>
+													{group.reservations.map((reservation) => (
+														<TableRow key={reservation.publicId}>
+															<TableCell>
+																{reservation.equipment?.name ?? "N/A"}
 															</TableCell>
+															<TableCell>{reservation.quantity}</TableCell>
+															<TableCell>
+																<Badge
+																	className={`${getStatusColor(reservation.status)}`}
+																>
+																	{reservation.status.charAt(0).toUpperCase() +
+																		reservation.status.slice(1).toLowerCase()}
+																</Badge>
+															</TableCell>
+															{(reservation.status === "PENDING" ||
+																reservation.status === "APPROVED") &&
+																canUserModifyEquipmentReservation && (
+																	<TableCell className="text-right">
+																		<Button
+																			variant="ghost"
+																			size="icon"
+																			onClick={() =>
+																				handleCancelEquipmentReservationClick(
+																					reservation.publicId,
+																				)
+																			}
+																			disabled={
+																				cancelEquipmentReservationMutationHook.isPending &&
+																				equipmentReservationToCancelId ===
+																					reservation.publicId
+																			}
+																		>
+																			<XCircle className="h-4 w-4 text-destructive" />
+																			<span className="sr-only">
+																				Cancel Reservation
+																			</span>
+																		</Button>
+																	</TableCell>
+																)}
 														</TableRow>
-														{group.reservations.map((reservation) => (
-															<TableRow key={reservation.publicId}>
-																<TableCell>
-																	{reservation.equipment?.name ?? "N/A"}
-																</TableCell>
-																<TableCell>{reservation.quantity}</TableCell>
-																<TableCell>
-																	<Badge
-																		className={`${getStatusColor(reservation.status)}`}
-																	>
-																		{reservation.status
-																			.charAt(0)
-																			.toUpperCase() +
-																			reservation.status.slice(1).toLowerCase()}
-																	</Badge>
-																</TableCell>
-																{(reservation.status === "PENDING" ||
-																	reservation.status === "APPROVED") &&
-																	canUserModifyEquipmentReservation && (
-																		<TableCell className="text-right">
-																			<Button
-																				variant="ghost"
-																				size="icon"
-																				onClick={() =>
-																					handleCancelEquipmentReservationClick(
-																						reservation.publicId,
-																					)
-																				}
-																				disabled={
-																					cancelEquipmentReservationMutationHook.isPending &&
-																					equipmentReservationToCancelId ===
-																						reservation.publicId
-																				}
-																			>
-																				<XCircle className="h-4 w-4 text-destructive" />
-																				<span className="sr-only">
-																					Cancel Reservation
-																				</span>
-																			</Button>
-																		</TableCell>
-																	)}
-															</TableRow>
-														))}
-													</Fragment>
-												))}
-											</TableBody>
-										</Table>
-									) : (
-										<p className="text-sm text-muted-foreground py-4">
-											No equipment reserved for this event yet.
-										</p>
-									);
-								})()}
+													))}
+												</Fragment>
+											))}
+										</TableBody>
+									</Table>
+								) : (
+									<p className="text-sm text-muted-foreground py-4">
+										No equipment reserved for this event yet.
+									</p>
+								)}
 							</CardContent>
 						</Card>
 

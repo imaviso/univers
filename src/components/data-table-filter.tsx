@@ -6,6 +6,7 @@ import {
 	isValidElement,
 	useCallback, // Add useCallback import
 	useEffect,
+	useId,
 	useMemo,
 	useRef,
 	useState,
@@ -1634,6 +1635,7 @@ export function PropertyFilterNumberValueMenu<TData, TValue>({
 }: ProperFilterValueMenuProps<TData, TValue>) {
 	const maxFromMeta = columnMeta.max;
 	const cappedMax = maxFromMeta ?? Number.MAX_SAFE_INTEGER;
+	const singleInputId = useId();
 
 	const filter = column.getFilterValue()
 		? (column.getFilterValue() as FilterValue<"number", TData>)
@@ -1773,7 +1775,7 @@ export function PropertyFilterNumberValueMenu<TData, TValue>({
 								<div className="flex items-center gap-2">
 									<span className="text-xs font-medium">Value</span>
 									<Input
-										id="single"
+										id={singleInputId}
 										type="number"
 										value={inputValues[0]}
 										onChange={(e) => handleInputChange(0, e.target.value)}

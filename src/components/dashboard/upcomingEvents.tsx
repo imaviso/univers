@@ -23,7 +23,7 @@ export function UpcomingEvents() {
 					{[...Array(3)].map((_, index) => (
 						<div
 							key={`skeleton-event-${
-								// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+								// biome-ignore lint/suspicious/noArrayIndexKey: Using index for skeleton is acceptable as the list is static.
 								index
 							}`}
 							className="block p-3 rounded-lg border"

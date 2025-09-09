@@ -10,7 +10,7 @@ import {
 	PlusCircleIcon, // Added for new category button
 	XIcon as X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner"; // For toast notifications
 import { Button } from "@/components/ui/button";
@@ -92,6 +92,7 @@ export function EquipmentFormDialog({
 	currentUserRoles,
 	equipmentOwners,
 }: EquipmentFormDialogProps) {
+	const formId = useId();
 	const isSuperAdmin = currentUserRoles?.includes("SUPER_ADMIN");
 	const isEditing = !!equipment;
 
@@ -301,7 +302,7 @@ export function EquipmentFormDialog({
 
 				<Form {...form}>
 					<form
-						id="equipment-form"
+						id={formId}
 						onSubmit={form.handleSubmit(processSubmit)}
 						className="space-y-4 py-4"
 					>
@@ -379,7 +380,6 @@ export function EquipmentFormDialog({
 											<FormControl>
 												<Button
 													variant="outline"
-													// biome-ignore lint/a11y/useSemanticElements: <yes>
 													role="combobox"
 													aria-expanded={popoverOpen}
 													className={cn(
@@ -674,15 +674,9 @@ export function EquipmentFormDialog({
 									<FormControl>
 										<div className="flex flex-col gap-2">
 											<div className="relative">
-												<div
-													// biome-ignore lint/a11y/useSemanticElements: <yes>
-													role="button"
-													tabIndex={0}
+												<button
+													type="button"
 													onClick={openFileDialog}
-													onKeyDown={(e) => {
-														if (e.key === "Enter" || e.key === " ")
-															openFileDialog();
-													}}
 													onDragEnter={handleDragEnter}
 													onDragLeave={handleDragLeave}
 													onDragOver={handleDragOver}
@@ -690,12 +684,13 @@ export function EquipmentFormDialog({
 													data-dragging={isDragging || undefined}
 													className={cn(
 														"border-input hover:bg-accent/50 data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50",
-														"relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed p-4 transition-colors",
+														"relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed p-4 transition-colors w-full",
 														(isMutating || field.disabled) &&
 															"pointer-events-none opacity-50",
 														currentPreviewUrl && "has-[img]:border-none",
 													)}
-													aria-disabled={isMutating || field.disabled}
+													disabled={isMutating || field.disabled}
+													aria-label="Upload equipment image"
 												>
 													<input
 														{...getInputProps({
@@ -734,7 +729,7 @@ export function EquipmentFormDialog({
 															</p>
 														</div>
 													)}
-												</div>
+												</button>
 												{currentPreviewUrl && (
 													<div className="absolute top-4 right-4">
 														{isEditing &&
@@ -812,7 +807,7 @@ export function EquipmentFormDialog({
 					</Button>
 					<Button
 						type="submit"
-						form="equipment-form"
+						form={formId}
 						disabled={
 							isMutating ||
 							isLoadingCategories ||

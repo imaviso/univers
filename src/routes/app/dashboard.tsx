@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { addDays, format } from "date-fns";
 import { Calendar as CalendarIcon, ListFilter } from "lucide-react"; // Added ListFilter
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { CancellationRateChart } from "@/components/dashboard/cancellationRateChart";
 import { EventsOverviewChart } from "@/components/dashboard/eventsOverviewChart";
@@ -146,6 +146,7 @@ export const Route = createFileRoute("/app/dashboard")({
 });
 
 function Dashboard() {
+	const dateButtonId = useId();
 	const [visibleEventStatuses, setVisibleEventStatuses] = usePersistentState<
 		Record<string, boolean>
 	>(
@@ -201,7 +202,7 @@ function Dashboard() {
 						<Popover>
 							<PopoverTrigger asChild>
 								<Button
-									id="date"
+									id={dateButtonId}
 									variant={"outline"}
 									className={cn(
 										"w-fit justify-start text-left font-normal",
@@ -236,7 +237,7 @@ function Dashboard() {
 											}));
 										} else {
 											setDateRange({
-												from: addDays(now, -Number.parseInt(value)),
+												from: addDays(now, -Number.parseInt(value, 10)),
 												to: now,
 											});
 										}

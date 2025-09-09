@@ -69,7 +69,7 @@ export function UserFormDialog({
 	});
 
 	const handleFormSubmit = (values: UserFormInput) => {
-		const { confirmPassword, ...dataToSubmit } = values;
+		const { confirmPassword: _, ...dataToSubmit } = values;
 		// Ensure roles is an array
 		if (!Array.isArray(dataToSubmit.roles)) {
 			dataToSubmit.roles = [];

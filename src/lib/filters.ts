@@ -20,6 +20,7 @@ import { intersection, uniq } from "./array";
 export type ElementType<T> = T extends (infer U)[] ? U : T;
 
 declare module "@tanstack/react-table" {
+	//biome-ignore lint: idk
 	interface ColumnMeta<TData extends RowData, TValue> {
 		/* The display name of the column. */
 		displayName: string;

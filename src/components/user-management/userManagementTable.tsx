@@ -534,11 +534,7 @@ export function UserDataTable() {
 					icon: FingerprintIcon, // Changed icon
 				}) as ColumnMeta<UserDTO, unknown>,
 			},
-			{
-				id: "publicId",
-				header: "Public ID",
-				cell: ({ row }) => <div>{row.original.publicId}</div>,
-			},
+
 			// ... Role column ...
 			{
 				accessorKey: "roles",
@@ -724,7 +720,7 @@ export function UserDataTable() {
 							hour12: true,
 						}).format(date);
 						return <div className="text-right font-medium">{formatted}</div>;
-					} catch (error) {
+					} catch (_error) {
 						return (
 							<div className="text-right text-muted-foreground">
 								Invalid Date
@@ -738,7 +734,7 @@ export function UserDataTable() {
 						try {
 							const date = new Date(row.createdAt);
 							return Number.isNaN(date.getTime()) ? undefined : date;
-						} catch (e) {
+						} catch (_e) {
 							return undefined;
 						}
 					},
@@ -752,15 +748,9 @@ export function UserDataTable() {
 			// --- Actions column ---
 			{
 				id: "actions",
+				enableHiding: false,
 				cell: ({ row }) => {
 					const user = row.original;
-					// Get setters from useAtom
-					const [, setEditDialogOpen] = useAtom(editDialogAtom);
-					const [, setSelectedUser] = useAtom(selectedUserAtom);
-					const [, setDeleteDialogOpen] = useAtom(deleteDialogAtom);
-					// Use the state setter directly, not from atom
-					// const [, setActivateDialogOpen] = useAtom(activateDialogAtom); // Remove if using local state
-
 					return (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
@@ -796,7 +786,7 @@ export function UserDataTable() {
 										className="text-green-600 focus:text-green-700 focus:bg-green-100"
 										onClick={() => {
 											setSelectedUser(user);
-											setActivateDialogOpen(true); // Use local state setter
+											setActivateDialogOpen(true);
 										}}
 										disabled={activateUserMutation.isPending}
 									>
@@ -807,7 +797,6 @@ export function UserDataTable() {
 						</DropdownMenu>
 					);
 				},
-				enableHiding: false,
 			},
 		],
 		[
@@ -817,6 +806,9 @@ export function UserDataTable() {
 			VERIFIED_OPTIONS,
 			bulkDeactivateUsersMutation.isPending,
 			activateUserMutation.isPending,
+			setSelectedUser,
+			setEditDialogOpen,
+			setDeleteDialogOpen,
 		],
 	);
 
