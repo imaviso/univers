@@ -368,7 +368,11 @@ const TimePicker = () => {
                         const hour = i + 6;
                         const PM_AM = hour >= 12 ? "PM" : "AM";
                         const formatIndex =
-                            hour > 12 ? hour % 12 : hour === 0 || hour === 12 ? 12 : hour;
+                            hour > 12
+                                ? hour % 12
+                                : hour === 0 || hour === 12
+                                  ? 12
+                                  : hour;
                         return Array.from({ length: 2 }).map((_, part) => {
                             const minutes = part * timestamp;
                             const trueIndex = hour * 2 + part;
@@ -406,7 +410,12 @@ const TimePicker = () => {
                                         "h-8 px-3 w-full text-sm focus-visible:outline-0 outline-0 focus-visible:border-0 cursor-default ring-0",
                                     )}
                                     onClick={() =>
-                                        handleClick(hour, part, PM_AM, trueIndex)
+                                        handleClick(
+                                            hour,
+                                            part,
+                                            PM_AM,
+                                            trueIndex,
+                                        )
                                     }
                                     onKeyDown={(e) => {
                                         if (
