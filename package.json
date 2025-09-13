@@ -71,7 +71,7 @@
         "vite-plugin-biome": "^1.0.12"
     },
     "devDependencies": {
-        "@biomejs/biome": "^1.9.4",
+        "@biomejs/biome": "1.9.4",
         "@tanstack/router-devtools": "^1.120.3",
         "@tanstack/router-plugin": "^1.120.3",
         "@types/node": "^22.15.17",

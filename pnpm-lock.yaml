@@ -178,7 +178,7 @@ importers:
         version: 1.0.12(@biomejs/biome@1.9.4)
     devDependencies:
       '@biomejs/biome':
-        specifier: ^1.9.4
+        specifier: 1.9.4
         version: 1.9.4
       '@tanstack/router-devtools':
         specifier: ^1.120.3
