@@ -29,10 +29,15 @@ export const accountInfoSchema = v.pipe(
             v.string(),
             v.nonEmpty("Email is required"),
             v.email("The email is badly formatted"),
+            v.regex(
+                /^[^@]+@cit\.edu$/,
+                "Please use your institutional email (cit.edu)",
+            ),
         ),
         telephoneNumber: v.pipe(
             v.string(),
             v.minLength(3, "Telephone Number is required"),
+            v.regex(/^\d{3}$/, "Telephone number must be exactly 3 digits"),
         ),
         phoneNumber: v.optional(
             v.union([
