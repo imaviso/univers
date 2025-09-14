@@ -73,7 +73,7 @@ export const eventTypes = [
 	"External",
 	"Program-based",
 	"Admin",
-	"SSG/Advocay-based",
+	"SSG/Advocacy-based",
 ];
 
 // Extracted component to keep hooks at the top level.
