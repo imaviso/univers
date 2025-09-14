@@ -30,7 +30,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { allNavigation } from "@/lib/navigation";
 import { searchEventsQueryOptions } from "@/lib/query";
 import type { EventDTO, UserRole } from "@/lib/types"; // Use the shared Event type
-import { cn } from "@/lib/utils";
+import { cn, getStatusColor } from "@/lib/utils";
 
 // Custom hook for persistent state
 function usePersistentState<T>(
@@ -68,40 +68,6 @@ function usePersistentState<T>(
 
 	return [state, setState];
 }
-
-const eventColorClasses = [
-	"bg-blue-500",
-	"bg-indigo-500",
-	"bg-purple-500",
-	"bg-pink-500",
-	"bg-teal-500",
-	"bg-cyan-500",
-	"bg-orange-500",
-	"bg-lime-500",
-];
-
-const simpleHash = (str: string): number => {
-	let hash = 0;
-	for (let i = 0; i < str.length; i++) {
-		const char = str.charCodeAt(i);
-		hash = (hash << 5) - hash + char;
-		hash |= 0;
-	}
-	return Math.abs(hash);
-};
-
-// Get a deterministic color based on event ID
-const getRandomColorForEvent = (
-	eventId: string | number | undefined,
-): string => {
-	if (eventId === undefined) {
-		return eventColorClasses[0];
-	}
-	const idString = String(eventId);
-	const hash = simpleHash(idString);
-	const index = hash % eventColorClasses.length;
-	return eventColorClasses[index];
-};
 
 interface EventWithDisplayColor extends EventDTO {
 	displayColor: string;
@@ -161,7 +127,7 @@ const calculateDayLayout = (events: EventDTO[]): EventWithLayout[] => {
 			const topPercent = (minutesFromViewStart / totalMinutesInView) * 100;
 			const heightPercent = (durationMinutes / totalMinutesInView) * 100;
 
-			const displayColor = getRandomColorForEvent(event.publicId);
+			const displayColor = getStatusColor(event.status);
 
 			return {
 				...event,
@@ -382,11 +348,11 @@ function Calendar() {
 							startOfCalendarDay <= eventEnd && endOfCalendarDay >= eventStart
 						);
 					})
-					// --- Add displayColor to each filtered event ---
+					// Add displayColor by status for each filtered event
 					.map(
 						(event: EventDTO): EventWithDisplayColor => ({
 							...event,
-							displayColor: getRandomColorForEvent(event.publicId),
+							displayColor: getStatusColor(event.status),
 						}),
 					)
 			);
@@ -530,9 +496,9 @@ function Calendar() {
 											type="button"
 											// Reduced padding, adjusted line height implicitly via text size
 											className={cn(
-												// Use the assigned random color
+												// Color by status (bg + text)
 												event.displayColor,
-												"text-white text-[11px] px-1 py-0.5 rounded block w-full text-left focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 mb-0.5", // Adjusted focus ring, added margin bottom
+												"text-[11px] px-1 py-0.5 rounded block w-full text-left focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 mb-0.5", // Adjusted focus ring, added margin bottom
 											)}
 											onClick={(e) => {
 												e.stopPropagation();
@@ -605,7 +571,7 @@ function Calendar() {
 										type="button"
 										className={cn(
 											event.displayColor,
-											"text-white text-[11px] px-1 py-0.5 rounded block w-full text-left focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1", // Adjusted focus ring
+											"text-[11px] px-1 py-0.5 rounded block w-full text-left focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1", // Adjusted focus ring
 										)}
 										onClick={(e) => {
 											e.stopPropagation();
@@ -701,7 +667,7 @@ function Calendar() {
 									className={cn(
 										// Use the assigned random color
 										event.displayColor,
-										"text-white text-xs p-1 absolute cursor-pointer text-left block overflow-hidden rounded", // Added rounded
+										"text-xs p-1 absolute cursor-pointer text-left block overflow-hidden rounded", // Added rounded
 										"focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1",
 									)}
 									// Apply the calculated layout style object
@@ -709,15 +675,12 @@ function Calendar() {
 									onClick={() => handleEventClick(event)}
 									title={`${event.eventName} (${format(event.startDate, "h:mm a")} - ${format(event.endDate, "h:mm a")})`}
 								>
-									{/* Inner div for text content */}
+									{/* Single-line label: time + name */}
 									<div className="h-full overflow-hidden">
-										<div className="font-medium text-[11px] leading-tight whitespace-normal">
-											{event.eventName}
-										</div>
-										<div className="text-[9px] opacity-90 leading-tight whitespace-normal">
-											{format(event.startDate, "h:mm a")} -{" "}
-											{format(event.endDate, "h:mm a")}
-										</div>
+										<span className="block text-[11px] leading-tight truncate whitespace-nowrap">
+											{format(event.startDate, "h:mm")}–
+											{format(event.endDate, "h:mm a")} {event.eventName}
+										</span>
 									</div>
 								</button>
 							))}

@@ -66,8 +66,8 @@
 
 	--maroon: hsl(356, 58%, 34%);
 	--maroon-foreground: hsl(0 0% 100%);
-	--cityellow: hsl(47, 91%, 55%);
-	--cityellow-foreground: hsl(0, 0%, 2%);
+	--gold: hsl(47, 91%, 55%);
+	--gold-foreground: hsl(0, 0%, 2%);
 }
 
 .dark {
@@ -122,8 +122,8 @@
 
 	--maroon: hsl(356, 58%, 34%);
 	--maroon-foreground: hsl(0 0% 100%);
-	--cityellow: hsl(47, 91%, 55%);
-	--cityellow-foreground: hsl(0, 0%, 2%);
+	--gold: hsl(47, 91%, 55%);
+	--gold-foreground: hsl(0, 0%, 2%);
 }
 
 @theme inline {
@@ -173,8 +173,8 @@
 
 	--color-maroon: var(--maroon);
 	--color-maroon-foreground: var(--maroon-foreground);
-	--color-cityellow: var(--cityellow);
-	--color-cityellow-foreground: var(--cityellow-foreground);
+	--color-gold: var(--gold);
+	--color-gold-foreground: var(--gold-foreground);
 }
 
 @layer base {

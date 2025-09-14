@@ -95,7 +95,7 @@ export function Sidebar() {
 					>
 						{!isCollapsed && (
 							<Link to="/" className="flex items-center font-semibold">
-								<span className="text-cityellow">Uni</span>
+								<span className="text-gold">Uni</span>
 								<span className="relative">
 									<span className="bg-maroon text-white px-1">VERS</span>
 								</span>

@@ -78,7 +78,7 @@ export const getStatusColor = (status: string | undefined) => {
 		case "PENDING":
 			return "bg-yellow-500/10 text-yellow-600";
 		case "APPROVED":
-			return "bg-green-500/10 text-green-600";
+			return "bg-maroon/10 text-maroon";
 		case "REJECTED":
 			return "bg-red-500/10 text-red-600";
 		case "COMPLETED":

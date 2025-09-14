@@ -10,6 +10,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import type { Event } from "@/lib/types"; // Use the correct Event type
+import { getStatusColor } from "@/lib/utils";
 
 // Removed useState as Team/Comments tabs are removed
 
@@ -19,38 +20,6 @@ interface EventDetailsModalProps {
 	event: Event;
 }
 
-// Helper function to get status color and label (adjust based on actual statuses)
-const getStatusInfo = (
-	status: string | null | undefined,
-): { color: string; label: string } => {
-	const upperStatus = status?.toUpperCase();
-	switch (upperStatus) {
-		case "PENDING":
-			return {
-				color: "bg-yellow-500/10 text-yellow-600",
-				label: "Pending",
-			};
-		case "APPROVED":
-			return {
-				color: "bg-green-500/10 text-green-600",
-				label: "Approved",
-			};
-		case "REJECTED":
-			return { color: "bg-red-500/10 text-red-600", label: "Rejected" };
-		case "CANCELLED": // Ensure spelling matches backend/types
-			return {
-				color: "bg-gray-500/10 text-gray-600",
-				label: "Cancelled",
-			};
-		// Add other statuses as needed
-		default:
-			return {
-				color: "bg-gray-400/10 text-gray-500",
-				label: status || "Unknown",
-			};
-	}
-};
-
 export function EventDetailsModal({
 	isOpen,
 	onClose,
@@ -59,8 +28,6 @@ export function EventDetailsModal({
 	// Removed state for tabs, comments, etc.
 
 	if (!event) return null;
-
-	const statusInfo = getStatusInfo(event.status);
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
@@ -83,7 +50,12 @@ export function EventDetailsModal({
 				<div className="flex justify-between items-start gap-4">
 					{" "}
 					{/* Use items-start */}
-					<Badge className={statusInfo.color}>{statusInfo.label}</Badge>
+					<Badge className={`${getStatusColor(event.status)}`}>
+						{event.status
+							? event.status.charAt(0).toUpperCase() +
+								event.status.slice(1).toLowerCase()
+							: "Unknown"}
+					</Badge>
 					<div className="flex flex-col sm:flex-row gap-2">
 						{" "}
 						{/* Stack buttons on small screens */}
