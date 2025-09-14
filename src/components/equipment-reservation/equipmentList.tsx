@@ -1,4 +1,4 @@
-import { Package } from "lucide-react";
+// import { Package } from "lucide-react";
 import { Fragment, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,6 +12,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { DEFAULT_EQUIPMENT_IMAGE_URL } from "@/lib/constants";
 import type { Equipment, EquipmentCategoryDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -311,15 +312,17 @@ export default function EquipmentList({
 											<TableCell className="py-2">
 												<div className="flex items-center gap-3">
 													<div className="w-10 h-10 bg-muted rounded-sm flex items-center justify-center overflow-hidden">
-														{item.imagePath ? (
-															<img
-																src={item.imagePath}
-																alt={item.name}
-																className="w-full h-full object-cover"
-															/>
-														) : (
-															<Package className="h-4 w-4 text-muted-foreground" />
-														)}
+														<img
+															src={
+																item.imagePath || DEFAULT_EQUIPMENT_IMAGE_URL
+															}
+															alt={item.name}
+															className="w-full h-full object-cover"
+															onError={(e) => {
+																e.currentTarget.src =
+																	DEFAULT_EQUIPMENT_IMAGE_URL;
+															}}
+														/>
 													</div>
 													<div>
 														<Label

@@ -27,6 +27,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { type FileMetadata, useFileUpload } from "@/hooks/use-file-upload";
+import { DEFAULT_VENUE_IMAGE_URL } from "@/lib/constants";
 import { type VenueInput, venueSchema } from "@/lib/schema";
 import type { UserDTO, UserRole, VenueDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -345,6 +346,9 @@ function ImageUploadField({
 												src={currentPreviewUrl}
 												alt={files[0]?.file?.name || "Uploaded image"}
 												className="size-full object-cover"
+												onError={(e) => {
+													e.currentTarget.src = DEFAULT_VENUE_IMAGE_URL;
+												}}
 											/>
 										</div>
 									) : (

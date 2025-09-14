@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DEFAULT_EQUIPMENT_IMAGE_URL } from "@/lib/constants";
 import {
 	ownEquipmentReservationsQueryOptions,
 	useCancelEquipmentReservationMutation,
@@ -122,19 +123,20 @@ export default function UserReservations() {
 									className="overflow-hidden flex flex-col"
 								>
 									{/* Equipment Image */}
-									{reservation.equipment?.imagePath && (
-										<div className="aspect-video w-full overflow-hidden bg-muted">
-											<img
-												src={reservation.equipment.imagePath}
-												alt={reservation.equipment.name ?? "Equipment image"}
-												className="h-full w-full object-cover"
-												onError={(e) => {
-													e.currentTarget.src = "/placeholder.svg";
-												}}
-												loading="lazy"
-											/>
-										</div>
-									)}
+									<div className="aspect-video w-full overflow-hidden bg-muted">
+										<img
+											src={
+												reservation.equipment?.imagePath ||
+												DEFAULT_EQUIPMENT_IMAGE_URL
+											}
+											alt={reservation.equipment?.name ?? "Equipment image"}
+											className="h-full w-full object-cover"
+											onError={(e) => {
+												e.currentTarget.src = DEFAULT_EQUIPMENT_IMAGE_URL;
+											}}
+											loading="lazy"
+										/>
+									</div>
 									<CardHeader>
 										<div className="flex justify-between items-start">
 											<CardTitle className="text-lg">

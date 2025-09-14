@@ -48,3 +48,11 @@ interface EventCountDTOWithOptionalCounts {
 	ongoingCount?: number;
 	completedCount?: number;
 }
+
+// Default placeholder for equipment images
+export const DEFAULT_EQUIPMENT_IMAGE_URL =
+	"https://placehold.co/600x400?text=Equipment";
+
+// Default placeholder for venue images
+export const DEFAULT_VENUE_IMAGE_URL =
+	"https://placehold.co/600x400?text=Venue";

@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/table";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { bulkDeleteEquipment } from "@/lib/api";
+import { DEFAULT_EQUIPMENT_IMAGE_URL } from "@/lib/constants";
 import { defineMeta, type FilterValue, filterFn } from "@/lib/filters";
 import type { Equipment, UserDTO } from "@/lib/types";
 import { usePersistentState } from "@/lib/utils";
@@ -300,7 +301,7 @@ export function EquipmentDataTable({
 				header: "Name",
 				cell: ({ row }) => {
 					const item = row.original;
-					const imageUrl = item.imagePath;
+					const imageUrl = item.imagePath || DEFAULT_EQUIPMENT_IMAGE_URL;
 					return (
 						<div className="flex items-center gap-3">
 							<img
@@ -308,6 +309,9 @@ export function EquipmentDataTable({
 								alt={item.name}
 								className="h-10 w-10 rounded object-cover"
 								loading="lazy"
+								onError={(e) => {
+									e.currentTarget.src = DEFAULT_EQUIPMENT_IMAGE_URL;
+								}}
 							/>
 							<div className="flex-1 text-center">
 								<div className="font-medium">{item.name}</div>

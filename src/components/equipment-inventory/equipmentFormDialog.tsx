@@ -52,6 +52,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { type FileMetadata, useFileUpload } from "@/hooks/use-file-upload";
+import { DEFAULT_EQUIPMENT_IMAGE_URL } from "@/lib/constants";
 import {
 	allEquipmentCategoriesQueryOptions,
 	useCreateEquipmentCategoryMutation,
@@ -701,7 +702,8 @@ export function EquipmentFormDialog({
 																}
 																className="size-full object-cover"
 																onError={(e) => {
-																	e.currentTarget.src = "/placeholder.svg";
+																	e.currentTarget.src =
+																		DEFAULT_EQUIPMENT_IMAGE_URL;
 																}}
 															/>
 														</div>

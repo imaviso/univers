@@ -66,6 +66,7 @@ import {
 	rejectEvent,
 	updateEvent,
 } from "@/lib/api";
+import { DEFAULT_VENUE_IMAGE_URL } from "@/lib/constants";
 import {
 	departmentsQueryOptions,
 	equipmentReservationKeys,
@@ -1052,11 +1053,13 @@ export function EventDetailsPage() {
 											<div>
 												<div className="rounded-lg overflow-hidden border aspect-[16/10] bg-muted mb-2 max-h-80">
 													<img
-														src={eventVenue.imagePath ?? "/placeholder.svg"}
+														src={
+															eventVenue.imagePath ?? DEFAULT_VENUE_IMAGE_URL
+														}
 														alt={eventVenue.name ?? "Venue image"}
 														className="h-full w-full object-cover"
 														onError={(e) => {
-															e.currentTarget.src = "/placeholder.svg";
+															e.currentTarget.src = DEFAULT_VENUE_IMAGE_URL;
 														}}
 													/>
 												</div>

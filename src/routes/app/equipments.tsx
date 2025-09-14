@@ -40,6 +40,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { addEquipment, bulkDeleteEquipment, editEquipment } from "@/lib/api";
+import { DEFAULT_EQUIPMENT_IMAGE_URL } from "@/lib/constants";
 import { allNavigation } from "@/lib/navigation";
 import {
 	allEquipmentCategoriesQueryOptions,
@@ -433,7 +434,7 @@ function EquipmentInventory() {
 					{viewMode === "grid" && (
 						<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
 							{filteredEquipment.map((item) => {
-								const imageUrl = item.imagePath;
+								const imageUrl = item.imagePath || DEFAULT_EQUIPMENT_IMAGE_URL;
 								const canManage =
 									role?.includes("SUPER_ADMIN") ||
 									(["EQUIPMENT_OWNER", "MSDO", "OPC"].some((r) =>
@@ -453,6 +454,9 @@ function EquipmentInventory() {
 												alt={item.name}
 												className="aspect-video w-full object-cover"
 												loading="lazy"
+												onError={(e) => {
+													e.currentTarget.src = DEFAULT_EQUIPMENT_IMAGE_URL;
+												}}
 											/>
 											<div className="absolute top-2 right-2 flex flex-col items-end gap-1">
 												<Badge

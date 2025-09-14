@@ -44,6 +44,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { DEFAULT_VENUE_IMAGE_URL } from "@/lib/constants";
 import { defineMeta, filterFn } from "@/lib/filters";
 import type { UserDTO, VenueDTO } from "@/lib/types";
 import { Checkbox } from "../ui/checkbox";
@@ -180,11 +181,13 @@ export function VenueDataTable({
 						<div className="flex items-center gap-3">
 							<div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex-shrink-0">
 								<img
-									src={venue.imagePath ?? undefined}
+									src={venue.imagePath ?? DEFAULT_VENUE_IMAGE_URL}
 									alt={venue.name}
 									className="h-full w-full object-cover"
 									loading="lazy"
-									// onError={(e) => { e.currentTarget.src =
+									onError={(e) => {
+										e.currentTarget.src = DEFAULT_VENUE_IMAGE_URL;
+									}}
 								/>
 							</div>
 							<Button

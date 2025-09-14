@@ -37,6 +37,7 @@ import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmD
 import { VenueDataTable } from "@/components/venue/venueDataTable";
 import { VenueFormDialog } from "@/components/venue/venueFormDialog";
 import { bulkDeleteVenues, createVenue, updateVenue } from "@/lib/api";
+import { DEFAULT_VENUE_IMAGE_URL } from "@/lib/constants";
 import {
 	departmentsQueryOptions,
 	searchEventsQueryOptions,
@@ -443,14 +444,15 @@ export function VenueManagement() {
 									>
 										<div className="aspect-video w-full overflow-hidden relative">
 											<img
-												src={venue.imagePath ?? undefined} // Construct URL
+												src={venue.imagePath ?? DEFAULT_VENUE_IMAGE_URL}
 												alt={venue.name}
 												className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 												onError={(e) => {
-													e.currentTarget.src = "/placeholder.svg";
+													e.currentTarget.src = DEFAULT_VENUE_IMAGE_URL;
 												}}
 												loading="lazy"
 											/>
+
 											<DropdownMenu>
 												<DropdownMenuTrigger asChild>
 													<Button
@@ -584,12 +586,12 @@ export function VenueManagement() {
 													src={
 														event.imageUrl ??
 														event.eventVenue.imagePath ??
-														"/placeholder.svg"
+														DEFAULT_VENUE_IMAGE_URL
 													}
 													alt={event.eventName ?? "Event image"}
 													className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 													onError={(e) => {
-														e.currentTarget.src = "/placeholder.svg";
+														e.currentTarget.src = DEFAULT_VENUE_IMAGE_URL;
 													}}
 													loading="lazy"
 												/>

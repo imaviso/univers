@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getOngoingAndApprovedEventsByVenue } from "@/lib/api";
+import { DEFAULT_VENUE_IMAGE_URL } from "@/lib/constants";
 import { eventsQueryKeys, venuesQueryOptions } from "@/lib/query";
 import type { Event as AppEvent, VenueDTO } from "@/lib/types";
 import { formatDateRange, getStatusColor } from "@/lib/utils";
@@ -123,9 +124,12 @@ export function VenueDetails() {
 								<div className="md:col-span-2 space-y-6">
 									<div className="rounded-lg overflow-hidden border aspect-video">
 										<img
-											src={venue.imagePath || undefined}
+											src={venue.imagePath || DEFAULT_VENUE_IMAGE_URL}
 											alt={venue.name}
 											className="w-full h-full object-cover"
+											onError={(e) => {
+												e.currentTarget.src = DEFAULT_VENUE_IMAGE_URL;
+											}}
 										/>
 									</div>
 									{/* Add Description/Amenities back here if those fields exist */}
