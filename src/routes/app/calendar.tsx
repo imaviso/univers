@@ -87,42 +87,40 @@ interface EventWithLayout extends EventWithDisplayColor {
 	numColumns: number;
 }
 
-const calculateDayLayout = (events: EventDTO[]): EventWithLayout[] => {
+const calculateDayLayout = (
+	events: EventDTO[],
+	currentDate: Date,
+): EventWithLayout[] => {
 	if (!events || events.length === 0) return [];
 
-	// --- Define View Hours (Widened) ---
-	const viewStartHour = 6; // Start at 6 AM
-	const viewEndHour = 22; // End boundary for 9 PM - 10 PM slot (total view ends at 10 PM)
-	const totalMinutesInView = (viewEndHour - viewStartHour) * 60;
+	// Define view window anchored to the active day
+	const viewStartHour = 6; // 6:00 AM
+	const dayStart = new Date(currentDate);
+	dayStart.setHours(viewStartHour, 0, 0, 0);
+	// End at 11:30 PM (23:30)
+	const dayEnd = new Date(currentDate);
+	dayEnd.setHours(23, 30, 0, 0);
+	// Total minutes in view (e.g., 6:00–23:30 = 1050)
+	const totalMinutesInView = differenceInMinutes(dayEnd, dayStart);
 
-	// 1. Parse dates, calculate initial vertical layout, and sort
+	// 1) Parse and compute vertical layout within [dayStart, dayEnd]
 	const parsedEvents = events
 		.map((event, index) => {
 			const start = parseISO(event.startTime);
 			const end = parseISO(event.endTime);
 			if (!isValid(start) || !isValid(end)) return null;
 
-			// Clamp times to the viewable range (e.g., 6 AM to 10 PM)
-			const dayStart = new Date(start);
-			dayStart.setHours(viewStartHour, 0, 0, 0);
-			const dayEnd = new Date(start);
-			dayEnd.setHours(viewEndHour, 0, 0, 0);
+			// Skip events that don't intersect the visible window
+			if (end <= dayStart || start >= dayEnd) return null;
 
-			// FIX: Pass dates as an array to maxDate and minDate
+			// Clamp to visible window for top/height calculations
 			const clampedStart = maxDate([start, dayStart]);
 			const clampedEnd = minDate([end, dayEnd]);
-
-			// Ensure clamped dates are valid before proceeding
 			if (!isValid(clampedStart) || !isValid(clampedEnd)) return null;
 
 			const minutesFromViewStart = differenceInMinutes(clampedStart, dayStart);
-			// Ensure duration calculation uses valid dates and handles edge cases
-			const durationMinutes = Math.max(
-				15, // Minimum duration
-				differenceInMinutes(clampedEnd, clampedStart) > 0
-					? differenceInMinutes(clampedEnd, clampedStart)
-					: 0, // Avoid negative duration if end is before start after clamping
-			);
+			const rawDuration = differenceInMinutes(clampedEnd, clampedStart);
+			const durationMinutes = Math.max(15, rawDuration); // ensure tap area
 
 			const topPercent = (minutesFromViewStart / totalMinutesInView) * 100;
 			const heightPercent = (durationMinutes / totalMinutesInView) * 100;
@@ -131,13 +129,12 @@ const calculateDayLayout = (events: EventDTO[]): EventWithLayout[] => {
 
 			return {
 				...event,
-				id: event.publicId ?? `temp-${index}`, // Ensure unique key if id is missing
-				startDate: start, // Keep original start/end for display
+				id: event.publicId ?? `temp-${index}`,
+				startDate: start, // keep originals for labels/overlap
 				endDate: end,
 				displayColor,
 				layout: {
-					// Ensure percentages are non-negative and finite
-					top: `${Math.max(0, topPercent)}%`,
+					top: `${Math.max(0, Math.min(100, topPercent))}%`,
 					height: `${Math.max(0, heightPercent)}%`,
 					minHeight: "1.5rem",
 					left: "0%",
@@ -147,7 +144,7 @@ const calculateDayLayout = (events: EventDTO[]): EventWithLayout[] => {
 				numColumns: 1,
 			};
 		})
-		.filter((event): event is NonNullable<typeof event> => event !== null); // Filter out nulls and assert non-null type
+		.filter((event): event is NonNullable<typeof event> => event !== null);
 
 	type ParsedEventNonNull = NonNullable<(typeof parsedEvents)[number]>;
 
@@ -157,10 +154,8 @@ const calculateDayLayout = (events: EventDTO[]): EventWithLayout[] => {
 
 	for (const event of parsedEvents) {
 		let placed = false;
-		// Find the first column where this event doesn't overlap with the last event placed
 		for (let i = 0; i < columns.length; i++) {
 			const lastEventInColumn = columns[i].events[columns[i].events.length - 1];
-			// Check if lastEventInColumn exists before accessing its properties
 			if (lastEventInColumn && event.startDate >= lastEventInColumn.endDate) {
 				event.columnIndex = i;
 				columns[i].events.push(event);
@@ -168,70 +163,51 @@ const calculateDayLayout = (events: EventDTO[]): EventWithLayout[] => {
 				break;
 			}
 		}
-		// If not placed, start a new column
 		if (!placed) {
 			event.columnIndex = columns.length;
 			columns.push({ events: [event] });
 		}
 	}
 
-	// const totalColumns = columns.length;
-
-	// 3. Refine layout based on columns (apply width/left)
-	// Calculate the number of columns needed for each event based on actual overlaps.
+	// 3) Determine overlap-based column counts per event
 	for (const event of parsedEvents) {
-		// Use for...of loop
-		// Find events that *actually* overlap with this one
 		const overlappingEvents = parsedEvents.filter(
 			(otherEvent) =>
-				// No need for null checks here as parsedEvents is filtered
 				event.publicId !== otherEvent.publicId &&
 				event.startDate < otherEvent.endDate &&
 				event.endDate > otherEvent.startDate,
 		);
 
-		// Determine the number of columns required for this event's overlapping group
-		// using a greedy approach on the group.
 		const group = [event, ...overlappingEvents];
-		const tempColumns: Date[] = []; // Tracks the end time of the last event in each temporary column
+		const tempColumns: Date[] = [];
 
-		// Sort the group - no null checks needed for a and b
 		group.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
 
-		// Process events in the sorted group using for...of
 		for (const ev of group) {
-			// Use for...of loop
 			let placed = false;
-			// Try to place the event in an existing temporary column
 			for (let i = 0; i < tempColumns.length; i++) {
 				if (ev.startDate >= tempColumns[i]) {
-					// Found a column where it fits without overlapping the last event
-					tempColumns[i] = ev.endDate; // Update the end time for this column
-					ev.columnIndex = i; // Assign column index relative to the group
+					tempColumns[i] = ev.endDate;
+					ev.columnIndex = i;
 					placed = true;
 					break;
 				}
 			}
-			// If it couldn't be placed in an existing column, create a new one
 			if (!placed) {
-				ev.columnIndex = tempColumns.length; // Assign new column index
-				tempColumns.push(ev.endDate); // Add end time to the new column tracker
+				ev.columnIndex = tempColumns.length;
+				tempColumns.push(ev.endDate);
 			}
 		}
-		// The number of columns needed for this event is the total number of temporary columns created for its group
 		event.numColumns = tempColumns.length;
 	}
 
-	// 4. Calculate final left and width
-	const horizontalPadding = 0.5; // Percentage padding between events (e.g., 0.5% on each side = 1% total gap)
-
+	// 4) Compute final left/width
+	const horizontalPadding = 0.5;
 	const finalLayoutEvents = parsedEvents.map((event) => {
-		// No null checks needed for event here
-		const numCols = event.numColumns || 1; // Use calculated overlap columns
+		const numCols = event.numColumns || 1;
 		const colWidth = 100 / numCols;
-		const effectiveWidth = colWidth - 2 * horizontalPadding; // Width minus padding on both sides
-		const effectiveLeft = event.columnIndex * colWidth + horizontalPadding; // Left offset plus padding
-
+		const effectiveWidth = colWidth - 2 * horizontalPadding;
+		const effectiveLeft = event.columnIndex * colWidth + horizontalPadding;
 		return {
 			...event,
 			layout: {
@@ -433,28 +409,72 @@ function Calendar() {
 		return days;
 	};
 
-	// Generate hours for day view (Widened Range)
+	// Generate hours and grid positions for day view (6:00 AM – 11:30 PM)
 	const generateDayHours = () => {
 		const startHour = 6; // 6 AM
-		const endHour = 22; // Boundary for 10 PM
-		const hoursInRange = endHour - startHour; // Number of full hour intervals
+		const endHour = 23; // last full label at 11 PM
+		const labels = [] as { label: string; topPercent: number }[];
+		const gridLines = [] as { key: string; topPercent: number }[];
 
-		const hours = Array.from({ length: hoursInRange + 1 }, (_, i) => {
-			// +1 for the labels
-			const hour24 = startHour + i;
-			const hour12 = hour24 > 12 ? hour24 - 12 : hour24 === 0 ? 12 : hour24;
-			const ampm = hour24 >= 12 && hour24 < 24 ? "PM" : "AM";
-			return {
-				hour: hour12,
-				ampm: ampm,
+		// Total minutes in view must match calculateDayLayout
+		const dayStart = new Date(currentDate);
+		dayStart.setHours(startHour, 0, 0, 0);
+		const dayEnd = new Date(currentDate);
+		dayEnd.setHours(23, 30, 0, 0); // 11:30 PM
+		const totalMinutes = differenceInMinutes(dayEnd, dayStart); // 1050
+
+		for (let h = startHour; h <= endHour; h++) {
+			const hour12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+			const ampm = h >= 12 ? "PM" : "AM";
+			const minutesFromStart = (h - startHour) * 60;
+			labels.push({
 				label: `${hour12} ${ampm}`,
-			};
+				topPercent: (minutesFromStart / totalMinutes) * 100,
+			});
+			gridLines.push({
+				key: `h-${h}`,
+				topPercent: (minutesFromStart / totalMinutes) * 100,
+			});
+		}
+		// Add final half-hour line at 11:30 PM
+		const halfHourFromStart = (endHour + 0.5 - startHour) * 60; // 17.5 * 60 = 1050
+		gridLines.push({
+			key: "h-23-30",
+			topPercent: (halfHourFromStart / totalMinutes) * 100,
 		});
 
-		// Day events fetching remains the same here, layout calculation happens elsewhere
-		// const dayEvents = getEventsForDate(currentDate);
+		return { labels, gridLines, totalMinutes };
+	};
 
-		return { hours }; // Return only hours, dayEvents are calculated in renderDayView
+	const renderLegend = () => {
+		const statuses: { id: string; label: string }[] = [
+			{ id: "APPROVED", label: "Approved" },
+			{ id: "ONGOING", label: "Ongoing" },
+			{ id: "PENDING", label: "Pending" },
+		];
+		return (
+			<div className="mb-3 flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+				<span className="font-medium">Legend:</span>
+				{statuses.map((s) => {
+					const textClass =
+						getStatusColor(s.id)
+							.split(" ")
+							.find((c) => c.startsWith("text-")) ?? "text-gray-500";
+					return (
+						<span key={s.id} className="inline-flex items-center gap-1">
+							<span
+								className={cn(
+									textClass,
+									"h-2.5 w-2.5 rounded-full inline-block",
+								)}
+								style={{ backgroundColor: "currentColor" }}
+							/>
+							<span>{s.label}</span>
+						</span>
+					);
+				})}
+			</div>
+		);
 	};
 
 	const renderMonthView = () => {
@@ -469,12 +489,12 @@ function Calendar() {
 
 		return (
 			<div className="space-y-2">
-				<div className="grid grid-cols-7 gap-1">
+				<div className="grid grid-cols-7 auto-rows-fr gap-1 h-[calc(100vh-240px)]">
 					{monthDays.map((day) => (
 						<Card
 							key={day.dateString}
 							className={cn(
-								"h-32 overflow-hidden hover:shadow-sm transition-shadow relative",
+								"h-full overflow-hidden hover:shadow-sm transition-shadow relative",
 								!day.isCurrentMonth && "bg-muted/30",
 								day.isToday && "border-primary",
 							)}
@@ -483,7 +503,7 @@ function Calendar() {
 							<CardContent className="p-1 h-full flex flex-col">
 								<div
 									className={cn(
-										"text-xs font-medium p-1 flex-shrink-0",
+										"text-xs font-medium p-1 flex-shrink-0 sticky top-0 z-10 bg-card",
 										!day.isCurrentMonth && "text-muted-foreground",
 									)}
 								>
@@ -603,12 +623,9 @@ function Calendar() {
 
 	// Render day view
 	const renderDayView = () => {
-		const { hours } = generateDayHours(); // Now generates 6 AM - 10 PM
+		const { labels, gridLines } = generateDayHours(); // 6:00 AM – 11:30 PM
 		const dayEventsRaw = getEventsForDate(currentDate);
-		// Pass the updated view hours to the layout calculation if it were parameterized
-		// Since we hardcoded the wider range in calculateDayLayout, no parameters needed here yet.
-		const dayEventsWithLayout = calculateDayLayout(dayEventsRaw);
-		const totalHours = hours.length - 1; // Number of intervals (16 for 6AM-10PM)
+		const dayEventsWithLayout = calculateDayLayout(dayEventsRaw, currentDate);
 
 		return (
 			<div className="space-y-4">
@@ -623,39 +640,26 @@ function Calendar() {
 				</div>
 
 				<div className="grid grid-cols-[60px_1fr] gap-2 h-[calc(100vh-240px)]">
-					{" "}
-					{/* Adjusted width */}
 					{/* Hour Labels */}
-					<div className="space-y-0 border-r pr-2">
-						{hours.map((hour) => (
+					<div className="relative border-r pr-2">
+						{labels.map((l) => (
 							<div
-								key={hour.label}
-								// Use totalHours (number of intervals) for height calculation
-								className="h-[calc(100%/var(--total-hours))] text-xs text-muted-foreground text-right relative -top-2"
-								style={
-									{
-										"--total-hours": totalHours,
-									} as React.CSSProperties
-								} // Pass totalHours as CSS variable
+								key={l.label}
+								className="absolute -translate-y-1/2 text-xs text-muted-foreground right-0 pr-2"
+								style={{ top: `${l.topPercent}%` }}
 							>
-								{hour.label}
+								{l.label}
 							</div>
 						))}
 					</div>
 					{/* Event Area */}
 					<Card className="relative overflow-hidden p-0">
-						{" "}
-						{/* Remove padding */}
 						{/* Hour Lines */}
-						{hours.map((hour, index) => (
+						{gridLines.map((gl) => (
 							<div
-								key={`line-${hour.label}`}
+								key={gl.key}
 								className="absolute w-full border-t border-border/50"
-								style={{
-									// Use totalHours (number of intervals) for top calculation
-									top: `${(index / totalHours) * 100}%`,
-									left: 0,
-								}}
+								style={{ top: `${gl.topPercent}%`, left: 0 }}
 							/>
 						))}
 						{/* Events */}
@@ -663,19 +667,16 @@ function Calendar() {
 							{dayEventsWithLayout.map((event) => (
 								<button
 									type="button"
-									key={event.publicId} // Use the potentially generated unique key
+									key={event.publicId}
 									className={cn(
-										// Use the assigned random color
 										event.displayColor,
-										"text-xs p-1 absolute cursor-pointer text-left block overflow-hidden rounded", // Added rounded
+										"text-xs p-1 absolute cursor-pointer text-left block overflow-hidden rounded",
 										"focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1",
 									)}
-									// Apply the calculated layout style object
 									style={event.layout}
 									onClick={() => handleEventClick(event)}
 									title={`${event.eventName} (${format(event.startDate, "h:mm a")} - ${format(event.endDate, "h:mm a")})`}
 								>
-									{/* Single-line label: time + name */}
 									<div className="h-full overflow-hidden">
 										<span className="block text-[11px] leading-tight truncate whitespace-nowrap">
 											{format(event.startDate, "h:mm")}–
@@ -831,6 +832,7 @@ function Calendar() {
 						<PendingPage /> // Show pending state while events load initially
 					) : (
 						<>
+							{renderLegend()}
 							{calendarView === "month" && renderMonthView()}
 							{calendarView === "week" && renderWeekView()}
 							{calendarView === "day" && renderDayView()}
