@@ -314,9 +314,7 @@ export const Route = createFileRoute("/app/calendar")({
 	},
 	loader: async ({ context }) => {
 		// Ensure data is fetched or being fetched before component renders
-		context.queryClient.ensureQueryData(
-			searchEventsQueryOptions("ALL", "APPROVED"),
-		);
+		context.queryClient.ensureQueryData(searchEventsQueryOptions("ALL"));
 		// context.queryClient.ensureQueryData(venuesQueryOptions);
 	},
 	errorComponent: () => <ErrorPage />,
@@ -326,7 +324,7 @@ export const Route = createFileRoute("/app/calendar")({
 function Calendar() {
 	// Fetch events using useQuery
 	const { data: eventsData, isLoading: isLoadingEvents } = useQuery(
-		searchEventsQueryOptions("ALL", "APPROVED"),
+		searchEventsQueryOptions("ALL"),
 	);
 	// Adapt AppEvent[] to EventDTO[] to satisfy component's internal types
 	const events: EventDTO[] = eventsData || [];
@@ -363,10 +361,9 @@ function Calendar() {
 			return (
 				events
 					.filter((event) => {
-						// const statusMatch =
-						//     filters.statuses.length === 0 ||
-						//     filters.statuses.includes(event.status);
-						// if (!statusMatch) return false;
+						// Only show APPROVED, ONGOING, and PENDING events
+						const allowed = new Set(["APPROVED", "ONGOING", "PENDING"]);
+						if (!allowed.has((event.status || "").toUpperCase())) return false;
 
 						// Parse event start and end times
 						const eventStart = parseISO(event.startTime);
@@ -497,6 +494,13 @@ function Calendar() {
 	const renderMonthView = () => {
 		const monthDays = generateMonthDays();
 
+		const formatTimeRangeCompact = (start: Date, end: Date) => {
+			const sameMeridiem = format(start, "a") === format(end, "a");
+			return sameMeridiem
+				? `${format(start, "h:mm")}–${format(end, "h:mm a")}`
+				: `${format(start, "h:mm a")}–${format(end, "h:mm a")}`;
+		};
+
 		return (
 			<div className="space-y-2">
 				<div className="grid grid-cols-7 gap-1">
@@ -542,8 +546,14 @@ function Calendar() {
 											}}
 											title={event.eventName}
 										>
-											{/* Truncate text if it's too long */}
-											<span className="truncate block">{event.eventName}</span>
+											{/* Compact time first, then name */}
+											<span className="truncate block">
+												{formatTimeRangeCompact(
+													parseISO(event.startTime),
+													parseISO(event.endTime),
+												)}{" "}
+												{event.eventName}
+											</span>
 										</button>
 									))}
 								</div>
