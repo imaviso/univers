@@ -503,7 +503,7 @@ function Calendar() {
 							<CardContent className="p-1 h-full flex flex-col">
 								<div
 									className={cn(
-										"text-xs font-medium p-1 flex-shrink-0 sticky top-0 z-10 bg-card",
+										"text-xs font-medium p-1 flex-shrink-0",
 										!day.isCurrentMonth && "text-muted-foreground",
 									)}
 								>
