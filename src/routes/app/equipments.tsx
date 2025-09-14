@@ -242,10 +242,6 @@ function EquipmentInventory() {
 				imageFile: imageFile,
 			});
 		} else {
-			if (!imageFile && !editingEquipment) {
-				toast.error("Image file is required to add new equipment.");
-				return;
-			}
 			addMutation.mutate({
 				userId: currentUser.publicId,
 				equipmentData: {
@@ -258,7 +254,7 @@ function EquipmentInventory() {
 					ownerId: data.ownerId,
 					categoryIds: data.categoryIds,
 				},
-				imageFile: imageFile as File,
+				imageFile: imageFile,
 			});
 		}
 	};

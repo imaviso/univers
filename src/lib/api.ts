@@ -692,7 +692,7 @@ export const addEquipment = async ({
 }: {
 	userId: string;
 	equipmentData: EquipmentDTOInput;
-	imageFile: File;
+	imageFile?: File | null;
 }): Promise<Equipment> => {
 	try {
 		const formData = new FormData();
@@ -730,7 +730,9 @@ export const addEquipment = async ({
 			}),
 		);
 
-		formData.append("image", imageFile, imageFile.name);
+		if (imageFile) {
+			formData.append("image", imageFile, imageFile.name);
+		}
 
 		const url = new URL(`${API_BASE_URL}/equipments`);
 		url.searchParams.append("userId", userId);

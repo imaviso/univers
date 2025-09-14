@@ -111,11 +111,11 @@ export function EquipmentFormDialog({
 	const formDefaultValues = equipment
 		? {
 				name: equipment.name,
-				brand: equipment.brand,
+				brand: equipment.brand ?? "",
 				availability: equipment.availability,
 				quantity: equipment.quantity,
 				status: equipment.status,
-				serialNo: equipment.serialNo,
+				serialNo: equipment.serialNo ?? "",
 				ownerId: equipment.equipmentOwner?.publicId ?? undefined,
 				image: undefined,
 				categoryIds: equipment.categories?.map((cat) => cat.publicId) ?? [], // Added categoryIds
@@ -181,11 +181,11 @@ export function EquipmentFormDialog({
 			const newDefaultValues = equipment
 				? {
 						name: equipment.name,
-						brand: equipment.brand,
+						brand: equipment.brand ?? "",
 						availability: equipment.availability,
 						quantity: equipment.quantity,
 						status: equipment.status,
-						serialNo: equipment.serialNo,
+						serialNo: equipment.serialNo ?? "",
 						ownerId: equipment.equipmentOwner?.publicId ?? undefined,
 						image: undefined,
 						categoryIds: equipment.categories?.map((cat) => cat.publicId) ?? [], // Added categoryIds
@@ -259,14 +259,6 @@ export function EquipmentFormDialog({
 	};
 
 	const processSubmit = (data: EquipmentDTOInput) => {
-		// Validate image presence for new equipment
-		if (!isEditing && !data.image) {
-			form.setError("image", {
-				message: "Image file is required for new equipment.",
-			});
-			return;
-		}
-
 		// Validate owner selection for SUPER_ADMIN adding new equipment
 		if (isSuperAdmin && !isEditing && !data.ownerId) {
 			form.setError("ownerId", {
