@@ -1,1057 +1,985 @@
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useRouteContext } from "@tanstack/react-router";
 import {
-    type ColumnDef,
-    type ColumnFiltersState,
-    type ColumnMeta,
-    type SortingState,
-    type VisibilityState,
-    flexRender,
-    getCoreRowModel,
-    getFacetedRowModel,
-    getFacetedUniqueValues,
-    getFilteredRowModel,
-    getSortedRowModel,
-    useReactTable,
+	type ColumnDef,
+	type ColumnFiltersState,
+	type ColumnMeta,
+	flexRender,
+	getCoreRowModel,
+	getFacetedRowModel,
+	getFacetedUniqueValues,
+	getFilteredRowModel,
+	getSortedRowModel,
+	type SortingState,
+	useReactTable,
+	type VisibilityState,
 } from "@tanstack/react-table";
+import { useAtom } from "jotai";
 import {
-    ArrowUpDown,
-    BuildingIcon,
-    CalendarIcon,
-    CheckCircleIcon,
-    ChevronDown,
-    FingerprintIcon,
-    ListFilterIcon,
-    MoreHorizontal,
-    PhoneIcon,
-    UserCheck,
-    UserIcon,
-    UserX,
-    UsersIcon,
-    VerifiedIcon,
-    XCircleIcon,
+	ArrowUpDown,
+	BuildingIcon,
+	CalendarIcon,
+	CheckCircleIcon,
+	ChevronDown,
+	FingerprintIcon,
+	ListFilterIcon,
+	MoreHorizontal,
+	PhoneIcon,
+	UserCheck,
+	UserIcon,
+	UsersIcon,
+	UserX,
+	VerifiedIcon,
+	XCircleIcon,
 } from "lucide-react";
 import * as React from "react";
 import { useEffect, useState } from "react";
-
+import { toast } from "sonner";
+import { DataTableFilter } from "@/components/data-table-filter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
-
-import { DataTableFilter } from "@/components/data-table-filter";
 import { activateUser, updateUser } from "@/lib/api";
 import {
-    deleteDialogAtom,
-    editDialogAtom,
-    selectedUserAtom,
+	deleteDialogAtom,
+	editDialogAtom,
+	selectedUserAtom,
 } from "@/lib/atoms";
-import { defineMeta } from "@/lib/filters";
-import { filterFn } from "@/lib/filters";
+import { defineMeta, filterFn } from "@/lib/filters";
 import {
-    departmentsQueryOptions,
-    useBulkDeactivateUsersAsAdminMutation,
-    usersQueryOptions,
+	departmentsQueryOptions,
+	useBulkDeactivateUsersAsAdminMutation,
+	usersQueryOptions,
 } from "@/lib/query";
 import type { EditUserFormInput } from "@/lib/schema";
 import { ROLES, type UserDTO, type UserRole } from "@/lib/types";
 import { getBadgeVariant } from "@/lib/utils";
-import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
-import { useRouteContext } from "@tanstack/react-router";
-import { useAtom } from "jotai";
-import { toast } from "sonner";
 import { ActivateConfirmDialog } from "./activateConfirmDialog";
 import { DeleteConfirmDialog } from "./deleteConfirmDialog";
 import { EditUserFormDialog } from "./editUserFormDialog";
 
 // Custom hook for persistent state
 function usePersistentState<T>(
-    key: string,
-    initialValue: T,
+	key: string,
+	initialValue: T,
 ): [T, (value: T | ((prevState: T) => T)) => void] {
-    const [state, setState] = useState<T>(() => {
-        try {
-            const storedValue = localStorage.getItem(key);
-            if (storedValue) {
-                // TODO: Add specific parsing logic if needed, e.g., for dates
-                return JSON.parse(storedValue);
-            }
-            return initialValue;
-        } catch (error) {
-            console.error(
-                "Error reading from localStorage for key:",
-                key,
-                error,
-            );
-            return initialValue;
-        }
-    });
+	const [state, setState] = useState<T>(() => {
+		try {
+			const storedValue = localStorage.getItem(key);
+			if (storedValue) {
+				// TODO: Add specific parsing logic if needed, e.g., for dates
+				return JSON.parse(storedValue);
+			}
+			return initialValue;
+		} catch (error) {
+			console.error("Error reading from localStorage for key:", key, error);
+			return initialValue;
+		}
+	});
 
-    useEffect(() => {
-        try {
-            localStorage.setItem(key, JSON.stringify(state));
-        } catch (error) {
-            console.error("Error writing to localStorage for key:", key, error);
-        }
-    }, [key, state]);
+	useEffect(() => {
+		try {
+			localStorage.setItem(key, JSON.stringify(state));
+		} catch (error) {
+			console.error("Error writing to localStorage for key:", key, error);
+		}
+	}, [key, state]);
 
-    return [state, setState];
+	return [state, setState];
 }
 
 export function UserDataTable() {
-    const context = useRouteContext({ from: "/app/user-management" });
-    const queryClient = context.queryClient;
-    const [sorting, setSorting] = usePersistentState<SortingState>(
-        "userTableSorting_v1",
-        [],
-    );
-    const [columnFilters, setColumnFilters] =
-        usePersistentState<ColumnFiltersState>("userTableColumnFilters_v1", []);
-    const [columnVisibility, setColumnVisibility] =
-        usePersistentState<VisibilityState>("userTableColumnVisibility_v1", {});
-    const [rowSelection, setRowSelection] = React.useState({});
-    const [editDialogOpen, setEditDialogOpen] = useAtom(editDialogAtom);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useAtom(deleteDialogAtom);
-    const [selectedUser, setSelectedUser] = useAtom(selectedUserAtom);
-    const [activateDialogOpen, setActivateDialogOpen] = React.useState(false);
+	const context = useRouteContext({ from: "/app/user-management" });
+	const queryClient = context.queryClient;
+	const [sorting, setSorting] = usePersistentState<SortingState>(
+		"userTableSorting_v1",
+		[],
+	);
+	const [columnFilters, setColumnFilters] =
+		usePersistentState<ColumnFiltersState>("userTableColumnFilters_v1", []);
+	const [columnVisibility, setColumnVisibility] =
+		usePersistentState<VisibilityState>("userTableColumnVisibility_v1", {});
+	const [rowSelection, setRowSelection] = React.useState({});
+	const [editDialogOpen, setEditDialogOpen] = useAtom(editDialogAtom);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useAtom(deleteDialogAtom);
+	const [selectedUser, setSelectedUser] = useAtom(selectedUserAtom);
+	const [activateDialogOpen, setActivateDialogOpen] = React.useState(false);
 
-    // Persistent pagination state
-    // const [pageSize, setPageSize] = usePersistentState<number>(
-    //     "userTablePageSize_v1",
-    //     10,
-    // );
-    // const [pageIndex, setPageIndex] = usePersistentState<number>(
-    //     "userTablePageIndex_v1",
-    //     0,
-    // );
+	// Persistent pagination state
+	// const [pageSize, setPageSize] = usePersistentState<number>(
+	//     "userTablePageSize_v1",
+	//     10,
+	// );
+	// const [pageIndex, setPageIndex] = usePersistentState<number>(
+	//     "userTablePageIndex_v1",
+	//     0,
+	// );
 
-    const { data: initialUsers } = useSuspenseQuery(usersQueryOptions);
-    // Fetch actual departments data
-    const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
+	const { data: initialUsers } = useSuspenseQuery(usersQueryOptions);
+	// Fetch actual departments data
+	const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
 
-    const departmentMap = React.useMemo(() => {
-        const map = new Map<string, string>();
-        for (const dept of departmentsData ?? []) {
-            map.set(dept.publicId, dept.name);
-        }
-        return map;
-    }, [departmentsData]);
+	const departmentMap = React.useMemo(() => {
+		const map = new Map<string, string>();
+		for (const dept of departmentsData ?? []) {
+			map.set(dept.publicId, dept.name);
+		}
+		return map;
+	}, [departmentsData]);
 
-    const usersWithDeptNames = React.useMemo(() => {
-        return (initialUsers ?? []).map((user: UserDTO) => ({
-            ...user,
-            departmentName:
-                departmentMap.get(user.department?.publicId ?? "") ??
-                "Unknown Dept",
-        }));
-    }, [initialUsers, departmentMap]);
+	const usersWithDeptNames = React.useMemo(() => {
+		return (initialUsers ?? []).map((user: UserDTO) => ({
+			...user,
+			departmentName:
+				departmentMap.get(user.department?.publicId ?? "") ?? "Unknown Dept",
+		}));
+	}, [initialUsers, departmentMap]);
 
-    // --- Mutations ---
-    const updateUserMutation = useMutation({
-        mutationFn: ({
-            userId,
-            payload,
-            imageFile,
-        }: {
-            userId: string;
-            payload: EditUserFormInput;
-            imageFile?: File | null;
-        }) => updateUser({ userId, userData: payload, imageFile }),
-        onMutate: async ({ userId, payload }) => {
-            await queryClient.cancelQueries({
-                queryKey: usersQueryOptions.queryKey,
-            });
-            const previousUsers = queryClient.getQueryData<UserDTO[]>(
-                usersQueryOptions.queryKey,
-            );
+	// --- Mutations ---
+	const updateUserMutation = useMutation({
+		mutationFn: ({
+			userId,
+			payload,
+			imageFile,
+		}: {
+			userId: string;
+			payload: EditUserFormInput;
+			imageFile?: File | null;
+		}) => updateUser({ userId, userData: payload, imageFile }),
+		onMutate: async ({ userId, payload }) => {
+			await queryClient.cancelQueries({
+				queryKey: usersQueryOptions.queryKey,
+			});
+			const previousUsers = queryClient.getQueryData<UserDTO[]>(
+				usersQueryOptions.queryKey,
+			);
 
-            queryClient.setQueryData<UserDTO[]>(
-                usersQueryOptions.queryKey,
-                (old = []) =>
-                    old.map((user) => {
-                        if (user.publicId !== userId) return user;
+			queryClient.setQueryData<UserDTO[]>(
+				usersQueryOptions.queryKey,
+				(old = []) =>
+					old.map((user) => {
+						if (user.publicId !== userId) return user;
 
-                        const updatedUser: UserDTO = {
-                            ...user,
-                            // Apply basic payload fields directly
-                            ...(payload.firstName && {
-                                firstName: payload.firstName,
-                            }),
-                            ...(payload.lastName && {
-                                lastName: payload.lastName,
-                            }),
-                            ...(payload.idNumber && {
-                                idNumber: payload.idNumber,
-                            }),
-                            ...(payload.phoneNumber && {
-                                phoneNumber: payload.phoneNumber,
-                            }),
-                            ...(payload.telephoneNumber && {
-                                telephoneNumber: payload.telephoneNumber,
-                            }),
-                            roles:
-                                payload.roles !== undefined
-                                    ? Array.from(payload.roles as UserRole[])
-                                    : user.roles,
-                            email: user.email,
-                            password: user.password,
-                            emailVerified: user.emailVerified,
-                            active: user.active,
-                            createdAt: user.createdAt,
-                            profileImagePath: user.profileImagePath,
-                            // Update updatedAt timestamp
-                            updatedAt: new Date().toISOString(),
-                        };
-                        return updatedUser;
-                    }),
-            );
-            return { previousUsers };
-        },
-        onError: (err, _variables, context) => {
-            if (context?.previousUsers) {
-                queryClient.setQueryData(
-                    usersQueryOptions.queryKey,
-                    context.previousUsers,
-                );
-            }
-            const errorMessage =
-                err instanceof Error ? err.message : "Failed to update user";
-            toast.error(errorMessage);
-        },
-        onSuccess: () => {
-            toast.success("User updated successfully");
-            setEditDialogOpen(false);
-            setSelectedUser(null);
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({
-                queryKey: usersQueryOptions.queryKey,
-            });
-            // Also invalidate departments if the update could affect department heads shown elsewhere
-            // queryClient.invalidateQueries({ queryKey: departmentsQueryOptions.queryKey });
-        },
-    });
+						const updatedUser: UserDTO = {
+							...user,
+							// Apply basic payload fields directly
+							...(payload.firstName && {
+								firstName: payload.firstName,
+							}),
+							...(payload.lastName && {
+								lastName: payload.lastName,
+							}),
+							...(payload.idNumber && {
+								idNumber: payload.idNumber,
+							}),
+							...(payload.phoneNumber && {
+								phoneNumber: payload.phoneNumber,
+							}),
+							...(payload.telephoneNumber && {
+								telephoneNumber: payload.telephoneNumber,
+							}),
+							roles:
+								payload.roles !== undefined
+									? Array.from(payload.roles as UserRole[])
+									: user.roles,
+							email: user.email,
+							password: user.password,
+							emailVerified: user.emailVerified,
+							active: user.active,
+							createdAt: user.createdAt,
+							profileImagePath: user.profileImagePath,
+							// Update updatedAt timestamp
+							updatedAt: new Date().toISOString(),
+						};
+						return updatedUser;
+					}),
+			);
+			return { previousUsers };
+		},
+		onError: (err, _variables, context) => {
+			if (context?.previousUsers) {
+				queryClient.setQueryData(
+					usersQueryOptions.queryKey,
+					context.previousUsers,
+				);
+			}
+			const errorMessage =
+				err instanceof Error ? err.message : "Failed to update user";
+			toast.error(errorMessage);
+		},
+		onSuccess: () => {
+			toast.success("User updated successfully");
+			setEditDialogOpen(false);
+			setSelectedUser(null);
+		},
+		onSettled: () => {
+			queryClient.invalidateQueries({
+				queryKey: usersQueryOptions.queryKey,
+			});
+			// Also invalidate departments if the update could affect department heads shown elsewhere
+			// queryClient.invalidateQueries({ queryKey: departmentsQueryOptions.queryKey });
+		},
+	});
 
-    const activateUserMutation = useMutation({
-        mutationFn: activateUser,
-        onMutate: async (userId: string) => {
-            await queryClient.cancelQueries({
-                queryKey: usersQueryOptions.queryKey,
-            });
-            const previousUsers = queryClient.getQueryData<UserDTO[]>(
-                usersQueryOptions.queryKey,
-            );
-            queryClient.setQueryData<UserDTO[]>(
-                usersQueryOptions.queryKey,
-                (old = []) =>
-                    old.map((user) =>
-                        user.publicId === userId
-                            ? {
-                                  ...user,
-                                  active: true,
-                                  updatedAt: new Date().toISOString(),
-                              }
-                            : user,
-                    ),
-            );
-            return { previousUsers };
-        },
-        onError: (err, _userId, context) => {
-            if (context?.previousUsers) {
-                queryClient.setQueryData(
-                    usersQueryOptions.queryKey,
-                    context.previousUsers,
-                );
-            }
-            const errorMessage =
-                err instanceof Error ? err.message : "Failed to activate user";
-            toast.error(errorMessage);
-        },
-        onSuccess: () => {
-            toast.success("User activated successfully");
-            setActivateDialogOpen(false);
-            setSelectedUser(null);
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({
-                queryKey: usersQueryOptions.queryKey,
-            });
-        },
-    });
+	const activateUserMutation = useMutation({
+		mutationFn: activateUser,
+		onMutate: async (userId: string) => {
+			await queryClient.cancelQueries({
+				queryKey: usersQueryOptions.queryKey,
+			});
+			const previousUsers = queryClient.getQueryData<UserDTO[]>(
+				usersQueryOptions.queryKey,
+			);
+			queryClient.setQueryData<UserDTO[]>(
+				usersQueryOptions.queryKey,
+				(old = []) =>
+					old.map((user) =>
+						user.publicId === userId
+							? {
+									...user,
+									active: true,
+									updatedAt: new Date().toISOString(),
+								}
+							: user,
+					),
+			);
+			return { previousUsers };
+		},
+		onError: (err, _userId, context) => {
+			if (context?.previousUsers) {
+				queryClient.setQueryData(
+					usersQueryOptions.queryKey,
+					context.previousUsers,
+				);
+			}
+			const errorMessage =
+				err instanceof Error ? err.message : "Failed to activate user";
+			toast.error(errorMessage);
+		},
+		onSuccess: () => {
+			toast.success("User activated successfully");
+			setActivateDialogOpen(false);
+			setSelectedUser(null);
+		},
+		onSettled: () => {
+			queryClient.invalidateQueries({
+				queryKey: usersQueryOptions.queryKey,
+			});
+		},
+	});
 
-    const bulkDeactivateUsersMutation = useBulkDeactivateUsersAsAdminMutation({
-        onMutate: async (userIds: string[]) => {
-            await queryClient.cancelQueries({
-                queryKey: usersQueryOptions.queryKey,
-            });
-            const previousUsers = queryClient.getQueryData<UserDTO[]>(
-                usersQueryOptions.queryKey,
-            );
-            queryClient.setQueryData<UserDTO[]>(
-                usersQueryOptions.queryKey,
-                (old = []) =>
-                    old.map((user) =>
-                        userIds.includes(user.publicId)
-                            ? {
-                                  ...user,
-                                  active: false,
-                                  updatedAt: new Date().toISOString(),
-                              }
-                            : user,
-                    ),
-            );
-            return { previousUsers };
-        },
-        onError: (
-            err: Error,
-            _userIds: string[],
-            context?: { previousUsers?: UserDTO[] },
-        ) => {
-            if (context?.previousUsers) {
-                queryClient.setQueryData(
-                    usersQueryOptions.queryKey,
-                    context.previousUsers,
-                );
-            }
-            const errorMessage =
-                err instanceof Error
-                    ? err.message
-                    : "Failed to deactivate user(s)";
-            toast.error(errorMessage);
-        },
-        onSuccess: (
-            data: string[],
-            _userIds: string[],
-            _context?: { previousUsers?: UserDTO[] },
-        ) => {
-            if (
-                data?.some((msg: string) => msg.startsWith("Cannot deactivate"))
-            ) {
-                toast.warning(
-                    `Some users could not be deactivated. ${data.join("; ")}`,
-                );
-            } else {
-                toast.success("User(s) processed for deactivation.");
-            }
-            setDeleteDialogOpen(false);
-            setSelectedUser(null);
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({
-                queryKey: usersQueryOptions.queryKey,
-            });
-        },
-    });
-    // --- End Mutations ---
+	const bulkDeactivateUsersMutation = useBulkDeactivateUsersAsAdminMutation({
+		onMutate: async (userIds: string[]) => {
+			await queryClient.cancelQueries({
+				queryKey: usersQueryOptions.queryKey,
+			});
+			const previousUsers = queryClient.getQueryData<UserDTO[]>(
+				usersQueryOptions.queryKey,
+			);
+			queryClient.setQueryData<UserDTO[]>(
+				usersQueryOptions.queryKey,
+				(old = []) =>
+					old.map((user) =>
+						userIds.includes(user.publicId)
+							? {
+									...user,
+									active: false,
+									updatedAt: new Date().toISOString(),
+								}
+							: user,
+					),
+			);
+			return { previousUsers };
+		},
+		onError: (
+			err: Error,
+			_userIds: string[],
+			context?: { previousUsers?: UserDTO[] },
+		) => {
+			if (context?.previousUsers) {
+				queryClient.setQueryData(
+					usersQueryOptions.queryKey,
+					context.previousUsers,
+				);
+			}
+			const errorMessage =
+				err instanceof Error ? err.message : "Failed to deactivate user(s)";
+			toast.error(errorMessage);
+		},
+		onSuccess: (
+			data: string[],
+			_userIds: string[],
+			_context?: { previousUsers?: UserDTO[] },
+		) => {
+			if (data?.some((msg: string) => msg.startsWith("Cannot deactivate"))) {
+				toast.warning(
+					`Some users could not be deactivated. ${data.join("; ")}`,
+				);
+			} else {
+				toast.success("User(s) processed for deactivation.");
+			}
+			setDeleteDialogOpen(false);
+			setSelectedUser(null);
+		},
+		onSettled: () => {
+			queryClient.invalidateQueries({
+				queryKey: usersQueryOptions.queryKey,
+			});
+		},
+	});
+	// --- End Mutations ---
 
-    // --- Event Handlers ---
-    // onSubmit for EditUserFormDialog
-    const handleEditUserSubmit = (payload: EditUserFormInput) => {
-        if (!selectedUser) return;
-        // Note: The payload from EditUserFormDialog already contains departmentId (number | null)
-        // and other fields matching UpdateUserInputFE.
-        // If image upload is needed from the edit dialog, it needs to be handled here too.
-        updateUserMutation.mutate({
-            userId: selectedUser.publicId,
-            payload: payload,
-            // imageFile: /* pass image file if collected from dialog */,
-        });
-    };
+	// --- Event Handlers ---
+	// onSubmit for EditUserFormDialog
+	const handleEditUserSubmit = (payload: EditUserFormInput) => {
+		if (!selectedUser) return;
+		// Note: The payload from EditUserFormDialog already contains departmentId (number | null)
+		// and other fields matching UpdateUserInputFE.
+		// If image upload is needed from the edit dialog, it needs to be handled here too.
+		updateUserMutation.mutate({
+			userId: selectedUser.publicId,
+			payload: payload,
+			// imageFile: /* pass image file if collected from dialog */,
+		});
+	};
 
-    const handleDeactivateUser = () => {
-        if (selectedUser) {
-            bulkDeactivateUsersMutation.mutate([selectedUser.publicId]);
-        }
-    };
+	const handleDeactivateUser = () => {
+		if (selectedUser) {
+			bulkDeactivateUsersMutation.mutate([selectedUser.publicId]);
+		}
+	};
 
-    const handleActivateUser = () => {
-        if (selectedUser) {
-            activateUserMutation.mutate(selectedUser.publicId);
-        }
-    };
+	const handleActivateUser = () => {
+		if (selectedUser) {
+			activateUserMutation.mutate(selectedUser.publicId);
+		}
+	};
 
-    const handleBulkDeactivateSelectedUsers = () => {
-        const selectedRows = table.getFilteredSelectedRowModel().rows;
-        if (selectedRows.length === 0) {
-            toast.info("No users selected for deactivation.");
-            return;
-        }
-        const selectedPublicIds = selectedRows.map(
-            (row) => row.original.publicId,
-        );
-        bulkDeactivateUsersMutation.mutate(selectedPublicIds, {
-            onSuccess: (data, _variables, _context) => {
-                if (
-                    data?.some((msg: string) =>
-                        msg.startsWith("Cannot deactivate"),
-                    )
-                ) {
-                    toast.warning(
-                        `Some selected users could not be deactivated. ${data.join("; ")}`,
-                    );
-                } else {
-                    toast.success(
-                        `${selectedPublicIds.length} user(s) processed for deactivation.`,
-                    );
-                }
-                setDeleteDialogOpen(false);
-                setSelectedUser(null);
-                table.resetRowSelection();
-            },
-            onError: (error) => {
-                const errorMessage =
-                    error instanceof Error
-                        ? error.message
-                        : `Failed to deactivate ${selectedPublicIds.length} user(s)`;
-                toast.error(errorMessage);
-            },
-        });
-    };
+	const handleBulkDeactivateSelectedUsers = () => {
+		const selectedRows = table.getFilteredSelectedRowModel().rows;
+		if (selectedRows.length === 0) {
+			toast.info("No users selected for deactivation.");
+			return;
+		}
+		const selectedPublicIds = selectedRows.map((row) => row.original.publicId);
+		bulkDeactivateUsersMutation.mutate(selectedPublicIds, {
+			onSuccess: (data, _variables, _context) => {
+				if (data?.some((msg: string) => msg.startsWith("Cannot deactivate"))) {
+					toast.warning(
+						`Some selected users could not be deactivated. ${data.join("; ")}`,
+					);
+				} else {
+					toast.success(
+						`${selectedPublicIds.length} user(s) processed for deactivation.`,
+					);
+				}
+				setDeleteDialogOpen(false);
+				setSelectedUser(null);
+				table.resetRowSelection();
+			},
+			onError: (error) => {
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: `Failed to deactivate ${selectedPublicIds.length} user(s)`;
+				toast.error(errorMessage);
+			},
+		});
+	};
 
-    // --- Filter Options ---
-    const ACTIVE_OPTIONS = React.useMemo(() => {
-        const users = initialUsers || [];
-        const uniqueActiveStates = Array.from(
-            new Set(users.map((u: UserDTO) => u.active)),
-        ) as boolean[];
-        return uniqueActiveStates.map((isActive) => ({
-            value: String(isActive),
-            label: isActive ? "Active" : "Inactive",
-            icon: isActive ? CheckCircleIcon : XCircleIcon,
-        }));
-    }, [initialUsers]);
+	// --- Filter Options ---
+	const ACTIVE_OPTIONS = React.useMemo(() => {
+		const users = initialUsers || [];
+		const uniqueActiveStates = Array.from(
+			new Set(users.map((u: UserDTO) => u.active)),
+		) as boolean[];
+		return uniqueActiveStates.map((isActive) => ({
+			value: String(isActive),
+			label: isActive ? "Active" : "Inactive",
+			icon: isActive ? CheckCircleIcon : XCircleIcon,
+		}));
+	}, [initialUsers]);
 
-    const VERIFIED_OPTIONS = React.useMemo(() => {
-        const users = initialUsers || [];
-        const uniqueVerifiedStates = Array.from(
-            new Set(users.map((u: UserDTO) => u.emailVerified)),
-        ) as boolean[];
-        return uniqueVerifiedStates.map((isVerified) => ({
-            value: String(isVerified),
-            label: isVerified ? "Verified" : "Not Verified",
-            icon: isVerified ? VerifiedIcon : XCircleIcon,
-        }));
-    }, [initialUsers]);
+	const VERIFIED_OPTIONS = React.useMemo(() => {
+		const users = initialUsers || [];
+		const uniqueVerifiedStates = Array.from(
+			new Set(users.map((u: UserDTO) => u.emailVerified)),
+		) as boolean[];
+		return uniqueVerifiedStates.map((isVerified) => ({
+			value: String(isVerified),
+			label: isVerified ? "Verified" : "Not Verified",
+			icon: isVerified ? VerifiedIcon : XCircleIcon,
+		}));
+	}, [initialUsers]);
 
-    const ROLE_OPTIONS = React.useMemo(
-        () =>
-            ROLES.map((role) => ({
-                value: role.value,
-                label: role.label,
-            })),
-        [],
-    );
+	const ROLE_OPTIONS = React.useMemo(
+		() =>
+			ROLES.map((role) => ({
+				value: role.value,
+				label: role.label,
+			})),
+		[],
+	);
 
-    // Derive DEPARTMENT_OPTIONS from fetched departmentsData
-    const DEPARTMENT_OPTIONS = React.useMemo(
-        () =>
-            (departmentsData ?? []).map((dept) => ({
-                value: dept.name,
-                label: dept.name,
-                icon: BuildingIcon,
-            })),
-        [departmentsData],
-    );
+	// Derive DEPARTMENT_OPTIONS from fetched departmentsData
+	const DEPARTMENT_OPTIONS = React.useMemo(
+		() =>
+			(departmentsData ?? []).map((dept) => ({
+				value: dept.name,
+				label: dept.name,
+				icon: BuildingIcon,
+			})),
+		[departmentsData],
+	);
 
-    // --- Define the columns with filter metadata ---
-    const columns = React.useMemo<ColumnDef<UserDTO>[]>(
-        () => [
-            // ... Select column ...
+	// --- Define the columns with filter metadata ---
+	const columns = React.useMemo<ColumnDef<UserDTO>[]>(
+		() => [
+			// ... Select column ...
 
-            {
-                id: "select",
-                header: ({ table }) => (
-                    <Checkbox
-                        checked={
-                            table.getIsAllPageRowsSelected() ||
-                            (table.getIsSomePageRowsSelected() &&
-                                "indeterminate")
-                        }
-                        onCheckedChange={(value) =>
-                            table.toggleAllPageRowsSelected(!!value)
-                        }
-                        aria-label="Select all"
-                    />
-                ),
-                cell: ({ row }) => (
-                    <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
-                        aria-label="Select row"
-                    />
-                ),
-                enableSorting: false,
-                enableHiding: false,
-            },
-            // ... User column ...
-            {
-                accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-                id: "name",
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        User
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                cell: ({ row }) => {
-                    const user = row.original;
-                    const fullName = `${user.firstName} ${user.lastName}`;
-                    const getInitials = () => {
-                        return `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase();
-                    };
-                    return (
-                        <div className="flex items-center space-x-3">
-                            <Avatar>
-                                {user.profileImagePath && (
-                                    <AvatarImage
-                                        src={user.profileImagePath}
-                                        alt={fullName}
-                                    />
-                                )}
-                                <AvatarFallback>{getInitials()}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <div className="font-medium">{fullName}</div>
-                                <div className="text-sm text-muted-foreground">
-                                    {user.email}
-                                </div>
-                            </div>
-                        </div>
-                    );
-                },
-                filterFn: filterFn("text"),
-                meta: defineMeta(
-                    (row: UserDTO) => `${row.firstName} ${row.lastName}`,
-                    {
-                        displayName: "User Name",
-                        type: "text",
-                        icon: UserIcon,
-                    },
-                ) as ColumnMeta<UserDTO, unknown>,
-            },
-            // ... ID Number column ...
-            {
-                accessorKey: "idNumber",
-                header: "ID Number",
-                cell: ({ row }) => <div>{row.getValue("idNumber")}</div>,
-                filterFn: filterFn("text"),
-                meta: defineMeta((row: UserDTO) => row.idNumber, {
-                    displayName: "ID Number",
-                    type: "text",
-                    icon: FingerprintIcon, // Changed icon
-                }) as ColumnMeta<UserDTO, unknown>,
-            },
-            {
-                id: "publicId",
-                header: "Public ID",
-                cell: ({ row }) => <div>{row.original.publicId}</div>,
-            },
-            // ... Role column ...
-            {
-                accessorKey: "roles",
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        Role
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                cell: ({ row }) => {
-                    const roles = row.getValue("roles") as Set<UserRole>;
-                    return (
-                        <div className="flex flex-wrap gap-1">
-                            {Array.from(roles).map((role) => {
-                                const roleInfo = ROLES.find(
-                                    (r) => r.value === role,
-                                );
-                                return (
-                                    <Badge
-                                        key={role}
-                                        className={`font-medium capitalize px-2 py-0.5 ${getBadgeVariant(role)}`}
-                                        variant="outline"
-                                    >
-                                        {roleInfo ? roleInfo.label : role}
-                                    </Badge>
-                                );
-                            })}
-                        </div>
-                    );
-                },
-                filterFn: filterFn("option"),
-                meta: defineMeta((row: UserDTO) => row.roles, {
-                    displayName: "Role",
-                    type: "option",
-                    icon: UsersIcon,
-                    options: ROLE_OPTIONS,
-                }) as ColumnMeta<UserDTO, unknown>,
-            },
-            // ... Phone Number column ...
-            {
-                accessorKey: "telephoneNumber",
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        Telephone
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                cell: ({ row }) => {
-                    const telephoneNumber = row.original.telephoneNumber;
-                    return <div>{telephoneNumber || "-"}</div>;
-                },
-                filterFn: filterFn("text"),
-                meta: defineMeta((row: UserDTO) => row.telephoneNumber, {
-                    displayName: "Telephone Number",
-                    type: "text",
-                    icon: PhoneIcon,
-                }) as ColumnMeta<UserDTO, unknown>,
-            },
-            {
-                accessorKey: "phoneNumber",
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        Phone
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                cell: ({ row }) => {
-                    const phoneNumber = row.original.phoneNumber;
-                    return <div>{phoneNumber || "-"}</div>;
-                },
-                filterFn: filterFn("text"),
-                meta: defineMeta((row: UserDTO) => row.phoneNumber, {
-                    displayName: "Phone Number",
-                    type: "text",
-                    icon: PhoneIcon,
-                }) as ColumnMeta<UserDTO, unknown>,
-            },
-            // --- Department column ---
-            {
-                accessorKey: "departmentName",
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        Department
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                cell: ({ row }) => (
-                    <div>{row.getValue("departmentName") || "-"}</div>
-                ),
-                filterFn: filterFn("option"),
-                meta: defineMeta(
-                    (row: UserDTO) => String(row.department?.publicId ?? ""),
-                    {
-                        displayName: "Department",
-                        type: "option",
-                        icon: BuildingIcon,
-                        options: DEPARTMENT_OPTIONS,
-                    },
-                ) as ColumnMeta<UserDTO, unknown>,
-            },
-            // ... Verified column ...
-            {
-                accessorKey: "emailVerified",
-                header: "Verified",
-                cell: ({ row }) => {
-                    const emailVerified = row.original.emailVerified;
-                    return (
-                        <Badge
-                            variant={emailVerified ? "default" : "outline"}
-                            className={`capitalize ${emailVerified ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
-                        >
-                            {emailVerified ? "Verified" : "Not Verified"}
-                        </Badge>
-                    );
-                },
-                filterFn: filterFn("option"),
-                meta: defineMeta((row: UserDTO) => String(row.emailVerified), {
-                    displayName: "Verified",
-                    type: "option",
-                    icon: VerifiedIcon,
-                    options: VERIFIED_OPTIONS,
-                }) as ColumnMeta<UserDTO, unknown>,
-            },
-            // ... Active column ...
-            {
-                accessorKey: "active",
-                header: "Status",
-                cell: ({ row }) => {
-                    const isActive = row.original.active;
-                    return (
-                        <Badge
-                            variant={isActive ? "default" : "destructive"}
-                            className={`capitalize ${isActive ? "bg-green-100 text-green-800" : "bg-destructive text-destructive-foreground"}`}
-                        >
-                            {isActive ? "Active" : "Inactive"}
-                        </Badge>
-                    );
-                },
-                filterFn: filterFn("option"),
-                meta: defineMeta((row: UserDTO) => String(row.active), {
-                    displayName: "Status",
-                    type: "option",
-                    icon: ListFilterIcon,
-                    options: ACTIVE_OPTIONS,
-                }) as ColumnMeta<UserDTO, unknown>,
-            },
-            // ... Created At column ...
-            {
-                accessorKey: "createdAt",
-                header: ({ column }) => (
-                    <div className="text-right">
-                        <Button
-                            variant="ghost"
-                            onClick={() =>
-                                column.toggleSorting(
-                                    column.getIsSorted() === "asc",
-                                )
-                            }
-                        >
-                            Created At <ArrowUpDown className="ml-2 h-4 w-4" />
-                        </Button>
-                    </div>
-                ),
-                cell: ({ row }) => {
-                    const dateValue = row.getValue("createdAt");
-                    try {
-                        const date = new Date(dateValue as string);
-                        if (Number.isNaN(date.getTime())) {
-                            throw new Error("Invalid Date");
-                        }
-                        const formatted = new Intl.DateTimeFormat("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                        }).format(date);
-                        return (
-                            <div className="text-right font-medium">
-                                {formatted}
-                            </div>
-                        );
-                    } catch (error) {
-                        return (
-                            <div className="text-right text-muted-foreground">
-                                Invalid Date
-                            </div>
-                        );
-                    }
-                },
-                filterFn: filterFn("date"),
-                meta: defineMeta(
-                    (row: UserDTO) => {
-                        try {
-                            const date = new Date(row.createdAt);
-                            return Number.isNaN(date.getTime())
-                                ? undefined
-                                : date;
-                        } catch (e) {
-                            return undefined;
-                        }
-                    },
-                    {
-                        displayName: "Created At",
-                        type: "date",
-                        icon: CalendarIcon,
-                    },
-                ) as ColumnMeta<UserDTO, unknown>,
-            },
-            // --- Actions column ---
-            {
-                id: "actions",
-                cell: ({ row }) => {
-                    const user = row.original;
-                    // Get setters from useAtom
-                    const [, setEditDialogOpen] = useAtom(editDialogAtom);
-                    const [, setSelectedUser] = useAtom(selectedUserAtom);
-                    const [, setDeleteDialogOpen] = useAtom(deleteDialogAtom);
-                    // Use the state setter directly, not from atom
-                    // const [, setActivateDialogOpen] = useAtom(activateDialogAtom); // Remove if using local state
+			{
+				id: "select",
+				header: ({ table }) => (
+					<Checkbox
+						checked={
+							table.getIsAllPageRowsSelected() ||
+							(table.getIsSomePageRowsSelected() && "indeterminate")
+						}
+						onCheckedChange={(value) =>
+							table.toggleAllPageRowsSelected(!!value)
+						}
+						aria-label="Select all"
+					/>
+				),
+				cell: ({ row }) => (
+					<Checkbox
+						checked={row.getIsSelected()}
+						onCheckedChange={(value) => row.toggleSelected(!!value)}
+						aria-label="Select row"
+					/>
+				),
+				enableSorting: false,
+				enableHiding: false,
+			},
+			// ... User column ...
+			{
+				accessorFn: (row) => `${row.firstName} ${row.lastName}`,
+				id: "name",
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						User
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => {
+					const user = row.original;
+					const fullName = `${user.firstName} ${user.lastName}`;
+					const getInitials = () => {
+						return `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase();
+					};
+					return (
+						<div className="flex items-center space-x-3">
+							<Avatar>
+								{user.profileImagePath && (
+									<AvatarImage src={user.profileImagePath} alt={fullName} />
+								)}
+								<AvatarFallback>{getInitials()}</AvatarFallback>
+							</Avatar>
+							<div>
+								<div className="font-medium">{fullName}</div>
+								<div className="text-sm text-muted-foreground">
+									{user.email}
+								</div>
+							</div>
+						</div>
+					);
+				},
+				filterFn: filterFn("text"),
+				meta: defineMeta((row: UserDTO) => `${row.firstName} ${row.lastName}`, {
+					displayName: "User Name",
+					type: "text",
+					icon: UserIcon,
+				}) as ColumnMeta<UserDTO, unknown>,
+			},
+			// ... ID Number column ...
+			{
+				accessorKey: "idNumber",
+				header: "ID Number",
+				cell: ({ row }) => <div>{row.getValue("idNumber")}</div>,
+				filterFn: filterFn("text"),
+				meta: defineMeta((row: UserDTO) => row.idNumber, {
+					displayName: "ID Number",
+					type: "text",
+					icon: FingerprintIcon, // Changed icon
+				}) as ColumnMeta<UserDTO, unknown>,
+			},
 
-                    return (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        setSelectedUser(user);
-                                        setEditDialogOpen(true);
-                                    }}
-                                >
-                                    <UserIcon className="mr-2 h-4 w-4" /> Edit
-                                    User
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {user.active ? (
-                                    <DropdownMenuItem
-                                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                                        onClick={() => {
-                                            setSelectedUser(user);
-                                            setDeleteDialogOpen(true);
-                                        }}
-                                        disabled={
-                                            bulkDeactivateUsersMutation.isPending
-                                        }
-                                    >
-                                        <UserX className="mr-2 h-4 w-4" />{" "}
-                                        Deactivate User
-                                    </DropdownMenuItem>
-                                ) : (
-                                    <DropdownMenuItem
-                                        className="text-green-600 focus:text-green-700 focus:bg-green-100"
-                                        onClick={() => {
-                                            setSelectedUser(user);
-                                            setActivateDialogOpen(true); // Use local state setter
-                                        }}
-                                        disabled={
-                                            activateUserMutation.isPending
-                                        }
-                                    >
-                                        <UserCheck className="mr-2 h-4 w-4" />{" "}
-                                        Activate User
-                                    </DropdownMenuItem>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    );
-                },
-                enableHiding: false,
-            },
-        ],
-        [
-            ROLE_OPTIONS,
-            DEPARTMENT_OPTIONS, // Use derived options
-            ACTIVE_OPTIONS,
-            VERIFIED_OPTIONS,
-            bulkDeactivateUsersMutation.isPending,
-            activateUserMutation.isPending,
-        ],
-    );
+			// ... Role column ...
+			{
+				accessorKey: "roles",
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						Role
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => {
+					const roles = row.getValue("roles") as Set<UserRole>;
+					return (
+						<div className="flex flex-wrap gap-1">
+							{Array.from(roles).map((role) => {
+								const roleInfo = ROLES.find((r) => r.value === role);
+								return (
+									<Badge
+										key={role}
+										className={`font-medium capitalize px-2 py-0.5 ${getBadgeVariant(role)}`}
+										variant="outline"
+									>
+										{roleInfo ? roleInfo.label : role}
+									</Badge>
+								);
+							})}
+						</div>
+					);
+				},
+				filterFn: filterFn("option"),
+				meta: defineMeta((row: UserDTO) => row.roles, {
+					displayName: "Role",
+					type: "option",
+					icon: UsersIcon,
+					options: ROLE_OPTIONS,
+				}) as ColumnMeta<UserDTO, unknown>,
+			},
+			// ... Phone Number column ...
+			{
+				accessorKey: "telephoneNumber",
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						Telephone
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => {
+					const telephoneNumber = row.original.telephoneNumber;
+					return <div>{telephoneNumber || "-"}</div>;
+				},
+				filterFn: filterFn("text"),
+				meta: defineMeta((row: UserDTO) => row.telephoneNumber, {
+					displayName: "Telephone Number",
+					type: "text",
+					icon: PhoneIcon,
+				}) as ColumnMeta<UserDTO, unknown>,
+			},
+			{
+				accessorKey: "phoneNumber",
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						Phone
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => {
+					const phoneNumber = row.original.phoneNumber;
+					return <div>{phoneNumber || "-"}</div>;
+				},
+				filterFn: filterFn("text"),
+				meta: defineMeta((row: UserDTO) => row.phoneNumber, {
+					displayName: "Phone Number",
+					type: "text",
+					icon: PhoneIcon,
+				}) as ColumnMeta<UserDTO, unknown>,
+			},
+			// --- Department column ---
+			{
+				accessorKey: "departmentName",
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						Department
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => <div>{row.getValue("departmentName") || "-"}</div>,
+				filterFn: filterFn("option"),
+				meta: defineMeta(
+					(row: UserDTO) => String(row.department?.publicId ?? ""),
+					{
+						displayName: "Department",
+						type: "option",
+						icon: BuildingIcon,
+						options: DEPARTMENT_OPTIONS,
+					},
+				) as ColumnMeta<UserDTO, unknown>,
+			},
+			// ... Verified column ...
+			{
+				accessorKey: "emailVerified",
+				header: "Verified",
+				cell: ({ row }) => {
+					const emailVerified = row.original.emailVerified;
+					return (
+						<Badge
+							variant={emailVerified ? "default" : "outline"}
+							className={`capitalize ${emailVerified ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
+						>
+							{emailVerified ? "Verified" : "Not Verified"}
+						</Badge>
+					);
+				},
+				filterFn: filterFn("option"),
+				meta: defineMeta((row: UserDTO) => String(row.emailVerified), {
+					displayName: "Verified",
+					type: "option",
+					icon: VerifiedIcon,
+					options: VERIFIED_OPTIONS,
+				}) as ColumnMeta<UserDTO, unknown>,
+			},
+			// ... Active column ...
+			{
+				accessorKey: "active",
+				header: "Status",
+				cell: ({ row }) => {
+					const isActive = row.original.active;
+					return (
+						<Badge
+							variant={isActive ? "default" : "destructive"}
+							className={`capitalize ${isActive ? "bg-green-100 text-green-800" : "bg-destructive text-destructive-foreground"}`}
+						>
+							{isActive ? "Active" : "Inactive"}
+						</Badge>
+					);
+				},
+				filterFn: filterFn("option"),
+				meta: defineMeta((row: UserDTO) => String(row.active), {
+					displayName: "Status",
+					type: "option",
+					icon: ListFilterIcon,
+					options: ACTIVE_OPTIONS,
+				}) as ColumnMeta<UserDTO, unknown>,
+			},
+			// ... Created At column ...
+			{
+				accessorKey: "createdAt",
+				header: ({ column }) => (
+					<div className="text-right">
+						<Button
+							variant="ghost"
+							onClick={() =>
+								column.toggleSorting(column.getIsSorted() === "asc")
+							}
+						>
+							Created At <ArrowUpDown className="ml-2 h-4 w-4" />
+						</Button>
+					</div>
+				),
+				cell: ({ row }) => {
+					const dateValue = row.getValue("createdAt");
+					try {
+						const date = new Date(dateValue as string);
+						if (Number.isNaN(date.getTime())) {
+							throw new Error("Invalid Date");
+						}
+						const formatted = new Intl.DateTimeFormat("en-US", {
+							year: "numeric",
+							month: "short",
+							day: "numeric",
+							hour: "2-digit",
+							minute: "2-digit",
+							hour12: true,
+						}).format(date);
+						return <div className="text-right font-medium">{formatted}</div>;
+					} catch (_error) {
+						return (
+							<div className="text-right text-muted-foreground">
+								Invalid Date
+							</div>
+						);
+					}
+				},
+				filterFn: filterFn("date"),
+				meta: defineMeta(
+					(row: UserDTO) => {
+						try {
+							const date = new Date(row.createdAt);
+							return Number.isNaN(date.getTime()) ? undefined : date;
+						} catch (_e) {
+							return undefined;
+						}
+					},
+					{
+						displayName: "Created At",
+						type: "date",
+						icon: CalendarIcon,
+					},
+				) as ColumnMeta<UserDTO, unknown>,
+			},
+			// --- Actions column ---
+			{
+				id: "actions",
+				enableHiding: false,
+				cell: ({ row }) => {
+					const user = row.original;
+					return (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" className="h-8 w-8 p-0">
+									<span className="sr-only">Open menu</span>
+									<MoreHorizontal className="h-4 w-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuLabel>Actions</DropdownMenuLabel>
+								<DropdownMenuItem
+									onClick={() => {
+										setSelectedUser(user);
+										setEditDialogOpen(true);
+									}}
+								>
+									<UserIcon className="mr-2 h-4 w-4" /> Edit User
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								{user.active ? (
+									<DropdownMenuItem
+										className="text-destructive focus:text-destructive focus:bg-destructive/10"
+										onClick={() => {
+											setSelectedUser(user);
+											setDeleteDialogOpen(true);
+										}}
+										disabled={bulkDeactivateUsersMutation.isPending}
+									>
+										<UserX className="mr-2 h-4 w-4" /> Deactivate User
+									</DropdownMenuItem>
+								) : (
+									<DropdownMenuItem
+										className="text-green-600 focus:text-green-700 focus:bg-green-100"
+										onClick={() => {
+											setSelectedUser(user);
+											setActivateDialogOpen(true);
+										}}
+										disabled={activateUserMutation.isPending}
+									>
+										<UserCheck className="mr-2 h-4 w-4" /> Activate User
+									</DropdownMenuItem>
+								)}
+							</DropdownMenuContent>
+						</DropdownMenu>
+					);
+				},
+			},
+		],
+		[
+			ROLE_OPTIONS,
+			DEPARTMENT_OPTIONS, // Use derived options
+			ACTIVE_OPTIONS,
+			VERIFIED_OPTIONS,
+			bulkDeactivateUsersMutation.isPending,
+			activateUserMutation.isPending,
+			setSelectedUser,
+			setEditDialogOpen,
+			setDeleteDialogOpen,
+		],
+	);
 
-    const table = useReactTable({
-        data: usersWithDeptNames || [],
-        columns,
-        state: {
-            sorting,
-            columnVisibility,
-            rowSelection,
-            columnFilters,
-            // pagination: {
-            // Controlled pagination
-            // pageIndex,
-            // pageSize,
-            // },
-        },
-        onColumnFiltersChange: setColumnFilters,
-        getFilteredRowModel: getFilteredRowModel(),
-        getFacetedRowModel: getFacetedRowModel(),
-        getFacetedUniqueValues: getFacetedUniqueValues(),
-        onSortingChange: setSorting,
-        onColumnVisibilityChange: setColumnVisibility,
-        onRowSelectionChange: setRowSelection,
-        getCoreRowModel: getCoreRowModel(),
-        // getPaginationRowModel: getPaginationRowModel(), // Still needed for page count, etc.
-        getSortedRowModel: getSortedRowModel(),
-        // manualPagination: false, // Set to false if getPaginationRowModel is used for client-side pagination
-        // pageCount: -1, // Or calculate if known, otherwise react-table will estimate
-        // onPaginationChange: (updater) => {
-        //     // Handle pagination changes to update persistent state
-        //     if (typeof updater === "function") {
-        //         const newPaginationState = updater(table.getState().pagination);
-        //         setPageIndex(newPaginationState.pageIndex);
-        //         setPageSize(newPaginationState.pageSize);
-        //     } else {
-        //         setPageIndex(updater.pageIndex);
-        //         setPageSize(updater.pageSize);
-        //     }
-        // },
-    });
+	const table = useReactTable({
+		data: usersWithDeptNames || [],
+		columns,
+		state: {
+			sorting,
+			columnVisibility,
+			rowSelection,
+			columnFilters,
+			// pagination: {
+			// Controlled pagination
+			// pageIndex,
+			// pageSize,
+			// },
+		},
+		onColumnFiltersChange: setColumnFilters,
+		getFilteredRowModel: getFilteredRowModel(),
+		getFacetedRowModel: getFacetedRowModel(),
+		getFacetedUniqueValues: getFacetedUniqueValues(),
+		onSortingChange: setSorting,
+		onColumnVisibilityChange: setColumnVisibility,
+		onRowSelectionChange: setRowSelection,
+		getCoreRowModel: getCoreRowModel(),
+		// getPaginationRowModel: getPaginationRowModel(), // Still needed for page count, etc.
+		getSortedRowModel: getSortedRowModel(),
+		// manualPagination: false, // Set to false if getPaginationRowModel is used for client-side pagination
+		// pageCount: -1, // Or calculate if known, otherwise react-table will estimate
+		// onPaginationChange: (updater) => {
+		//     // Handle pagination changes to update persistent state
+		//     if (typeof updater === "function") {
+		//         const newPaginationState = updater(table.getState().pagination);
+		//         setPageIndex(newPaginationState.pageIndex);
+		//         setPageSize(newPaginationState.pageSize);
+		//     } else {
+		//         setPageIndex(updater.pageIndex);
+		//         setPageSize(updater.pageSize);
+		//     }
+		// },
+	});
 
-    return (
-        <div className="w-full space-y-4">
-            {/* ... Filter/Column Toggle UI ... */}
-            <div className="flex items-center justify-between">
-                {" "}
-                {/* Changed justify-end to justify-between */}
-                {/* Filter Component */}
-                <DataTableFilter table={table} />
-                {/* Right-aligned Buttons */}
-                <div className="flex items-center space-x-2">
-                    {Object.keys(table.getState().rowSelection).length > 0 && (
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            className="ml-2 h-8"
-                            onClick={handleBulkDeactivateSelectedUsers}
-                            disabled={bulkDeactivateUsersMutation.isPending}
-                        >
-                            Deactivate (
-                            {Object.keys(table.getState().rowSelection).length})
-                        </Button>
-                    )}
-                    {/* Column Visibility Dropdown */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-8">
-                                {" "}
-                                {/* Consistent height */}
-                                Columns <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            {table
-                                .getAllColumns()
-                                .filter((column) => column.getCanHide())
-                                .map((column) => {
-                                    const displayName =
-                                        (
-                                            column.columnDef.meta as
-                                                | { displayName?: string }
-                                                | undefined
-                                        )?.displayName || column.id;
-                                    return (
-                                        <DropdownMenuCheckboxItem
-                                            key={column.id}
-                                            className="capitalize"
-                                            checked={column.getIsVisible()}
-                                            onCheckedChange={(value) =>
-                                                column.toggleVisibility(!!value)
-                                            }
-                                        >
-                                            {displayName}
-                                        </DropdownMenuCheckboxItem>
-                                    );
-                                })}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </div>
-            {/* --- Table Rendering --- */}
-            <div className="rounded-md border overflow-y-auto max-h-[80vh]">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow
-                                key={headerGroup.id}
-                                className="bg-secondary"
-                            >
-                                {headerGroup.headers.map((header) => (
-                                    <TableHead
-                                        key={header.id}
-                                        colSpan={header.colSpan}
-                                        className="text-secondary-foreground font-medium h-11 text-center"
-                                        style={{
-                                            width:
-                                                header.getSize() !== 150
-                                                    ? `${header.getSize()}px`
-                                                    : undefined,
-                                        }}
-                                    >
-                                        <div className="flex justify-center">
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext(),
-                                                  )}
-                                        </div>
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={
-                                        row.getIsSelected()
-                                            ? "selected"
-                                            : undefined
-                                    }
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell
-                                            key={cell.id}
-                                            style={{
-                                                width:
-                                                    cell.column.getSize() !==
-                                                    150
-                                                        ? `${cell.column.getSize()}px`
-                                                        : undefined,
-                                            }}
-                                        >
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext(),
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length} // Use columns length
-                                    className="h-24 text-center"
-                                >
-                                    No results.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-            {/* --- Pagination --- */}
-            {/*
+	return (
+		<div className="w-full space-y-4">
+			{/* ... Filter/Column Toggle UI ... */}
+			<div className="flex items-center justify-between">
+				{" "}
+				{/* Changed justify-end to justify-between */}
+				{/* Filter Component */}
+				<DataTableFilter table={table} />
+				{/* Right-aligned Buttons */}
+				<div className="flex items-center space-x-2">
+					{Object.keys(table.getState().rowSelection).length > 0 && (
+						<Button
+							variant="destructive"
+							size="sm"
+							className="ml-2 h-8"
+							onClick={handleBulkDeactivateSelectedUsers}
+							disabled={bulkDeactivateUsersMutation.isPending}
+						>
+							Deactivate ({Object.keys(table.getState().rowSelection).length})
+						</Button>
+					)}
+					{/* Column Visibility Dropdown */}
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" className="h-8">
+								{" "}
+								{/* Consistent height */}
+								Columns <ChevronDown className="ml-2 h-4 w-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							{table
+								.getAllColumns()
+								.filter((column) => column.getCanHide())
+								.map((column) => {
+									const displayName =
+										(
+											column.columnDef.meta as
+												| { displayName?: string }
+												| undefined
+										)?.displayName || column.id;
+									return (
+										<DropdownMenuCheckboxItem
+											key={column.id}
+											className="capitalize"
+											checked={column.getIsVisible()}
+											onCheckedChange={(value) =>
+												column.toggleVisibility(!!value)
+											}
+										>
+											{displayName}
+										</DropdownMenuCheckboxItem>
+									);
+								})}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+			</div>
+			{/* --- Table Rendering --- */}
+			<div className="rounded-md border overflow-y-auto max-h-[80vh]">
+				<Table>
+					<TableHeader>
+						{table.getHeaderGroups().map((headerGroup) => (
+							<TableRow key={headerGroup.id} className="bg-secondary">
+								{headerGroup.headers.map((header) => (
+									<TableHead
+										key={header.id}
+										colSpan={header.colSpan}
+										className="text-secondary-foreground font-medium h-11 text-center"
+										style={{
+											width:
+												header.getSize() !== 150
+													? `${header.getSize()}px`
+													: undefined,
+										}}
+									>
+										<div className="flex justify-center">
+											{header.isPlaceholder
+												? null
+												: flexRender(
+														header.column.columnDef.header,
+														header.getContext(),
+													)}
+										</div>
+									</TableHead>
+								))}
+							</TableRow>
+						))}
+					</TableHeader>
+					<TableBody>
+						{table.getRowModel().rows?.length ? (
+							table.getRowModel().rows.map((row) => (
+								<TableRow
+									key={row.id}
+									data-state={row.getIsSelected() ? "selected" : undefined}
+								>
+									{row.getVisibleCells().map((cell) => (
+										<TableCell
+											key={cell.id}
+											style={{
+												width:
+													cell.column.getSize() !== 150
+														? `${cell.column.getSize()}px`
+														: undefined,
+											}}
+										>
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						) : (
+							<TableRow>
+								<TableCell
+									colSpan={columns.length} // Use columns length
+									className="h-24 text-center"
+								>
+									No results.
+								</TableCell>
+							</TableRow>
+						)}
+					</TableBody>
+				</Table>
+			</div>
+			{/* --- Pagination --- */}
+			{/*
             <div className="flex items-center justify-between">
                 <div className="flex-1 text-sm text-muted-foreground">
                     {table.getFilteredSelectedRowModel().rows.length} of{" "}
@@ -1132,49 +1060,49 @@ export function UserDataTable() {
                 </div>
             </div>
             */}
-            {/* --- Dialogs --- */}
-            {selectedUser && (
-                <EditUserFormDialog
-                    isOpen={editDialogOpen}
-                    onClose={() => {
-                        setEditDialogOpen(false);
-                        setSelectedUser(null);
-                    }}
-                    isLoading={updateUserMutation.isPending}
-                    onSubmit={handleEditUserSubmit}
-                    user={selectedUser}
-                    roles={ROLES}
-                    departments={departmentsData}
-                />
-            )}
+			{/* --- Dialogs --- */}
+			{selectedUser && (
+				<EditUserFormDialog
+					isOpen={editDialogOpen}
+					onClose={() => {
+						setEditDialogOpen(false);
+						setSelectedUser(null);
+					}}
+					isLoading={updateUserMutation.isPending}
+					onSubmit={handleEditUserSubmit}
+					user={selectedUser}
+					roles={ROLES}
+					departments={departmentsData}
+				/>
+			)}
 
-            {selectedUser && (
-                <DeleteConfirmDialog
-                    isOpen={deleteDialogOpen}
-                    onClose={() => {
-                        setDeleteDialogOpen(false);
-                        setSelectedUser(null);
-                    }}
-                    title="Deactivate User"
-                    description={`Are you sure you want to deactivate user ${selectedUser.firstName} ${selectedUser.lastName}? This action will mark the user as inactive.`}
-                    onConfirm={handleDeactivateUser}
-                    isLoading={bulkDeactivateUsersMutation.isPending}
-                />
-            )}
+			{selectedUser && (
+				<DeleteConfirmDialog
+					isOpen={deleteDialogOpen}
+					onClose={() => {
+						setDeleteDialogOpen(false);
+						setSelectedUser(null);
+					}}
+					title="Deactivate User"
+					description={`Are you sure you want to deactivate user ${selectedUser.firstName} ${selectedUser.lastName}? This action will mark the user as inactive.`}
+					onConfirm={handleDeactivateUser}
+					isLoading={bulkDeactivateUsersMutation.isPending}
+				/>
+			)}
 
-            {selectedUser && (
-                <ActivateConfirmDialog
-                    isOpen={activateDialogOpen}
-                    onClose={() => {
-                        setActivateDialogOpen(false);
-                        setSelectedUser(null);
-                    }}
-                    title="Activate User"
-                    description={`Are you sure you want to activate user ${selectedUser.firstName} ${selectedUser.lastName}?`}
-                    onConfirm={handleActivateUser}
-                    isLoading={activateUserMutation.isPending}
-                />
-            )}
-        </div>
-    );
+			{selectedUser && (
+				<ActivateConfirmDialog
+					isOpen={activateDialogOpen}
+					onClose={() => {
+						setActivateDialogOpen(false);
+						setSelectedUser(null);
+					}}
+					title="Activate User"
+					description={`Are you sure you want to activate user ${selectedUser.firstName} ${selectedUser.lastName}?`}
+					onConfirm={handleActivateUser}
+					isLoading={activateUserMutation.isPending}
+				/>
+			)}
+		</div>
+	);
 }

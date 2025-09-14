@@ -510,14 +510,14 @@ export type EquipmentStatus = v.InferInput<typeof EquipmentStatusSchema>;
 
 export const equipmentDataSchema = v.object({
 	name: v.pipe(v.string(), v.nonEmpty("Equipment Name is required")),
-	brand: v.pipe(v.string()),
+	brand: v.optional(v.pipe(v.string())),
 	availability: v.boolean("Availability is required"),
 	quantity: v.pipe(
 		v.number("Quantity must be a number"),
 		v.minValue(0, "Quantity cannot be negative"),
 	),
 	status: EquipmentStatusSchema,
-	serialNo: v.pipe(v.string()),
+	serialNo: v.optional(v.pipe(v.string())),
 	ownerId: v.optional(
 		v.pipe(v.string(), v.uuid("Owner ID must be a valid UUID")),
 	),

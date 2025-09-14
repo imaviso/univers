@@ -1,23 +1,22 @@
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import NotFound from "@/components/404NotFound";
 import { Sidebar } from "@/components/sideBar";
 import { useWebSocketNotifications } from "@/hooks/use-websocket-notifications";
-import { createFileRoute } from "@tanstack/react-router";
-import { Outlet } from "@tanstack/react-router";
 export const Route = createFileRoute("/app")({
-    component: App,
-    notFoundComponent: () => <NotFound />,
+	component: App,
+	notFoundComponent: () => <NotFound />,
 });
 
 function App() {
-    useWebSocketNotifications();
-    return (
-        <div className="flex h-screen overflow-y-hidden">
-            <Sidebar />
-            <div className="flex-1 relative flex h-full w-full flex-col overflow-y-auto overflow-x-hidden">
-                <main>
-                    <Outlet />
-                </main>
-            </div>
-        </div>
-    );
+	useWebSocketNotifications();
+	return (
+		<div className="flex h-screen overflow-y-hidden">
+			<Sidebar />
+			<div className="flex-1 relative flex h-full w-full flex-col overflow-y-auto overflow-x-hidden">
+				<main>
+					<Outlet />
+				</main>
+			</div>
+		</div>
+	);
 }

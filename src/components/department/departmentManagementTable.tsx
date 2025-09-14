@@ -1,458 +1,432 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+	type ColumnDef,
+	type ColumnFiltersState,
+	type ColumnMeta,
+	flexRender,
+	getCoreRowModel,
+	getFacetedRowModel,
+	getFacetedUniqueValues,
+	getFilteredRowModel,
+	getSortedRowModel,
+	type SortingState,
+	useReactTable,
+	type VisibilityState,
+} from "@tanstack/react-table";
+import { useAtom } from "jotai";
+import {
+	ArrowUpDown,
+	Building,
+	CalendarIcon,
+	ChevronDown,
+	Loader2, // For loading states
+	MoreHorizontal, // For create buttons
+	TextIcon, // For Description
+	Trash2, // For Assign Head action
+	UserIcon,
+} from "lucide-react";
+import * as React from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { DataTableFilter } from "@/components/data-table-filter";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
 } from "@/components/ui/table";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import { editDepartmentDialogAtom, selectedDepartmentAtom } from "@/lib/atoms";
 import { defineMeta, filterFn } from "@/lib/filters";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import type { DepartmentDTO } from "@/lib/types";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import {
-    type ColumnDef,
-    type ColumnFiltersState,
-    type ColumnMeta,
-    type SortingState,
-    type VisibilityState,
-    flexRender,
-    getCoreRowModel,
-    getFacetedRowModel,
-    getFacetedUniqueValues,
-    getFilteredRowModel,
-    getSortedRowModel,
-    useReactTable,
-} from "@tanstack/react-table";
-import { useAtom } from "jotai";
-import {
-    ArrowUpDown,
-    Building,
-    CalendarIcon,
-    ChevronDown,
-    Loader2, // For loading states
-    MoreHorizontal, // For create buttons
-    TextIcon, // For Description
-    Trash2, // For Assign Head action
-    UserIcon,
-} from "lucide-react";
-import * as React from "react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { useBulkDeleteDepartmentsMutation } from "../../lib/query";
 import { EditDepartmentFormDialog } from "./editDepartmentFormDialog";
 
 // Custom hook for persistent state
 function usePersistentState<T>(
-    key: string,
-    initialValue: T,
+	key: string,
+	initialValue: T,
 ): [T, (value: T | ((prevState: T) => T)) => void] {
-    const [state, setState] = useState<T>(() => {
-        try {
-            const storedValue = localStorage.getItem(key);
-            if (storedValue) {
-                return JSON.parse(storedValue);
-            }
-            return initialValue;
-        } catch (error) {
-            console.error(
-                "Error reading from localStorage for key:",
-                key,
-                error,
-            );
-            return initialValue;
-        }
-    });
+	const [state, setState] = useState<T>(() => {
+		try {
+			const storedValue = localStorage.getItem(key);
+			if (storedValue) {
+				return JSON.parse(storedValue);
+			}
+			return initialValue;
+		} catch (error) {
+			console.error("Error reading from localStorage for key:", key, error);
+			return initialValue;
+		}
+	});
 
-    useEffect(() => {
-        try {
-            localStorage.setItem(key, JSON.stringify(state));
-        } catch (error) {
-            console.error("Error writing to localStorage for key:", key, error);
-        }
-    }, [key, state]);
+	useEffect(() => {
+		try {
+			localStorage.setItem(key, JSON.stringify(state));
+		} catch (error) {
+			console.error("Error writing to localStorage for key:", key, error);
+		}
+	}, [key, state]);
 
-    return [state, setState];
+	return [state, setState];
 }
 
 export function DepartmentDataTable() {
-    const [sorting, setSorting] = usePersistentState<SortingState>(
-        "departmentTableSorting_v1",
-        [],
-    );
-    const [columnFilters, setColumnFilters] =
-        usePersistentState<ColumnFiltersState>(
-            "departmentTableColumnFilters_v1",
-            [],
-        );
-    const [columnVisibility, setColumnVisibility] =
-        usePersistentState<VisibilityState>(
-            "departmentTableColumnVisibility_v1",
-            {},
-        );
-    const [rowSelection, setRowSelection] = React.useState({});
+	const [sorting, setSorting] = usePersistentState<SortingState>(
+		"departmentTableSorting_v1",
+		[],
+	);
+	const [columnFilters, setColumnFilters] =
+		usePersistentState<ColumnFiltersState>(
+			"departmentTableColumnFilters_v1",
+			[],
+		);
+	const [columnVisibility, setColumnVisibility] =
+		usePersistentState<VisibilityState>(
+			"departmentTableColumnVisibility_v1",
+			{},
+		);
+	const [rowSelection, setRowSelection] = React.useState({});
 
-    const [editDialogOpen, setEditDialogOpen] = useAtom(
-        editDepartmentDialogAtom,
-    );
-    const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] =
-        React.useState(false);
-    // const [assignHeadOpen, setAssignHeadOpen] = useAtom(assignHeadDialogAtom);
-    const [selectedDepartment, setSelectedDepartment] = useAtom(
-        selectedDepartmentAtom,
-    );
+	const [editDialogOpen, setEditDialogOpen] = useAtom(editDepartmentDialogAtom);
+	const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = React.useState(false);
+	// const [assignHeadOpen, setAssignHeadOpen] = useAtom(assignHeadDialogAtom);
+	const [selectedDepartment, setSelectedDepartment] = useAtom(
+		selectedDepartmentAtom,
+	);
 
-    // Persistent pagination state
-    // const [pageSize, setPageSize] = usePersistentState<number>(
-    //     "departmentTablePageSize_v1",
-    //     10,
-    // );
-    // const [pageIndex, setPageIndex] = usePersistentState<number>(
-    //     "departmentTablePageIndex_v1",
-    //     0,
-    // );
+	// Persistent pagination state
+	// const [pageSize, setPageSize] = usePersistentState<number>(
+	//     "departmentTablePageSize_v1",
+	//     10,
+	// );
+	// const [pageIndex, setPageIndex] = usePersistentState<number>(
+	//     "departmentTablePageIndex_v1",
+	//     0,
+	// );
 
-    // Fetch departments and users
-    const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
-    const { data: usersData } = useSuspenseQuery(usersQueryOptions);
+	// Fetch departments and users
+	const { data: departmentsData } = useSuspenseQuery(departmentsQueryOptions);
+	const { data: usersData } = useSuspenseQuery(usersQueryOptions);
 
-    const bulkDeleteDepartmentsMutation = useBulkDeleteDepartmentsMutation();
+	const bulkDeleteDepartmentsMutation = useBulkDeleteDepartmentsMutation();
 
-    // const assignHeadMutation = useMutation({
-    // 	mutationFn: ({
-    // 		departmentId,
-    // 		userId,
-    // 	}: {
-    // 		departmentId: number;
-    // 		userId: number;
-    // 	}) => assignDepartmentHead(departmentId, userId),
-    // 	// Optimistic update for assign head
-    // 	onMutate: async ({ departmentId, userId }) => {
-    // 		await queryClient.cancelQueries({
-    // 			queryKey: departmentsQueryOptions.queryKey,
-    // 		});
-    // 		const previousDepartments = queryClient.getQueryData<DepartmentType[]>(
-    // 			departmentsQueryOptions.queryKey,
-    // 		);
+	// const assignHeadMutation = useMutation({
+	// 	mutationFn: ({
+	// 		departmentId,
+	// 		userId,
+	// 	}: {
+	// 		departmentId: number;
+	// 		userId: number;
+	// 	}) => assignDepartmentHead(departmentId, userId),
+	// 	// Optimistic update for assign head
+	// 	onMutate: async ({ departmentId, userId }) => {
+	// 		await queryClient.cancelQueries({
+	// 			queryKey: departmentsQueryOptions.queryKey,
+	// 		});
+	// 		const previousDepartments = queryClient.getQueryData<DepartmentType[]>(
+	// 			departmentsQueryOptions.queryKey,
+	// 		);
 
-    // 		const deptHeadUser = usersData?.find((u: UserType) => Number(u.id) === userId);
-    // 		const deptHeadName = deptHeadUser
-    // 			? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
-    // 			: null;
+	// 		const deptHeadUser = usersData?.find((u: UserType) => Number(u.id) === userId);
+	// 		const deptHeadName = deptHeadUser
+	// 			? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
+	// 			: null;
 
-    // 		queryClient.setQueryData<DepartmentType[]>(
-    // 			departmentsQueryOptions.queryKey,
-    // 			(old = []) =>
-    // 				old.map((dept) =>
-    // 					dept.id === departmentId
-    // 						? {
-    // 								...dept,
-    // 								deptHeadId: userId,
-    // 								deptHeadName: deptHeadName,
-    // 								updatedAt: new Date().toISOString(),
-    // 							}
-    // 						: dept,
-    // 				),
-    // 		);
-    // 		return { previousDepartments };
-    // 	},
-    // 	onError: (err, _variables, context) => {
-    // 		if (context?.previousDepartments) {
-    // 			queryClient.setQueryData(
-    // 				departmentsQueryOptions.queryKey,
-    // 				context.previousDepartments,
-    // 			);
-    // 		}
-    // 		toast.error(
-    // 			err instanceof Error ? err.message : "Failed to assign department head",
-    // 		);
-    // 	},
-    // 	onSuccess: (data) => {
-    // 		toast.success(data || "Department head assigned successfully");
-    // 		setAssignHeadOpen(false);
-    // 		setSelectedDepartment(null);
-    // 	},
-    // 	onSettled: () => {
-    // 		queryClient.invalidateQueries({
-    // 			queryKey: departmentsQueryOptions.queryKey,
-    // 		});
-    // 		// Invalidate users query if head assignment might change user roles/data shown elsewhere
-    // 		queryClient.invalidateQueries({
-    // 			queryKey: usersQueryOptions.queryKey,
-    // 		});
-    // 	},
-    // });
+	// 		queryClient.setQueryData<DepartmentType[]>(
+	// 			departmentsQueryOptions.queryKey,
+	// 			(old = []) =>
+	// 				old.map((dept) =>
+	// 					dept.id === departmentId
+	// 						? {
+	// 								...dept,
+	// 								deptHeadId: userId,
+	// 								deptHeadName: deptHeadName,
+	// 								updatedAt: new Date().toISOString(),
+	// 							}
+	// 						: dept,
+	// 				),
+	// 		);
+	// 		return { previousDepartments };
+	// 	},
+	// 	onError: (err, _variables, context) => {
+	// 		if (context?.previousDepartments) {
+	// 			queryClient.setQueryData(
+	// 				departmentsQueryOptions.queryKey,
+	// 				context.previousDepartments,
+	// 			);
+	// 		}
+	// 		toast.error(
+	// 			err instanceof Error ? err.message : "Failed to assign department head",
+	// 		);
+	// 	},
+	// 	onSuccess: (data) => {
+	// 		toast.success(data || "Department head assigned successfully");
+	// 		setAssignHeadOpen(false);
+	// 		setSelectedDepartment(null);
+	// 	},
+	// 	onSettled: () => {
+	// 		queryClient.invalidateQueries({
+	// 			queryKey: departmentsQueryOptions.queryKey,
+	// 		});
+	// 		// Invalidate users query if head assignment might change user roles/data shown elsewhere
+	// 		queryClient.invalidateQueries({
+	// 			queryKey: usersQueryOptions.queryKey,
+	// 		});
+	// 	},
+	// });
 
-    // --- Event Handlers ---
-    const handleBulkDelete = () => {
-        const selectedRows = table.getFilteredSelectedRowModel().rows;
-        if (selectedRows.length === 0) {
-            toast.info("No departments selected for deletion.");
-            return;
-        }
-        setBulkDeleteDialogOpen(true);
-    };
+	// --- Event Handlers ---
+	const handleBulkDelete = () => {
+		const selectedRows = table.getFilteredSelectedRowModel().rows;
+		if (selectedRows.length === 0) {
+			toast.info("No departments selected for deletion.");
+			return;
+		}
+		setBulkDeleteDialogOpen(true);
+	};
 
-    // const handleDeleteDepartment = () => { ... }; // Removed for bulk delete
+	// const handleDeleteDepartment = () => { ... }; // Removed for bulk delete
 
-    // Handler for Assign Head Dialog submission
-    // const handleAssignHead = (userId: number) => {
-    // 	if (selectedDepartment) {
-    // 		assignHeadMutation.mutate({
-    // 			departmentId: selectedDepartment.id,
-    // 			userId,
-    // 		});
-    // 	}
-    // };
+	// Handler for Assign Head Dialog submission
+	// const handleAssignHead = (userId: number) => {
+	// 	if (selectedDepartment) {
+	// 		assignHeadMutation.mutate({
+	// 			departmentId: selectedDepartment.id,
+	// 			userId,
+	// 		});
+	// 	}
+	// };
 
-    const handleConfirmBulkDelete = () => {
-        const selectedRows = table.getFilteredSelectedRowModel().rows;
-        if (selectedRows.length > 0) {
-            const selectedPublicIds = selectedRows.map(
-                (row) => row.original.publicId,
-            );
-            bulkDeleteDepartmentsMutation.mutate(selectedPublicIds);
-        }
-        setBulkDeleteDialogOpen(false);
-    };
+	const handleConfirmBulkDelete = () => {
+		const selectedRows = table.getFilteredSelectedRowModel().rows;
+		if (selectedRows.length > 0) {
+			const selectedPublicIds = selectedRows.map(
+				(row) => row.original.publicId,
+			);
+			bulkDeleteDepartmentsMutation.mutate(selectedPublicIds);
+		}
+		setBulkDeleteDialogOpen(false);
+	};
 
-    const columns: ColumnDef<DepartmentDTO>[] = React.useMemo(
-        () => [
-            {
-                id: "select",
-                header: ({ table }) => (
-                    <Checkbox
-                        checked={
-                            table.getIsAllPageRowsSelected() ||
-                            (table.getIsSomePageRowsSelected() &&
-                                "indeterminate")
-                        }
-                        onCheckedChange={(value) =>
-                            table.toggleAllPageRowsSelected(!!value)
-                        }
-                        aria-label="Select all"
-                        className="translate-y-[2px]"
-                    />
-                ),
-                cell: ({ row }) => (
-                    <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
-                        aria-label="Select row"
-                        className="translate-y-[2px]"
-                    />
-                ),
-                enableSorting: false,
-                enableHiding: false,
-            },
-            {
-                id: "id",
-                accessorFn: (row: DepartmentDTO) => String(row.publicId),
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        ID
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                cell: ({ row }) => <div>{row.getValue("id")}</div>,
-                filterFn: filterFn("text"),
-                meta: defineMeta((row: DepartmentDTO) => String(row.publicId), {
-                    displayName: "ID",
-                    type: "text",
-                    icon: Building,
-                }) as ColumnMeta<DepartmentDTO, unknown>,
-            },
-            {
-                accessorKey: "name",
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        Name
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                cell: ({ row }) => (
-                    <div className="font-medium">{row.getValue("name")}</div>
-                ),
-                filterFn: filterFn("text"),
-                meta: defineMeta((row: DepartmentDTO) => row.name, {
-                    displayName: "Name",
-                    type: "text",
-                    icon: Building,
-                }) as ColumnMeta<DepartmentDTO, unknown>,
-            },
-            {
-                accessorKey: "description",
-                header: "Description",
-                cell: ({ row }) => (
-                    <div className="text-sm text-muted-foreground truncate max-w-xs">
-                        {row.getValue("description") || "-"}
-                    </div>
-                ),
-                filterFn: filterFn("text"),
-                meta: defineMeta((row: DepartmentDTO) => row.description, {
-                    displayName: "Description",
-                    type: "text",
-                    icon: TextIcon,
-                }) as ColumnMeta<DepartmentDTO, unknown>,
-            },
-            {
-                accessorKey: "deptHead",
-                id: "deptHead",
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        Department Head
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                accessorFn: (row: DepartmentDTO) => {
-                    const deptHeadUser = row.deptHead;
-                    return deptHeadUser
-                        ? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
-                        : "Unassigned";
-                },
-                cell: ({ row }) => {
-                    const deptHeadUser = row.original.deptHead;
-                    return (
-                        <div>
-                            {deptHeadUser ? (
-                                `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
-                            ) : (
-                                <span className="text-muted-foreground">
-                                    Unassigned
-                                </span>
-                            )}
-                        </div>
-                    );
-                },
-                filterFn: filterFn("text"),
-                meta: defineMeta(
-                    (row: DepartmentDTO) => {
-                        const deptHeadUser = row.deptHead;
-                        return deptHeadUser
-                            ? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
-                            : "Unassigned";
-                    },
-                    {
-                        displayName: "Department Head",
-                        type: "text",
-                        icon: UserIcon,
-                    },
-                ) as ColumnMeta<DepartmentDTO, unknown>,
-            },
-            {
-                accessorKey: "createdAt",
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        Created At
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                cell: ({ row }) => {
-                    const date = new Date(row.getValue("createdAt"));
-                    const formatted = new Intl.DateTimeFormat("en-US", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                    }).format(date);
-                    return <div className="text-right">{formatted}</div>;
-                },
-                filterFn: filterFn("date"),
-                meta: defineMeta(
-                    (row: DepartmentDTO) => new Date(row.createdAt),
-                    {
-                        displayName: "Created At",
-                        type: "date",
-                        icon: CalendarIcon,
-                    },
-                ) as ColumnMeta<DepartmentDTO, unknown>,
-            },
-            {
-                accessorKey: "updatedAt",
-                header: ({ column }) => (
-                    <Button
-                        variant="ghost"
-                        onClick={() =>
-                            column.toggleSorting(column.getIsSorted() === "asc")
-                        }
-                    >
-                        Updated At
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                ),
-                cell: ({ row }) => {
-                    const date = new Date(row.getValue("updatedAt"));
-                    const formatted = new Intl.DateTimeFormat("en-US", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                    }).format(date);
-                    return <div className="text-right">{formatted}</div>;
-                },
-                filterFn: filterFn("date"),
-                meta: defineMeta(
-                    (row: DepartmentDTO) => new Date(row.updatedAt),
-                    {
-                        displayName: "Updated At",
-                        type: "date",
-                        icon: CalendarIcon,
-                    },
-                ) as ColumnMeta<DepartmentDTO, unknown>,
-            },
-            {
-                id: "actions",
-                cell: ({ row, cell }) => {
-                    const department = row.original;
-                    return (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        setSelectedDepartment(department);
-                                        setEditDialogOpen(true);
-                                    }}
-                                >
-                                    <Building className="mr-2 h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-                                {/* <DropdownMenuItem
+	const columns: ColumnDef<DepartmentDTO>[] = React.useMemo(
+		() => [
+			{
+				id: "select",
+				header: ({ table }) => (
+					<Checkbox
+						checked={
+							table.getIsAllPageRowsSelected() ||
+							(table.getIsSomePageRowsSelected() && "indeterminate")
+						}
+						onCheckedChange={(value) =>
+							table.toggleAllPageRowsSelected(!!value)
+						}
+						aria-label="Select all"
+						className="translate-y-[2px]"
+					/>
+				),
+				cell: ({ row }) => (
+					<Checkbox
+						checked={row.getIsSelected()}
+						onCheckedChange={(value) => row.toggleSelected(!!value)}
+						aria-label="Select row"
+						className="translate-y-[2px]"
+					/>
+				),
+				enableSorting: false,
+				enableHiding: false,
+			},
+			{
+				id: "id",
+				accessorFn: (row: DepartmentDTO) => String(row.publicId),
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						ID
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => <div>{row.getValue("id")}</div>,
+				filterFn: filterFn("text"),
+				meta: defineMeta((row: DepartmentDTO) => String(row.publicId), {
+					displayName: "ID",
+					type: "text",
+					icon: Building,
+				}) as ColumnMeta<DepartmentDTO, unknown>,
+			},
+			{
+				accessorKey: "name",
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						Name
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => (
+					<div className="font-medium">{row.getValue("name")}</div>
+				),
+				filterFn: filterFn("text"),
+				meta: defineMeta((row: DepartmentDTO) => row.name, {
+					displayName: "Name",
+					type: "text",
+					icon: Building,
+				}) as ColumnMeta<DepartmentDTO, unknown>,
+			},
+			{
+				accessorKey: "description",
+				header: "Description",
+				cell: ({ row }) => (
+					<div className="text-sm text-muted-foreground truncate max-w-xs">
+						{row.getValue("description") || "-"}
+					</div>
+				),
+				filterFn: filterFn("text"),
+				meta: defineMeta((row: DepartmentDTO) => row.description, {
+					displayName: "Description",
+					type: "text",
+					icon: TextIcon,
+				}) as ColumnMeta<DepartmentDTO, unknown>,
+			},
+			{
+				accessorKey: "deptHead",
+				id: "deptHead",
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						Department Head
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				accessorFn: (row: DepartmentDTO) => {
+					const deptHeadUser = row.deptHead;
+					return deptHeadUser
+						? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
+						: "Unassigned";
+				},
+				cell: ({ row }) => {
+					const deptHeadUser = row.original.deptHead;
+					return (
+						<div>
+							{deptHeadUser ? (
+								`${deptHeadUser.firstName} ${deptHeadUser.lastName}`
+							) : (
+								<span className="text-muted-foreground">Unassigned</span>
+							)}
+						</div>
+					);
+				},
+				filterFn: filterFn("text"),
+				meta: defineMeta(
+					(row: DepartmentDTO) => {
+						const deptHeadUser = row.deptHead;
+						return deptHeadUser
+							? `${deptHeadUser.firstName} ${deptHeadUser.lastName}`
+							: "Unassigned";
+					},
+					{
+						displayName: "Department Head",
+						type: "text",
+						icon: UserIcon,
+					},
+				) as ColumnMeta<DepartmentDTO, unknown>,
+			},
+			{
+				accessorKey: "createdAt",
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						Created At
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => {
+					const date = new Date(row.getValue("createdAt"));
+					const formatted = new Intl.DateTimeFormat("en-US", {
+						dateStyle: "medium",
+						timeStyle: "short",
+					}).format(date);
+					return <div className="text-right">{formatted}</div>;
+				},
+				filterFn: filterFn("date"),
+				meta: defineMeta((row: DepartmentDTO) => new Date(row.createdAt), {
+					displayName: "Created At",
+					type: "date",
+					icon: CalendarIcon,
+				}) as ColumnMeta<DepartmentDTO, unknown>,
+			},
+			{
+				accessorKey: "updatedAt",
+				header: ({ column }) => (
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					>
+						Updated At
+						<ArrowUpDown className="ml-2 h-4 w-4" />
+					</Button>
+				),
+				cell: ({ row }) => {
+					const date = new Date(row.getValue("updatedAt"));
+					const formatted = new Intl.DateTimeFormat("en-US", {
+						dateStyle: "medium",
+						timeStyle: "short",
+					}).format(date);
+					return <div className="text-right">{formatted}</div>;
+				},
+				filterFn: filterFn("date"),
+				meta: defineMeta((row: DepartmentDTO) => new Date(row.updatedAt), {
+					displayName: "Updated At",
+					type: "date",
+					icon: CalendarIcon,
+				}) as ColumnMeta<DepartmentDTO, unknown>,
+			},
+			{
+				id: "actions",
+				cell: ({ row, cell }) => {
+					const department = row.original;
+					return (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" className="h-8 w-8 p-0">
+									<span className="sr-only">Open menu</span>
+									<MoreHorizontal className="h-4 w-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuLabel>Actions</DropdownMenuLabel>
+								<DropdownMenuItem
+									onClick={() => {
+										setSelectedDepartment(department);
+										setEditDialogOpen(true);
+									}}
+								>
+									<Building className="mr-2 h-4 w-4" /> Edit
+								</DropdownMenuItem>
+								{/* <DropdownMenuItem
                                     onClick={() => {
                                         setSelectedDepartment(department);
                                         // setAssignHeadOpen(true); // TODO: Re-enable if needed
@@ -460,194 +434,190 @@ export function DepartmentDataTable() {
                                 >
                                     <UserCog className="mr-2 h-4 w-4" /> Assign Head
                                 </DropdownMenuItem> */}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => {
-                                        // event.stopPropagation(); // Optional: if you want to prevent other click handlers on the row
-                                        const { table } = cell.getContext(); // Access table instance
-                                        table.resetRowSelection(true); // Clear other selections
-                                        row.toggleSelected(true); // Select current row
-                                        setSelectedDepartment(department); // Still useful for context if dialog shows name
-                                        setBulkDeleteDialogOpen(true);
-                                    }}
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    );
-                },
-                enableHiding: false,
-            },
-        ],
-        [setEditDialogOpen, setSelectedDepartment],
-    );
+								<DropdownMenuSeparator />
+								<DropdownMenuItem
+									className="text-destructive"
+									onClick={() => {
+										// event.stopPropagation(); // Optional: if you want to prevent other click handlers on the row
+										const { table } = cell.getContext(); // Access table instance
+										table.resetRowSelection(true); // Clear other selections
+										row.toggleSelected(true); // Select current row
+										setSelectedDepartment(department); // Still useful for context if dialog shows name
+										setBulkDeleteDialogOpen(true);
+									}}
+								>
+									<Trash2 className="mr-2 h-4 w-4" /> Delete
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					);
+				},
+				enableHiding: false,
+			},
+		],
+		[setEditDialogOpen, setSelectedDepartment],
+	);
 
-    // --- Table Instance ---
-    const table = useReactTable({
-        data: departmentsData ?? [],
-        columns,
-        enableRowSelection: true,
-        onRowSelectionChange: setRowSelection,
-        state: {
-            sorting,
-            columnVisibility,
-            rowSelection,
-            columnFilters,
-            // pagination: {
-            //     pageIndex,
-            //     pageSize,
-            // },
-        },
+	// --- Table Instance ---
+	const table = useReactTable({
+		data: departmentsData ?? [],
+		columns,
+		enableRowSelection: true,
+		onRowSelectionChange: setRowSelection,
+		state: {
+			sorting,
+			columnVisibility,
+			rowSelection,
+			columnFilters,
+			// pagination: {
+			//     pageIndex,
+			//     pageSize,
+			// },
+		},
 
-        onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
-        onColumnVisibilityChange: setColumnVisibility,
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        // getPaginationRowModel: getPaginationRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFacetedRowModel: getFacetedRowModel(),
-        getFacetedUniqueValues: getFacetedUniqueValues(),
-        // manualPagination: false,
-        // pageCount: -1,
-        // onPaginationChange: (updater) => {
-        //     if (typeof updater === "function") {
-        //         const newPaginationState = updater(table.getState().pagination);
-        //         setPageIndex(newPaginationState.pageIndex);
-        //         setPageSize(newPaginationState.pageSize);
-        //     } else {
-        //         setPageIndex(updater.pageIndex);
-        //         setPageSize(updater.pageSize);
-        //     }
-        // },
-    });
+		onSortingChange: setSorting,
+		onColumnFiltersChange: setColumnFilters,
+		onColumnVisibilityChange: setColumnVisibility,
+		getCoreRowModel: getCoreRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		// getPaginationRowModel: getPaginationRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+		getFacetedRowModel: getFacetedRowModel(),
+		getFacetedUniqueValues: getFacetedUniqueValues(),
+		// manualPagination: false,
+		// pageCount: -1,
+		// onPaginationChange: (updater) => {
+		//     if (typeof updater === "function") {
+		//         const newPaginationState = updater(table.getState().pagination);
+		//         setPageIndex(newPaginationState.pageIndex);
+		//         setPageSize(newPaginationState.pageSize);
+		//     } else {
+		//         setPageIndex(updater.pageIndex);
+		//         setPageSize(updater.pageSize);
+		//     }
+		// },
+	});
 
-    // --- Render ---
-    return (
-        <div className="w-full space-y-4">
-            {/* Filters */}
-            <div className="flex flex-1 items-center space-x-2">
-                <DataTableFilter table={table} />
-                <div className="ml-auto flex items-center space-x-2">
-                    {table.getFilteredSelectedRowModel().rows.length > 0 && (
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            className="h-8"
-                            onClick={handleBulkDelete}
-                            disabled={bulkDeleteDepartmentsMutation.isPending}
-                        >
-                            {bulkDeleteDepartmentsMutation.isPending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Trash2 className="mr-2 h-4 w-4" />
-                            )}
-                            Delete (
-                            {table.getFilteredSelectedRowModel().rows.length})
-                        </Button>
-                    )}
-                </div>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="h-8 gap ml-2">
-                            Columns <ChevronDown className="ml-2 h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        {table
-                            .getAllColumns()
-                            .filter((column) => column.getCanHide())
-                            .map((column) => {
-                                const displayName =
-                                    (
-                                        column.columnDef.meta as
-                                            | { displayName?: string }
-                                            | undefined
-                                    )?.displayName || column.id;
-                                return (
-                                    <DropdownMenuCheckboxItem
-                                        key={column.id}
-                                        className="capitalize"
-                                        checked={column.getIsVisible()}
-                                        onCheckedChange={(value) =>
-                                            column.toggleVisibility(!!value)
-                                        }
-                                    >
-                                        {displayName}
-                                    </DropdownMenuCheckboxItem>
-                                );
-                            })}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
+	// --- Render ---
+	return (
+		<div className="w-full space-y-4">
+			{/* Filters */}
+			<div className="flex flex-1 items-center space-x-2">
+				<DataTableFilter table={table} />
+				<div className="ml-auto flex items-center space-x-2">
+					{table.getFilteredSelectedRowModel().rows.length > 0 && (
+						<Button
+							variant="destructive"
+							size="sm"
+							className="h-8"
+							onClick={handleBulkDelete}
+							disabled={bulkDeleteDepartmentsMutation.isPending}
+						>
+							{bulkDeleteDepartmentsMutation.isPending ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : (
+								<Trash2 className="mr-2 h-4 w-4" />
+							)}
+							Delete ({table.getFilteredSelectedRowModel().rows.length})
+						</Button>
+					)}
+				</div>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button variant="outline" className="h-8 gap ml-2">
+							Columns <ChevronDown className="ml-2 h-4 w-4" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						{table
+							.getAllColumns()
+							.filter((column) => column.getCanHide())
+							.map((column) => {
+								const displayName =
+									(
+										column.columnDef.meta as
+											| { displayName?: string }
+											| undefined
+									)?.displayName || column.id;
+								return (
+									<DropdownMenuCheckboxItem
+										key={column.id}
+										className="capitalize"
+										checked={column.getIsVisible()}
+										onCheckedChange={(value) =>
+											column.toggleVisibility(!!value)
+										}
+									>
+										{displayName}
+									</DropdownMenuCheckboxItem>
+								);
+							})}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
 
-            {/* Table */}
-            <div className="rounded-md border overflow-y-auto max-h-[80vh]">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => (
-                                    <TableHead
-                                        key={header.id}
-                                        colSpan={header.colSpan}
-                                        className="text-secondary-foreground bg-secondary text-center font-medium"
-                                        style={{
-                                            width:
-                                                header.getSize() !== 150
-                                                    ? `${header.getSize()}px`
-                                                    : undefined,
-                                        }}
-                                    >
-                                        {header.isPlaceholder
-                                            ? null
-                                            : flexRender(
-                                                  header.column.columnDef
-                                                      .header,
-                                                  header.getContext(),
-                                              )}
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={
-                                        row.getIsSelected() && "selected"
-                                    }
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext(),
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center"
-                                >
-                                    No departments found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+			{/* Table */}
+			<div className="rounded-md border overflow-y-auto max-h-[80vh]">
+				<Table>
+					<TableHeader>
+						{table.getHeaderGroups().map((headerGroup) => (
+							<TableRow key={headerGroup.id}>
+								{headerGroup.headers.map((header) => (
+									<TableHead
+										key={header.id}
+										colSpan={header.colSpan}
+										className="text-secondary-foreground bg-secondary text-center font-medium"
+										style={{
+											width:
+												header.getSize() !== 150
+													? `${header.getSize()}px`
+													: undefined,
+										}}
+									>
+										{header.isPlaceholder
+											? null
+											: flexRender(
+													header.column.columnDef.header,
+													header.getContext(),
+												)}
+									</TableHead>
+								))}
+							</TableRow>
+						))}
+					</TableHeader>
+					<TableBody>
+						{table.getRowModel().rows?.length ? (
+							table.getRowModel().rows.map((row) => (
+								<TableRow
+									key={row.id}
+									data-state={row.getIsSelected() && "selected"}
+								>
+									{row.getVisibleCells().map((cell) => (
+										<TableCell key={cell.id}>
+											{flexRender(
+												cell.column.columnDef.cell,
+												cell.getContext(),
+											)}
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						) : (
+							<TableRow>
+								<TableCell
+									colSpan={columns.length}
+									className="h-24 text-center"
+								>
+									No departments found.
+								</TableCell>
+							</TableRow>
+						)}
+					</TableBody>
+				</Table>
+			</div>
 
-            {/* Pagination */}
-            {/* <div className="flex items-center justify-between space-x-2 py-4">
+			{/* Pagination */}
+			{/* <div className="flex items-center justify-between space-x-2 py-4">
                 <div className="flex-1 text-sm text-muted-foreground">
                     {table.getFilteredSelectedRowModel().rows.length} of{" "}
                     {table.getFilteredRowModel().rows.length} row(s) selected.
@@ -722,28 +692,28 @@ export function DepartmentDataTable() {
                 </div>
             </div> */}
 
-            {selectedDepartment && (
-                <EditDepartmentFormDialog
-                    isOpen={editDialogOpen}
-                    onClose={() => {
-                        setEditDialogOpen(false);
-                        setSelectedDepartment(null);
-                    }}
-                    department={selectedDepartment}
-                    users={usersData ?? []}
-                />
-            )}
-            {bulkDeleteDialogOpen && (
-                <DeleteConfirmDialog
-                    isOpen={bulkDeleteDialogOpen}
-                    onClose={() => setBulkDeleteDialogOpen(false)}
-                    title={`Delete ${table.getFilteredSelectedRowModel().rows.length} Department(s)`}
-                    description={`Are you sure you want to delete the selected ${table.getFilteredSelectedRowModel().rows.length} department(s)? This action cannot be undone.`}
-                    onConfirm={handleConfirmBulkDelete}
-                    isLoading={bulkDeleteDepartmentsMutation.isPending}
-                />
-            )}
-            {/* {selectedDepartment && (
+			{selectedDepartment && (
+				<EditDepartmentFormDialog
+					isOpen={editDialogOpen}
+					onClose={() => {
+						setEditDialogOpen(false);
+						setSelectedDepartment(null);
+					}}
+					department={selectedDepartment}
+					users={usersData ?? []}
+				/>
+			)}
+			{bulkDeleteDialogOpen && (
+				<DeleteConfirmDialog
+					isOpen={bulkDeleteDialogOpen}
+					onClose={() => setBulkDeleteDialogOpen(false)}
+					title={`Delete ${table.getFilteredSelectedRowModel().rows.length} Department(s)`}
+					description={`Are you sure you want to delete the selected ${table.getFilteredSelectedRowModel().rows.length} department(s)? This action cannot be undone.`}
+					onConfirm={handleConfirmBulkDelete}
+					isLoading={bulkDeleteDepartmentsMutation.isPending}
+				/>
+			)}
+			{/* {selectedDepartment && (
                 <DeleteConfirmDialog
                     isOpen={deleteDialogOpen}
                     onClose={() => {
@@ -756,7 +726,7 @@ export function DepartmentDataTable() {
                     isLoading={deleteDepartmentMutation.isPending} // This would need to be updated if re-enabled
                 />
             )} */}
-            {/* {selectedDepartment && (
+			{/* {selectedDepartment && (
 				<AssignHeadDialog
 					isOpen={assignHeadOpen}
 					onClose={() => {
@@ -770,6 +740,6 @@ export function DepartmentDataTable() {
 					isLoading={assignHeadMutation.isPending}
 				/>
 			)} */}
-        </div>
-    );
+		</div>
+	);
 }
