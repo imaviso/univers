@@ -26,10 +26,15 @@ export const accountInfoSchema = v.pipe(
 			v.string(),
 			v.nonEmpty("Email is required"),
 			v.email("The email is badly formatted"),
+			v.regex(
+				/^[^@]+@cit\.edu$/,
+				"Please use your institutional email (cit.edu)",
+			),
 		),
 		telephoneNumber: v.pipe(
 			v.string(),
 			v.minLength(3, "Telephone Number is required"),
+			v.regex(/^\d{3}$/, "Telephone number must be exactly 3 digits"),
 		),
 		phoneNumber: v.optional(
 			v.union([
@@ -460,10 +465,7 @@ export const venueSchema = v.object({
 		v.string("Location is required"),
 		v.nonEmpty("Location is required"),
 	),
-	venueOwnerId: v.pipe(
-		v.string("Venue Owner ID is required"),
-		v.nonEmpty("Venue Owner ID is required"),
-	),
+	venueOwnerId: v.optional(v.pipe(v.string())),
 	image: v.optional(
 		v.pipe(
 			v.instance(File, "Image must be a file."),
@@ -508,14 +510,14 @@ export type EquipmentStatus = v.InferInput<typeof EquipmentStatusSchema>;
 
 export const equipmentDataSchema = v.object({
 	name: v.pipe(v.string(), v.nonEmpty("Equipment Name is required")),
-	brand: v.pipe(v.string(), v.nonEmpty("Brand is required")),
+	brand: v.optional(v.pipe(v.string())),
 	availability: v.boolean("Availability is required"),
 	quantity: v.pipe(
 		v.number("Quantity must be a number"),
 		v.minValue(0, "Quantity cannot be negative"),
 	),
 	status: EquipmentStatusSchema,
-	serialNo: v.pipe(v.string(), v.nonEmpty("Serial Number is required")),
+	serialNo: v.optional(v.pipe(v.string())),
 	ownerId: v.optional(
 		v.pipe(v.string(), v.uuid("Owner ID must be a valid UUID")),
 	),
