@@ -158,6 +158,8 @@ export function formatRole(role: UserRole): string {
 
 	if (role === "SUPER_ADMIN") return "Super Admin";
 
+	if (role === "ADMIN") return "Approver";
+
 	return role
 		.split("_")
 		.map((word) => {

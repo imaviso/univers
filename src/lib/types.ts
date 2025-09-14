@@ -79,7 +79,7 @@ export const ROLES = [
 	{ value: "SUPER_ADMIN", label: "Super Admin" },
 	{ value: "VP_ADMIN", label: "VP Admin" },
 	{ value: "VPAA", label: "VP Academic Affairs" },
-	{ value: "ADMIN", label: "Admin" },
+	{ value: "ADMIN", label: "Approver" },
 	{ value: "ORGANIZER", label: "Organizer" },
 	{ value: "DEPT_HEAD", label: "Department Head" },
 	{ value: "VENUE_OWNER", label: "Venue Owner" },
