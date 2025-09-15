@@ -489,7 +489,7 @@ function Calendar() {
 
 		return (
 			<div className="space-y-2">
-				<div className="grid grid-cols-7 auto-rows-fr gap-1 h-[calc(100vh-240px)]">
+				<div className="grid grid-cols-7 auto-rows-fr gap-1 h-[calc(100vh-60px)]">
 					{monthDays.map((day) => (
 						<Card
 							key={day.dateString}
