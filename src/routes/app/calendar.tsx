@@ -489,12 +489,12 @@ function Calendar() {
 
 		return (
 			<div className="space-y-2">
-				<div className="grid grid-cols-7 auto-rows-fr gap-1 h-[calc(100vh-240px)]">
+				<div className="grid grid-cols-7 auto-rows-fr gap-1 h-[calc(100vh-50px)]">
 					{monthDays.map((day) => (
 						<Card
 							key={day.dateString}
 							className={cn(
-								"h-full overflow-hidden hover:shadow-sm transition-shadow relative",
+								"h-full py-1 overflow-hidden hover:shadow-sm transition-shadow relative",
 								!day.isCurrentMonth && "bg-muted/30",
 								day.isToday && "border-primary",
 							)}
