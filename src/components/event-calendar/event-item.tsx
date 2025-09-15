@@ -1,7 +1,5 @@
 "use client";
 
-import type { DraggableAttributes } from "@dnd-kit/core";
-import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 import { differenceInMinutes, format, getMinutes, isPast } from "date-fns";
 import { useMemo } from "react";
 
@@ -26,8 +24,6 @@ interface EventWrapperProps {
 	className?: string;
 	children: React.ReactNode;
 	currentTime?: Date;
-	dndListeners?: SyntheticListenerMap;
-	dndAttributes?: DraggableAttributes;
 	onMouseDown?: (e: React.MouseEvent) => void;
 	onTouchStart?: (e: React.TouchEvent) => void;
 }
@@ -42,8 +38,6 @@ function EventWrapper({
 	className,
 	children,
 	currentTime,
-	dndListeners,
-	dndAttributes,
 	onMouseDown,
 	onTouchStart,
 }: EventWrapperProps) {
@@ -70,8 +64,6 @@ function EventWrapper({
 			onClick={onClick}
 			onMouseDown={onMouseDown}
 			onTouchStart={onTouchStart}
-			{...dndListeners}
-			{...dndAttributes}
 		>
 			{children}
 		</button>
@@ -89,8 +81,6 @@ interface EventItemProps {
 	isLastDay?: boolean;
 	children?: React.ReactNode;
 	className?: string;
-	dndListeners?: SyntheticListenerMap;
-	dndAttributes?: DraggableAttributes;
 	onMouseDown?: (e: React.MouseEvent) => void;
 	onTouchStart?: (e: React.TouchEvent) => void;
 }
@@ -106,8 +96,6 @@ export function EventItem({
 	isLastDay = true,
 	children,
 	className,
-	dndListeners,
-	dndAttributes,
 	onMouseDown,
 	onTouchStart,
 }: EventItemProps) {
@@ -157,8 +145,6 @@ export function EventItem({
 					className,
 				)}
 				currentTime={currentTime}
-				dndListeners={dndListeners}
-				dndAttributes={dndAttributes}
 				onMouseDown={onMouseDown}
 				onTouchStart={onTouchStart}
 			>
@@ -191,8 +177,6 @@ export function EventItem({
 					className,
 				)}
 				currentTime={currentTime}
-				dndListeners={dndListeners}
-				dndAttributes={dndAttributes}
 				onMouseDown={onMouseDown}
 				onTouchStart={onTouchStart}
 			>
@@ -231,8 +215,6 @@ export function EventItem({
 			onClick={onClick}
 			onMouseDown={onMouseDown}
 			onTouchStart={onTouchStart}
-			{...dndListeners}
-			{...dndAttributes}
 		>
 			<div className="text-sm font-medium">{event.title}</div>
 			<div className="text-xs opacity-70">

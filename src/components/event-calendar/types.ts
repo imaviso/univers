@@ -17,4 +17,6 @@ export type EventColor =
 	| "violet"
 	| "rose"
 	| "emerald"
-	| "orange";
+	| "orange"
+	| "gold"
+	| "maroon";

@@ -18,8 +18,6 @@ import type React from "react";
 import { useMemo } from "react";
 import { EndHour, StartHour } from "@/components/event-calendar/constants";
 import type { CalendarEvent } from "./types";
-import { DraggableEvent } from "./draggable-event";
-import { DroppableCell } from "./droppable-cell";
 import { EventItem } from "./event-item";
 import { isMultiDayEvent } from "./utils";
 import { useCurrentTimeIndicator } from "./hooks/use-current-time-indicator";
@@ -333,12 +331,11 @@ export function WeekView({
 								onClick={(e) => e.stopPropagation()}
 							>
 								<div className="size-full">
-									<DraggableEvent
+									<EventItem
 										event={positionedEvent.event}
 										view="week"
 										onClick={(e) => handleEventClick(positionedEvent.event, e)}
 										showTime
-										height={positionedEvent.height}
 									/>
 								</div>
 							</div>
@@ -356,38 +353,14 @@ export function WeekView({
 								</div>
 							</div>
 						)}
-						{hours.map((hour) => {
-							const hourValue = getHours(hour);
-							return (
-								<div
-									key={hour.toString()}
-									className="border-border/70 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
-								>
-									{/* Quarter-hour intervals */}
-									{[0, 1, 2, 3].map((quarter) => {
-										const quarterHourTime = hourValue + quarter * 0.25;
-										return (
-											<DroppableCell
-												key={`${hour.toString()}-${quarter}`}
-												id={`week-cell-${day.toISOString()}-${quarterHourTime}`}
-												date={day}
-												time={quarterHourTime}
-												className={cn(
-													"absolute h-[calc(var(--week-cells-height)/4)] w-full",
-													quarter === 0 && "top-0",
-													quarter === 1 &&
-														"top-[calc(var(--week-cells-height)/4)]",
-													quarter === 2 &&
-														"top-[calc(var(--week-cells-height)/4*2)]",
-													quarter === 3 &&
-														"top-[calc(var(--week-cells-height)/4*3)]",
-												)}
-											/>
-										);
-									})}
-								</div>
-							);
-						})}
+						{hours.map((hour) => (
+							<div
+								key={hour.toString()}
+								className="border-border/70 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
+							>
+								{/* Quarter-hour intervals removed (DnD disabled) */}
+							</div>
+						))}
 					</div>
 				))}
 			</div>

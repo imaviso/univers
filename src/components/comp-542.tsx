@@ -128,20 +128,11 @@ const sampleEvents: CalendarEvent[] = [
 ];
 
 export default function Component() {
-	const [events, setEvents] = useState<CalendarEvent[]>(sampleEvents);
-
-	const handleEventUpdate = (updatedEvent: CalendarEvent) => {
-		setEvents(
-			events.map((event) =>
-				event.id === updatedEvent.id ? updatedEvent : event,
-			),
-		);
-	};
+	const [events] = useState<CalendarEvent[]>(sampleEvents);
 
 	return (
 		<EventCalendar
 			events={events}
-			onEventUpdate={handleEventUpdate}
 			onEventClick={(e) => console.log("clicked", e)}
 		/>
 	);

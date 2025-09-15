@@ -1,10 +1,7 @@
 export { AgendaView } from "./agenda-view";
-export { CalendarDndProvider, useCalendarDnd } from "./calendar-dnd-context";
 // Constants and utility exports
 export * from "./constants";
 export { DayView } from "./day-view";
-export { DraggableEvent } from "./draggable-event";
-export { DroppableCell } from "./droppable-cell";
 export { EventCalendar } from "./event-calendar";
 // export { EventDialog } from "./event-dialog"; // no longer used in read-only calendar
 export { EventItem } from "./event-item";

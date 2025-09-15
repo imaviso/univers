@@ -105,13 +105,10 @@ function Calendar() {
 	}
 
 	return (
-		<div className="flex flex-col flex-1 overflow-hidden p-4 md:p-6">
+		<div className="flex flex-col flex-1 overflow-hidden">
 			<EventCalendar
 				events={events}
 				legendItems={legendItems}
-				onEventUpdate={(event) =>
-					setEvents((prev) => prev.map((e) => (e.id === event.id ? event : e)))
-				}
 				onEventClick={(event) => setSelectedId(event.id)}
 			/>
 			{selectedEvent && (
