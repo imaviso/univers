@@ -20,13 +20,11 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import {
-	AgendaDaysToShow,
 	EventGap,
 	EventHeight,
 	WeekCellsHeight,
 	type StatusLegendItem,
 } from "./constants";
-import { AgendaView } from "./agenda-view";
 import type { CalendarEvent, CalendarView } from "./types";
 import { DayView } from "./day-view";
 import { MonthView } from "./month-view";
@@ -82,9 +80,6 @@ export function EventCalendar({
 				case "d":
 					setView("day");
 					break;
-				case "a":
-					setView("agenda");
-					break;
 			}
 		};
 
@@ -102,9 +97,6 @@ export function EventCalendar({
 			setCurrentDate(subWeeks(currentDate, 1));
 		} else if (view === "day") {
 			setCurrentDate(addDays(currentDate, -1));
-		} else if (view === "agenda") {
-			// For agenda view, go back 30 days (a full month)
-			setCurrentDate(addDays(currentDate, -AgendaDaysToShow));
 		}
 	};
 
@@ -115,9 +107,6 @@ export function EventCalendar({
 			setCurrentDate(addWeeks(currentDate, 1));
 		} else if (view === "day") {
 			setCurrentDate(addDays(currentDate, 1));
-		} else if (view === "agenda") {
-			// For agenda view, go forward 30 days (a full month)
-			setCurrentDate(addDays(currentDate, AgendaDaysToShow));
 		}
 	};
 
@@ -154,16 +143,6 @@ export function EventCalendar({
 					</span>
 				</>
 			);
-		} else if (view === "agenda") {
-			// Show the month range for agenda view
-			const start = currentDate;
-			const end = addDays(currentDate, AgendaDaysToShow - 1);
-
-			if (isSameMonth(start, end)) {
-				return format(start, "MMMM yyyy");
-			} else {
-				return `${format(start, "MMM")} - ${format(end, "MMM yyyy")}`;
-			}
 		} else {
 			return format(currentDate, "MMMM yyyy");
 		}
@@ -272,9 +251,6 @@ export function EventCalendar({
 							<DropdownMenuItem onClick={() => setView("day")}>
 								Day <DropdownMenuShortcut>D</DropdownMenuShortcut>
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => setView("agenda")}>
-								Agenda <DropdownMenuShortcut>A</DropdownMenuShortcut>
-							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</div>
@@ -297,13 +273,6 @@ export function EventCalendar({
 				)}
 				{view === "day" && (
 					<DayView
-						currentDate={currentDate}
-						events={events}
-						onEventSelect={handleEventSelect}
-					/>
-				)}
-				{view === "agenda" && (
-					<AgendaView
 						currentDate={currentDate}
 						events={events}
 						onEventSelect={handleEventSelect}
