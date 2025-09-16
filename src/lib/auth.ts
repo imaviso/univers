@@ -271,7 +271,7 @@ export const userForgotPassword = async (email: string) => {
 
 export const userResetVerificationCode = async (
 	email: string,
-	code: string,
+	verificationCode: string,
 ) => {
 	try {
 		const response = await fetch(`${API_BASE_URL}/auth/verify-reset-code`, {
@@ -279,7 +279,7 @@ export const userResetVerificationCode = async (
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({ email, code }),
+			body: JSON.stringify({ email, verificationCode }),
 		});
 		const data = await handleApiResponse<string>(response, false);
 		return data || "Reset code verified";
