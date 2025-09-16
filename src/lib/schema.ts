@@ -238,10 +238,6 @@ export const userFormSchema = v.pipe(
 			v.string(),
 			v.nonEmpty("Email is required"),
 			v.email("Invalid email address"),
-			v.regex(
-				/^[^@]+@cit\.edu$/,
-				"Please use your institutional email (cit.edu)",
-			),
 		),
 		password: v.optional(
 			v.pipe(
@@ -270,7 +266,7 @@ export const userFormSchema = v.pipe(
 		roles: v.pipe(v.array(v.string()), v.nonEmpty("Role is required")),
 		telephoneNumber: v.pipe(
 			v.string(),
-			v.minLength(3, "Telephone must be atleast 3 characters"),
+			v.minLength(3, "Telephone Number is required"),
 		),
 		phoneNumber: v.optional(
 			v.union([
@@ -313,10 +309,6 @@ export const editUserFormSchema = v.pipe(
 			v.string(),
 			v.nonEmpty("Email is required"),
 			v.email("Invalid email format"),
-			v.regex(
-				/^[^@]+@cit\.edu$/,
-				"Please use your institutional email (cit.edu)",
-			),
 		),
 		password: v.optional(
 			v.pipe(
