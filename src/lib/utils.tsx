@@ -124,7 +124,7 @@ export const getApproverStatusBadge = (status: string | undefined) => {
 	switch (status?.toUpperCase()) {
 		case "APPROVED":
 			return (
-				<Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">
+				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
 					Reserved
 				</Badge>
 			);

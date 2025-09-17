@@ -93,7 +93,7 @@ export function EventCard({
 									<h3
 										className={`font-medium ${
 											currentUserApproval.status === "APPROVED"
-												? "text-green-600"
+												? "text-maroon"
 												: currentUserApproval.status === "REJECTED"
 													? "text-red-600"
 													: "text-yellow-600"
@@ -105,7 +105,9 @@ export function EventCard({
 								<TooltipContent>
 									<div className="flex flex-col gap-1">
 										<span className="font-medium">
-											You {currentUserApproval.status.toLowerCase()} this event
+											{currentUserApproval.status === "PENDING"
+												? "Your approval is pending"
+												: `You ${currentUserApproval.status.toLowerCase()} this event`}
 										</span>
 										{currentUserApproval.dateSigned && (
 											<span className="text-xs text-primary-foreground">
