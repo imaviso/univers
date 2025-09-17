@@ -62,7 +62,7 @@ interface MultipleSelectorProps {
 	/** Group the options base on provided key. */
 	groupBy?: string;
 	className?: string;
-	badgeClassName?: string;
+	badgeClassName?: string | ((option: Option) => string);
 	/**
 	 * First item selected is a default behavior by cmdk. That is why the default is true.
 	 * This is a workaround solution by add a dummy item.
@@ -456,7 +456,9 @@ const MultipleSelector = ({
 								key={option.value}
 								className={cn(
 									"animate-fadeIn bg-background text-primary-foreground hover:bg-background relative inline-flex h-7 cursor-default items-center rounded-md border ps-2 pe-7 pl-2 text-xs font-medium transition-all disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-fixed:pe-2",
-									badgeClassName,
+									typeof badgeClassName === "function"
+										? badgeClassName(option)
+										: badgeClassName,
 								)}
 								data-fixed={option.fixed}
 								data-disabled={disabled || undefined}

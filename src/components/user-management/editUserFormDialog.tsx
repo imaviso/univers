@@ -27,13 +27,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-// Import the specific type needed for the onSubmit prop
 import {
 	type EditUserFormInput,
 	type EditUserFormOutput,
 	editUserFormSchema,
 } from "@/lib/schema";
-import type { DepartmentDTO, UserDTO } from "@/lib/types";
+import type { DepartmentDTO, UserDTO, UserRole } from "@/lib/types";
+// Import the specific type needed for the onSubmit prop
+import { getBadgeVariant } from "@/lib/utils";
 
 interface UserFormDialogProps {
 	isOpen: boolean;
@@ -204,7 +205,9 @@ export function EditUserFormDialog({
 											options={roles}
 											placeholder="Select roles"
 											className="w-full file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input"
-											badgeClassName="bg-accent text-accent-foreground hover:bg-accent/80"
+											badgeClassName={(option) =>
+												getBadgeVariant(option.value as UserRole)
+											}
 										/>
 									</FormControl>
 									<FormMessage />

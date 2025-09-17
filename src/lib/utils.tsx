@@ -125,7 +125,7 @@ export const getApproverStatusBadge = (status: string | undefined) => {
 		case "APPROVED":
 			return (
 				<Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20">
-					Approved
+					Reserved
 				</Badge>
 			);
 		case "REJECTED":
@@ -160,6 +160,8 @@ export function formatRole(role: UserRole): string {
 
 	if (role === "ADMIN") return "Approver";
 
+	if (role === "VPAA") return "VPAA";
+
 	return role
 		.split("_")
 		.map((word) => {
@@ -190,6 +192,8 @@ export const getBadgeVariant = (role: UserRole): string => {
 			return "bg-indigo-100 text-indigo-800";
 		case "EQUIPMENT_OWNER":
 			return "bg-teal-100 text-teal-800";
+		case "VPAA":
+			return "bg-orange-100 text-orange-800";
 		default:
 			return "bg-gray-100 text-gray-800";
 	}

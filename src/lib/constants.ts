@@ -12,7 +12,7 @@ export const EVENT_STATUSES: Record<
 		dataKey: "pendingCount",
 	},
 	approved: {
-		label: "Approved",
+		label: "Reserved",
 		color: "var(--chart-2)",
 		dataKey: "approvedCount",
 	},

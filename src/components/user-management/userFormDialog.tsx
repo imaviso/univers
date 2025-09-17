@@ -28,7 +28,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { type UserFormInput, userFormSchema } from "@/lib/schema";
-import type { DepartmentDTO } from "@/lib/types";
+import type { DepartmentDTO, UserRole } from "@/lib/types";
+import { getBadgeVariant } from "@/lib/utils";
 import { Switch } from "../ui/switch";
 
 interface UserFormDialogProps {
@@ -136,7 +137,9 @@ export function UserFormDialog({
 												options={roles}
 												placeholder="Select roles"
 												className="w-full file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input"
-												badgeClassName="bg-accent text-accent-foreground hover:bg-accent/80"
+												badgeClassName={(option) =>
+													getBadgeVariant(option.value as UserRole)
+												}
 											/>
 										</FormControl>
 										<FormMessage />

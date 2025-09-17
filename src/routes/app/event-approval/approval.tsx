@@ -142,8 +142,8 @@ const approvalConfigs: Record<ApprovalType, ApprovalConfig> = {
 	},
 	ADMIN: {
 		type: "ADMIN",
-		title: "Admin Event Approval",
-		description: "Approve or reject events as an administrator",
+		title: "Event Approval",
+		description: "Approve or reject events",
 		getQueryOptions: () => searchEventsQueryOptions("related", undefined),
 		isApprover: (_event: ApprovalEvent, _currentUserId?: string) => true,
 		getApprovalStatus: (event, currentUserId) => {
@@ -171,7 +171,7 @@ function usePersistentState<T>(
 			}
 			return initialValue;
 		} catch (error) {
-			console.error("Error reading from localStorage for key:", key, error);
+			console.error("Error reading from localStorage for key", key, error);
 			return initialValue;
 		}
 	});
@@ -180,7 +180,7 @@ function usePersistentState<T>(
 		try {
 			localStorage.setItem(key, JSON.stringify(state));
 		} catch (error) {
-			console.error("Error writing to localStorage for key:", key, error);
+			console.error("Error writing to localStorage for key", key, error);
 		}
 	}, [key, state]);
 
@@ -251,6 +251,28 @@ export function EventApproval() {
 	const approvalType = context.approvalType as ApprovalType;
 	const config = approvalConfigs[approvalType];
 	const queryClient = useQueryClient();
+
+	// Role-based label overrides for VPAA + ADMIN
+	const userRoles = context.authState?.roles || [];
+	const isVpaaAdmin = userRoles.includes("VPAA") && userRoles.includes("ADMIN");
+	const approveActionLabel = isVpaaAdmin ? "Recommend" : "Approve";
+	const rejectActionLabel = isVpaaAdmin ? "Not Recommended" : "Reject";
+	const approveDialogTitle = isVpaaAdmin ? "Recommend Event" : "Approve Event";
+	const rejectDialogTitle = isVpaaAdmin ? "Not Recommended" : "Reject Event";
+	const approveBulkTitle = isVpaaAdmin
+		? "Recommend Selected Events"
+		: "Approve Selected Events";
+	const rejectBulkTitle = isVpaaAdmin
+		? "Not Recommend Selected Events"
+		: "Reject Selected Events";
+	const approveConfirmLabel = isVpaaAdmin
+		? "Confirm Recommendation"
+		: "Confirm Approval";
+	const rejectConfirmLabel = isVpaaAdmin
+		? "Confirm Not Recommendation"
+		: "Confirm Rejection";
+	const approvePendingLabel = isVpaaAdmin ? "Recommending..." : "Approving...";
+	const rejectPendingLabel = isVpaaAdmin ? "Processing..." : "Rejecting...";
 
 	const currentQueryOptions = config.getQueryOptions();
 	const { data: fetchedEvents } = useSuspenseQuery({
@@ -370,8 +392,8 @@ export function EventApproval() {
 				(event: ApprovalEvent) =>
 					event.eventName.toLowerCase().includes(query) ||
 					event.eventType.toLowerCase().includes(query) ||
-					event.eventVenue?.name.toLowerCase().includes(query) || // Use optional chaining
-					event.department?.name.toLowerCase().includes(query), // Use optional chaining
+					event.eventVenue?.name.toLowerCase().includes(query) ||
+					event.department?.name.toLowerCase().includes(query),
 			);
 		}
 
@@ -519,15 +541,19 @@ export function EventApproval() {
 		);
 
 		toast.promise(Promise.all(promises), {
-			loading: `Approving ${eligibleEventPayloads.length} event(s)...`,
+			loading: `${isVpaaAdmin ? "Recommending" : "Approving"} ${
+				eligibleEventPayloads.length
+			} event(s)...`,
 			success: (_messages: string[]) => {
 				setRowSelection({});
 				setIsBulkApproveDialogOpen(false);
 				setBulkApproveRemarks("");
-				return `${eligibleEventPayloads.length} event(s) approved.`;
+				return `${eligibleEventPayloads.length} event(s) ${
+					isVpaaAdmin ? "recommended" : "approved"
+				}.`;
 			},
 			error: (err: Error) => {
-				return `Failed to approve some events: ${err.message}`;
+				return `Failed to ${isVpaaAdmin ? "recommend" : "approve"} some events: ${err.message}`;
 			},
 		});
 	};
@@ -584,15 +610,19 @@ export function EventApproval() {
 		);
 
 		toast.promise(Promise.all(promises), {
-			loading: `Rejecting ${eligibleEventPayloads.length} event(s)...`,
+			loading: `${isVpaaAdmin ? "Marking Not Recommended" : "Rejecting"} ${
+				eligibleEventPayloads.length
+			} event(s)...`,
 			success: (_messages: string[]) => {
 				setRowSelection({});
 				setIsBulkRejectDialogOpen(false);
 				setBulkRejectionRemarks("");
-				return `${eligibleEventPayloads.length} event(s) rejected.`;
+				return `${eligibleEventPayloads.length} event(s) ${
+					isVpaaAdmin ? "marked Not Recommended" : "rejected"
+				}.`;
 			},
 			error: (err: Error) => {
-				return `Failed to reject some events: ${err.message}`;
+				return `Failed to ${isVpaaAdmin ? "mark Not Recommended" : "reject"} some events: ${err.message}`;
 			},
 		});
 	};
@@ -918,9 +948,10 @@ export function EventApproval() {
 													approveEventMutation.isPending ||
 													rejectEventMutation.isPending
 												}
+												className="text-green-600 focus:text-green-600 focus:bg-green-100/10"
 											>
-												<CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />
-												Approve
+												<Check className="mr-2 h-4 w-4" />
+												{approveActionLabel}
 											</DropdownMenuItem>
 											<DropdownMenuItem
 												onClick={() => openSingleRejectDialog(event)}
@@ -931,7 +962,7 @@ export function EventApproval() {
 												className="text-destructive focus:text-destructive focus:bg-destructive/10"
 											>
 												<X className="mr-2 h-4 w-4" />
-												Reject
+												{rejectActionLabel}
 											</DropdownMenuItem>
 										</>
 									)}
@@ -965,8 +996,8 @@ export function EventApproval() {
 					displayName: "Actions",
 					options: [
 						{ value: "view", label: "View Details" },
-						{ value: "approve", label: "Approve" },
-						{ value: "reject", label: "Reject" },
+						{ value: "approve", label: approveActionLabel },
+						{ value: "reject", label: rejectActionLabel },
 					],
 				} as ColumnMeta<ApprovalEvent, unknown>,
 			},
@@ -980,6 +1011,8 @@ export function EventApproval() {
 			handleNavigateToVenue,
 			openSingleApproveDialog,
 			openSingleRejectDialog,
+			approveActionLabel,
+			rejectActionLabel,
 		],
 	);
 
@@ -1075,7 +1108,7 @@ export function EventApproval() {
 								}
 							>
 								<CheckCircle2 className="h-4 w-4 text-green-600" />
-								Approve
+								{approveActionLabel}
 							</Button>
 							<Button
 								variant="destructive"
@@ -1088,7 +1121,7 @@ export function EventApproval() {
 								}
 							>
 								<X className="h-4 w-4" />
-								Reject
+								{rejectActionLabel}
 							</Button>
 						</div>
 					)}
@@ -1176,10 +1209,7 @@ export function EventApproval() {
 									})}
 							</DropdownMenuContent>
 						</DropdownMenu>
-						{/* <Button variant="outline" size="sm" className="gap-1">
-                            <Download className="h-4 w-4" />
-                            Export
-                        </Button> */}
+						{/* Optional export button placeholder */}
 					</div>
 				</div>
 
@@ -1263,8 +1293,8 @@ export function EventApproval() {
 					<DialogHeader>
 						<DialogTitle>
 							{singleActionInfo.type === "approve"
-								? "Approve Event"
-								: "Reject Event"}
+								? approveDialogTitle
+								: rejectDialogTitle}
 						</DialogTitle>
 						<DialogDescription>
 							{singleActionInfo.type === "approve"
@@ -1300,8 +1330,8 @@ export function EventApproval() {
 								disabled={approveEventMutation.isPending}
 							>
 								{approveEventMutation.isPending
-									? "Approving..."
-									: "Confirm Approval"}
+									? approvePendingLabel
+									: approveConfirmLabel}
 							</Button>
 						)}
 						{singleActionInfo.type === "reject" && (
@@ -1313,8 +1343,8 @@ export function EventApproval() {
 								}
 							>
 								{rejectEventMutation.isPending
-									? "Rejecting..."
-									: "Confirm Rejection"}
+									? rejectPendingLabel
+									: rejectConfirmLabel}
 							</Button>
 						)}
 					</DialogFooter>
@@ -1327,9 +1357,10 @@ export function EventApproval() {
 			>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Approve Selected Events</DialogTitle>
+						<DialogTitle>{approveBulkTitle}</DialogTitle>
 						<DialogDescription>
-							Optionally add remarks for approving the selected{" "}
+							Optionally add remarks for{" "}
+							{isVpaaAdmin ? "recommending" : "approving"} the selected{" "}
 							{numEligibleSelected} eligible event(s). This note will be
 							recorded for all of them.
 						</DialogDescription>
@@ -1360,8 +1391,8 @@ export function EventApproval() {
 							}
 						>
 							{approveEventMutation.isPending
-								? "Approving..."
-								: `Confirm Approval (${numEligibleSelected})`}
+								? approvePendingLabel
+								: `${approveConfirmLabel} (${numEligibleSelected})`}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -1373,10 +1404,12 @@ export function EventApproval() {
 			>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Reject Selected Events</DialogTitle>
+						<DialogTitle>{rejectBulkTitle}</DialogTitle>
 						<DialogDescription>
-							Provide a reason for rejecting the selected {numEligibleSelected}{" "}
-							eligible event(s). This note will be recorded for all of them.
+							Provide a reason for{" "}
+							{isVpaaAdmin ? "marking Not Recommended" : "rejecting"} the
+							selected {numEligibleSelected} eligible event(s). This note will
+							be recorded for all of them.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
@@ -1408,8 +1441,8 @@ export function EventApproval() {
 							}
 						>
 							{rejectEventMutation.isPending
-								? "Rejecting..."
-								: `Confirm Rejection (${numEligibleSelected})`}
+								? rejectPendingLabel
+								: `${rejectConfirmLabel} (${numEligibleSelected})`}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

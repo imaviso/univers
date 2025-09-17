@@ -80,6 +80,7 @@ export async function fetchWithAuth(
 // --- END: Added for Token Refresh ---
 
 export const userSignIn = async (email: string, password: string) => {
+	localStorage.clear();
 	try {
 		const response = await fetch(`${API_BASE_URL}/auth/login`, {
 			method: "POST",
@@ -156,6 +157,7 @@ export const userSignOut = async () => {
 			credentials: "include",
 		});
 		const data = await handleApiResponse<string>(response, false);
+		localStorage.clear();
 		return data || "Logout successful";
 	} catch (error) {
 		if (error instanceof ApiError) {
