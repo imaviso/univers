@@ -123,6 +123,37 @@ export function UserDataTable() {
 	const [selectedUser, setSelectedUser] = useAtom(selectedUserAtom);
 	const [activateDialogOpen, setActivateDialogOpen] = React.useState(false);
 
+	// Migrate legacy 'roles' filter (stored as option) to new multiOption structure
+	useEffect(() => {
+		setColumnFilters((prev) => {
+			let changed = false;
+			const next = prev.map((cf) => {
+				if (cf.id === "roles") {
+					const val: any = cf.value;
+					if (
+						val &&
+						Array.isArray(val.values) &&
+						val.values.length > 0 &&
+						typeof val.values[0] === "string"
+					) {
+						changed = true;
+						const vals = val.values as string[];
+						return {
+							id: "roles",
+							value: {
+								operator: vals.length > 1 ? "include any of" : "include",
+								values: [vals],
+								columnMeta: { ...(val.columnMeta ?? {}), type: "multiOption" },
+							},
+						};
+					}
+				}
+				return cf;
+			});
+			return changed ? next : prev;
+		});
+	}, [setColumnFilters]);
+
 	// Persistent pagination state
 	// const [pageSize, setPageSize] = usePersistentState<number>(
 	//     "userTablePageSize_v1",
@@ -537,7 +568,8 @@ export function UserDataTable() {
 
 			// ... Role column ...
 			{
-				accessorKey: "roles",
+				accessorFn: (row) => row.roles,
+				id: "roles",
 				header: ({ column }) => (
 					<Button
 						variant="ghost"
@@ -548,15 +580,17 @@ export function UserDataTable() {
 					</Button>
 				),
 				cell: ({ row }) => {
-					const roles = row.getValue("roles") as Set<UserRole>;
+					const roles = row.getValue("roles") as UserRole[];
 					return (
 						<div className="flex flex-wrap gap-1">
-							{Array.from(roles).map((role) => {
+							{roles.map((role) => {
 								const roleInfo = ROLES.find((r) => r.value === role);
 								return (
 									<Badge
 										key={role}
-										className={`font-medium capitalize px-2 py-0.5 ${getBadgeVariant(role)}`}
+										className={`font-medium capitalize px-2 py-0.5 ${getBadgeVariant(
+											role,
+										)}`}
 										variant="outline"
 									>
 										{roleInfo ? roleInfo.label : role}
@@ -566,10 +600,11 @@ export function UserDataTable() {
 						</div>
 					);
 				},
-				filterFn: filterFn("option"),
+				// Use custom multi-option filter handler compatible with DataTableFilter
+				filterFn: filterFn("multiOption"),
 				meta: defineMeta((row: UserDTO) => row.roles, {
 					displayName: "Role",
-					type: "option",
+					type: "multiOption",
 					icon: UsersIcon,
 					options: ROLE_OPTIONS,
 				}) as ColumnMeta<UserDTO, unknown>,
@@ -645,7 +680,8 @@ export function UserDataTable() {
 			},
 			// ... Verified column ...
 			{
-				accessorKey: "emailVerified",
+				accessorFn: (row) => String(row.emailVerified),
+				id: "emailVerified",
 				header: "Verified",
 				cell: ({ row }) => {
 					const emailVerified = row.original.emailVerified;
