@@ -76,9 +76,6 @@ export function EditUserFormDialog({
 		mode: "onChange",
 	});
 
-	const { dirtyFields, isValid, isDirty } = form.formState;
-	const numberOfChanges = Object.keys(dirtyFields).length;
-
 	const handleFormSubmit = (values: EditUserFormInput) => {
 		// Destructure only the fields needed for UpdateUserInputFE
 		const {
@@ -150,10 +147,6 @@ export function EditUserFormDialog({
 			}
 		}
 	}, [user, isOpen, form.reset]);
-
-	const isSaveDisabled = user
-		? numberOfChanges < 1 || !isValid || isLoading
-		: !isDirty || !isValid || isLoading;
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
@@ -391,7 +384,7 @@ export function EditUserFormDialog({
 						</Button>
 						<Button
 							type="button"
-							disabled={isSaveDisabled}
+							disabled={isLoading}
 							onClick={form.handleSubmit(handleFormSubmit)}
 						>
 							{user ? "Save Changes" : "Create User"}
