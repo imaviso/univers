@@ -190,6 +190,23 @@ export function EventDetailsPage() {
 	const isSuperAdmin = currentUser?.roles?.includes("SUPER_ADMIN");
 	const isEventPending = event.status === "PENDING";
 
+	// Role-based label overrides for VPAA + ADMIN
+	const userRoles = currentUser?.roles || [];
+	const isVpaaAdmin = userRoles.includes("VPAA") && userRoles.includes("ADMIN");
+	const approveActionLabel = isVpaaAdmin ? "Recommend" : "Approve Event";
+	const approveDialogTitle = isVpaaAdmin ? "Recommend Event" : "Approve Event";
+	const approveConfirmLabel = isVpaaAdmin
+		? "Confirm Recommendation"
+		: "Confirm Approval";
+	const approvePendingLabel = isVpaaAdmin ? "Recommending..." : "Approving...";
+
+	const rejectActionLabel = isVpaaAdmin ? "Not Recommended" : "Reject Event";
+	const rejectDialogTitle = isVpaaAdmin ? "Not Recommended" : "Reject Event";
+	const rejectConfirmLabel = isVpaaAdmin
+		? "Confirm Not Recommendation"
+		: "Confirm Rejection";
+	const rejectPendingLabel = isVpaaAdmin ? "Processing..." : "Rejecting...";
+
 	// Update currentUserApprovalRecord to use event.approvals
 	const currentUserApprovalRecord = useMemo(() => {
 		if (
@@ -756,12 +773,12 @@ export function EventDetailsPage() {
 								<DialogTrigger asChild>
 									<Button size="sm" className="gap-1">
 										<CheckCircle2 className="h-4 w-4" />
-										Approve Event
+										{approveActionLabel}
 									</Button>
 								</DialogTrigger>
 								<DialogContent>
 									<DialogHeader>
-										<DialogTitle>Approve Event</DialogTitle>
+										<DialogTitle>{approveDialogTitle}</DialogTitle>
 										<DialogDescription>
 											Add optional remarks for your approval.
 										</DialogDescription>
@@ -786,8 +803,8 @@ export function EventDetailsPage() {
 											disabled={approveMutation.isPending}
 										>
 											{approveMutation.isPending
-												? "Approving..."
-												: "Confirm Approval"}
+												? approvePendingLabel
+												: approveConfirmLabel}
 										</Button>
 									</DialogFooter>
 								</DialogContent>
@@ -802,12 +819,12 @@ export function EventDetailsPage() {
 								<DialogTrigger asChild>
 									<Button variant="destructive" size="sm" className="gap-1">
 										<XCircle className="h-4 w-4" />
-										Reject Event
+										{rejectActionLabel}
 									</Button>
 								</DialogTrigger>
 								<DialogContent>
 									<DialogHeader>
-										<DialogTitle>Reject Event</DialogTitle>
+										<DialogTitle>{rejectDialogTitle}</DialogTitle>
 										<DialogDescription>
 											Provide remarks for rejecting this event. Remarks are
 											required for rejection.
@@ -837,8 +854,8 @@ export function EventDetailsPage() {
 											}
 										>
 											{rejectEventMutation.isPending
-												? "Rejecting..."
-												: "Confirm Rejection"}
+												? rejectPendingLabel
+												: rejectConfirmLabel}
 										</Button>
 									</DialogFooter>
 								</DialogContent>
