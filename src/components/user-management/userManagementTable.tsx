@@ -129,7 +129,10 @@ export function UserDataTable() {
 			let changed = false;
 			const next = prev.map((cf) => {
 				if (cf.id === "roles") {
-					const val: any = cf.value;
+					const val = cf.value as {
+						values?: unknown;
+						columnMeta?: Record<string, unknown>;
+					};
 					if (
 						val &&
 						Array.isArray(val.values) &&
@@ -148,6 +151,7 @@ export function UserDataTable() {
 						};
 					}
 				}
+
 				return cf;
 			});
 			return changed ? next : prev;
