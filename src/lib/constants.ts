@@ -1,3 +1,6 @@
+import equipmentPlaceholder from "@/assets/equipment.svg";
+import venuePlaceholder from "@/assets/venue.svg";
+
 export const EVENT_STATUSES: Record<
 	string,
 	{
@@ -50,9 +53,7 @@ interface EventCountDTOWithOptionalCounts {
 }
 
 // Default placeholder for equipment images
-export const DEFAULT_EQUIPMENT_IMAGE_URL =
-	"https://placehold.co/600x400?text=Equipment";
+export const DEFAULT_EQUIPMENT_IMAGE_URL = equipmentPlaceholder;
 
 // Default placeholder for venue images
-export const DEFAULT_VENUE_IMAGE_URL =
-	"https://placehold.co/600x400?text=Venue";
+export const DEFAULT_VENUE_IMAGE_URL = venuePlaceholder;
