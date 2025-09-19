@@ -46,6 +46,7 @@ export type UserRole =
 	| "DEPT_HEAD"
 	| "VENUE_OWNER"
 	| "EQUIPMENT_OWNER"
+	| "ACCOUNTING"
 	| "VPAA";
 
 export const STATUS_EQUIPMENT = [
@@ -84,6 +85,7 @@ export const ROLES = [
 	{ value: "DEPT_HEAD", label: "Department Head" },
 	{ value: "VENUE_OWNER", label: "Venue Owner" },
 	{ value: "EQUIPMENT_OWNER", label: "Equipment Owner" },
+	{ value: "ACCOUNTING", label: "Accounting" },
 ];
 
 export const DEPARTMENTS: Array<{ value: string; label: string }> = [

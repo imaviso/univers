@@ -8,6 +8,7 @@ import {
 	Package,
 	PackageCheck,
 	Settings,
+	UserCogIcon,
 	Users,
 } from "lucide-react";
 import type { UserRole } from "./types";
@@ -53,6 +54,12 @@ export const allNavigation: NavigationItem[] = [
 			"ADMIN",
 			"DEPT_HEAD",
 		],
+	},
+	{
+		name: "Event Staffing",
+		href: "/app/event-staffing/staff",
+		icon: UserCogIcon,
+		roles: ["SUPER_ADMIN"],
 	},
 	{
 		name: "Venues",

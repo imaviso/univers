@@ -27,6 +27,7 @@ import { Route as AppVenuesRouteImport } from './routes/app/venues/route'
 import { Route as AppUserManagementRouteImport } from './routes/app/user-management/route'
 import { Route as AppSettingsRouteImport } from './routes/app/settings/route'
 import { Route as AppEventsRouteImport } from './routes/app/events/route'
+import { Route as AppEventStaffingRouteImport } from './routes/app/event-staffing/route'
 import { Route as AppEventApprovalRouteImport } from './routes/app/event-approval/route'
 import { Route as AppEquipmentApprovalRouteImport } from './routes/app/equipment-approval/route'
 import { Route as AppDepartmentsRouteImport } from './routes/app/departments/route'
@@ -37,6 +38,7 @@ import { Route as AppSettingsNotificationsImport } from './routes/app/settings/n
 import { Route as AppSettingsAccountImport } from './routes/app/settings/account'
 import { Route as AppEventsTimelineImport } from './routes/app/events/timeline'
 import { Route as AppEventsEventIdImport } from './routes/app/events/$eventId'
+import { Route as AppEventStaffingStaffImport } from './routes/app/event-staffing/staff'
 import { Route as AppEventApprovalApprovalImport } from './routes/app/event-approval/approval'
 import { Route as AppEquipmentApprovalApprovalImport } from './routes/app/equipment-approval/approval'
 import { Route as AppDepartmentsDashboardImport } from './routes/app/departments/dashboard'
@@ -138,6 +140,12 @@ const AppEventsRouteRoute = AppEventsRouteImport.update({
   getParentRoute: () => AppRouteRoute,
 } as any)
 
+const AppEventStaffingRouteRoute = AppEventStaffingRouteImport.update({
+  id: '/event-staffing',
+  path: '/event-staffing',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+
 const AppEventApprovalRouteRoute = AppEventApprovalRouteImport.update({
   id: '/event-approval',
   path: '/event-approval',
@@ -196,6 +204,12 @@ const AppEventsEventIdRoute = AppEventsEventIdImport.update({
   id: '/$eventId',
   path: '/$eventId',
   getParentRoute: () => AppEventsRouteRoute,
+} as any)
+
+const AppEventStaffingStaffRoute = AppEventStaffingStaffImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AppEventStaffingRouteRoute,
 } as any)
 
 const AppEventApprovalApprovalRoute = AppEventApprovalApprovalImport.update({
@@ -261,6 +275,13 @@ declare module '@tanstack/react-router' {
       path: '/event-approval'
       fullPath: '/app/event-approval'
       preLoaderRoute: typeof AppEventApprovalRouteImport
+      parentRoute: typeof AppRouteImport
+    }
+    '/app/event-staffing': {
+      id: '/app/event-staffing'
+      path: '/event-staffing'
+      fullPath: '/app/event-staffing'
+      preLoaderRoute: typeof AppEventStaffingRouteImport
       parentRoute: typeof AppRouteImport
     }
     '/app/events': {
@@ -375,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEventApprovalApprovalImport
       parentRoute: typeof AppEventApprovalRouteImport
     }
+    '/app/event-staffing/staff': {
+      id: '/app/event-staffing/staff'
+      path: '/staff'
+      fullPath: '/app/event-staffing/staff'
+      preLoaderRoute: typeof AppEventStaffingStaffImport
+      parentRoute: typeof AppEventStaffingRouteImport
+    }
     '/app/events/$eventId': {
       id: '/app/events/$eventId'
       path: '/$eventId'
@@ -487,6 +515,19 @@ const AppEventApprovalRouteRouteWithChildren =
     AppEventApprovalRouteRouteChildren,
   )
 
+interface AppEventStaffingRouteRouteChildren {
+  AppEventStaffingStaffRoute: typeof AppEventStaffingStaffRoute
+}
+
+const AppEventStaffingRouteRouteChildren: AppEventStaffingRouteRouteChildren = {
+  AppEventStaffingStaffRoute: AppEventStaffingStaffRoute,
+}
+
+const AppEventStaffingRouteRouteWithChildren =
+  AppEventStaffingRouteRoute._addFileChildren(
+    AppEventStaffingRouteRouteChildren,
+  )
+
 interface AppEventsRouteRouteChildren {
   AppEventsEventIdRoute: typeof AppEventsEventIdRoute
   AppEventsTimelineRoute: typeof AppEventsTimelineRoute
@@ -546,6 +587,7 @@ interface AppRouteRouteChildren {
   AppDepartmentsRouteRoute: typeof AppDepartmentsRouteRouteWithChildren
   AppEquipmentApprovalRouteRoute: typeof AppEquipmentApprovalRouteRouteWithChildren
   AppEventApprovalRouteRoute: typeof AppEventApprovalRouteRouteWithChildren
+  AppEventStaffingRouteRoute: typeof AppEventStaffingRouteRouteWithChildren
   AppEventsRouteRoute: typeof AppEventsRouteRouteWithChildren
   AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
   AppUserManagementRouteRoute: typeof AppUserManagementRouteRouteWithChildren
@@ -560,6 +602,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppDepartmentsRouteRoute: AppDepartmentsRouteRouteWithChildren,
   AppEquipmentApprovalRouteRoute: AppEquipmentApprovalRouteRouteWithChildren,
   AppEventApprovalRouteRoute: AppEventApprovalRouteRouteWithChildren,
+  AppEventStaffingRouteRoute: AppEventStaffingRouteRouteWithChildren,
   AppEventsRouteRoute: AppEventsRouteRouteWithChildren,
   AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
   AppUserManagementRouteRoute: AppUserManagementRouteRouteWithChildren,
@@ -580,6 +623,7 @@ export interface FileRoutesByFullPath {
   '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
   '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
   '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
+  '/app/event-staffing': typeof AppEventStaffingRouteRouteWithChildren
   '/app/events': typeof AppEventsRouteRouteWithChildren
   '/app/settings': typeof AppSettingsRouteRouteWithChildren
   '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
@@ -596,6 +640,7 @@ export interface FileRoutesByFullPath {
   '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
   '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
   '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
+  '/app/event-staffing/staff': typeof AppEventStaffingStaffRoute
   '/app/events/$eventId': typeof AppEventsEventIdRoute
   '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
@@ -611,6 +656,7 @@ export interface FileRoutesByTo {
   '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
   '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
   '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
+  '/app/event-staffing': typeof AppEventStaffingRouteRouteWithChildren
   '/app/events': typeof AppEventsRouteRouteWithChildren
   '/app/settings': typeof AppSettingsRouteRouteWithChildren
   '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
@@ -627,6 +673,7 @@ export interface FileRoutesByTo {
   '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
   '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
   '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
+  '/app/event-staffing/staff': typeof AppEventStaffingStaffRoute
   '/app/events/$eventId': typeof AppEventsEventIdRoute
   '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
@@ -644,6 +691,7 @@ export interface FileRoutesById {
   '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
   '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
   '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
+  '/app/event-staffing': typeof AppEventStaffingRouteRouteWithChildren
   '/app/events': typeof AppEventsRouteRouteWithChildren
   '/app/settings': typeof AppSettingsRouteRouteWithChildren
   '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
@@ -660,6 +708,7 @@ export interface FileRoutesById {
   '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
   '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
   '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
+  '/app/event-staffing/staff': typeof AppEventStaffingStaffRoute
   '/app/events/$eventId': typeof AppEventsEventIdRoute
   '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
@@ -677,6 +726,7 @@ export interface FileRouteTypes {
     | '/app/departments'
     | '/app/equipment-approval'
     | '/app/event-approval'
+    | '/app/event-staffing'
     | '/app/events'
     | '/app/settings'
     | '/app/user-management'
@@ -693,6 +743,7 @@ export interface FileRouteTypes {
     | '/app/departments/dashboard'
     | '/app/equipment-approval/approval'
     | '/app/event-approval/approval'
+    | '/app/event-staffing/staff'
     | '/app/events/$eventId'
     | '/app/events/timeline'
     | '/app/settings/account'
@@ -707,6 +758,7 @@ export interface FileRouteTypes {
     | '/app/departments'
     | '/app/equipment-approval'
     | '/app/event-approval'
+    | '/app/event-staffing'
     | '/app/events'
     | '/app/settings'
     | '/app/user-management'
@@ -723,6 +775,7 @@ export interface FileRouteTypes {
     | '/app/departments/dashboard'
     | '/app/equipment-approval/approval'
     | '/app/event-approval/approval'
+    | '/app/event-staffing/staff'
     | '/app/events/$eventId'
     | '/app/events/timeline'
     | '/app/settings/account'
@@ -738,6 +791,7 @@ export interface FileRouteTypes {
     | '/app/departments'
     | '/app/equipment-approval'
     | '/app/event-approval'
+    | '/app/event-staffing'
     | '/app/events'
     | '/app/settings'
     | '/app/user-management'
@@ -754,6 +808,7 @@ export interface FileRouteTypes {
     | '/app/departments/dashboard'
     | '/app/equipment-approval/approval'
     | '/app/event-approval/approval'
+    | '/app/event-staffing/staff'
     | '/app/events/$eventId'
     | '/app/events/timeline'
     | '/app/settings/account'
@@ -810,6 +865,7 @@ export const routeTree = rootRoute
         "/app/departments",
         "/app/equipment-approval",
         "/app/event-approval",
+        "/app/event-staffing",
         "/app/events",
         "/app/settings",
         "/app/user-management",
@@ -839,6 +895,13 @@ export const routeTree = rootRoute
       "parent": "/app",
       "children": [
         "/app/event-approval/approval"
+      ]
+    },
+    "/app/event-staffing": {
+      "filePath": "app/event-staffing/route.tsx",
+      "parent": "/app",
+      "children": [
+        "/app/event-staffing/staff"
       ]
     },
     "/app/events": {
@@ -919,6 +982,10 @@ export const routeTree = rootRoute
     "/app/event-approval/approval": {
       "filePath": "app/event-approval/approval.tsx",
       "parent": "/app/event-approval"
+    },
+    "/app/event-staffing/staff": {
+      "filePath": "app/event-staffing/staff.tsx",
+      "parent": "/app/event-staffing"
     },
     "/app/events/$eventId": {
       "filePath": "app/events/$eventId.tsx",
