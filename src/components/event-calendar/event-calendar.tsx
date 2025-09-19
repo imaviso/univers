@@ -150,7 +150,7 @@ export function EventCalendar({
 
 	return (
 		<div
-			className="flex flex-col rounded-lg border has-data-[slot=month-view]:flex-1"
+			className="flex flex-col rounded-lg has-data-[slot=month-view]:flex-1"
 			style={
 				{
 					"--event-height": `${EventHeight}px`,
@@ -159,13 +159,14 @@ export function EventCalendar({
 				} as React.CSSProperties
 			}
 		>
-			<div
+			<header
 				className={cn(
-					"flex items-center justify-between p-2 sm:p-4",
+					"flex items-center border-b justify-between p-2 sm:p-4 h-[65px]",
 					className,
 				)}
 			>
 				<div className="flex items-center gap-1 sm:gap-4">
+					<h1 className="text-xl font-semibold">Calendar</h1>
 					<Button
 						variant="outline"
 						className="max-[479px]:aspect-square max-[479px]:p-0!"
@@ -254,9 +255,9 @@ export function EventCalendar({
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</div>
-			</div>
+			</header>
 
-			<div className="flex flex-1 flex-col">
+			<div className="flex flex-1 flex-col p-6">
 				{view === "month" && (
 					<MonthView
 						currentDate={currentDate}
