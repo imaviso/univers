@@ -149,6 +149,7 @@ export type EventDTO = {
 	cancellationReason: string | null;
 	createdAt: string;
 	updatedAt: string;
+	staffAssigned: Personnel | null;
 };
 
 export type EventInputType = {
@@ -183,6 +184,7 @@ export type Event = {
 	startTime: string;
 	endTime: string;
 	status: string;
+	staffAssigned: Personnel | null;
 };
 
 export type EventApprovalDTO = {
@@ -404,4 +406,13 @@ export type EquipmentCategoryDTO = {
 	description: string | null;
 	createdAt: string;
 	updatedAt: string | null;
+};
+
+export type Personnel = {
+	publicId: string;
+	name: string;
+	email: string;
+	phoneNumber: string;
+	avatar?: string;
+	status: "Available" | "Busy" | "Unavailable";
 };
