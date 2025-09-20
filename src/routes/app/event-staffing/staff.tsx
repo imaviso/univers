@@ -36,7 +36,7 @@ const getPersonnelStatusColor = (status: Personnel["status"]) => {
 		case "Busy":
 			return "bg-gold/10 text-gold";
 		case "Unavailable":
-			return "bg-destructive text-destructive-foreground";
+			return "bg-destructive/10 text-destructive";
 		default:
 			return "bg-muted text-muted-foreground";
 	}
@@ -318,7 +318,7 @@ function EventStaff() {
 													{getInitials(person.name)}
 												</AvatarFallback>
 											</Avatar>
-											<div className="flex-1">
+											<div className="flex grow">
 												<CardTitle className="text-lg">{person.name}</CardTitle>
 												<CardDescription>&nbsp;</CardDescription>
 											</div>
