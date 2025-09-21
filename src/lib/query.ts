@@ -649,7 +649,7 @@ export const useApproveEquipmentReservationMutation = () => {
 							if (reservation.publicId === variables.reservationPublicId) {
 								const newApproval: EquipmentApprovalDTO = {
 									publicId: `optimistic-approval-${Date.now()}`,
-									status: "APPROVED",
+									status: "RESERVED",
 									remarks:
 										variables.remarks === undefined ? null : variables.remarks,
 									signedByUser: currentUser,
@@ -659,7 +659,7 @@ export const useApproveEquipmentReservationMutation = () => {
 								};
 								return {
 									...reservation,
-									status: "APPROVED",
+									status: "RESERVED",
 									approvals: [...(reservation.approvals || []), newApproval],
 								};
 							}

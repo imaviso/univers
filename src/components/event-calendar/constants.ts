@@ -23,7 +23,7 @@ import { EVENT_STATUSES } from "@/lib/constants";
 
 // Uppercase status to calendar EventColor used across views
 export const STATUS_TO_EVENT_COLOR: Record<string, EventColor> = {
-	APPROVED: "maroon",
+	RESERVED: "maroon",
 	ONGOING: "sky",
 	PENDING: "gold",
 	CANCELED: "rose",

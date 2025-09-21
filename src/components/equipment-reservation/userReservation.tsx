@@ -221,9 +221,9 @@ export default function UserReservations() {
 											>
 												View Details
 											</Button>
-											{/* Allow cancellation if PENDING or APPROVED */}
+											{/* Allow cancellation if PENDING or RESERVED */}
 											{(reservation.status === "PENDING" ||
-												reservation.status === "APPROVED") && (
+												reservation.status === "RESERVED") && (
 												<Button
 													variant="destructive"
 													size="sm"

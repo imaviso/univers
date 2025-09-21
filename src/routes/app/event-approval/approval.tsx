@@ -838,7 +838,7 @@ export function EventApproval() {
 					icon: HelpCircle,
 					options: [
 						{ value: "PENDING", label: "Pending" },
-						{ value: "APPROVED", label: "Approved" },
+						{ value: "RESERVED", label: "Reserved" },
 						{ value: "REJECTED", label: "Rejected" },
 						{ value: "CANCELLED", label: "Cancelled" },
 					],
@@ -891,7 +891,7 @@ export function EventApproval() {
 						icon: UserCheck,
 						options: [
 							{ value: "PENDING", label: "Pending" },
-							{ value: "APPROVED", label: "Approved" },
+							{ value: "RESERVED", label: "Reserved" },
 							{ value: "REJECTED", label: "Rejected" },
 						],
 					},
@@ -974,7 +974,7 @@ export function EventApproval() {
 													disabled
 													className="text-muted-foreground italic"
 												>
-													{currentUserApproval.status === "APPROVED" ? (
+													{currentUserApproval.status === "RESERVED" ? (
 														<Check className="mr-2 h-4 w-4 text-green-600" />
 													) : (
 														<XCircle className="mr-2 h-4 w-4 text-red-600" />
@@ -1057,7 +1057,7 @@ export function EventApproval() {
 			}).length,
 			userApproved: eventsRelevantToView.filter((event) => {
 				const userApproval = config.getApprovalStatus(event, currentUserId);
-				return userApproval?.status === "APPROVED";
+				return userApproval?.status === "RESERVED";
 			}).length,
 			userRejected: eventsRelevantToView.filter((event) => {
 				const userApproval = config.getApprovalStatus(event, currentUserId);

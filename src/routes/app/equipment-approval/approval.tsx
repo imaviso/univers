@@ -507,7 +507,7 @@ export function EquipmentReservationApproval() {
 					icon: CheckSquare,
 					options: [
 						{ value: "PENDING", label: "Pending" },
-						{ value: "APPROVED", label: "Approved" },
+						{ value: "RESERVED", label: "Reserved" },
 						{ value: "REJECTED", label: "Rejected" },
 						{ value: "CANCELLED", label: "Cancelled" },
 					],
@@ -529,7 +529,7 @@ export function EquipmentReservationApproval() {
 					if (!currentUserApproval) {
 						return <span className="text-muted-foreground">-</span>;
 					}
-					if (currentUserApproval.status === "APPROVED") {
+					if (currentUserApproval.status === "RESERVED") {
 						return (
 							<div className="flex items-center justify-center text-green-600">
 								<Check className="h-4 w-4" />
@@ -684,7 +684,7 @@ export function EquipmentReservationApproval() {
 		return {
 			total: sourceData.length,
 			pending: sourceData.filter((r) => r.status === "PENDING").length,
-			approved: sourceData.filter((r) => r.status === "APPROVED").length,
+			approved: sourceData.filter((r) => r.status === "RESERVED").length,
 			rejected: sourceData.filter(
 				(r) => r.status === "REJECTED" || r.status === "CANCELLED",
 			).length,

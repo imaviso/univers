@@ -234,20 +234,20 @@ export function EventDetailsPage() {
 		if (!isEventPending || !currentUser) return false; // Added !currentUser check
 		// Same conditions as approving for being able to act on their pending item.
 		return (
-			currentUserApprovalRecord?.status === "APPROVED" ||
+			currentUserApprovalRecord?.status === "RESERVED" ||
 			currentUserApprovalRecord?.status === "PENDING"
 		);
 	}, [isEventPending, currentUserApprovalRecord, currentUser]);
 
 	const canCancelEvent =
 		(isOrganizer || isSuperAdmin) &&
-		(event.status === "PENDING" || event.status === "APPROVED");
+		(event.status === "PENDING" || event.status === "RESERVED");
 
 	const canEditEvent =
 		isSuperAdmin || (isOrganizer && event.status === "PENDING");
 
 	const canUserModifyEquipmentReservation =
-		isOrganizer && (event.status === "PENDING" || event.status === "APPROVED");
+		isOrganizer && (event.status === "PENDING" || event.status === "RESERVED");
 
 	const approveMutation = useMutation({
 		mutationFn: approveEvent,
@@ -1112,7 +1112,7 @@ export function EventDetailsPage() {
 								<CardTitle>Reserved Equipment</CardTitle>
 								{isOrganizer &&
 									(event.status === "PENDING" ||
-										event.status === "APPROVED") && (
+										event.status === "RESERVED") && (
 										<Button
 											size="sm"
 											variant="outline"
@@ -1166,7 +1166,7 @@ export function EventDetailsPage() {
 																</Badge>
 															</TableCell>
 															{(reservation.status === "PENDING" ||
-																reservation.status === "APPROVED") &&
+																reservation.status === "RESERVED") &&
 																canUserModifyEquipmentReservation && (
 																	<TableCell className="text-right">
 																		<Button

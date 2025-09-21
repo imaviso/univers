@@ -52,7 +52,7 @@ export const Route = createFileRoute("/app/events/timeline")({
 // Define EventStatus constants locally
 const EventStatus = {
 	PENDING: "Pending",
-	APPROVED: "Approved",
+	RESERVED: "Reserved",
 	ONGOING: "Ongoing",
 	COMPLETED: "Completed",
 	REJECTED: "Rejected",
@@ -163,8 +163,8 @@ function Events() {
 										<DropdownMenuRadioItem value={EventStatus.PENDING}>
 											{EventStatus.PENDING}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.APPROVED}>
-											{EventStatus.APPROVED}
+										<DropdownMenuRadioItem value={EventStatus.RESERVED}>
+											{EventStatus.RESERVED}
 										</DropdownMenuRadioItem>
 										<DropdownMenuRadioItem value={EventStatus.ONGOING}>
 											{EventStatus.ONGOING}
@@ -509,8 +509,8 @@ function Events() {
 										<DropdownMenuRadioItem value={EventStatus.PENDING}>
 											{EventStatus.PENDING}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.APPROVED}>
-											{EventStatus.APPROVED}
+										<DropdownMenuRadioItem value={EventStatus.RESERVED}>
+											{EventStatus.RESERVED}
 										</DropdownMenuRadioItem>
 										<DropdownMenuRadioItem value={EventStatus.ONGOING}>
 											{EventStatus.ONGOING}

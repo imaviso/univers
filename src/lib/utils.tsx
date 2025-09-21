@@ -77,7 +77,7 @@ export const getStatusColor = (status: string | undefined) => {
 	switch (status?.toUpperCase()) {
 		case "PENDING":
 			return "bg-yellow-500/10 text-yellow-600";
-		case "APPROVED":
+		case "RESERVED":
 			return "bg-maroon/10 text-maroon";
 		case "REJECTED":
 			return "bg-red-500/10 text-red-600";
@@ -96,7 +96,7 @@ export function getStatusBadgeClass(status: string | undefined): string {
 			return "border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400";
 		case "PENDING":
 			return "border-yellow-500/50 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
-		case "APPROVED":
+		case "RESERVED":
 			return "border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400";
 		case "REJECTED":
 			return "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400";
@@ -122,7 +122,7 @@ export function getEquipmentNameById(
 
 export const getApproverStatusBadge = (status: string | undefined) => {
 	switch (status?.toUpperCase()) {
-		case "APPROVED":
+		case "RESERVED":
 			return (
 				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
 					Reserved

@@ -127,7 +127,7 @@ const mockEvents: Event[] = [
 		department: sampleDepartment,
 		startTime: "2024-03-15T09:00:00Z",
 		endTime: "2024-03-15T17:00:00Z",
-		status: "APPROVED",
+		status: "RESERVED",
 		staffAssigned: mockPersonnel[0]!,
 	},
 	{

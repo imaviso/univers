@@ -74,7 +74,7 @@ export function UpcomingEvents() {
 								{event.eventName}
 							</h4>
 							<Badge
-								variant={event.status === "APPROVED" ? "default" : "secondary"}
+								variant={event.status === "RESERVED" ? "default" : "secondary"}
 							>
 								{event.status}
 							</Badge>

@@ -503,7 +503,7 @@ export const approveEvent = async ({
 
 		const payload = {
 			eventPublicIds: [eventId],
-			status: "APPROVED",
+			status: "RESERVED",
 			remarks: remarks || "",
 		};
 

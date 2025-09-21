@@ -81,7 +81,7 @@ export function EventListItem({
 								<TooltipTrigger asChild>
 									<p
 										className={`font-medium truncate ${
-											currentUserApproval.status === "APPROVED"
+											currentUserApproval.status === "RESERVED"
 												? "text-maroon"
 												: currentUserApproval.status === "REJECTED"
 													? "text-red-600"

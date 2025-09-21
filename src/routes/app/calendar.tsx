@@ -65,7 +65,7 @@ function Calendar() {
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 
 	const allowedStatuses = useMemo(
-		() => new Set(["APPROVED", "ONGOING", "PENDING"]),
+		() => new Set(["RESERVED", "ONGOING", "PENDING"]),
 		[],
 	);
 

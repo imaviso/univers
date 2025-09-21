@@ -92,7 +92,7 @@ export function EventCard({
 								<TooltipTrigger asChild>
 									<h3
 										className={`font-medium ${
-											currentUserApproval.status === "APPROVED"
+											currentUserApproval.status === "RESERVED"
 												? "text-maroon"
 												: currentUserApproval.status === "REJECTED"
 													? "text-red-600"
