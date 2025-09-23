@@ -1289,13 +1289,7 @@ export function EventDetailsPage() {
 																approvalRow.userRole,
 														)}
 													</TableCell>
-													<TableCell>
-														{approvalRow.remarks ||
-															(approvalRow.status === "PENDING" &&
-															!approvalRow.dateSigned
-																? "Awaiting Approval"
-																: "—")}
-													</TableCell>
+													<TableCell>{approvalRow.remarks} </TableCell>
 												</TableRow>
 											))}
 										</TableBody>
