@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { getApproverStatusBadge } from "@/lib/utils";
 
 // Sample event data
 const eventData = {
@@ -123,19 +124,6 @@ const eventData = {
 	],
 };
 
-const getStatusColor = (status: string) => {
-	switch (status) {
-		case "planning":
-			return "bg-blue-500/10 text-blue-500";
-		case "confirmed":
-			return "bg-green-500/10 text-green-500";
-		case "completed":
-			return "bg-purple-500/10 text-purple-500";
-		default:
-			return "bg-gray-500/10 text-gray-500";
-	}
-};
-
 const getTaskStatusIcon = (status: string) => {
 	switch (status) {
 		case "completed":
@@ -169,9 +157,7 @@ export function EventDetailView() {
 				<header className="flex items-center justify-between border-b px-6 py-3">
 					<div className="flex items-center gap-4">
 						<h1 className="text-xl font-semibold">{event.title}</h1>
-						<Badge className={`${getStatusColor(event.status)}`}>
-							{event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-						</Badge>
+						{getApproverStatusBadge(event.status)}
 					</div>
 					<div className="flex items-center gap-2">
 						<Button variant="outline" size="sm" className="gap-1">

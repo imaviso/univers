@@ -507,8 +507,8 @@ export function EquipmentReservationApproval() {
 					icon: CheckSquare,
 					options: [
 						{ value: "PENDING", label: "Pending" },
-						{ value: "APPROVED", label: "Approved" },
-						{ value: "REJECTED", label: "Rejected" },
+						{ value: "APPROVED", label: "Reserved" },
+						{ value: "REJECTED", label: "Denied Reservation" },
 						{ value: "CANCELLED", label: "Cancelled" },
 					],
 				}) as ColumnMeta<EquipmentReservationDTO, unknown>,
@@ -800,7 +800,7 @@ export function EquipmentReservationApproval() {
 							onClick={() => setViewMode("approved")}
 						>
 							<CardHeader className="pb-2">
-								<CardTitle className="text-sm font-medium">Approved</CardTitle>
+								<CardTitle className="text-sm font-medium">Reserved</CardTitle>
 							</CardHeader>
 							<CardContent>
 								<div className="text-2xl font-bold text-green-500">
@@ -814,7 +814,7 @@ export function EquipmentReservationApproval() {
 						>
 							<CardHeader className="pb-2">
 								<CardTitle className="text-sm font-medium">
-									Rejected/Cancelled
+									Denied Reservation/Cancelled
 								</CardTitle>
 							</CardHeader>
 							<CardContent>

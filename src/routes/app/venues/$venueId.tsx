@@ -9,7 +9,6 @@ import {
 	UserCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -23,7 +22,7 @@ import { getOngoingAndApprovedEventsByVenue } from "@/lib/api";
 import { DEFAULT_VENUE_IMAGE_URL } from "@/lib/constants";
 import { eventsQueryKeys, venuesQueryOptions } from "@/lib/query";
 import type { Event as AppEvent, VenueDTO } from "@/lib/types";
-import { formatDateRange, getStatusColor } from "@/lib/utils";
+import { formatDateRange, getApproverStatusBadge } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/venues/$venueId")({
 	component: VenueDetails,
@@ -193,14 +192,7 @@ export function VenueDetails() {
 															<CardTitle className="text-base">
 																{event.eventName}
 															</CardTitle>
-															<Badge
-																className={`${getStatusColor(event.status)}`}
-															>
-																{event.status
-																	? event.status.charAt(0).toUpperCase() +
-																		event.status.slice(1).toLowerCase()
-																	: "Unknown"}
-															</Badge>
+															{getApproverStatusBadge(event.status)}
 														</div>
 													</CardHeader>
 													<CardContent className="flex-grow space-y-2 text-sm">

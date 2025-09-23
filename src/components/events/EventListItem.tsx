@@ -2,7 +2,6 @@ import { format } from "date-fns";
 import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
 import { useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Tooltip,
@@ -12,7 +11,11 @@ import {
 } from "@/components/ui/tooltip";
 import { useCurrentUser } from "@/lib/query";
 import type { EventDTO } from "@/lib/types";
-import { formatDateRange, getInitials, getStatusColor } from "@/lib/utils";
+import {
+	formatDateRange,
+	getApproverStatusBadge,
+	getInitials,
+} from "@/lib/utils";
 
 interface EventListItemProps {
 	event: EventDTO;
@@ -159,14 +162,7 @@ export function EventListItem({
 				</span>
 			</div>
 
-			<Badge
-				className={`${getStatusColor(event.status)} w-24 justify-center text-center flex-shrink-0 mx-4 hidden sm:flex`}
-			>
-				{event.status
-					? event.status.charAt(0).toUpperCase() +
-						event.status.slice(1).toLowerCase()
-					: "Unknown"}
-			</Badge>
+			{getApproverStatusBadge(event.status)}
 
 			<Button
 				variant="ghost"

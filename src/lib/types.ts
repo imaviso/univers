@@ -49,6 +49,24 @@ export type UserRole =
 	| "ACCOUNTING"
 	| "VPAA";
 
+export type Status =
+	| "APPROVED"
+	| "PENDING"
+	| "CANCELED"
+	| "REJECTED"
+	| "ONGOING"
+	| "COMPLETED"
+	| "ENDED"
+	| "DEFECT"
+	| "MAINTENANCE"
+	| "NEED_REPLACEMENT"
+	| "NEW"
+	| "AVAILABLE"
+	| "RESERVED"
+	| "DENIED_RESERVATION"
+	| "PAID"
+	| "UNPAID";
+
 export const STATUS_EQUIPMENT = [
 	{ value: "DEFECT", label: "Defect" },
 	{ value: "MAINTENANCE", label: "Maintenance" },
@@ -144,7 +162,7 @@ export type EventDTO = {
 	department: DepartmentDTO;
 	startTime: string;
 	endTime: string;
-	status: string;
+	status: Status;
 	approvals: EventApprovalDTO[] | null;
 	cancellationReason: string | null;
 	createdAt: string;
@@ -296,6 +314,7 @@ export type AUTHORIZED_ROLES =
 	| "VPAA"
 	| "SSD"
 	| "FAO"
+	| "ACCOUNTING"
 	| "DEPT_HEAD";
 
 export interface ApiResponse<T> {

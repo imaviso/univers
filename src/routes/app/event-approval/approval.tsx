@@ -39,11 +39,11 @@ import {
 	UserCheck,
 	UserCircle,
 	X,
-	XCircle,
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DataTableFilter } from "@/components/data-table-filter";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -255,24 +255,58 @@ export function EventApproval() {
 	// Role-based label overrides for VPAA + ADMIN
 	const userRoles = context.authState?.roles || [];
 	const isVpaaAdmin = userRoles.includes("VPAA") && userRoles.includes("ADMIN");
-	const approveActionLabel = isVpaaAdmin ? "Recommend" : "Approve";
-	const rejectActionLabel = isVpaaAdmin ? "Not Recommended" : "Reject";
-	const approveDialogTitle = isVpaaAdmin ? "Recommend Event" : "Approve Event";
-	const rejectDialogTitle = isVpaaAdmin ? "Not Recommended" : "Reject Event";
-	const approveBulkTitle = isVpaaAdmin
-		? "Recommend Selected Events"
-		: "Approve Selected Events";
-	const rejectBulkTitle = isVpaaAdmin
-		? "Not Recommend Selected Events"
-		: "Reject Selected Events";
-	const approveConfirmLabel = isVpaaAdmin
-		? "Confirm Recommendation"
-		: "Confirm Approval";
-	const rejectConfirmLabel = isVpaaAdmin
-		? "Confirm Not Recommendation"
-		: "Confirm Rejection";
-	const approvePendingLabel = isVpaaAdmin ? "Recommending..." : "Approving...";
-	const rejectPendingLabel = isVpaaAdmin ? "Processing..." : "Rejecting...";
+	const isAccounting = userRoles.includes("ACCOUNTING");
+
+	const approveActionLabel = isAccounting
+		? "Paid"
+		: isVpaaAdmin
+			? "Recommend"
+			: "Approve";
+	const rejectActionLabel = isAccounting
+		? "Unpaid"
+		: isVpaaAdmin
+			? "Not Recommended"
+			: "Reject";
+	const approveDialogTitle = isAccounting
+		? "Mark as Paid"
+		: isVpaaAdmin
+			? "Recommend Event"
+			: "Approve Event";
+	const rejectDialogTitle = isAccounting
+		? "Mark as Unpaid"
+		: isVpaaAdmin
+			? "Not Recommended"
+			: "Reject Event";
+	const approveBulkTitle = isAccounting
+		? "Mark Selected Events as Paid"
+		: isVpaaAdmin
+			? "Recommend Selected Events"
+			: "Approve Selected Events";
+	const rejectBulkTitle = isAccounting
+		? "Mark Selected Events as Unpaid"
+		: isVpaaAdmin
+			? "Not Recommend Selected Events"
+			: "Reject Selected Events";
+	const approveConfirmLabel = isAccounting
+		? "Confirm Payment"
+		: isVpaaAdmin
+			? "Confirm Recommendation"
+			: "Confirm Approval";
+	const rejectConfirmLabel = isAccounting
+		? "Confirm Unpaid"
+		: isVpaaAdmin
+			? "Confirm Not Recommendation"
+			: "Confirm Rejection";
+	const approvePendingLabel = isAccounting
+		? "Processing..."
+		: isVpaaAdmin
+			? "Recommending..."
+			: "Approving...";
+	const rejectPendingLabel = isAccounting
+		? "Processing..."
+		: isVpaaAdmin
+			? "Processing..."
+			: "Rejecting...";
 
 	const currentQueryOptions = config.getQueryOptions();
 	const { data: fetchedEvents } = useSuspenseQuery({
@@ -505,14 +539,9 @@ export function EventApproval() {
 					event,
 					currentUserId,
 				);
-				const currentUserSpecificApproval = config.getApprovalStatus(
-					event,
-					currentUserId,
-				);
 				return (
 					isOverallEventPending &&
 					isUserTheCorrectApproverType &&
-					currentUserSpecificApproval?.status === "PENDING" &&
 					event.publicId
 				);
 			})
@@ -541,7 +570,7 @@ export function EventApproval() {
 		);
 
 		toast.promise(Promise.all(promises), {
-			loading: `${isVpaaAdmin ? "Recommending" : "Approving"} ${
+			loading: `${isAccounting ? "Marking" : isVpaaAdmin ? "Recommending" : "Approving"} ${
 				eligibleEventPayloads.length
 			} event(s)...`,
 			success: (_messages: string[]) => {
@@ -549,11 +578,15 @@ export function EventApproval() {
 				setIsBulkApproveDialogOpen(false);
 				setBulkApproveRemarks("");
 				return `${eligibleEventPayloads.length} event(s) ${
-					isVpaaAdmin ? "recommended" : "approved"
+					isAccounting
+						? "marked as paid"
+						: isVpaaAdmin
+							? "recommended"
+							: "approved"
 				}.`;
 			},
 			error: (err: Error) => {
-				return `Failed to ${isVpaaAdmin ? "recommend" : "approve"} some events: ${err.message}`;
+				return `Failed to ${isAccounting ? "mark as paid" : isVpaaAdmin ? "recommend" : "approve"} some events: ${err.message}`;
 			},
 		});
 	};
@@ -574,14 +607,9 @@ export function EventApproval() {
 					event,
 					currentUserId,
 				);
-				const currentUserSpecificApproval = config.getApprovalStatus(
-					event,
-					currentUserId,
-				);
 				return (
 					isOverallEventPending &&
 					isUserTheCorrectApproverType &&
-					currentUserSpecificApproval?.status === "PENDING" &&
 					event.publicId
 				);
 			})
@@ -610,7 +638,7 @@ export function EventApproval() {
 		);
 
 		toast.promise(Promise.all(promises), {
-			loading: `${isVpaaAdmin ? "Marking Not Recommended" : "Rejecting"} ${
+			loading: `${isAccounting ? "Marking" : isVpaaAdmin ? "Marking Not Recommended" : "Rejecting"} ${
 				eligibleEventPayloads.length
 			} event(s)...`,
 			success: (_messages: string[]) => {
@@ -618,11 +646,15 @@ export function EventApproval() {
 				setIsBulkRejectDialogOpen(false);
 				setBulkRejectionRemarks("");
 				return `${eligibleEventPayloads.length} event(s) ${
-					isVpaaAdmin ? "marked Not Recommended" : "rejected"
+					isAccounting
+						? "marked as unpaid"
+						: isVpaaAdmin
+							? "marked Not Recommended"
+							: "rejected"
 				}.`;
 			},
 			error: (err: Error) => {
-				return `Failed to ${isVpaaAdmin ? "mark Not Recommended" : "reject"} some events: ${err.message}`;
+				return `Failed to ${isAccounting ? "mark as unpaid" : isVpaaAdmin ? "mark Not Recommended" : "reject"} some events: ${err.message}`;
 			},
 		});
 	};
@@ -838,8 +870,8 @@ export function EventApproval() {
 					icon: HelpCircle,
 					options: [
 						{ value: "PENDING", label: "Pending" },
-						{ value: "APPROVED", label: "Approved" },
-						{ value: "REJECTED", label: "Rejected" },
+						{ value: "APPROVED", label: "Reserved" },
+						{ value: "REJECTED", label: "Denied Reservation" },
 						{ value: "CANCELLED", label: "Cancelled" },
 					],
 				}) as ColumnMeta<ApprovalEvent, unknown>,
@@ -870,6 +902,33 @@ export function EventApproval() {
 						currentUserId,
 					);
 					const statusToDisplay = currentUserApproval?.status || "PENDING";
+
+					// Custom badge for accounting role
+					if (isAccounting) {
+						switch (statusToDisplay) {
+							case "APPROVED":
+								return (
+									<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
+										Paid
+									</Badge>
+								);
+							case "REJECTED":
+								return (
+									<Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
+										Unpaid
+									</Badge>
+								);
+							case "PENDING":
+								return (
+									<Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
+										Pending
+									</Badge>
+								);
+							default:
+								return getApproverStatusBadge(statusToDisplay);
+						}
+					}
+
 					return getApproverStatusBadge(statusToDisplay);
 				},
 				accessorFn: (row) => {
@@ -889,11 +948,17 @@ export function EventApproval() {
 						displayName: "Your Approval",
 						type: "option",
 						icon: UserCheck,
-						options: [
-							{ value: "PENDING", label: "Pending" },
-							{ value: "APPROVED", label: "Approved" },
-							{ value: "REJECTED", label: "Rejected" },
-						],
+						options: isAccounting
+							? [
+									{ value: "PENDING", label: "Pending" },
+									{ value: "APPROVED", label: "Paid" },
+									{ value: "REJECTED", label: "Unpaid" },
+								]
+							: [
+									{ value: "PENDING", label: "Pending" },
+									{ value: "APPROVED", label: "Reserved" },
+									{ value: "REJECTED", label: "Denied Reservation" },
+								],
 					},
 				) as ColumnMeta<ApprovalEvent, unknown>,
 			},
@@ -908,10 +973,13 @@ export function EventApproval() {
 						event,
 						currentUserId,
 					);
-					const canTakeAction =
-						isPending &&
-						isApprover &&
-						currentUserApproval?.status === "PENDING";
+					const canTakeAction = isPending && isApprover;
+					const userApprovalStatus = currentUserApproval?.status;
+
+					// Show approve button if user hasn't approved yet (PENDING or REJECTED)
+					const canApprove = canTakeAction && userApprovalStatus !== "APPROVED";
+					// Show reject button if user hasn't rejected yet (PENDING or APPROVED)
+					const canReject = canTakeAction && userApprovalStatus !== "REJECTED";
 
 					return (
 						<div className="text-center">
@@ -939,51 +1007,37 @@ export function EventApproval() {
 										<Calendar className="mr-2 h-4 w-4" />
 										View Venue
 									</DropdownMenuItem>
-									{canTakeAction && (
+									{(canApprove || canReject) && (
 										<>
 											<DropdownMenuSeparator />
-											<DropdownMenuItem
-												onClick={() => openSingleApproveDialog(event)}
-												disabled={
-													approveEventMutation.isPending ||
-													rejectEventMutation.isPending
-												}
-												className="text-green-600 focus:text-green-600 focus:bg-green-100/10"
-											>
-												<Check className="mr-2 h-4 w-4" />
-												{approveActionLabel}
-											</DropdownMenuItem>
-											<DropdownMenuItem
-												onClick={() => openSingleRejectDialog(event)}
-												disabled={
-													approveEventMutation.isPending ||
-													rejectEventMutation.isPending
-												}
-												className="text-destructive focus:text-destructive focus:bg-destructive/10"
-											>
-												<X className="mr-2 h-4 w-4" />
-												{rejectActionLabel}
-											</DropdownMenuItem>
+											{canApprove && (
+												<DropdownMenuItem
+													onClick={() => openSingleApproveDialog(event)}
+													disabled={
+														approveEventMutation.isPending ||
+														rejectEventMutation.isPending
+													}
+													className="text-green-600 focus:text-green-600 focus:bg-green-100/10"
+												>
+													<Check className="mr-2 h-4 w-4" />
+													{approveActionLabel}
+												</DropdownMenuItem>
+											)}
+											{canReject && (
+												<DropdownMenuItem
+													onClick={() => openSingleRejectDialog(event)}
+													disabled={
+														approveEventMutation.isPending ||
+														rejectEventMutation.isPending
+													}
+													className="text-destructive focus:text-destructive focus:bg-destructive/10"
+												>
+													<X className="mr-2 h-4 w-4" />
+													{rejectActionLabel}
+												</DropdownMenuItem>
+											)}
 										</>
 									)}
-									{currentUserApproval &&
-										currentUserApproval.status !== "PENDING" && (
-											<>
-												<DropdownMenuSeparator />
-												<DropdownMenuItem
-													disabled
-													className="text-muted-foreground italic"
-												>
-													{currentUserApproval.status === "APPROVED" ? (
-														<Check className="mr-2 h-4 w-4 text-green-600" />
-													) : (
-														<XCircle className="mr-2 h-4 w-4 text-red-600" />
-													)}
-													You have already{" "}
-													{currentUserApproval.status.toLowerCase()} this event
-												</DropdownMenuItem>
-											</>
-										)}
 								</DropdownMenuContent>
 							</DropdownMenu>
 						</div>
@@ -1013,6 +1067,7 @@ export function EventApproval() {
 			openSingleRejectDialog,
 			approveActionLabel,
 			rejectActionLabel,
+			isAccounting,
 		],
 	);
 
@@ -1073,13 +1128,7 @@ export function EventApproval() {
 			const event = row.original as ApprovalEvent;
 			const isPending = event.status === "PENDING";
 			const isApprover = config.isApprover(event, currentUserId);
-			const currentUserApproval = config.getApprovalStatus(
-				event,
-				currentUserId,
-			);
-			return (
-				isPending && isApprover && currentUserApproval?.status === "PENDING"
-			);
+			return isPending && isApprover;
 		}).length;
 
 	return (
@@ -1153,7 +1202,7 @@ export function EventApproval() {
 					<Card>
 						<CardHeader className="pb-2">
 							<CardTitle className="text-sm font-medium">
-								Events You've Approved
+								Events You've Reserved
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
@@ -1165,7 +1214,7 @@ export function EventApproval() {
 					<Card>
 						<CardHeader className="pb-2">
 							<CardTitle className="text-sm font-medium">
-								Events You've Rejected
+								Events You've Denied Reservation
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
@@ -1298,16 +1347,24 @@ export function EventApproval() {
 						</DialogTitle>
 						<DialogDescription>
 							{singleActionInfo.type === "approve"
-								? "You can optionally add remarks for this event approval."
-								: "Please provide a reason for rejection. This note will be recorded for the event."}
+								? isAccounting
+									? "You can optionally add remarks for this payment confirmation."
+									: "You can optionally add remarks for this event approval."
+								: isAccounting
+									? "Please provide a reason for marking as unpaid. This note will be recorded for the event."
+									: "Please provide a reason for rejection. This note will be recorded for the event."}
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
 						<Textarea
 							placeholder={
 								singleActionInfo.type === "approve"
-									? "Optional remarks..."
-									: "Enter reason for rejection..."
+									? isAccounting
+										? "Optional payment remarks..."
+										: "Optional remarks..."
+									: isAccounting
+										? "Enter reason for marking as unpaid..."
+										: "Enter reason for rejection..."
 							}
 							value={singleActionRemarks}
 							onChange={(e) => setSingleActionRemarks(e.target.value)}
@@ -1360,14 +1417,22 @@ export function EventApproval() {
 						<DialogTitle>{approveBulkTitle}</DialogTitle>
 						<DialogDescription>
 							Optionally add remarks for{" "}
-							{isVpaaAdmin ? "recommending" : "approving"} the selected{" "}
-							{numEligibleSelected} eligible event(s). This note will be
-							recorded for all of them.
+							{isAccounting
+								? "marking as paid"
+								: isVpaaAdmin
+									? "recommending"
+									: "approving"}{" "}
+							the selected {numEligibleSelected} eligible event(s). This note
+							will be recorded for all of them.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
 						<Textarea
-							placeholder="Optional remarks..."
+							placeholder={
+								isAccounting
+									? "Optional payment remarks..."
+									: "Optional remarks..."
+							}
 							value={bulkApproveRemarks}
 							onChange={(e) => setBulkApproveRemarks(e.target.value)}
 							rows={5}
@@ -1407,14 +1472,22 @@ export function EventApproval() {
 						<DialogTitle>{rejectBulkTitle}</DialogTitle>
 						<DialogDescription>
 							Provide a reason for{" "}
-							{isVpaaAdmin ? "marking Not Recommended" : "rejecting"} the
-							selected {numEligibleSelected} eligible event(s). This note will
-							be recorded for all of them.
+							{isAccounting
+								? "marking as unpaid"
+								: isVpaaAdmin
+									? "marking Not Recommended"
+									: "rejecting"}{" "}
+							the selected {numEligibleSelected} eligible event(s). This note
+							will be recorded for all of them.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
 						<Textarea
-							placeholder="Enter reason for rejection..."
+							placeholder={
+								isAccounting
+									? "Enter reason for marking as unpaid..."
+									: "Enter reason for rejection..."
+							}
 							value={bulkRejectionRemarks}
 							onChange={(e) => setBulkRejectionRemarks(e.target.value)}
 							rows={5}

@@ -30,7 +30,7 @@ export const EVENT_STATUSES: Record<
 		dataKey: "completedCount",
 	},
 	rejected: {
-		label: "Rejected",
+		label: "Denied Reservation",
 		color: "var(--chart-5)",
 		dataKey: "rejectedCount",
 	},

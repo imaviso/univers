@@ -42,6 +42,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select"; // ADDED Select components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
+import { EVENT_STATUSES } from "@/lib/constants";
 import { useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import useCurrentUser
 import { cn, usePersistentState } from "@/lib/utils"; // Added cn
 
@@ -51,12 +52,12 @@ export const Route = createFileRoute("/app/events/timeline")({
 
 // Define EventStatus constants locally
 const EventStatus = {
-	PENDING: "Pending",
-	APPROVED: "Approved",
-	ONGOING: "Ongoing",
-	COMPLETED: "Completed",
-	REJECTED: "Rejected",
-	CANCELED: "Canceled",
+	PENDING: EVENT_STATUSES.pending.label,
+	APPROVED: EVENT_STATUSES.approved.label,
+	ONGOING: EVENT_STATUSES.ongoing.label,
+	COMPLETED: EVENT_STATUSES.completed.label,
+	REJECTED: EVENT_STATUSES.rejected.label,
+	CANCELED: EVENT_STATUSES.canceled.label,
 } as const;
 
 function Events() {
@@ -160,22 +161,22 @@ function Events() {
 										<DropdownMenuRadioItem value="ALL">
 											All Statuses
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.PENDING}>
+										<DropdownMenuRadioItem value="PENDING">
 											{EventStatus.PENDING}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.APPROVED}>
+										<DropdownMenuRadioItem value="APPROVED">
 											{EventStatus.APPROVED}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.ONGOING}>
+										<DropdownMenuRadioItem value="ONGOING">
 											{EventStatus.ONGOING}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.COMPLETED}>
+										<DropdownMenuRadioItem value="COMPLETED">
 											{EventStatus.COMPLETED}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.REJECTED}>
+										<DropdownMenuRadioItem value="REJECTED">
 											{EventStatus.REJECTED}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.CANCELED}>
+										<DropdownMenuRadioItem value="CANCELED">
 											{EventStatus.CANCELED}
 										</DropdownMenuRadioItem>
 									</DropdownMenuRadioGroup>
@@ -506,22 +507,22 @@ function Events() {
 										<DropdownMenuRadioItem value="ALL">
 											All Statuses
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.PENDING}>
+										<DropdownMenuRadioItem value="PENDING">
 											{EventStatus.PENDING}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.APPROVED}>
+										<DropdownMenuRadioItem value="APPROVED">
 											{EventStatus.APPROVED}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.ONGOING}>
+										<DropdownMenuRadioItem value="ONGOING">
 											{EventStatus.ONGOING}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.COMPLETED}>
+										<DropdownMenuRadioItem value="COMPLETED">
 											{EventStatus.COMPLETED}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.REJECTED}>
+										<DropdownMenuRadioItem value="REJECTED">
 											{EventStatus.REJECTED}
 										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value={EventStatus.CANCELED}>
+										<DropdownMenuRadioItem value="CANCELED">
 											{EventStatus.CANCELED}
 										</DropdownMenuRadioItem>
 									</DropdownMenuRadioGroup>

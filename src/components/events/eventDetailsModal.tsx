@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router"; // Import Link for navigation
 import { format, isSameDay } from "date-fns";
 import { Clock, ExternalLink, Users } from "lucide-react"; // Removed Edit, Trash. Added ExternalLink
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -10,7 +9,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import type { Event } from "@/lib/types"; // Use the correct Event type
-import { getStatusColor } from "@/lib/utils";
+import { getApproverStatusBadge } from "@/lib/utils";
 
 // Removed useState as Team/Comments tabs are removed
 
@@ -50,12 +49,7 @@ export function EventDetailsModal({
 				<div className="flex justify-between items-start gap-4">
 					{" "}
 					{/* Use items-start */}
-					<Badge className={`${getStatusColor(event.status)}`}>
-						{event.status
-							? event.status.charAt(0).toUpperCase() +
-								event.status.slice(1).toLowerCase()
-							: "Unknown"}
-					</Badge>
+					{getApproverStatusBadge(event.status)}
 					<div className="flex flex-col sm:flex-row gap-2">
 						{" "}
 						{/* Stack buttons on small screens */}

@@ -94,7 +94,6 @@ import {
 	getApproverStatusBadge,
 	getBadgeVariant,
 	getInitials,
-	getStatusColor,
 } from "@/lib/utils";
 
 // Helper function to check if URL likely points to an image
@@ -207,7 +206,7 @@ export function EventDetailsPage() {
 		: "Confirm Rejection";
 	const rejectPendingLabel = isVpaaAdmin ? "Processing..." : "Rejecting...";
 
-	// Update currentUserApprovalRecord to use event.approvals
+	// Get current user's approval record to check their status
 	const currentUserApprovalRecord = useMemo(() => {
 		if (
 			!currentUser?.publicId ||
@@ -222,22 +221,65 @@ export function EventDetailsPage() {
 		);
 	}, [event?.approvals, currentUser]);
 
-	// User can approve if the event is pending AND their specific approval record is pending
+	// Determine if user can approve/reject based on their role and event status
 	const canUserApprove = useMemo(() => {
-		if (!isEventPending || !currentUser) return false; // Added !currentUser check
-		// For any user (including SUPER_ADMIN), they need an assigned PENDING approval record to act.
-		return currentUserApprovalRecord?.status === "PENDING";
-	}, [isEventPending, currentUserApprovalRecord, currentUser]);
+		if (!isEventPending || !currentUser) return false;
 
-	// User can reject if the event is pending AND their specific approval record is pending
+		// Check if user has any approver role
+		const userRoles = currentUser.roles || [];
+		const isVenueOwner =
+			userRoles.includes("VENUE_OWNER") &&
+			event.eventVenue?.venueOwner?.publicId === currentUser.publicId;
+		const isDeptHead =
+			userRoles.includes("DEPT_HEAD") &&
+			event.department?.deptHead?.publicId === currentUser.publicId;
+		const isAdmin =
+			userRoles.includes("ADMIN") || userRoles.includes("SUPER_ADMIN");
+		const isAccounting = userRoles.includes("ACCOUNTING");
+
+		const hasApproverRole =
+			isVenueOwner || isDeptHead || isAdmin || isAccounting;
+
+		// Show approve button if user has approver role AND hasn't already approved
+		const hasAlreadyApproved = currentUserApprovalRecord?.status === "APPROVED";
+		return hasApproverRole && !hasAlreadyApproved;
+	}, [
+		isEventPending,
+		currentUser,
+		event.eventVenue?.venueOwner?.publicId,
+		event.department?.deptHead?.publicId,
+		currentUserApprovalRecord?.status,
+	]);
+
+	// User can reject if they have approver role and haven't already rejected
 	const canUserReject = useMemo(() => {
-		if (!isEventPending || !currentUser) return false; // Added !currentUser check
-		// Same conditions as approving for being able to act on their pending item.
-		return (
-			currentUserApprovalRecord?.status === "APPROVED" ||
-			currentUserApprovalRecord?.status === "PENDING"
-		);
-	}, [isEventPending, currentUserApprovalRecord, currentUser]);
+		if (!isEventPending || !currentUser) return false;
+
+		// Check if user has any approver role (same logic as approve)
+		const userRoles = currentUser.roles || [];
+		const isVenueOwner =
+			userRoles.includes("VENUE_OWNER") &&
+			event.eventVenue?.venueOwner?.publicId === currentUser.publicId;
+		const isDeptHead =
+			userRoles.includes("DEPT_HEAD") &&
+			event.department?.deptHead?.publicId === currentUser.publicId;
+		const isAdmin =
+			userRoles.includes("ADMIN") || userRoles.includes("SUPER_ADMIN");
+		const isAccounting = userRoles.includes("ACCOUNTING");
+
+		const hasApproverRole =
+			isVenueOwner || isDeptHead || isAdmin || isAccounting;
+
+		// Show reject button if user has approver role AND hasn't already rejected
+		const hasAlreadyRejected = currentUserApprovalRecord?.status === "REJECTED";
+		return hasApproverRole && !hasAlreadyRejected;
+	}, [
+		isEventPending,
+		currentUser,
+		event.eventVenue?.venueOwner?.publicId,
+		event.department?.deptHead?.publicId,
+		currentUserApprovalRecord?.status,
+	]);
 
 	const canCancelEvent =
 		(isOrganizer || isSuperAdmin) &&
@@ -756,12 +798,7 @@ export function EventDetailsPage() {
 							<ArrowLeft className="h-4 w-4" />
 						</Button>
 						<h1 className="text-xl font-semibold">{event.eventName}</h1>
-						<Badge className={`${getStatusColor(event.status)}`}>
-							{event.status
-								? event.status.charAt(0).toUpperCase() +
-									event.status.slice(1).toLowerCase()
-								: "Unknown"}
-						</Badge>
+						{getApproverStatusBadge(event.status)}
 					</div>
 					<div className="flex items-center gap-2">
 						{/* Show Approve Button if user can approve */}
@@ -1158,12 +1195,7 @@ export function EventDetailsPage() {
 															</TableCell>
 															<TableCell>{reservation.quantity}</TableCell>
 															<TableCell>
-																<Badge
-																	className={`${getStatusColor(reservation.status)}`}
-																>
-																	{reservation.status.charAt(0).toUpperCase() +
-																		reservation.status.slice(1).toLowerCase()}
-																</Badge>
+																{getApproverStatusBadge(reservation.status)}
 															</TableCell>
 															{(reservation.status === "PENDING" ||
 																reservation.status === "APPROVED") &&
@@ -1252,7 +1284,9 @@ export function EventDetailsPage() {
 													</TableCell>
 													<TableCell>
 														{getApproverStatusBadge(
-															approvalRow.status as string,
+															approvalRow.status,
+															approvalRow.signedByUser.roles ||
+																approvalRow.userRole,
 														)}
 													</TableCell>
 													<TableCell>

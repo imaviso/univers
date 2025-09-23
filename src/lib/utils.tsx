@@ -3,7 +3,36 @@ import { format, setHours, setMinutes } from "date-fns";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { Badge } from "@/components/ui/badge";
-import type { Equipment, UserRole } from "./types";
+import type { Equipment, Status, UserRole } from "./types";
+
+// Normalize unknown strings to a safe Status value
+export function toStatus(s?: string | Status | null): Status | undefined {
+	if (!s) return undefined;
+	const upper = s.toString().trim().toUpperCase();
+	// Map common variants to canonical values
+	const normalized = upper === "CANCELLED" ? "CANCELED" : upper;
+	const VALID_STATUSES: Status[] = [
+		"APPROVED",
+		"PENDING",
+		"CANCELED",
+		"REJECTED",
+		"ONGOING",
+		"COMPLETED",
+		"ENDED",
+		"DEFECT",
+		"MAINTENANCE",
+		"NEED_REPLACEMENT",
+		"NEW",
+		"AVAILABLE",
+		"RESERVED",
+		"DENIED_RESERVATION",
+		"PAID",
+		"UNPAID",
+	];
+	return VALID_STATUSES.includes(normalized as Status)
+		? (normalized as Status)
+		: undefined;
+}
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -73,8 +102,9 @@ export const formatDateTime = (dateString: string | null): string => {
 	}
 };
 
-export const getStatusColor = (status: string | undefined) => {
-	switch (status?.toUpperCase()) {
+export const getStatusColor = (status: Status | string | undefined | null) => {
+	const st = toStatus(status as string | null);
+	switch (st) {
 		case "PENDING":
 			return "bg-yellow-500/10 text-yellow-600";
 		case "APPROVED":
@@ -90,8 +120,11 @@ export const getStatusColor = (status: string | undefined) => {
 	}
 };
 
-export function getStatusBadgeClass(status: string | undefined): string {
-	switch (status) {
+export function getStatusBadgeClass(
+	status: Status | string | undefined | null,
+): string {
+	const st = toStatus(status as string | null);
+	switch (st) {
 		case "NEW":
 			return "border-blue-500/50 bg-blue-500/10 text-blue-600 dark:text-blue-400";
 		case "PENDING":
@@ -120,34 +153,75 @@ export function getEquipmentNameById(
 	return equipment ? equipment.name : null;
 }
 
-export const getApproverStatusBadge = (status: string | undefined) => {
-	switch (status?.toUpperCase()) {
+export const getApproverStatusBadge = (
+	status: Status | string | undefined | null,
+	userRole?: string | string[] | null,
+) => {
+	const raw = status?.toString().trim().toUpperCase();
+	if (raw === "NOT_REQUIRED") {
+		return (
+			<Badge className="bg-gray-500/10 text-gray-500 hover:bg-gray-500/20">
+				Not Required
+			</Badge>
+		);
+	}
+
+	const st = toStatus(raw ?? null);
+	const isAccountingUser = Array.isArray(userRole)
+		? userRole.includes("ACCOUNTING")
+		: userRole === "ACCOUNTING";
+
+	switch (st) {
 		case "APPROVED":
 			return (
 				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
-					Reserved
+					{isAccountingUser ? "Paid" : "Reserved"}
+				</Badge>
+			);
+		case "ONGOING":
+			return (
+				<Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20">
+					Ongoing
+				</Badge>
+			);
+		case "RESERVED":
+			return (
+				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
+					{isAccountingUser ? "Paid" : "Reserved"}
 				</Badge>
 			);
 		case "REJECTED":
 			return (
 				<Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-					Rejected
+					{isAccountingUser ? "Unpaid" : "Denied Reservation"}
+				</Badge>
+			);
+		case "DENIED_RESERVATION":
+			return (
+				<Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
+					{isAccountingUser ? "Unpaid" : "Denied Reservation"}
 				</Badge>
 			);
 		case "PENDING":
 			return (
 				<Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
-					Pending
+					{isAccountingUser ? "Unpaid" : "Pending"}
 				</Badge>
 			);
-		case "NOT_REQUIRED": // Handle if applicable
+		case "UNPAID":
 			return (
-				<Badge className="bg-gray-500/10 text-gray-500 hover:bg-gray-500/20">
-					Not Required
+				<Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
+					Unpaid
+				</Badge>
+			);
+		case "PAID":
+			return (
+				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
+					Paid
 				</Badge>
 			);
 		default:
-			return <Badge variant="outline">{status || "Unknown"}</Badge>;
+			return <Badge variant="outline">{st || "Unknown"}</Badge>;
 	}
 };
 
@@ -194,6 +268,8 @@ export const getBadgeVariant = (role: UserRole): string => {
 			return "bg-teal-100 text-teal-800";
 		case "VPAA":
 			return "bg-orange-100 text-orange-800";
+		case "ACCOUNTING":
+			return "bg-cyan-100 text-cyan-800";
 		default:
 			return "bg-gray-100 text-gray-800";
 	}

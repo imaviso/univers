@@ -491,6 +491,35 @@ export const deleteEvent = async (eventId: string): Promise<string> => {
 	}
 };
 
+export const eventApprovalAction = async (data: {
+	/** One or more event public ids */
+	eventPublicIds: string[];
+	/** Status to apply: APPROVED | REJECTED | PAID | UNPAID | ... */
+	status: import("./types").Status;
+	remarks?: string;
+}): Promise<string[]> => {
+	try {
+		const url = `${API_BASE_URL}/event-approval/action`;
+		const payload = {
+			eventPublicIds: data.eventPublicIds,
+			status: data.status,
+			remarks: data.remarks ?? "",
+		};
+		const response = await fetchWithAuth(url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload),
+		});
+		const responseData = await handleApiResponse<string[]>(response, true);
+		return responseData || [];
+	} catch (error) {
+		if (error instanceof ApiError) throw error;
+		throw new Error(
+			`An unexpected error occurred performing event approval action. ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+};
+
 export const approveEvent = async ({
 	eventId,
 	remarks,
@@ -498,34 +527,14 @@ export const approveEvent = async ({
 	eventId: string;
 	remarks: string;
 }): Promise<string> => {
-	try {
-		const url = `${API_BASE_URL}/event-approval/action`;
-
-		const payload = {
-			eventPublicIds: [eventId],
-			status: "APPROVED",
-			remarks: remarks || "",
-		};
-
-		const response = await fetchWithAuth(url, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(payload),
-		});
-		const responseData = await handleApiResponse<unknown[]>(response, true);
-		return responseData && responseData.length > 0
-			? "Event approved successfully"
-			: "Approval processed";
-	} catch (error) {
-		if (error instanceof Error) {
-			throw error;
-		}
-		throw new Error(
-			`An unexpected error occurred during approving event ${eventId}.`,
-		);
-	}
+	const result = await eventApprovalAction({
+		eventPublicIds: [eventId],
+		status: "APPROVED",
+		remarks,
+	});
+	return result && result.length > 0
+		? "Event approved successfully"
+		: "Approval processed";
 };
 
 export const createVenue = async ({

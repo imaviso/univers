@@ -2,7 +2,6 @@ import { format } from "date-fns";
 import { ChevronRight, Clock, MapPin, Tag } from "lucide-react";
 import { useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -19,7 +18,11 @@ import {
 } from "@/components/ui/tooltip";
 import { useCurrentUser } from "@/lib/query";
 import type { EventDTO } from "@/lib/types";
-import { formatDateRange, getInitials, getStatusColor } from "@/lib/utils";
+import {
+	formatDateRange,
+	getApproverStatusBadge,
+	getInitials,
+} from "@/lib/utils";
 
 // Helper component for rendering a single event card
 export function EventCard({
@@ -131,12 +134,7 @@ export function EventCard({
 						<h3 className="font-medium">{event.eventName}</h3>
 					)}
 					<div className="flex flex-col items-end gap-1">
-						<Badge className={`${getStatusColor(event.status)}`}>
-							{event.status
-								? event.status.charAt(0).toUpperCase() +
-									event.status.slice(1).toLowerCase()
-								: "Unknown"}
-						</Badge>
+						{getApproverStatusBadge(event.status)}
 					</div>
 				</div>
 			</CardHeader>

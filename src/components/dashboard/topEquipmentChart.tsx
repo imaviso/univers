@@ -20,10 +20,14 @@ interface TopEquipmentChartProps {
 // Define statuses (same as in UserActivityChart)
 const RESERVATION_STATUSES = [
 	{ key: "pendingCount", label: "Pending", color: "var(--chart-1)" },
-	{ key: "approvedCount", label: "Approved", color: "var(--chart-2)" },
+	{ key: "approvedCount", label: "Reserved", color: "var(--chart-2)" },
 	{ key: "ongoingCount", label: "Ongoing", color: "var(--chart-3)" },
 	{ key: "completedCount", label: "Completed", color: "var(--chart-4)" },
-	{ key: "rejectedCount", label: "Rejected", color: "var(--chart-5)" },
+	{
+		key: "rejectedCount",
+		label: "Denied Reservation",
+		color: "var(--chart-5)",
+	},
 	{
 		key: "canceledCount",
 		label: "Canceled",
