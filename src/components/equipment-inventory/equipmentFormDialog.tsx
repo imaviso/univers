@@ -537,7 +537,7 @@ export function EquipmentFormDialog({
 								name="brand"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Brand</FormLabel>
+										<FormLabel>Brand (Optional)</FormLabel>
 										<FormControl>
 											<Input
 												placeholder="e.g., Epson, Dell"
@@ -556,7 +556,7 @@ export function EquipmentFormDialog({
 								name="serialNo"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Serial Number</FormLabel>
+										<FormLabel>Serial Number (Optional)</FormLabel>
 										<FormControl>
 											<Input
 												placeholder="Enter Serial Number"
