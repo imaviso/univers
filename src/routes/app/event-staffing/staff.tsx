@@ -5,7 +5,7 @@ import { CalendarDays, MapPin, Phone, Users } from "lucide-react";
 import { AddPersonnelDialog } from "@/components/event-staffing/addPersonnelDialog";
 import { ManageAssignmentsDialog } from "@/components/event-staffing/manageAssignmentsDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -21,7 +21,11 @@ import {
 } from "@/lib/atoms";
 import { searchEventsQueryOptions } from "@/lib/query";
 import type { EventPersonnelDTO } from "@/lib/types";
-import { formatDateTime, getInitials, getStatusColor } from "@/lib/utils";
+import {
+	formatDateTime,
+	getApproverStatusBadge,
+	getInitials,
+} from "@/lib/utils";
 
 export const Route = createFileRoute("/app/event-staffing/staff")({
 	component: EventStaff,
@@ -156,9 +160,7 @@ function EventStaff() {
 											</span>
 										</CardDescription>
 									</div>
-									<Badge className={getStatusColor(event.status)}>
-										{event.status}
-									</Badge>
+									{getApproverStatusBadge(event.status)}
 								</div>
 							</CardHeader>
 							<CardContent className="flex flex-col h-full">
