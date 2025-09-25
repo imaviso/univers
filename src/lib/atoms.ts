@@ -58,3 +58,7 @@ export const editDepartmentDialogAtom = atom(false);
 export const deleteDepartmentDialogAtom = atom(false);
 export const assignHeadDialogAtom = atom(false);
 export const selectedDepartmentAtom = atom<DepartmentDTO | null>(null);
+
+export const addPersonnelDialogAtom = atom(false);
+export const manageAssignmentsDialogAtom = atom(false);
+export const selectedEventForAssignmentAtom = atom<string | null>(null);

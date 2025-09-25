@@ -59,7 +59,7 @@ export const allNavigation: NavigationItem[] = [
 		name: "Event Staffing",
 		href: "/app/event-staffing/staff",
 		icon: UserCogIcon,
-		roles: ["SUPER_ADMIN"],
+		roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER"],
 	},
 	{
 		name: "Venues",

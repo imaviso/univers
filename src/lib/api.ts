@@ -7,6 +7,7 @@ import type {
 	VenueInput,
 } from "./schema";
 import type {
+	ApiResponse,
 	CancellationRateDTO,
 	CreateEquipmentReservationInput,
 	DepartmentDTO,
@@ -19,6 +20,7 @@ import type {
 	EventCountDTO,
 	EventDTO,
 	EventDTOPayload,
+	EventPersonnelDTO,
 	EventTypeStatusDistributionDTO,
 	PeakHourDTO,
 	RecentActivityItemDTO,
@@ -1860,5 +1862,58 @@ export const bulkDeleteEquipment = async ({
 		throw error instanceof Error
 			? error
 			: new Error("An unexpected error occurred while deleting equipments.");
+	}
+};
+
+// --- Event Personnel API ---
+
+export const addEventPersonnel = async (
+	eventId: string,
+	personnelData: Omit<EventPersonnelDTO, "publicId">,
+): Promise<EventPersonnelDTO[]> => {
+	try {
+		const response = await fetchWithAuth(
+			`${API_BASE_URL}/events/${eventId}/personnel`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(personnelData),
+			},
+		);
+		const responseData = await handleApiResponse<
+			ApiResponse<EventPersonnelDTO[]>
+		>(response, true);
+		return responseData?.data || [];
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					`An unexpected error occurred while adding personnel to event ${eventId}.`,
+				);
+	}
+};
+
+export const deleteEventPersonnel = async (
+	eventId: string,
+	personnelPublicId: string,
+): Promise<string> => {
+	try {
+		const response = await fetchWithAuth(
+			`${API_BASE_URL}/events/${eventId}/personnel/${personnelPublicId}`,
+			{
+				method: "DELETE",
+			},
+		);
+		const responseData = await handleApiResponse<ApiResponse<string>>(
+			response,
+			true,
+		);
+		return responseData?.data || "Personnel removed successfully";
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					`An unexpected error occurred while removing personnel ${personnelPublicId} from event ${eventId}.`,
+				);
 	}
 };

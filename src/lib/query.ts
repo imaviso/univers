@@ -7,6 +7,8 @@ import {
 } from "@tanstack/react-query";
 import { type AnyRoute, useRouteContext } from "@tanstack/react-router"; // Added AnyRoute import
 import {
+	// Personnel API imports
+	addEventPersonnel,
 	approveEquipmentReservation,
 	bulkDeactivateUsersAsAdmin, // Added for bulk user deactivation by admin
 	bulkDeleteDepartments,
@@ -16,6 +18,7 @@ import {
 	createEquipmentReservation,
 	deleteEquipmentCategory,
 	deleteEquipmentReservation,
+	deleteEventPersonnel,
 	deleteNotifications,
 	getAllDepartments,
 	getAllEquipmentCategories,
@@ -66,6 +69,7 @@ import type {
 	EquipmentReservationDTO,
 	EventCountDTO,
 	EventDTO,
+	EventPersonnelDTO,
 	EventTypeStatusDistributionDTO, // For event types chart with status breakdown
 	PeakHourDTO,
 	RecentActivityItemDTO,
@@ -1306,6 +1310,185 @@ export const useDeleteEquipmentCategoryMutation = () => {
 				queryKey: equipmentCategoryKeys.lists(),
 			});
 			// Optionally invalidate other related queries if needed
+		},
+	});
+};
+
+// --- Personnel Query Keys and Options ---
+
+export const personnelQueryKeys = {
+	all: ["personnel"] as const,
+	byEvent: (eventId: string) =>
+		[...personnelQueryKeys.all, "event", eventId] as const,
+};
+
+// --- Personnel Mutations ---
+
+export const useAddEventPersonnelMutation = () => {
+	const queryClient = useQueryClient();
+	return useMutation<
+		EventPersonnelDTO[],
+		Error,
+		{ eventId: string; personnelData: Omit<EventPersonnelDTO, "publicId"> },
+		{ previousPersonnel?: EventPersonnelDTO[] }
+	>({
+		mutationFn: ({ eventId, personnelData }) =>
+			addEventPersonnel(eventId, personnelData),
+		onMutate: async ({ eventId, personnelData }) => {
+			await queryClient.cancelQueries({
+				queryKey: personnelQueryKeys.byEvent(eventId),
+			});
+			await queryClient.cancelQueries({
+				queryKey: eventsQueryKeys.detail(eventId),
+			});
+			await queryClient.cancelQueries({
+				queryKey: eventsQueryKeys.listsRelated(),
+			});
+
+			const previousPersonnel = queryClient.getQueryData<EventPersonnelDTO[]>(
+				personnelQueryKeys.byEvent(eventId),
+			);
+
+			const optimisticPersonnel: EventPersonnelDTO = {
+				publicId: `temp-${Date.now()}`,
+				...personnelData,
+			};
+
+			queryClient.setQueryData<EventPersonnelDTO[]>(
+				personnelQueryKeys.byEvent(eventId),
+				(old = []) => [...old, optimisticPersonnel],
+			);
+
+			// Optimistically update events list queries
+			queryClient.setQueriesData<EventDTO[]>(
+				{ queryKey: eventsQueryKeys.listsRelated() },
+				(old) => {
+					if (!old) return old;
+					return old.map((event) =>
+						event.publicId === eventId
+							? {
+									...event,
+									assignedPersonnel: [
+										...(event.assignedPersonnel || []),
+										optimisticPersonnel,
+									],
+								}
+							: event,
+					);
+				},
+			);
+
+			return { previousPersonnel };
+		},
+		onError: (err, variables, context) => {
+			if (context?.previousPersonnel) {
+				queryClient.setQueryData(
+					personnelQueryKeys.byEvent(variables.eventId),
+					context.previousPersonnel,
+				);
+			}
+			// Invalidate events list queries to revert optimistic updates
+			queryClient.invalidateQueries({
+				queryKey: eventsQueryKeys.listsRelated(),
+			});
+			console.error(
+				"Error adding event personnel (optimistic update failed):",
+				err,
+			);
+		},
+		onSuccess: (newPersonnelList, variables) => {
+			queryClient.setQueryData(
+				personnelQueryKeys.byEvent(variables.eventId),
+				newPersonnelList,
+			);
+			queryClient.invalidateQueries({
+				queryKey: eventsQueryKeys.detail(variables.eventId),
+			});
+			// Invalidate all events list queries to update personnel in events
+			queryClient.invalidateQueries({
+				queryKey: eventsQueryKeys.listsRelated(),
+			});
+		},
+	});
+};
+
+export const useDeleteEventPersonnelMutation = () => {
+	const queryClient = useQueryClient();
+	return useMutation<
+		string,
+		Error,
+		{ eventId: string; personnelPublicId: string },
+		{ previousPersonnel?: EventPersonnelDTO[] }
+	>({
+		mutationFn: ({ eventId, personnelPublicId }) =>
+			deleteEventPersonnel(eventId, personnelPublicId),
+		onMutate: async ({ eventId, personnelPublicId }) => {
+			await queryClient.cancelQueries({
+				queryKey: personnelQueryKeys.byEvent(eventId),
+			});
+			await queryClient.cancelQueries({
+				queryKey: eventsQueryKeys.detail(eventId),
+			});
+			await queryClient.cancelQueries({
+				queryKey: eventsQueryKeys.listsRelated(),
+			});
+
+			const previousPersonnel = queryClient.getQueryData<EventPersonnelDTO[]>(
+				personnelQueryKeys.byEvent(eventId),
+			);
+
+			queryClient.setQueryData<EventPersonnelDTO[]>(
+				personnelQueryKeys.byEvent(eventId),
+				(old = []) => old.filter((p) => p.publicId !== personnelPublicId),
+			);
+
+			// Optimistically update events list queries
+			queryClient.setQueriesData<EventDTO[]>(
+				{ queryKey: eventsQueryKeys.listsRelated() },
+				(old) => {
+					if (!old) return old;
+					return old.map((event) =>
+						event.publicId === eventId
+							? {
+									...event,
+									assignedPersonnel: (event.assignedPersonnel || []).filter(
+										(p) => p.publicId !== personnelPublicId,
+									),
+								}
+							: event,
+					);
+				},
+			);
+
+			return { previousPersonnel };
+		},
+		onError: (err, variables, context) => {
+			if (context?.previousPersonnel) {
+				queryClient.setQueryData(
+					personnelQueryKeys.byEvent(variables.eventId),
+					context.previousPersonnel,
+				);
+			}
+			// Invalidate events list queries to revert optimistic updates
+			queryClient.invalidateQueries({
+				queryKey: eventsQueryKeys.listsRelated(),
+			});
+			console.error(
+				"Error removing event personnel (optimistic update failed):",
+				err,
+			);
+		},
+		onSuccess: (_data, variables) => {
+			queryClient.invalidateQueries({
+				queryKey: personnelQueryKeys.byEvent(variables.eventId),
+			});
+			queryClient.invalidateQueries({
+				queryKey: eventsQueryKeys.detail(variables.eventId),
+			});
+			// Invalidate all events list queries to update personnel in events
+			queryClient.invalidateQueries({
+				queryKey: eventsQueryKeys.listsRelated(),
+			});
 		},
 	});
 };

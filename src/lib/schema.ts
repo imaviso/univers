@@ -608,3 +608,14 @@ export const ReservationActionPayloadSchema = v.object({
 export type ReservationActionPayloadInput = v.InferInput<
 	typeof ReservationActionPayloadSchema
 >;
+
+export const personnelSchema = v.object({
+	name: v.pipe(v.string(), v.nonEmpty("Name is required")),
+	phoneNumber: v.pipe(
+		v.string(),
+		v.nonEmpty("Phone number is required"),
+		v.regex(/^\d{11}$/, "Phone number must be exactly 11 digits"),
+	),
+});
+
+export type PersonnelInput = v.InferInput<typeof personnelSchema>;
