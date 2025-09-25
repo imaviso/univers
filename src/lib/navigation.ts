@@ -40,6 +40,7 @@ export const allNavigation: NavigationItem[] = [
 			"DEPT_HEAD",
 			"ADMIN",
 			"ACCOUNTING",
+			"VPAA",
 		],
 	},
 	{
@@ -55,6 +56,7 @@ export const allNavigation: NavigationItem[] = [
 			"ADMIN",
 			"DEPT_HEAD",
 			"ACCOUNTING",
+			"VPAA",
 		],
 	},
 	{
@@ -76,6 +78,7 @@ export const allNavigation: NavigationItem[] = [
 			"ADMIN",
 			"DEPT_HEAD",
 			"ACCOUNTING",
+			"VPAA",
 		],
 	},
 	{
@@ -103,6 +106,7 @@ export const allNavigation: NavigationItem[] = [
 			"ADMIN",
 			"DEPT_HEAD",
 			"ACCOUNTING",
+			"VPAA",
 		],
 	},
 	{
@@ -133,6 +137,7 @@ export const settingsNavigation: NavigationItem[] = [
 			"DEPT_HEAD",
 			"ADMIN",
 			"ACCOUNTING",
+			"VPAA",
 		],
 	},
 ];
@@ -151,6 +156,7 @@ export const authNavigation: NavigationItem[] = [
 			"ADMIN",
 			"DEPT_HEAD",
 			"ACCOUNTING",
+			"VPAA",
 		],
 	},
 ];
