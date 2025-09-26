@@ -180,13 +180,13 @@ export const getApproverStatusBadge = (
 			);
 		case "ONGOING":
 			return (
-				<Badge className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20">
+				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
 					Ongoing
 				</Badge>
 			);
 		case "COMPLETED":
 			return (
-				<Badge className="bg-purple-500/10 text-purple-500 hover:bg-purple-500/20">
+				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
 					Completed
 				</Badge>
 			);
@@ -200,6 +200,12 @@ export const getApproverStatusBadge = (
 			return (
 				<Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
 					{isAccountingUser ? "Unpaid" : "Denied Reservation"}
+				</Badge>
+			);
+		case "CANCELED":
+			return (
+				<Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
+					Canceled
 				</Badge>
 			);
 		case "DENIED_RESERVATION":

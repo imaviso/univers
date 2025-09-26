@@ -1,10 +1,16 @@
 "use client";
 
 import { differenceInMinutes, format, getMinutes, isPast } from "date-fns";
+import { Users } from "lucide-react";
 import { useMemo } from "react";
 
 import type { CalendarEvent } from "./types";
 import { getBorderRadiusClasses, getEventColorClasses } from "./utils";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 // Using date-fns format with custom formatting:
@@ -14,6 +20,40 @@ import { cn } from "@/lib/utils";
 const formatTimeWithOptionalMinutes = (date: Date) => {
 	return format(date, getMinutes(date) === 0 ? "ha" : "h:mma").toLowerCase();
 };
+
+function StaffIndicator({
+	staffCount,
+	staffNames,
+	className,
+}: {
+	staffCount?: number;
+	staffNames?: string[];
+	className?: string;
+}) {
+	if (!staffCount || staffCount === 0) return null;
+
+	const staffTooltip =
+		staffNames && staffNames.length > 0
+			? staffNames.join(", ")
+			: `${staffCount} staff assigned`;
+
+	// Determine icon size based on text size in className
+	const iconSize = className?.includes("text-xs") ? "h-3 w-3" : "h-2.5 w-2.5";
+
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<span className={cn("flex items-center gap-0.5 opacity-70", className)}>
+					<Users className={iconSize} />
+					{staffCount}
+				</span>
+			</TooltipTrigger>
+			<TooltipContent>
+				<p>{staffTooltip}</p>
+			</TooltipContent>
+		</Tooltip>
+	);
+}
 
 interface EventWrapperProps {
 	event: CalendarEvent;
@@ -149,13 +189,18 @@ export function EventItem({
 				onTouchStart={onTouchStart}
 			>
 				{children || (
-					<span className="truncate">
+					<span className="truncate flex items-center gap-1">
 						{!event.allDay && (
 							<span className="truncate font-normal opacity-70 sm:text-[11px]">
 								{formatTimeWithOptionalMinutes(displayStart)}{" "}
 							</span>
 						)}
 						{event.title}
+						<StaffIndicator
+							staffCount={event.staffCount}
+							staffNames={event.staffNames}
+							className="text-[8px] sm:text-[10px]"
+						/>
 					</span>
 				)}
 			</EventWrapper>
@@ -181,17 +226,29 @@ export function EventItem({
 				onTouchStart={onTouchStart}
 			>
 				{durationMinutes < 45 ? (
-					<div className="truncate">
+					<div className="truncate flex items-center gap-1">
 						{event.title}{" "}
 						{showTime && (
 							<span className="opacity-70">
 								{formatTimeWithOptionalMinutes(displayStart)}
 							</span>
 						)}
+						<StaffIndicator
+							staffCount={event.staffCount}
+							staffNames={event.staffNames}
+							className="text-[8px] sm:text-[10px]"
+						/>
 					</div>
 				) : (
 					<>
-						<div className="truncate font-medium">{event.title}</div>
+						<div className="truncate font-medium flex items-center gap-1">
+							{event.title}
+							<StaffIndicator
+								staffCount={event.staffCount}
+								staffNames={event.staffNames}
+								className="text-[8px] sm:text-[10px]"
+							/>
+						</div>
 						{showTime && (
 							<div className="truncate font-normal opacity-70 sm:text-[11px]">
 								{getEventTime()}
@@ -216,7 +273,14 @@ export function EventItem({
 			onMouseDown={onMouseDown}
 			onTouchStart={onTouchStart}
 		>
-			<div className="text-sm font-medium">{event.title}</div>
+			<div className="text-sm font-medium flex items-center gap-2">
+				{event.title}
+				<StaffIndicator
+					staffCount={event.staffCount}
+					staffNames={event.staffNames}
+					className="text-xs"
+				/>
+			</div>
 			<div className="text-xs opacity-70">
 				{event.allDay ? (
 					<span>All day</span>

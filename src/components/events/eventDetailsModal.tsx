@@ -1,6 +1,17 @@
 import { Link } from "@tanstack/react-router"; // Import Link for navigation
 import { format, isSameDay } from "date-fns";
-import { Clock, ExternalLink, Users } from "lucide-react"; // Removed Edit, Trash. Added ExternalLink
+import {
+	Building,
+	Calendar,
+	Clock,
+	ExternalLink,
+	MapPin,
+	Phone,
+	Tag,
+	User,
+	Users,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -8,6 +19,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import type { Event } from "@/lib/types"; // Use the correct Event type
 import { getApproverStatusBadge } from "@/lib/utils";
 
@@ -69,47 +81,135 @@ export function EventDetailsModal({
                         </Button> */}
 					</div>
 				</div>
-				{/* Simplified Details Section */}
+				{/* Event Details Section */}
 				<div className="space-y-4 pt-4">
+					{/* Date & Time Section */}
 					<div className="space-y-3">
-						{/* Event Time */}
+						<div className="flex items-center gap-2 text-sm">
+							<Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+							<span className="font-medium">
+								{format(new Date(event.startTime), "PPP")}
+							</span>
+						</div>
 						<div className="flex items-center gap-2 text-sm">
 							<Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
 							<span>
-								{format(new Date(event.startTime), "PPP")}
 								{isSameDay(new Date(event.startTime), new Date(event.endTime))
-									? // Same day: Show time range
-										` ${format(new Date(event.startTime), "p")} - ${format(new Date(event.endTime), "p")}`
-									: // Different days: Show end date
-										` to ${format(new Date(event.endTime), "PPP")}`}
-							</span>
-						</div>
-
-						{/* Organizer Info */}
-						<div className="flex items-center gap-2 text-sm">
-							<Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-							<span>
-								Organizer: {event.organizer.firstName}{" "}
-								{event.organizer.lastName}
-							</span>
-						</div>
-
-						{/* TODO: Display Venue Location (Requires fetching Venue data) */}
-						{/* <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span>Venue: {venue?.name ?? 'Loading...'} ({venue?.location ?? '...'})</span>
-                        </div> */}
-
-						{/* Event Type */}
-						<div className="flex items-center gap-2 text-sm">
-							{/* You might want a specific icon for event type */}
-							<span className="ml-6">
-								{" "}
-								{/* Indent to align with others */}
-								Type: {event.eventType || "N/A"}
+									? `${format(new Date(event.startTime), "p")} - ${format(new Date(event.endTime), "p")}`
+									: `${format(new Date(event.startTime), "p")} to ${format(new Date(event.endTime), "PPP p")}`}
 							</span>
 						</div>
 					</div>
+
+					<Separator />
+
+					{/* Venue Section */}
+					{event.eventVenue && (
+						<>
+							<div className="space-y-2">
+								<div className="flex items-center gap-2 text-sm">
+									<MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+									<span className="font-medium">{event.eventVenue.name}</span>
+								</div>
+								{event.eventVenue.location && (
+									<div className="flex items-center gap-2 text-sm text-muted-foreground ml-6">
+										<span>{event.eventVenue.location}</span>
+									</div>
+								)}
+							</div>
+							<Separator />
+						</>
+					)}
+
+					{/* Department Section */}
+					{event.department && (
+						<>
+							<div className="space-y-2">
+								<div className="flex items-center gap-2 text-sm">
+									<Building className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+									<span className="font-medium">{event.department.name}</span>
+								</div>
+								{event.department.description && (
+									<div className="flex items-center gap-2 text-sm text-muted-foreground ml-6">
+										<span>{event.department.description}</span>
+									</div>
+								)}
+							</div>
+							<Separator />
+						</>
+					)}
+
+					{/* Event Type Section */}
+					<div className="flex items-center gap-2 text-sm">
+						<Tag className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+						<span>{event.eventType || "N/A"}</span>
+					</div>
+
+					<Separator />
+
+					{/* Organizer Section */}
+					<div className="flex items-center gap-2 text-sm">
+						<User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+						<div className="flex items-center gap-2">
+							<Avatar className="h-6 w-6">
+								<AvatarImage
+									src={event.organizer.profileImagePath || undefined}
+								/>
+								<AvatarFallback className="text-xs">
+									{event.organizer.firstName[0]}
+									{event.organizer.lastName[0]}
+								</AvatarFallback>
+							</Avatar>
+							<span>
+								{event.organizer.firstName} {event.organizer.lastName}
+							</span>
+							{event.organizer.phoneNumber && (
+								<span className="text-muted-foreground text-xs">
+									• {event.organizer.phoneNumber}
+								</span>
+							)}
+						</div>
+					</div>
+
+					{/* Staff Section */}
+					{event.assignedPersonnel && event.assignedPersonnel.length > 0 && (
+						<>
+							<Separator />
+							<div className="space-y-3">
+								<div className="flex items-center gap-2 text-sm">
+									<Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+									<span className="font-medium">
+										Staff ({event.assignedPersonnel.length})
+									</span>
+								</div>
+								<div className="ml-6 space-y-2">
+									{event.assignedPersonnel.map((person) => (
+										<div
+											key={person.publicId}
+											className="flex items-center gap-2 text-sm"
+										>
+											<Avatar className="h-6 w-6">
+												<AvatarFallback className="text-xs">
+													{person.name
+														.split(" ")
+														.map((n) => n[0])
+														.join("")
+														.slice(0, 2)}
+												</AvatarFallback>
+											</Avatar>
+											<span>{person.name}</span>
+											{person.phoneNumber && (
+												<div className="flex items-center gap-1 text-muted-foreground text-xs">
+													<Phone className="h-3 w-3" />
+													<span>{person.phoneNumber}</span>
+												</div>
+											)}
+										</div>
+									))}
+								</div>
+							</div>
+						</>
+					)}
 				</div>
 			</DialogContent>
 		</Dialog>

@@ -9,6 +9,8 @@ export interface CalendarEvent {
 	allDay?: boolean;
 	color?: EventColor;
 	location?: string;
+	staffCount?: number;
+	staffNames?: string[];
 }
 
 export type EventColor =
