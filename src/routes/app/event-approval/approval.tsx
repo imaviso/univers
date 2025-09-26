@@ -43,7 +43,7 @@ import {
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DataTableFilter } from "@/components/data-table-filter";
-import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -860,7 +860,7 @@ export function EventApproval() {
 				header: "Event Status",
 				cell: ({ row }: { row: { original: ApprovalEvent } }) => {
 					const event = row.original;
-					return getApproverStatusBadge(event.status);
+					return getApproverStatusBadge(event.status, userRoles);
 				},
 				accessorFn: (row) => row.status,
 				filterFn: filterFn("option"),
@@ -903,33 +903,7 @@ export function EventApproval() {
 					);
 					const statusToDisplay = currentUserApproval?.status || "PENDING";
 
-					// Custom badge for accounting role
-					if (isAccounting) {
-						switch (statusToDisplay) {
-							case "APPROVED":
-								return (
-									<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
-										Paid
-									</Badge>
-								);
-							case "REJECTED":
-								return (
-									<Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-										Unpaid
-									</Badge>
-								);
-							case "PENDING":
-								return (
-									<Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
-										Pending
-									</Badge>
-								);
-							default:
-								return getApproverStatusBadge(statusToDisplay);
-						}
-					}
-
-					return getApproverStatusBadge(statusToDisplay);
+					return getApproverStatusBadge(statusToDisplay, userRoles);
 				},
 				accessorFn: (row) => {
 					const event = row as ApprovalEvent;
