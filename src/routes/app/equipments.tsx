@@ -234,7 +234,7 @@ function EquipmentInventory() {
 					name: data.name,
 					brand: data.brand,
 					availability: data.availability,
-					quantity: data.quantity,
+					totalQuantity: data.totalQuantity,
 					status: data.status,
 					serialNo: data.serialNo,
 					ownerId: data.ownerId,
@@ -249,7 +249,7 @@ function EquipmentInventory() {
 					name: data.name,
 					brand: data.brand,
 					availability: data.availability,
-					quantity: data.quantity,
+					totalQuantity: data.totalQuantity,
 					status: data.status,
 					serialNo: data.serialNo,
 					ownerId: data.ownerId,
@@ -522,7 +522,7 @@ function EquipmentInventory() {
 												)}
 											</div>
 											<CardDescription className="text-xs">
-												Brand: {item.brand} | Qty: {item.quantity}
+												Brand: {item.brand} | Qty: {item.totalQuantity}
 											</CardDescription>
 											{item.categories && item.categories.length > 0 && (
 												<CardDescription className="text-xs mt-1">

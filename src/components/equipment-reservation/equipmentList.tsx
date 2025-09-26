@@ -199,7 +199,7 @@ export default function EquipmentList({
 		const equipmentItem = equipmentWithUniqueFrontendIds.find(
 			(item) => item.uniqueFrontendId === equipmentIdStr,
 		);
-		const maxQuantity = equipmentItem?.quantity ?? 1;
+		const maxQuantity = equipmentItem?.availableQuantity ?? 1;
 
 		const validQuantity = Math.max(1, Math.min(newQuantity, maxQuantity));
 
@@ -348,7 +348,7 @@ export default function EquipmentList({
 														variant="outline"
 														className="border-green-500 text-green-600 px-1.5 py-0.5 text-xs"
 													>
-														{item.quantity -
+														{item.availableQuantity -
 															(value.find(
 																(v) => v.equipmentId === item.uniqueFrontendId,
 															)?.quantity || 0)}
@@ -370,7 +370,7 @@ export default function EquipmentList({
 														id={`qty-${item.uniqueFrontendId}`}
 														type="number"
 														min="1"
-														max={item.quantity}
+														max={item.availableQuantity}
 														value={String(
 															value.find(
 																(v) => v.equipmentId === item.uniqueFrontendId,

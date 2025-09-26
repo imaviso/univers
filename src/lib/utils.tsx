@@ -184,6 +184,12 @@ export const getApproverStatusBadge = (
 					Ongoing
 				</Badge>
 			);
+		case "COMPLETED":
+			return (
+				<Badge className="bg-purple-500/10 text-purple-500 hover:bg-purple-500/20">
+					Completed
+				</Badge>
+			);
 		case "RESERVED":
 			return (
 				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">

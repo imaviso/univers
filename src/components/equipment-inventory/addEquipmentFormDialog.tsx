@@ -59,7 +59,7 @@ export function AddEquipmentFormDialog({
 			name: equipment?.name ?? "",
 			brand: equipment?.brand ?? "",
 			availability: equipment?.availability ?? true,
-			quantity: equipment?.quantity ?? 1,
+			totalQuantity: equipment?.totalQuantity ?? 1,
 			status: equipment?.status ?? "NEW",
 			serialNo: equipment?.serialNo ?? "",
 			ownerId: equipment?.equipmentOwner?.publicId ?? undefined,
@@ -84,7 +84,7 @@ export function AddEquipmentFormDialog({
 				name: equipment?.name ?? "",
 				brand: equipment?.brand ?? "",
 				availability: equipment?.availability ?? true,
-				quantity: equipment?.quantity ?? 1,
+				totalQuantity: equipment?.totalQuantity ?? 1,
 				status: equipment?.status ?? "NEW",
 				serialNo: equipment?.serialNo ?? "",
 				ownerId: equipment?.equipmentOwner?.publicId ?? undefined,
@@ -207,18 +207,23 @@ export function AddEquipmentFormDialog({
 						/>
 						<FormField
 							control={form.control}
-							name="quantity"
+							name="totalQuantity"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Quantity</FormLabel>
+									<FormLabel>Total Quantity</FormLabel>
 									<FormControl>
 										<Input
 											type="number"
 											placeholder="e.g., 5"
 											{...field}
-											onChange={(e) =>
-												field.onChange(Number.parseInt(e.target.value, 10) || 0)
-											}
+											onChange={(e) => {
+												const value = e.target.value;
+												const numValue =
+													value === "" ? 1 : Number.parseInt(value, 10);
+												field.onChange(
+													Number.isNaN(numValue) ? 1 : Math.max(0, numValue),
+												);
+											}}
 											value={Number(field.value ?? 0)}
 										/>
 									</FormControl>
@@ -226,6 +231,7 @@ export function AddEquipmentFormDialog({
 								</FormItem>
 							)}
 						/>
+
 						<FormField
 							control={form.control}
 							name="serialNo"

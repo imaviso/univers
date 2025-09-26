@@ -6,6 +6,7 @@ import {
 	useRouteContext,
 	useRouter,
 } from "@tanstack/react-router";
+import { useAtom } from "jotai";
 import {
 	ArrowLeft,
 	Building,
@@ -18,11 +19,14 @@ import {
 	Paperclip,
 	Tag,
 	Trash2,
+	Users,
 	XCircle,
 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EquipmentReservationFormDialog } from "@/components/equipment-reservation/equipmentReservationForm";
+import { AddPersonnelDialog } from "@/components/event-staffing/addPersonnelDialog";
+import { ManageAssignmentsDialog } from "@/components/event-staffing/manageAssignmentsDialog";
 import { CancelConfirmDialog } from "@/components/events/cancelEventDialog";
 import { EditEventModal } from "@/components/events/editEventModal";
 import {
@@ -66,6 +70,10 @@ import {
 	rejectEvent,
 	updateEvent,
 } from "@/lib/api";
+import {
+	manageAssignmentsDialogAtom,
+	selectedEventForAssignmentAtom,
+} from "@/lib/atoms";
 import { DEFAULT_VENUE_IMAGE_URL } from "@/lib/constants";
 import {
 	departmentsQueryOptions,
@@ -84,6 +92,7 @@ import type {
 	EventApprovalDTO,
 	EventDTO,
 	EventDTOPayload,
+	EventPersonnelDTO,
 	UserRole,
 	VenueDTO,
 } from "@/lib/types";
@@ -163,6 +172,12 @@ export function EventDetailsPage() {
 	] = useState(false);
 	const [equipmentReservationToCancelId, setEquipmentReservationToCancelId] =
 		useState<string | null>(null);
+
+	// Staff management state
+	const [, setManageAssignmentsDialogOpen] = useAtom(
+		manageAssignmentsDialogAtom,
+	);
+	const [, setSelectedEventId] = useAtom(selectedEventForAssignmentAtom);
 
 	const venueMap1 = useMemo(() => {
 		const map = new Map<string, VenueDTO>();
@@ -290,6 +305,15 @@ export function EventDetailsPage() {
 
 	const canUserModifyEquipmentReservation =
 		isOrganizer && (event.status === "PENDING" || event.status === "APPROVED");
+
+	// Staff management permissions - Equipment owners and super admins can manage staff
+	const canManageStaff = useMemo(() => {
+		if (!currentUser) return false;
+		const userRoles = currentUser.roles || [];
+		return (
+			userRoles.includes("EQUIPMENT_OWNER") || userRoles.includes("SUPER_ADMIN")
+		);
+	}, [currentUser]);
 
 	const approveMutation = useMutation({
 		mutationFn: approveEvent,
@@ -1236,6 +1260,65 @@ export function EventDetailsPage() {
 							</CardContent>
 						</Card>
 
+						{/* Event Staff Section */}
+						<Card>
+							<CardHeader className="flex flex-row items-center justify-between pb-2">
+								<CardTitle>Event Staff</CardTitle>
+								{canManageStaff && (
+									<Button
+										size="sm"
+										variant="outline"
+										className="gap-1"
+										onClick={() => {
+											setSelectedEventId(event.publicId);
+											setManageAssignmentsDialogOpen(true);
+										}}
+									>
+										<Users className="h-4 w-4" />
+										Manage Staff
+									</Button>
+								)}
+							</CardHeader>
+							<CardContent>
+								{event.assignedPersonnel &&
+								event.assignedPersonnel.length > 0 ? (
+									<div className="space-y-3">
+										<div className="text-sm text-muted-foreground">
+											{event.assignedPersonnel.length} staff member(s) assigned
+										</div>
+										<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+											{event.assignedPersonnel.map(
+												(staff: EventPersonnelDTO) => (
+													<div
+														key={staff.publicId}
+														className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+													>
+														<Avatar className="h-10 w-10">
+															<AvatarFallback>
+																{getInitials(staff.name)}
+															</AvatarFallback>
+														</Avatar>
+														<div className="flex-1 min-w-0">
+															<div className="font-medium text-sm truncate">
+																{staff.name}
+															</div>
+															<div className="text-xs text-muted-foreground">
+																{staff.phoneNumber}
+															</div>
+														</div>
+													</div>
+												),
+											)}
+										</div>
+									</div>
+								) : (
+									<p className="text-sm text-muted-foreground py-4">
+										No staff assigned to this event yet.
+									</p>
+								)}
+							</CardContent>
+						</Card>
+
 						<Card>
 							<CardHeader>
 								<CardTitle>Approval Status</CardTitle>
@@ -1353,6 +1436,13 @@ export function EventDetailsPage() {
 				description="Are you sure you want to cancel this equipment reservation? This action cannot be undone."
 				isLoading={cancelEquipmentReservationMutationHook.isPending}
 			/>
+			{/* Staff Management Dialogs */}
+			{canManageStaff && (
+				<>
+					<AddPersonnelDialog />
+					<ManageAssignmentsDialog />
+				</>
+			)}
 		</div>
 	);
 }

@@ -387,11 +387,21 @@ export function EquipmentDataTable({
 				) as ColumnMeta<Equipment, unknown>,
 			},
 			{
-				accessorKey: "quantity",
-				header: "Quantity",
+				accessorKey: "totalQuantity",
+				header: "Total Quantity",
 				filterFn: filterFn("number"),
-				meta: defineMeta((row: Equipment) => row.quantity, {
-					displayName: "Quantity",
+				meta: defineMeta((row: Equipment) => row.totalQuantity, {
+					displayName: "Total Quantity",
+					type: "number",
+					icon: Package,
+				}) as ColumnMeta<Equipment, unknown>,
+			},
+			{
+				accessorKey: "availableQuantity",
+				header: "Available Quantity",
+				filterFn: filterFn("number"),
+				meta: defineMeta((row: Equipment) => row.availableQuantity, {
+					displayName: "Available Quantity",
 					type: "number",
 					icon: Package,
 				}) as ColumnMeta<Equipment, unknown>,

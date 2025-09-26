@@ -79,7 +79,8 @@ export type Equipment = {
 	name: string;
 	availability: boolean;
 	brand: string;
-	quantity: number;
+	totalQuantity: number;
+	availableQuantity: number;
 	equipmentOwner: UserDTO;
 	imagePath: string;
 	status: "DEFECT" | "MAINTENANCE" | "NEED_REPLACEMENT" | "NEW";

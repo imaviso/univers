@@ -66,7 +66,7 @@ const defaultValues: EquipmentDTOInput = {
 	name: "",
 	brand: "",
 	availability: true,
-	quantity: 1,
+	totalQuantity: 1,
 	status: "NEW",
 	serialNo: "",
 	ownerId: undefined,
@@ -114,7 +114,7 @@ export function EquipmentFormDialog({
 				name: equipment.name,
 				brand: equipment.brand ?? "",
 				availability: equipment.availability,
-				quantity: equipment.quantity,
+				totalQuantity: equipment.totalQuantity,
 				status: equipment.status,
 				serialNo: equipment.serialNo ?? "",
 				ownerId: equipment.equipmentOwner?.publicId ?? undefined,
@@ -184,7 +184,7 @@ export function EquipmentFormDialog({
 						name: equipment.name,
 						brand: equipment.brand ?? "",
 						availability: equipment.availability,
-						quantity: equipment.quantity,
+						totalQuantity: equipment.totalQuantity,
 						status: equipment.status,
 						serialNo: equipment.serialNo ?? "",
 						ownerId: equipment.equipmentOwner?.publicId ?? undefined,
@@ -574,24 +574,26 @@ export function EquipmentFormDialog({
 						{/* Quantity and Status */}
 
 						<div className="grid grid-cols-2 gap-4">
-							{/* Quantity */}
+							{/* Total Quantity */}
 							<FormField
 								control={form.control}
-								name="quantity"
+								name="totalQuantity"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Quantity</FormLabel>
+										<FormLabel>Total Quantity</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
 												min="0"
 												{...field}
-												onChange={(e) =>
+												onChange={(e) => {
+													const value = e.target.value;
+													const numValue =
+														value === "" ? 1 : Number.parseInt(value, 10);
 													field.onChange(
-														// Use parseFloat for potential decimals if needed, else parseInt
-														Number.parseInt(e.target.value, 10) || 0,
-													)
-												}
+														Number.isNaN(numValue) ? 1 : Math.max(0, numValue),
+													);
+												}}
 												// Ensure value is treated as number for input type=number
 												value={Number(field.value ?? 0)}
 												disabled={isMutating}

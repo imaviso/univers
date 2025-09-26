@@ -520,10 +520,11 @@ export const equipmentDataSchema = v.object({
 	name: v.pipe(v.string(), v.nonEmpty("Equipment Name is required")),
 	brand: v.optional(v.pipe(v.string())),
 	availability: v.boolean("Availability is required"),
-	quantity: v.pipe(
-		v.number("Quantity must be a number"),
-		v.minValue(0, "Quantity cannot be negative"),
+	totalQuantity: v.pipe(
+		v.number("Total quantity must be a number"),
+		v.minValue(0, "Total quantity cannot be negative"),
 	),
+
 	status: EquipmentStatusSchema,
 	serialNo: v.optional(v.pipe(v.string())),
 	ownerId: v.optional(
