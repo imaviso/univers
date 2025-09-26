@@ -170,12 +170,15 @@ export const getApproverStatusBadge = (
 	const isAccountingUser = Array.isArray(userRole)
 		? userRole.includes("ACCOUNTING")
 		: userRole === "ACCOUNTING";
+	const isVpaaUser = Array.isArray(userRole)
+		? userRole.includes("VPAA")
+		: userRole === "VPAA";
 
 	switch (st) {
 		case "APPROVED":
 			return (
 				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
-					{isAccountingUser ? "Paid" : "Reserved"}
+					{isAccountingUser ? "Paid" : isVpaaUser ? "Recommended" : "Reserved"}
 				</Badge>
 			);
 		case "ONGOING":
@@ -193,13 +196,17 @@ export const getApproverStatusBadge = (
 		case "RESERVED":
 			return (
 				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
-					{isAccountingUser ? "Paid" : "Reserved"}
+					{isAccountingUser ? "Paid" : isVpaaUser ? "Recommended" : "Reserved"}
 				</Badge>
 			);
 		case "REJECTED":
 			return (
 				<Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-					{isAccountingUser ? "Unpaid" : "Denied Reservation"}
+					{isAccountingUser
+						? "Unpaid"
+						: isVpaaUser
+							? "Not Recommended"
+							: "Denied Reservation"}
 				</Badge>
 			);
 		case "CANCELED":
@@ -211,7 +218,11 @@ export const getApproverStatusBadge = (
 		case "DENIED_RESERVATION":
 			return (
 				<Badge className="bg-red-500/10 text-red-500 hover:bg-red-500/20">
-					{isAccountingUser ? "Unpaid" : "Denied Reservation"}
+					{isAccountingUser
+						? "Unpaid"
+						: isVpaaUser
+							? "Not Recommended"
+							: "Denied Reservation"}
 				</Badge>
 			);
 		case "PENDING":
