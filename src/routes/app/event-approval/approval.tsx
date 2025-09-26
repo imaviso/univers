@@ -1042,6 +1042,7 @@ export function EventApproval() {
 			approveActionLabel,
 			rejectActionLabel,
 			isAccounting,
+			userRoles,
 		],
 	);
 
