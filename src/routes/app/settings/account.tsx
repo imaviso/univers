@@ -63,7 +63,7 @@ import {
 	userResetVerificationCode,
 } from "@/lib/auth";
 import { useCurrentUser, userQueryOptions } from "@/lib/query";
-import type { EmailInput } from "@/lib/schema";
+
 import {
 	OtpSchema,
 	type SetNewPasswordInput,
@@ -82,9 +82,6 @@ const initialNewPasswordState: SetNewPasswordInput = {
 };
 
 type PasswordDialogStep = "request" | "verify" | "reset" | "success";
-
-const initialChangeEmailState: EmailInput = { email: "" };
-type EmailDialogStep = "input" | "verify" | "success";
 
 type EditableProfile = {
 	firstName: string;
@@ -217,15 +214,6 @@ export function AccountSettings() {
 	const [isSettingPassword, setIsSettingPassword] = useState(false);
 	// const [isRequestingEmailCode, setIsRequestingEmailCode] = useState(false);
 	// const [isVerifyingEmailCode, setIsVerifyingEmailCode] = useState(false);
-	const [_emailDialogStep, setEmailDialogStep] = useState<EmailDialogStep>();
-	const [_emailForm, setEmailForm] = useState<EmailInput>(
-		initialChangeEmailState,
-	);
-	const [_emailFormError, setEmailFormError] = useState<string | null>(null);
-	const [_emailOtpCode, setEmailOtpCode] = useState<string>("");
-	const [_emailOtpError, setEmailOtpError] = useState<string | null>(null);
-	const [_isChangeEmailDialogOpen, setIsChangeEmailDialogOpen] =
-		useState(false);
 	// Other State
 	// const [twoFactorEnabled, setTwoFactorEnabled] = useState(false); // Removed as per original file state
 
@@ -596,18 +584,6 @@ export function AccountSettings() {
 		}
 	};
 
-	// Email Dialog Handlers
-	const handleOpenChangeEmailDialog = () => {
-		toast.error("Change email feature is not implemented yet.");
-		// Reset state when opening
-		setEmailDialogStep("input");
-		setEmailForm(initialChangeEmailState);
-		setEmailFormError(null);
-		setEmailOtpCode("");
-		setEmailOtpError(null);
-		setIsChangeEmailDialogOpen(true);
-	};
-
 	// const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 	//     setEmailForm({ email: e.target.value });
 	//     if (emailFormError) setEmailFormError(null); // Clear error on change
@@ -817,21 +793,12 @@ export function AccountSettings() {
 									))}
 								</div>
 							</div>
-							{/* Email Display & Change Button */}
+							{/* Email Display */}
 							<div className="grid gap-1">
 								<Label htmlFor={profileEmailId}>Email Address</Label>
-								<div className="flex items-center justify-between">
-									<p id={profileEmailId} className="text-sm text-primary">
-										{user.email}
-									</p>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={handleOpenChangeEmailDialog}
-									>
-										Change Email
-									</Button>
-								</div>
+								<p id={profileEmailId} className="text-sm text-primary">
+									{user.email}
+								</p>
 							</div>
 						</div>
 					</div>
