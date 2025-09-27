@@ -207,19 +207,25 @@ export function EventDetailsPage() {
 	// Role-based label overrides for VPAA + ADMIN
 	const userRoles = currentUser?.roles || [];
 	const isVpaaAdmin = userRoles.includes("VPAA") && userRoles.includes("ADMIN");
-	const approveActionLabel = isVpaaAdmin ? "Recommend" : "Approve Event";
-	const approveDialogTitle = isVpaaAdmin ? "Recommend Event" : "Approve Event";
+	const approveActionLabel = isVpaaAdmin ? "Recommend" : "Approve Reservation";
+	const approveDialogTitle = isVpaaAdmin
+		? "Recommend Event"
+		: "Approve Reservation";
 	const approveConfirmLabel = isVpaaAdmin
-		? "Confirm Recommendation"
-		: "Confirm Approval";
+		? "Recommend Event"
+		: "Confirm Approve Reservation";
 	const approvePendingLabel = isVpaaAdmin ? "Recommending..." : "Approving...";
 
-	const rejectActionLabel = isVpaaAdmin ? "Not Recommended" : "Reject Event";
-	const rejectDialogTitle = isVpaaAdmin ? "Not Recommended" : "Reject Event";
+	const rejectActionLabel = isVpaaAdmin
+		? "Not Recommended"
+		: "Deny Reservation";
+	const rejectDialogTitle = isVpaaAdmin
+		? "Not Recommended"
+		: "Deny Reservation";
 	const rejectConfirmLabel = isVpaaAdmin
-		? "Confirm Not Recommendation"
-		: "Confirm Rejection";
-	const rejectPendingLabel = isVpaaAdmin ? "Processing..." : "Rejecting...";
+		? "Not Recommended"
+		: "Confirm Deny Reservation";
+	const rejectPendingLabel = isVpaaAdmin ? "Processing..." : "Denying...";
 
 	// Get current user's approval record to check their status
 	const currentUserApprovalRecord = useMemo(() => {
