@@ -228,7 +228,7 @@ export const getApproverStatusBadge = (
 		case "PENDING":
 			return (
 				<Badge className="bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20">
-					{isAccountingUser ? "Unpaid" : "Pending"}
+					Pending
 				</Badge>
 			);
 		case "UNPAID":

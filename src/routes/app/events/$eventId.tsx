@@ -242,64 +242,50 @@ export function EventDetailsPage() {
 		);
 	}, [event?.approvals, currentUser]);
 
-	// Determine if user can approve/reject based on their role and event status
+	// Determine if user can approve/reject based on their presence in the approvals array
 	const canUserApprove = useMemo(() => {
 		if (!isEventPending || !currentUser) return false;
 
-		// Check if user has any approver role
-		const userRoles = currentUser.roles || [];
-		const isVenueOwner =
-			userRoles.includes("VENUE_OWNER") &&
-			event.eventVenue?.venueOwner?.publicId === currentUser.publicId;
-		const isDeptHead =
-			userRoles.includes("DEPT_HEAD") &&
-			event.department?.deptHead?.publicId === currentUser.publicId;
-		const isAdmin =
-			userRoles.includes("ADMIN") || userRoles.includes("SUPER_ADMIN");
-		const isAccounting = userRoles.includes("ACCOUNTING");
+		// Super admins can approve any event (except their own)
+		if (isSuperAdmin && !isOrganizer) return true;
 
-		const hasApproverRole =
-			isVenueOwner || isDeptHead || isAdmin || isAccounting;
+		// Organizers cannot approve their own events
+		if (isOrganizer) return false;
 
-		// Show approve button if user has approver role AND hasn't already approved
+		// Check if current user is in the approvals list and hasn't already approved
 		const hasAlreadyApproved = currentUserApprovalRecord?.status === "APPROVED";
-		return hasApproverRole && !hasAlreadyApproved;
+		const isInApprovalsList = currentUserApprovalRecord != null;
+
+		return isInApprovalsList && !hasAlreadyApproved;
 	}, [
 		isEventPending,
 		currentUser,
-		event.eventVenue?.venueOwner?.publicId,
-		event.department?.deptHead?.publicId,
-		currentUserApprovalRecord?.status,
+		currentUserApprovalRecord,
+		isOrganizer,
+		isSuperAdmin,
 	]);
 
-	// User can reject if they have approver role and haven't already rejected
+	// User can reject if they are in the approvals list and haven't already rejected
 	const canUserReject = useMemo(() => {
 		if (!isEventPending || !currentUser) return false;
 
-		// Check if user has any approver role (same logic as approve)
-		const userRoles = currentUser.roles || [];
-		const isVenueOwner =
-			userRoles.includes("VENUE_OWNER") &&
-			event.eventVenue?.venueOwner?.publicId === currentUser.publicId;
-		const isDeptHead =
-			userRoles.includes("DEPT_HEAD") &&
-			event.department?.deptHead?.publicId === currentUser.publicId;
-		const isAdmin =
-			userRoles.includes("ADMIN") || userRoles.includes("SUPER_ADMIN");
-		const isAccounting = userRoles.includes("ACCOUNTING");
+		// Super admins can reject any event (except their own)
+		if (isSuperAdmin && !isOrganizer) return true;
 
-		const hasApproverRole =
-			isVenueOwner || isDeptHead || isAdmin || isAccounting;
+		// Organizers cannot reject their own events
+		if (isOrganizer) return false;
 
-		// Show reject button if user has approver role AND hasn't already rejected
+		// Check if current user is in the approvals list and hasn't already rejected
 		const hasAlreadyRejected = currentUserApprovalRecord?.status === "REJECTED";
-		return hasApproverRole && !hasAlreadyRejected;
+		const isInApprovalsList = currentUserApprovalRecord != null;
+
+		return isInApprovalsList && !hasAlreadyRejected;
 	}, [
 		isEventPending,
 		currentUser,
-		event.eventVenue?.venueOwner?.publicId,
-		event.department?.deptHead?.publicId,
-		currentUserApprovalRecord?.status,
+		currentUserApprovalRecord,
+		isOrganizer,
+		isSuperAdmin,
 	]);
 
 	const canCancelEvent =
@@ -310,16 +296,20 @@ export function EventDetailsPage() {
 		isSuperAdmin || (isOrganizer && event.status === "PENDING");
 
 	const canUserModifyEquipmentReservation =
-		isOrganizer && (event.status === "PENDING" || event.status === "APPROVED");
+		(isOrganizer || isSuperAdmin) &&
+		(event.status === "PENDING" || event.status === "APPROVED");
 
-	// Staff management permissions - Equipment owners and super admins can manage staff
+	// Staff management permissions - Super admins and users in the approval list can manage staff
 	const canManageStaff = useMemo(() => {
 		if (!currentUser) return false;
-		const userRoles = currentUser.roles || [];
-		return (
-			userRoles.includes("EQUIPMENT_OWNER") || userRoles.includes("SUPER_ADMIN")
-		);
-	}, [currentUser]);
+
+		// Super admins can always manage staff
+		if (isSuperAdmin) return true;
+
+		// Users who are in the approval list can manage staff
+		const isInApprovalsList = currentUserApprovalRecord != null;
+		return isInApprovalsList;
+	}, [currentUser, isSuperAdmin, currentUserApprovalRecord]);
 
 	const approveMutation = useMutation({
 		mutationFn: approveEvent,
@@ -1177,20 +1167,18 @@ export function EventDetailsPage() {
 						<Card>
 							<CardHeader className="flex flex-row items-center justify-between pb-2">
 								<CardTitle>Reserved Equipment</CardTitle>
-								{isOrganizer &&
-									(event.status === "PENDING" ||
-										event.status === "APPROVED") && (
-										<Button
-											size="sm"
-											variant="outline"
-											className="gap-1"
-											onClick={handleReserveEquipmentClick}
-											disabled={createEquipmentReservationMutation.isPending}
-										>
-											<CalendarPlus className="h-4 w-4" />
-											Reserve Equipment
-										</Button>
-									)}
+								{canUserModifyEquipmentReservation && (
+									<Button
+										size="sm"
+										variant="outline"
+										className="gap-1"
+										onClick={handleReserveEquipmentClick}
+										disabled={createEquipmentReservationMutation.isPending}
+									>
+										<CalendarPlus className="h-4 w-4" />
+										Reserve Equipment
+									</Button>
+								)}
 							</CardHeader>
 							<CardContent>
 								{reservedEquipments && reservedEquipments.length > 0 ? (
@@ -1418,7 +1406,7 @@ export function EventDetailsPage() {
 					departments={departments} // Pass the loaded departments data
 				/>
 			)}
-			{isOrganizer && (
+			{canUserModifyEquipmentReservation && (
 				<EquipmentReservationFormDialog
 					isOpen={isReserveEquipmentDialogOpen}
 					onClose={() => setIsReserveEquipmentDialogOpen(false)}
