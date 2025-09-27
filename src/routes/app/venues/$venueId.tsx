@@ -1,13 +1,6 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { format } from "date-fns";
-import {
-	ArrowLeft,
-	Calendar,
-	Clock,
-	Eye,
-	MapPin,
-	UserCircle,
-} from "lucide-react";
+import { ArrowLeft, Clock, Eye, MapPin, UserCircle } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,12 +99,6 @@ export function VenueDetails() {
 							value="events"
 						>
 							Events
-						</TabsTrigger>
-						<TabsTrigger
-							className="hover:bg-accent hover:text-foreground data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent relative after:absolute after:inset-x-0 after:bottom-0 after:-mb-1 after:h-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-							value="calendar"
-						>
-							Calendar
 						</TabsTrigger>
 					</TabsList>
 
@@ -231,19 +218,6 @@ export function VenueDetails() {
 										No ongoing or approved events found for this venue.
 									</div>
 								)}
-							</div>
-						</TabsContent>
-
-						{/* Calendar Tab */}
-						<TabsContent value="calendar" className="h-full">
-							<div className="flex items-center justify-center h-full">
-								<div className="text-center">
-									<Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-									<h3 className="text-lg font-medium">Calendar View</h3>
-									<p className="text-muted-foreground">
-										Calendar integration will be available soon.
-									</p>
-								</div>
 							</div>
 						</TabsContent>
 					</div>
