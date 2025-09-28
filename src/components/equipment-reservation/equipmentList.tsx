@@ -232,7 +232,7 @@ export default function EquipmentList({
 	};
 
 	return (
-		<div className="rounded-md border max-h-[400px] overflow-y-auto relative">
+		<div className="rounded-md border max-h-[500px] overflow-y-auto relative">
 			<Table>
 				<TableHeader className="sticky top-0 bg-background z-10">
 					<TableRow>

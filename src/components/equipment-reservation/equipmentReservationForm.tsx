@@ -136,7 +136,7 @@ export function EquipmentReservationFormDialog({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={handleDialogClose}>
-			<DialogContent className="sm:max-w-[600px] overflow-y-auto">
+			<DialogContent className="sm:max-w-[900px] overflow-y-auto max-h-[90vh]">
 				<DialogHeader>
 					<DialogTitle>Select Equipment for Event</DialogTitle>
 					<p className="text-sm text-muted-foreground pt-1">
@@ -147,18 +147,18 @@ export function EquipmentReservationFormDialog({
 				<Form {...form}>
 					<form
 						onSubmit={form.handleSubmit(handleSubmit)}
-						className="space-y-6 pt-4"
+						className="space-y-4"
 					>
 						<FormField
 							control={form.control}
 							name="selectedEquipment"
 							render={({ field }) => (
 								<FormItem>
-									<div className="mb-4">
-										<FormLabel className="text-base">
+									<div className="mb-3">
+										<FormLabel className="text-base font-semibold">
 											Select Equipment *
 										</FormLabel>
-										<FormDescription>
+										<FormDescription className="text-sm">
 											Select the equipment and specify the quantity needed for
 											the event duration.
 										</FormDescription>
