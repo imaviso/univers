@@ -13,7 +13,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { DEFAULT_EQUIPMENT_IMAGE_URL } from "@/lib/constants";
-import type { Equipment, EquipmentCategoryDTO } from "@/lib/types";
+import type { Equipment, EquipmentCategoryDTO, UserDTO } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 // Helper function to compare two selection arrays (alternative for debugging)
@@ -39,9 +39,14 @@ interface EquipmentListProps {
 	onChange: (newValue: { equipmentId: string; quantity: number }[]) => void;
 }
 
-interface GroupedEquipment {
+interface GroupedByCategory {
 	category: EquipmentCategoryDTO;
 	equipmentItems: (Equipment & { uniqueFrontendId: string })[];
+}
+
+interface GroupedByOwner {
+	owner: UserDTO;
+	categories: GroupedByCategory[];
 }
 
 export default function EquipmentList({
@@ -58,61 +63,77 @@ export default function EquipmentList({
 			})),
 		[equipment],
 	);
-	const groupedEquipment: GroupedEquipment[] = useMemo(() => {
-		const groups: Map<
-			string,
-			{
-				category: EquipmentCategoryDTO;
-				equipmentItems: (Equipment & { uniqueFrontendId: string })[];
-			}
-		> = new Map();
-		const uncategorizedGroupId = "___uncategorized___";
+	const groupedByOwner: GroupedByOwner[] = useMemo(() => {
+		const ownerGroups: Map<string, GroupedByOwner> = new Map();
 		const uncategorizedCategory: EquipmentCategoryDTO = {
-			publicId: uncategorizedGroupId,
+			publicId: "___uncategorized___",
 			name: "Uncategorized",
 			description: "Items without a specific category",
-			createdAt: new Date().toISOString(), // Or a fixed date
+			createdAt: new Date().toISOString(),
 			updatedAt: null,
 		};
 
 		for (const equip of equipmentWithUniqueFrontendIds) {
+			const ownerId = equip.equipmentOwner.publicId;
+
+			if (!ownerGroups.has(ownerId)) {
+				ownerGroups.set(ownerId, {
+					owner: equip.equipmentOwner,
+					categories: [],
+				});
+			}
+
+			const ownerGroup = ownerGroups.get(ownerId)!;
+
 			if (equip.categories && equip.categories.length > 0) {
 				for (const category of equip.categories) {
-					if (!groups.has(category.publicId)) {
-						groups.set(category.publicId, {
+					let categoryGroup = ownerGroup.categories.find(
+						(c) => c.category.publicId === category.publicId,
+					);
+
+					if (!categoryGroup) {
+						categoryGroup = {
 							category,
 							equipmentItems: [],
-						});
+						};
+						ownerGroup.categories.push(categoryGroup);
 					}
-					const group = groups.get(category.publicId);
-					if (group) {
-						group.equipmentItems.push(equip);
-					}
+
+					categoryGroup.equipmentItems.push(equip);
 				}
 			} else {
-				// Add to Uncategorized group
-				if (!groups.has(uncategorizedGroupId)) {
-					groups.set(uncategorizedGroupId, {
+				let uncategorizedGroup = ownerGroup.categories.find(
+					(c) => c.category.publicId === uncategorizedCategory.publicId,
+				);
+
+				if (!uncategorizedGroup) {
+					uncategorizedGroup = {
 						category: uncategorizedCategory,
 						equipmentItems: [],
-					});
+					};
+					ownerGroup.categories.push(uncategorizedGroup);
 				}
-				const group = groups.get(uncategorizedGroupId);
-				if (group) {
-					group.equipmentItems.push(equip);
-				}
+
+				uncategorizedGroup.equipmentItems.push(equip);
 			}
 		}
-		return Array.from(groups.values());
+
+		return Array.from(ownerGroups.values());
 	}, [equipmentWithUniqueFrontendIds]);
 
 	const handleCategoryCheckboxChange = (
 		categoryId: string,
-		newCheckedStatus: boolean, // This is the state the checkbox *will* go to (true or false)
+		ownerId: string,
+		newCheckedStatus: boolean,
 	) => {
 		let currentSelection = [...value];
-		const categoryGroup = groupedEquipment.find(
-			(group) => group.category.publicId === categoryId,
+		const ownerGroup = groupedByOwner.find(
+			(group) => group.owner.publicId === ownerId,
+		);
+		if (!ownerGroup) return;
+
+		const categoryGroup = ownerGroup.categories.find(
+			(cat) => cat.category.publicId === categoryId,
 		);
 		if (!categoryGroup) return;
 
@@ -121,7 +142,6 @@ export default function EquipmentList({
 		);
 
 		if (newCheckedStatus) {
-			// Corresponds to 'select all available in this category'
 			for (const equipToAdd of availableItemsInThisCategory) {
 				if (
 					!currentSelection.some(
@@ -135,7 +155,6 @@ export default function EquipmentList({
 				}
 			}
 		} else {
-			// Corresponds to 'deselect all available in this category'
 			const uniqueIdsToDeselect = new Set(
 				availableItemsInThisCategory.map((item) => item.uniqueFrontendId),
 			);
@@ -143,6 +162,7 @@ export default function EquipmentList({
 				(item) => !uniqueIdsToDeselect.has(item.equipmentId),
 			);
 		}
+
 		if (!areSelectionsEqual(value, currentSelection)) {
 			onChange(currentSelection);
 		}
@@ -225,13 +245,13 @@ export default function EquipmentList({
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{groupedEquipment.length === 0 && equipment.length > 0 && (
+					{groupedByOwner.length === 0 && equipment.length > 0 && (
 						<TableRow>
 							<TableCell
 								colSpan={4}
 								className="h-24 text-center text-muted-foreground"
 							>
-								Equipment could not be grouped by category.
+								Equipment could not be grouped by owner.
 							</TableCell>
 						</TableRow>
 					)}
@@ -245,167 +265,195 @@ export default function EquipmentList({
 							</TableCell>
 						</TableRow>
 					)}
-					{groupedEquipment.map((group) => {
-						const itemsInCategory = group.equipmentItems;
-						const itemsAvailableInCategory = itemsInCategory.filter(
-							(item) => item.availability,
-						);
-						const selectedAvailableItemsInCategory =
-							itemsAvailableInCategory.filter((item) =>
-								value.some((sel) => sel.equipmentId === item.uniqueFrontendId),
-							);
+					{groupedByOwner.map((ownerGroup) => (
+						<Fragment key={ownerGroup.owner.publicId}>
+							{/* Owner Header Row */}
+							<TableRow className="bg-muted/70 hover:bg-muted/70">
+								<TableCell colSpan={4} className="py-3 font-bold text-sm">
+									{ownerGroup.owner.firstName} {ownerGroup.owner.lastName}
+									{ownerGroup.owner.department && (
+										<span className="text-muted-foreground font-normal ml-2">
+											({ownerGroup.owner.department.name})
+										</span>
+									)}
+								</TableCell>
+							</TableRow>
 
-						let categoryCheckedState: boolean | "indeterminate" = false;
-						if (itemsAvailableInCategory.length > 0) {
-							if (
-								selectedAvailableItemsInCategory.length ===
-								itemsAvailableInCategory.length
-							) {
-								categoryCheckedState = true;
-							} else if (selectedAvailableItemsInCategory.length > 0) {
-								categoryCheckedState = "indeterminate";
-							}
-						}
+							{/* Categories within this owner */}
+							{ownerGroup.categories.map((categoryGroup) => {
+								const itemsInCategory = categoryGroup.equipmentItems;
+								const itemsAvailableInCategory = itemsInCategory.filter(
+									(item) => item.availability,
+								);
+								const selectedAvailableItemsInCategory =
+									itemsAvailableInCategory.filter((item) =>
+										value.some(
+											(sel) => sel.equipmentId === item.uniqueFrontendId,
+										),
+									);
 
-						return (
-							<Fragment key={group.category.publicId}>
-								<TableRow className="bg-muted/50 hover:bg-muted/50">
-									<TableCell className="px-3 py-2">
-										<Checkbox
-											id={`cat-select-${group.category.publicId}`}
-											checked={categoryCheckedState}
-											onCheckedChange={(newCheckedStatus) => {
-												handleCategoryCheckboxChange(
-													group.category.publicId,
-													newCheckedStatus as boolean,
-												);
-											}}
-											aria-label={`Select all equipment in ${group.category.name}`}
-											disabled={itemsAvailableInCategory.length === 0} // Disable category checkbox if no items are available
-										/>
-									</TableCell>
-									<TableCell colSpan={3} className="py-2 font-semibold">
-										{group.category.name} (
-										{selectedAvailableItemsInCategory.length}/
-										{itemsAvailableInCategory.length} available selected)
-									</TableCell>
-								</TableRow>
-								{group.equipmentItems.map((item) => {
-									return (
-										<TableRow
-											key={item.uniqueFrontendId}
-											className="hover:bg-muted/20"
-										>
-											<TableCell className="px-3">
+								let categoryCheckedState: boolean | "indeterminate" = false;
+								if (itemsAvailableInCategory.length > 0) {
+									if (
+										selectedAvailableItemsInCategory.length ===
+										itemsAvailableInCategory.length
+									) {
+										categoryCheckedState = true;
+									} else if (selectedAvailableItemsInCategory.length > 0) {
+										categoryCheckedState = "indeterminate";
+									}
+								}
+
+								return (
+									<Fragment
+										key={`${ownerGroup.owner.publicId}-${categoryGroup.category.publicId}`}
+									>
+										<TableRow className="bg-muted/50 hover:bg-muted/50">
+											<TableCell className="px-3 py-2">
 												<Checkbox
-													id={item.uniqueFrontendId}
-													aria-label={`Select ${item.name}`}
-													checked={value.some(
-														(sel) => sel.equipmentId === item.uniqueFrontendId,
-													)}
-													onCheckedChange={(checked) =>
-														handleCheckboxChange(checked, item.uniqueFrontendId)
-													}
-													disabled={!item.availability}
+													id={`cat-select-${ownerGroup.owner.publicId}-${categoryGroup.category.publicId}`}
+													checked={categoryCheckedState}
+													onCheckedChange={(newCheckedStatus) => {
+														handleCategoryCheckboxChange(
+															categoryGroup.category.publicId,
+															ownerGroup.owner.publicId,
+															newCheckedStatus as boolean,
+														);
+													}}
+													aria-label={`Select all equipment in ${categoryGroup.category.name}`}
+													disabled={itemsAvailableInCategory.length === 0}
 												/>
 											</TableCell>
-											<TableCell className="py-2">
-												<div className="flex items-center gap-3">
-													<div className="w-10 h-10 bg-muted rounded-sm flex items-center justify-center overflow-hidden">
-														<img
-															src={
-																item.imagePath || DEFAULT_EQUIPMENT_IMAGE_URL
-															}
-															alt={item.name}
-															className="w-full h-full object-cover"
-															onError={(e) => {
-																e.currentTarget.src =
-																	DEFAULT_EQUIPMENT_IMAGE_URL;
-															}}
-														/>
-													</div>
-													<div>
-														<Label
-															htmlFor={item.uniqueFrontendId}
-															className={cn(
-																item.availability
-																	? "cursor-pointer"
-																	: "cursor-not-allowed",
-																"block",
-															)}
-														>
-															{item.name}
-														</Label>
-														<p className="text-xs text-muted-foreground">
-															{item.brand ?? "N/A"}
-														</p>
-													</div>
-												</div>
-											</TableCell>
-											<TableCell className="text-center py-2">
-												{item.availability ? (
-													<Badge
-														variant="outline"
-														className="border-green-500 text-green-600 px-1.5 py-0.5 text-xs"
-													>
-														{item.availableQuantity -
-															(value.find(
-																(v) => v.equipmentId === item.uniqueFrontendId,
-															)?.quantity || 0)}
-													</Badge>
-												) : (
-													<Badge
-														variant="destructive"
-														className="px-1.5 py-0.5 text-xs"
-													>
-														Unavailable
-													</Badge>
-												)}
-											</TableCell>
-											<TableCell className="text-center py-2">
-												{value.some(
-													(sel) => sel.equipmentId === item.uniqueFrontendId,
-												) && item.availability ? (
-													<Input
-														id={`qty-${item.uniqueFrontendId}`}
-														type="number"
-														min="1"
-														max={item.availableQuantity}
-														value={String(
-															value.find(
-																(v) => v.equipmentId === item.uniqueFrontendId,
-															)?.quantity || 1,
-														)}
-														disabled={
-															!value.some(
-																(sel) =>
-																	sel.equipmentId === item.uniqueFrontendId,
-															) || !item.availability
-														}
-														className="h-8 w-20 text-center"
-														aria-label={`Quantity for ${item.name}`}
-														onChange={(e) =>
-															handleQuantityChange(
-																Number.parseInt(e.target.value, 10) || 1,
-																item.uniqueFrontendId,
-															)
-														}
-														onClick={(e: React.MouseEvent) =>
-															e.stopPropagation()
-														} // Prevent row click if clicking input
-													/>
-												) : (
-													<div className="h-8 w-20" /> // Placeholder for alignment when input is not shown
-												)}
+											<TableCell colSpan={3} className="py-2 font-semibold">
+												{categoryGroup.category.name} (
+												{selectedAvailableItemsInCategory.length}/
+												{itemsAvailableInCategory.length} available selected)
 											</TableCell>
 										</TableRow>
-									);
-								})}{" "}
-								{/* End of group.equipmentItems.map */}
-							</Fragment>
-						); // End of return for group
-					})}{" "}
-					{/* End of groupedEquipment.map */}
+										{categoryGroup.equipmentItems.map((item) => {
+											return (
+												<TableRow
+													key={item.uniqueFrontendId}
+													className="hover:bg-muted/20"
+												>
+													<TableCell className="px-3">
+														<Checkbox
+															id={item.uniqueFrontendId}
+															aria-label={`Select ${item.name}`}
+															checked={value.some(
+																(sel) =>
+																	sel.equipmentId === item.uniqueFrontendId,
+															)}
+															onCheckedChange={(checked) =>
+																handleCheckboxChange(
+																	checked,
+																	item.uniqueFrontendId,
+																)
+															}
+															disabled={!item.availability}
+														/>
+													</TableCell>
+													<TableCell className="py-2">
+														<div className="flex items-center gap-3">
+															<div className="w-10 h-10 bg-muted rounded-sm flex items-center justify-center overflow-hidden">
+																<img
+																	src={
+																		item.imagePath ||
+																		DEFAULT_EQUIPMENT_IMAGE_URL
+																	}
+																	alt={item.name}
+																	className="w-full h-full object-cover"
+																	onError={(e) => {
+																		e.currentTarget.src =
+																			DEFAULT_EQUIPMENT_IMAGE_URL;
+																	}}
+																/>
+															</div>
+															<div>
+																<Label
+																	htmlFor={item.uniqueFrontendId}
+																	className={cn(
+																		item.availability
+																			? "cursor-pointer"
+																			: "cursor-not-allowed",
+																		"block",
+																	)}
+																>
+																	{item.name}
+																</Label>
+																<p className="text-xs text-muted-foreground">
+																	{item.brand ?? "N/A"}
+																</p>
+															</div>
+														</div>
+													</TableCell>
+													<TableCell className="text-center py-2">
+														{item.availability ? (
+															<Badge
+																variant="outline"
+																className="border-green-500 text-green-600 px-1.5 py-0.5 text-xs"
+															>
+																{item.availableQuantity -
+																	(value.find(
+																		(v) =>
+																			v.equipmentId === item.uniqueFrontendId,
+																	)?.quantity || 0)}
+															</Badge>
+														) : (
+															<Badge
+																variant="destructive"
+																className="px-1.5 py-0.5 text-xs"
+															>
+																Unavailable
+															</Badge>
+														)}
+													</TableCell>
+													<TableCell className="text-center py-2">
+														{value.some(
+															(sel) =>
+																sel.equipmentId === item.uniqueFrontendId,
+														) && item.availability ? (
+															<Input
+																id={`qty-${item.uniqueFrontendId}`}
+																type="number"
+																min="1"
+																max={item.availableQuantity}
+																value={String(
+																	value.find(
+																		(v) =>
+																			v.equipmentId === item.uniqueFrontendId,
+																	)?.quantity || 1,
+																)}
+																disabled={
+																	!value.some(
+																		(sel) =>
+																			sel.equipmentId === item.uniqueFrontendId,
+																	) || !item.availability
+																}
+																className="h-8 w-20 text-center"
+																aria-label={`Quantity for ${item.name}`}
+																onChange={(e) =>
+																	handleQuantityChange(
+																		Number.parseInt(e.target.value, 10) || 1,
+																		item.uniqueFrontendId,
+																	)
+																}
+																onClick={(e: React.MouseEvent) =>
+																	e.stopPropagation()
+																}
+															/>
+														) : (
+															<div className="h-8 w-20" />
+														)}
+													</TableCell>
+												</TableRow>
+											);
+										})}
+									</Fragment>
+								);
+							})}
+						</Fragment>
+					))}
 				</TableBody>
 			</Table>
 		</div>
