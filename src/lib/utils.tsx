@@ -173,14 +173,24 @@ export const getApproverStatusBadge = (
 	const isVpaaUser = Array.isArray(userRole)
 		? userRole.includes("VPAA")
 		: userRole === "VPAA";
+	const isVpAdminUser = Array.isArray(userRole)
+		? userRole.includes("VP_ADMIN")
+		: userRole === "VP_ADMIN";
 
 	switch (st) {
 		case "APPROVED":
 			return (
 				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
-					{isAccountingUser ? "Paid" : isVpaaUser ? "Recommended" : "Reserved"}
+					{isAccountingUser
+						? "Paid"
+						: isVpaaUser
+							? "Recommended"
+							: isVpAdminUser
+								? "Approved"
+								: "Reserved"}
 				</Badge>
 			);
+
 		case "ONGOING":
 			return (
 				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
@@ -196,7 +206,13 @@ export const getApproverStatusBadge = (
 		case "RESERVED":
 			return (
 				<Badge className="bg-maroon/10 text-maroon hover:bg-maroon/20">
-					{isAccountingUser ? "Paid" : isVpaaUser ? "Recommended" : "Reserved"}
+					{isAccountingUser
+						? "Paid"
+						: isVpaaUser
+							? "Recommended"
+							: isVpAdminUser
+								? "Approved"
+								: "Reserved"}
 				</Badge>
 			);
 		case "REJECTED":
