@@ -7,7 +7,6 @@ import { ThemeProvider } from "next-themes";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
-import { createSecurePair } from "tls";
 
 // Create a new router instance
 const queryClient = new QueryClient({

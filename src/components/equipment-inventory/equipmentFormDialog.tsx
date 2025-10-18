@@ -199,7 +199,7 @@ export function EquipmentFormDialog({
 			});
 			setCategorySearchTerm("");
 		}
-	}, [isOpen, equipment, form.reset, form.setValue]);
+	}, [isOpen, equipment, form]);
 
 	const handleCreateCategory = (name: string) => {
 		if (!name.trim()) {

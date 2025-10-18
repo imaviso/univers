@@ -146,7 +146,7 @@ export function EditUserFormDialog({
 				});
 			}
 		}
-	}, [user, isOpen, form.reset]);
+	}, [user, isOpen, form]);
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>

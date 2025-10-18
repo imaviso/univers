@@ -87,7 +87,7 @@ export function UserFormDialog({
 		if (!isOpen) {
 			form.reset();
 		}
-	}, [isOpen, form.reset]);
+	}, [isOpen, form]);
 
 	return (
 		<Dialog open={isOpen} onOpenChange={handleClose}>
