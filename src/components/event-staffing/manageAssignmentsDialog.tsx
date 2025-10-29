@@ -55,7 +55,11 @@ export function ManageAssignmentsDialog() {
 
 	const uniquePersonnel = allPersonnel.reduce(
 		(acc: EventPersonnelDTO[], person) => {
-			if (!acc.some((p) => p.publicId === person.publicId)) {
+			if (
+				!acc.some(
+					(p) => p.name === person.name && p.phoneNumber === person.phoneNumber,
+				)
+			) {
 				acc.push(person);
 			}
 			return acc;
@@ -63,11 +67,24 @@ export function ManageAssignmentsDialog() {
 		[],
 	);
 
-	const currentAssignedPersonnel = selectedEvent?.assignedPersonnel || [];
+	const currentAssignedPersonnel = (
+		selectedEvent?.assignedPersonnel || []
+	).reduce((acc: EventPersonnelDTO[], person) => {
+		if (
+			!acc.some(
+				(p) => p.name === person.name && p.phoneNumber === person.phoneNumber,
+			)
+		) {
+			acc.push(person);
+		}
+		return acc;
+	}, []);
 	const availablePersonnel = uniquePersonnel.filter(
 		(person) =>
 			!currentAssignedPersonnel.some(
-				(assigned) => assigned.publicId === person.publicId,
+				(assigned) =>
+					assigned.name === person.name &&
+					assigned.phoneNumber === person.phoneNumber,
 			),
 	);
 
