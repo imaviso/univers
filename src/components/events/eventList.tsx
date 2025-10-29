@@ -2,11 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query"; // Import query hook
 import { useNavigate } from "@tanstack/react-router";
 import { EventCard } from "@/components/events/eventCard"; // Import EventCard relative to src
 import { ScrollArea } from "@/components/ui/scroll-area"; // Import ScrollArea
-import {
-	searchEventsQueryOptions,
-	useCurrentUser,
-	venuesQueryOptions,
-} from "@/lib/query"; // Import query options
+import { searchEventsQueryOptions, venuesQueryOptions } from "@/lib/query"; // Import query options
 import type { VenueDTO } from "@/lib/types"; // Ensure Venue is imported if not already
 import { EventListItem } from "./EventListItem"; // Import EventListItem
 
@@ -28,7 +24,6 @@ export function EventList({
 }) {
 	const navigate = useNavigate();
 	const { data: venues = [] } = useSuspenseQuery(venuesQueryOptions);
-	const { data: currentUser } = useCurrentUser();
 
 	const venueMap = new Map(
 		venues.map((venue: VenueDTO) => [venue.publicId, venue.name]),
@@ -56,22 +51,6 @@ export function EventList({
 		}
 	};
 
-	// Client-side filter: Hide CANCELED events in 'mine' tab for non-admins
-	const eventsToDisplay = events.filter((event) => {
-		if (scope === "mine") {
-			if (
-				event.status?.toUpperCase() === "CANCELED" &&
-				!currentUser?.roles?.includes("SUPER_ADMIN") &&
-				!currentUser?.roles?.includes("VP_ADMIN") &&
-				!currentUser?.roles?.includes("ADMIN") &&
-				!currentUser?.roles?.includes("DEPT_HEAD")
-			) {
-				return false;
-			}
-		}
-		return true;
-	});
-
 	const noEventsMessage =
 		activeTab === "all"
 			? "No events found."
@@ -79,7 +58,7 @@ export function EventList({
 
 	return (
 		<ScrollArea className="h-[90vh] w-full">
-			{eventsToDisplay.length === 0 ? (
+			{events.length === 0 ? (
 				<div className="text-center text-muted-foreground py-10">
 					{noEventsMessage}
 				</div>
@@ -89,7 +68,7 @@ export function EventList({
 					{/* Container for list or grid */}
 					{displayView === "card" ? (
 						<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pr-6 py-4">
-							{eventsToDisplay.map((event) => (
+							{events.map((event) => (
 								<EventCard
 									key={`card-${activeTab}-${event.publicId}`}
 									event={event}
@@ -103,7 +82,7 @@ export function EventList({
 							{" "}
 							{/* List view container */}
 							{/* Optional: Add a header row here */}
-							{eventsToDisplay.map((event) => (
+							{events.map((event) => (
 								<EventListItem
 									key={`list-${activeTab}-${event.publicId}`}
 									event={event}
