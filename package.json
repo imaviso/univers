@@ -72,7 +72,7 @@
 		"vaul": "^1.1.2"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.6",
+		"@biomejs/biome": "2.2.6",
 		"@tanstack/router-devtools": "^1.120.3",
 		"@tanstack/router-plugin": "^1.120.3",
 		"@types/node": "^22.15.17",

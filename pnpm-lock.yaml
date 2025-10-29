@@ -181,7 +181,7 @@ importers:
         version: 1.1.2(@types/react-dom@19.1.5(@types/react@19.1.5))(@types/react@19.1.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
     devDependencies:
       '@biomejs/biome':
-        specifier: ^2.2.6
+        specifier: 2.2.6
         version: 2.2.6
       '@tanstack/router-devtools':
         specifier: ^1.120.3
