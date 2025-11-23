@@ -25,7 +25,6 @@ import {
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EquipmentReservationFormDialog } from "@/components/equipment-reservation/equipmentReservationForm";
-import { AddPersonnelDialog } from "@/components/event-staffing/addPersonnelDialog";
 import { ManageAssignmentsDialog } from "@/components/event-staffing/manageAssignmentsDialog";
 import { CancelConfirmDialog } from "@/components/events/cancelEventDialog";
 import { EditEventModal } from "@/components/events/editEventModal";
@@ -92,7 +91,6 @@ import type {
 	EventApprovalDTO,
 	EventDTO,
 	EventDTOPayload,
-	EventPersonnelDTO,
 	UserRole,
 	VenueDTO,
 } from "@/lib/types";
@@ -1281,28 +1279,29 @@ export function EventDetailsPage() {
 											{event.assignedPersonnel.length} staff member(s) assigned
 										</div>
 										<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-											{event.assignedPersonnel.map(
-												(staff: EventPersonnelDTO) => (
-													<div
-														key={staff.publicId}
-														className="flex items-center gap-3 p-3 rounded-lg border bg-card"
-													>
-														<Avatar className="h-10 w-10">
-															<AvatarFallback>
-																{getInitials(staff.name)}
-															</AvatarFallback>
-														</Avatar>
-														<div className="flex-1 min-w-0">
-															<div className="font-medium text-sm truncate">
-																{staff.name}
-															</div>
-															<div className="text-xs text-muted-foreground">
-																{staff.phoneNumber}
-															</div>
+											{event.assignedPersonnel?.map((staff) => (
+												<div
+													key={staff.publicId}
+													className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+												>
+													<Avatar className="h-10 w-10">
+														<AvatarFallback>
+															{getInitials(
+																`${staff.personnel.firstName} ${staff.personnel.lastName}`,
+															)}
+														</AvatarFallback>
+													</Avatar>
+													<div className="flex-1 min-w-0">
+														<div className="font-medium text-sm truncate">
+															{staff.personnel.firstName}{" "}
+															{staff.personnel.lastName}
+														</div>
+														<div className="text-xs text-muted-foreground">
+															{staff.phoneNumber}
 														</div>
 													</div>
-												),
-											)}
+												</div>
+											))}
 										</div>
 									</div>
 								) : (
@@ -1431,12 +1430,7 @@ export function EventDetailsPage() {
 				isLoading={cancelEquipmentReservationMutationHook.isPending}
 			/>
 			{/* Staff Management Dialogs */}
-			{canManageStaff && (
-				<>
-					<AddPersonnelDialog />
-					<ManageAssignmentsDialog />
-				</>
-			)}
+			{canManageStaff && <ManageAssignmentsDialog />}
 		</div>
 	);
 }

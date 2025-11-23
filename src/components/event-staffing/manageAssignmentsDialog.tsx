@@ -3,6 +3,7 @@ import { useAtom } from "jotai";
 import { Plus, Trash2, Users } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
+import * as v from "valibot";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,18 +15,25 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
-	addPersonnelDialogAtom,
 	manageAssignmentsDialogAtom,
 	selectedEventForAssignmentAtom,
 } from "@/lib/atoms";
 import {
 	searchEventsQueryOptions,
 	useAddEventPersonnelMutation,
+	useAllPersonnelQuery,
 	useDeleteEventPersonnelMutation,
 } from "@/lib/query";
+import { eventPersonnelSchema } from "@/lib/schema";
 import type { Event, EventPersonnelDTO } from "@/lib/types";
 import { getInitials } from "@/lib/utils";
 
@@ -34,13 +42,19 @@ export function ManageAssignmentsDialog() {
 	const [selectedEventId, setSelectedEventId] = useAtom(
 		selectedEventForAssignmentAtom,
 	);
-	const [, setAddPersonnelDialogOpen] = useAtom(addPersonnelDialogAtom);
-	const [searchTerm, setSearchTerm] = useState("");
-	const searchId = useId();
+	const [selectedPersonnelId, setSelectedPersonnelId] = useState<string>("");
+	const [selectedTask, setSelectedTask] = useState<"SETUP" | "PULLOUT">(
+		"SETUP",
+	);
+	const [phoneNumber, setPhoneNumber] = useState<string>("");
+	const phoneInputId = useId();
 
 	const { data: eventsData = [] } = useQuery(
 		searchEventsQueryOptions("ALL", "ALL", "startTime", undefined, undefined),
 	);
+
+	const { data: personnelList = [], isLoading: isPersonnelLoading } =
+		useAllPersonnelQuery();
 
 	const addPersonnelMutation = useAddEventPersonnelMutation();
 	const deletePersonnelMutation = useDeleteEventPersonnelMutation();
@@ -49,63 +63,62 @@ export function ManageAssignmentsDialog() {
 		(event) => event.publicId === selectedEventId,
 	) as Event | undefined;
 
-	const allPersonnel: EventPersonnelDTO[] = eventsData.flatMap(
-		(event) => event.assignedPersonnel || [],
+	const currentAssignedPersonnel =
+		(selectedEvent?.assignedPersonnel as unknown as EventPersonnelDTO[]) || [];
+
+	const currentAssignedPersonnelIds = new Set(
+		currentAssignedPersonnel.map((p) => p.personnel.publicId),
 	);
 
-	const uniquePersonnel = allPersonnel.reduce(
-		(acc: EventPersonnelDTO[], person) => {
-			if (
-				!acc.some(
-					(p) => p.name === person.name && p.phoneNumber === person.phoneNumber,
-				)
-			) {
-				acc.push(person);
-			}
-			return acc;
-		},
-		[],
+	const availablePersonnel = personnelList.filter(
+		(person) => !currentAssignedPersonnelIds.has(person.publicId),
 	);
 
-	const currentAssignedPersonnel = (
-		selectedEvent?.assignedPersonnel || []
-	).reduce((acc: EventPersonnelDTO[], person) => {
-		if (
-			!acc.some(
-				(p) => p.name === person.name && p.phoneNumber === person.phoneNumber,
-			)
-		) {
-			acc.push(person);
+	const handleAddPersonnelFromDropdown = () => {
+		// Validate inputs
+		const validationResult = v.safeParse(eventPersonnelSchema, {
+			personnelId: selectedPersonnelId,
+			phoneNumber: phoneNumber,
+			task: selectedTask,
+		});
+
+		if (!validationResult.success) {
+			const errors = validationResult.issues.map((issue) => issue.message);
+			toast.error(errors.join(", "));
+			return;
 		}
-		return acc;
-	}, []);
-	const availablePersonnel = uniquePersonnel.filter(
-		(person) =>
-			!currentAssignedPersonnel.some(
-				(assigned) =>
-					assigned.name === person.name &&
-					assigned.phoneNumber === person.phoneNumber,
-			),
-	);
 
-	const filteredAvailable = availablePersonnel.filter((person) =>
-		person.name.toLowerCase().includes(searchTerm.toLowerCase()),
-	);
+		if (!selectedEventId || !selectedPersonnelId) {
+			toast.error("Please select a personnel");
+			return;
+		}
 
-	const handleAddExistingPersonnel = (person: EventPersonnelDTO) => {
-		if (!selectedEventId) return;
+		const selectedPersonnel = personnelList.find(
+			(p) => p.publicId === selectedPersonnelId,
+		);
+
+		if (!selectedPersonnel) {
+			toast.error("Personnel not found");
+			return;
+		}
+
+		const fullName = `${selectedPersonnel.firstName} ${selectedPersonnel.lastName}`;
+		const phone = phoneNumber || selectedPersonnel.phoneNumber || "";
 
 		addPersonnelMutation.mutate(
 			{
 				eventId: selectedEventId,
 				personnelData: {
-					name: person.name,
-					phoneNumber: person.phoneNumber,
+					personnel: selectedPersonnel,
+					phoneNumber: phone,
+					task: selectedTask,
 				},
 			},
 			{
 				onSuccess: () => {
-					toast.success(`${person.name} added to event`);
+					toast.success(`${fullName} added to event as ${selectedTask}`);
+					setSelectedPersonnelId("");
+					setPhoneNumber("");
 				},
 				onError: (error) => {
 					toast.error(
@@ -126,7 +139,7 @@ export function ManageAssignmentsDialog() {
 			},
 			{
 				onSuccess: () => {
-					toast.success(`${person.name} removed from event`);
+					toast.success(`${person.personnel.firstName} removed from event`);
 				},
 				onError: (error) => {
 					toast.error(
@@ -139,21 +152,19 @@ export function ManageAssignmentsDialog() {
 		);
 	};
 
-	const handleAddNewPersonnel = () => {
-		setAddPersonnelDialogOpen(true);
-	};
-
 	const handleClose = () => {
 		setIsOpen(false);
 		setSelectedEventId(null);
-		setSearchTerm("");
+		setSelectedPersonnelId("");
+		setPhoneNumber("");
+		setSelectedTask("SETUP");
 	};
 
 	if (!selectedEvent) return null;
 
 	return (
 		<Dialog open={isOpen} onOpenChange={handleClose}>
-			<DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+			<DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<Users className="h-5 w-5" />
@@ -165,28 +176,153 @@ export function ManageAssignmentsDialog() {
 				</DialogHeader>
 
 				<div className="space-y-6 py-4">
-					{/* Currently Assigned */}
+					{/* Add Staff Section */}
+					<div className="border rounded-lg p-4 bg-background-50">
+						<div className="space-y-4">
+							{/* Staff Selection */}
+							<div>
+								<p className="text-xs font-medium text-muted-foreground mb-2">
+									Select Staff Member
+								</p>
+								<Select
+									value={selectedPersonnelId}
+									onValueChange={setSelectedPersonnelId}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Choose a staff member..." />
+									</SelectTrigger>
+									<SelectContent>
+										{isPersonnelLoading ? (
+											<div className="p-2 text-xs text-muted-foreground text-center">
+												Loading personnel...
+											</div>
+										) : availablePersonnel.length > 0 ? (
+											availablePersonnel.map((person) => (
+												<SelectItem
+													key={person.publicId}
+													value={person.publicId}
+												>
+													{person.firstName} {person.lastName}
+												</SelectItem>
+											))
+										) : (
+											<div className="p-2 text-xs text-muted-foreground text-center">
+												No available personnel
+											</div>
+										)}
+									</SelectContent>
+								</Select>
+							</div>
+
+							{/* Phone Number Input */}
+							<div className="grid grid-cols-2 gap-2">
+								<div>
+									<label
+										htmlFor={phoneInputId}
+										className="text-xs font-medium text-muted-foreground mb-2 block"
+									>
+										Phone Number
+									</label>
+									<Input
+										id={phoneInputId}
+										placeholder="e.g., 09123456789"
+										value={phoneNumber}
+										onChange={(e) => setPhoneNumber(e.target.value)}
+										maxLength={11}
+										disabled={!selectedPersonnelId}
+									/>
+									{selectedPersonnelId && !phoneNumber && (
+										<p className="text-xs text-muted-foreground mt-1.5">
+											{
+												personnelList.find(
+													(p) => p.publicId === selectedPersonnelId,
+												)?.phoneNumber
+											}
+										</p>
+									)}
+								</div>
+
+								{/* Task Selection */}
+								<div>
+									<p className="text-xs font-medium text-muted-foreground mb-2">
+										Task Type
+									</p>
+									<Select
+										value={selectedTask}
+										disabled={!selectedPersonnelId}
+										onValueChange={(value) =>
+											setSelectedTask(value as "SETUP" | "PULLOUT")
+										}
+									>
+										<SelectTrigger className="w-full">
+											<SelectValue placeholder="Select task..." />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="SETUP">Setup</SelectItem>
+											<SelectItem value="PULLOUT">Pullout</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+							</div>
+
+							{/* Add Button */}
+							<Button
+								onClick={handleAddPersonnelFromDropdown}
+								disabled={
+									!selectedPersonnelId ||
+									addPersonnelMutation.isPending ||
+									isPersonnelLoading
+								}
+								className="w-full"
+							>
+								{addPersonnelMutation.isPending ? (
+									"Adding..."
+								) : (
+									<>
+										<Plus className="h-4 w-4 mr-2" />
+										Add Staff to Event
+									</>
+								)}
+							</Button>
+						</div>
+					</div>
+
+					<Separator />
+
+					{/* Currently Assigned Staff Section */}
 					<div>
-						<h3 className="text-sm font-semibold mb-3">
-							Currently Assigned ({currentAssignedPersonnel.length})
+						<h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+							<Users className="h-4 w-4" />
+							Currently Assigned Staff ({currentAssignedPersonnel.length})
 						</h3>
+
 						{currentAssignedPersonnel.length > 0 ? (
 							<div className="space-y-2">
 								{currentAssignedPersonnel.map((person) => (
 									<div
 										key={person.publicId}
-										className="flex items-center justify-between p-2 border rounded-lg"
+										className="flex items-center justify-between p-3 border rounded-lg hover:bg-background-50 transition-colors"
 									>
-										<div className="flex items-center space-x-3">
-											<Avatar className="h-8 w-8">
-												<AvatarFallback className="text-xs">
-													{getInitials(person.name)}
+										<div className="flex items-center space-x-3 flex-1 min-w-0">
+											<Avatar className="h-10 w-10 flex-shrink-0">
+												<AvatarFallback className="text-sm font-medium">
+													{getInitials(
+														`${person.personnel.firstName} ${person.personnel.lastName}`,
+													)}
 												</AvatarFallback>
 											</Avatar>
-											<div>
-												<div className="font-medium text-sm">{person.name}</div>
+											<div className="min-w-0 flex-1">
+												<div className="font-medium text-sm">
+													{person.personnel.firstName}{" "}
+													{person.personnel.lastName}
+												</div>
 												<div className="text-xs text-muted-foreground">
 													{person.phoneNumber}
+												</div>
+												<div className="mt-2 flex items-center gap-2">
+													<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-500">
+														{person.task}
+													</span>
 												</div>
 											</div>
 										</div>
@@ -195,7 +331,8 @@ export function ManageAssignmentsDialog() {
 											size="sm"
 											onClick={() => handleRemovePersonnel(person)}
 											disabled={deletePersonnelMutation.isPending}
-											className="text-destructive hover:text-destructive"
+											className="text-destructive hover:text-destructive ml-2 flex-shrink-0"
+											title="Remove staff member"
 										>
 											<Trash2 className="h-4 w-4" />
 										</Button>
@@ -203,91 +340,21 @@ export function ManageAssignmentsDialog() {
 								))}
 							</div>
 						) : (
-							<div className="text-sm text-muted-foreground text-center py-4 border rounded-lg">
-								No staff currently assigned
+							<div className="text-sm text-muted-foreground text-center py-8 border rounded-lg bg-background-50">
+								<Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+								<p>No staff currently assigned</p>
+								<p className="text-xs mt-1">
+									Add staff members above to get started
+								</p>
 							</div>
 						)}
-					</div>
-
-					<Separator />
-
-					{/* Add Staff Section */}
-					<div>
-						<div className="flex items-center justify-between mb-3">
-							<h3 className="text-sm font-semibold">Add Staff</h3>
-							<Button size="sm" onClick={handleAddNewPersonnel}>
-								<Plus className="h-4 w-4 mr-1" />
-								Add New
-							</Button>
-						</div>
-
-						{/* Search existing personnel */}
-						<div className="space-y-3">
-							<div>
-								<Label
-									htmlFor={searchId}
-									className="text-xs text-muted-foreground"
-								>
-									Search existing personnel
-								</Label>
-								<Input
-									id={searchId}
-									placeholder="Search by name..."
-									value={searchTerm}
-									onChange={(e) => setSearchTerm(e.target.value)}
-									className="mt-1"
-								/>
-							</div>
-
-							{filteredAvailable.length > 0 ? (
-								<div className="space-y-2 max-h-48 overflow-y-auto">
-									{filteredAvailable.map((person) => (
-										<div
-											key={person.publicId}
-											className="flex items-center justify-between p-2 border rounded-lg"
-										>
-											<div className="flex items-center space-x-3">
-												<Avatar className="h-8 w-8">
-													<AvatarFallback className="text-xs">
-														{getInitials(person.name)}
-													</AvatarFallback>
-												</Avatar>
-												<div>
-													<div className="font-medium text-sm">
-														{person.name}
-													</div>
-													<div className="text-xs text-muted-foreground">
-														{person.phoneNumber}
-													</div>
-												</div>
-											</div>
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => handleAddExistingPersonnel(person)}
-												disabled={addPersonnelMutation.isPending}
-											>
-												<Plus className="h-4 w-4 mr-1" />
-												Add
-											</Button>
-										</div>
-									))}
-								</div>
-							) : searchTerm ? (
-								<div className="text-sm text-muted-foreground text-center py-4 border rounded-lg">
-									No personnel found matching "{searchTerm}"
-								</div>
-							) : availablePersonnel.length === 0 ? (
-								<div className="text-sm text-muted-foreground text-center py-4 border rounded-lg">
-									All available personnel are already assigned
-								</div>
-							) : null}
-						</div>
 					</div>
 				</div>
 
 				<DialogFooter>
-					<Button onClick={handleClose}>Done</Button>
+					<Button variant="outline" onClick={handleClose}>
+						Done
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

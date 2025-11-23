@@ -41,6 +41,7 @@ export const allNavigation: NavigationItem[] = [
 			"ADMIN",
 			"ACCOUNTING",
 			"VPAA",
+			"ASSIGNED_PERSONNEL",
 		],
 	},
 	{
@@ -57,6 +58,7 @@ export const allNavigation: NavigationItem[] = [
 			"DEPT_HEAD",
 			"ACCOUNTING",
 			"VPAA",
+			"ASSIGNED_PERSONNEL",
 		],
 	},
 	{

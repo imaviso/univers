@@ -26,6 +26,7 @@ import {
 	getAllEquipmentReservations,
 	getAllEquipmentsAdmin,
 	getAllEquipmentsByOwner,
+	getAllPersonnel,
 	getAllUsers,
 	getAllVenues,
 	getApprovalsForEquipmentReservation,
@@ -1329,12 +1330,15 @@ export const useAddEventPersonnelMutation = () => {
 	return useMutation<
 		EventPersonnelDTO[],
 		Error,
-		{ eventId: string; personnelData: Omit<EventPersonnelDTO, "publicId"> },
+		{
+			eventId: string;
+			personnelData: Omit<EventPersonnelDTO, "publicId">;
+		},
 		{ previousPersonnel?: EventPersonnelDTO[] }
 	>({
 		mutationFn: ({ eventId, personnelData }) =>
 			addEventPersonnel(eventId, personnelData),
-		onMutate: async ({ eventId, personnelData }) => {
+		onMutate: async ({ eventId }) => {
 			await queryClient.cancelQueries({
 				queryKey: personnelQueryKeys.byEvent(eventId),
 			});
@@ -1349,34 +1353,8 @@ export const useAddEventPersonnelMutation = () => {
 				personnelQueryKeys.byEvent(eventId),
 			);
 
-			const optimisticPersonnel: EventPersonnelDTO = {
-				publicId: `temp-${Date.now()}`,
-				...personnelData,
-			};
-
-			queryClient.setQueryData<EventPersonnelDTO[]>(
-				personnelQueryKeys.byEvent(eventId),
-				(old = []) => [...old, optimisticPersonnel],
-			);
-
-			// Optimistically update events list queries
-			queryClient.setQueriesData<EventDTO[]>(
-				{ queryKey: eventsQueryKeys.listsRelated() },
-				(old) => {
-					if (!old) return old;
-					return old.map((event) =>
-						event.publicId === eventId
-							? {
-									...event,
-									assignedPersonnel: [
-										...(event.assignedPersonnel || []),
-										optimisticPersonnel,
-									],
-								}
-							: event,
-					);
-				},
-			);
+			// Skip optimistic update for now since we don't have all required fields
+			// The server response will be used instead
 
 			return { previousPersonnel };
 		},
@@ -1415,7 +1393,7 @@ export const useAddEventPersonnelMutation = () => {
 export const useDeleteEventPersonnelMutation = () => {
 	const queryClient = useQueryClient();
 	return useMutation<
-		string,
+		EventPersonnelDTO[],
 		Error,
 		{ eventId: string; personnelPublicId: string },
 		{ previousPersonnel?: EventPersonnelDTO[] }
@@ -1491,4 +1469,16 @@ export const useDeleteEventPersonnelMutation = () => {
 			});
 		},
 	});
+};
+
+// --- Get All Personnel Query ---
+
+export const allPersonnelQueryOptions = queryOptions<UserDTO[]>({
+	queryKey: ["personnel", "list"],
+	queryFn: () => getAllPersonnel(),
+	staleTime: 1000 * 60 * 5, // 5 minutes
+});
+
+export const useAllPersonnelQuery = () => {
+	return useQuery(allPersonnelQueryOptions);
 };

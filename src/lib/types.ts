@@ -47,7 +47,8 @@ export type UserRole =
 	| "VENUE_OWNER"
 	| "EQUIPMENT_OWNER"
 	| "ACCOUNTING"
-	| "VPAA";
+	| "VPAA"
+	| "ASSIGNED_PERSONNEL";
 
 export type Status =
 	| "APPROVED"
@@ -105,6 +106,7 @@ export const ROLES = [
 	{ value: "VENUE_OWNER", label: "Venue Owner" },
 	{ value: "EQUIPMENT_OWNER", label: "Equipment Owner" },
 	{ value: "ACCOUNTING", label: "Accounting" },
+	{ value: "ASSIGNED_PERSONNEL", label: "Assigned Personnel" },
 ];
 
 export const DEPARTMENTS: Array<{ value: string; label: string }> = [
@@ -168,7 +170,7 @@ export type EventDTO = {
 	cancellationReason: string | null;
 	createdAt: string;
 	updatedAt: string;
-	assignedPersonnel: Personnel[] | null;
+	assignedPersonnel: EventPersonnelDTO[] | null;
 };
 
 export type EventInputType = {
@@ -203,7 +205,7 @@ export type Event = {
 	startTime: string;
 	endTime: string;
 	status: string;
-	assignedPersonnel: Personnel[] | null;
+	assignedPersonnel: EventPersonnelDTO[] | null;
 };
 
 export type EventApprovalDTO = {
@@ -430,15 +432,17 @@ export type EquipmentCategoryDTO = {
 
 export type Personnel = {
 	publicId: string;
-	name: string;
-	// email: string;
+	personnel: UserDTO;
 	phoneNumber: string;
-	// avatar?: string;
-	// status: "Available" | "Busy" | "Unavailable";
+	task: Task;
+	status: string;
 };
 
 export type EventPersonnelDTO = {
 	publicId: string;
-	name: string;
+	personnel: UserDTO;
 	phoneNumber: string;
+	task: Task;
 };
+
+export type Task = "SETUP" | "PULLOUT";

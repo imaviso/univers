@@ -620,3 +620,18 @@ export const personnelSchema = v.object({
 });
 
 export type PersonnelInput = v.InferInput<typeof personnelSchema>;
+
+export const eventPersonnelSchema = v.object({
+	personnelId: v.pipe(v.string(), v.nonEmpty("Staff member is required")),
+	phoneNumber: v.pipe(
+		v.string(),
+		v.regex(/^\d{11}$/, "Phone number must be exactly 11 digits"),
+	),
+	task: v.pipe(
+		v.string(),
+		v.nonEmpty("Task type is required"),
+		v.picklist(["SETUP", "PULLOUT"], "Task must be either Setup or Pullout"),
+	),
+});
+
+export type EventPersonnelInput = v.InferInput<typeof eventPersonnelSchema>;

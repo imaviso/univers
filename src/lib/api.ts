@@ -1872,12 +1872,18 @@ export const addEventPersonnel = async (
 	personnelData: Omit<EventPersonnelDTO, "publicId">,
 ): Promise<EventPersonnelDTO[]> => {
 	try {
+		const payload: Omit<EventPersonnelDTO, "publicId"> = {
+			personnel: personnelData.personnel,
+			phoneNumber: personnelData.phoneNumber,
+			task: personnelData.task,
+		};
+
 		const response = await fetchWithAuth(
 			`${API_BASE_URL}/events/${eventId}/personnel`,
 			{
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(personnelData),
+				body: JSON.stringify(payload),
 			},
 		);
 		const responseData = await handleApiResponse<
@@ -1896,7 +1902,7 @@ export const addEventPersonnel = async (
 export const deleteEventPersonnel = async (
 	eventId: string,
 	personnelPublicId: string,
-): Promise<string> => {
+): Promise<EventPersonnelDTO[]> => {
 	try {
 		const response = await fetchWithAuth(
 			`${API_BASE_URL}/events/${eventId}/personnel/${personnelPublicId}`,
@@ -1904,16 +1910,32 @@ export const deleteEventPersonnel = async (
 				method: "DELETE",
 			},
 		);
-		const responseData = await handleApiResponse<ApiResponse<string>>(
-			response,
-			true,
-		);
-		return responseData?.data || "Personnel removed successfully";
+		const responseData = await handleApiResponse<
+			ApiResponse<EventPersonnelDTO[]>
+		>(response, true);
+		return responseData?.data || [];
 	} catch (error) {
 		throw error instanceof Error
 			? error
 			: new Error(
 					`An unexpected error occurred while removing personnel ${personnelPublicId} from event ${eventId}.`,
+				);
+	}
+};
+
+export const getAllPersonnel = async (): Promise<UserDTO[]> => {
+	try {
+		const response = await fetchWithAuth(`${API_BASE_URL}/events/personnel`, {
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		});
+		const data = await handleApiResponse<UserDTO[]>(response, true);
+		return data || [];
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					"An unexpected error occurred while fetching personnel list.",
 				);
 	}
 };

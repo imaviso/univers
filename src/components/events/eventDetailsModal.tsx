@@ -190,14 +190,12 @@ export function EventDetailsModal({
 										>
 											<Avatar className="h-6 w-6">
 												<AvatarFallback className="text-xs">
-													{person.name
-														.split(" ")
-														.map((n) => n[0])
-														.join("")
-														.slice(0, 2)}
+													{`${person.personnel.firstName[0]}${person.personnel.lastName[0]}`}
 												</AvatarFallback>
 											</Avatar>
-											<span>{person.name}</span>
+											<span>
+												{person.personnel.firstName} {person.personnel.lastName}
+											</span>
 											{person.phoneNumber && (
 												<div className="flex items-center gap-1 text-muted-foreground text-xs">
 													<Phone className="h-3 w-3" />

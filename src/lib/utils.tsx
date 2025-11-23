@@ -309,6 +309,8 @@ export const getBadgeVariant = (role: UserRole): string => {
 			return "bg-orange-100 text-orange-800";
 		case "ACCOUNTING":
 			return "bg-cyan-100 text-cyan-800";
+		case "ASSIGNED_PERSONNEL":
+			return "bg-violet-100 text-violet-800";
 		default:
 			return "bg-gray-100 text-gray-800";
 	}

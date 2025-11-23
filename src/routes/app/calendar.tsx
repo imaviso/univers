@@ -87,7 +87,10 @@ function Calendar() {
 				color: STATUS_TO_EVENT_COLOR[(e.status || "").toUpperCase()] ?? "sky",
 				location: e.eventVenue?.name,
 				staffCount: e.assignedPersonnel?.length || 0,
-				staffNames: e.assignedPersonnel?.map((p) => p.name) || [],
+				staffNames:
+					e.assignedPersonnel?.map(
+						(p) => `${p.personnel.firstName} ${p.personnel.lastName}`,
+					) || [],
 			}));
 	}, [eventsData, allowedStatuses]);
 
