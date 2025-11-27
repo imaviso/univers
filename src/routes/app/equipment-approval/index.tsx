@@ -111,7 +111,7 @@ function usePersistentState<T>(
 	return [state, setState];
 }
 
-export const Route = createFileRoute("/app/equipment-approval/approval")({
+export const Route = createFileRoute("/app/equipment-approval/")({
 	component: EquipmentReservationApproval,
 });
 

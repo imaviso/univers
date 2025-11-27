@@ -69,7 +69,7 @@ import {
 	usePersistentState,
 } from "@/lib/utils";
 
-export const Route = createFileRoute("/app/event-staffing/staff")({
+export const Route = createFileRoute("/app/event-personnel/")({
 	component: EventStaff,
 });
 

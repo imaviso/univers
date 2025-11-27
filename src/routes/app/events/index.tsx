@@ -46,7 +46,7 @@ import { EVENT_STATUSES } from "@/lib/constants";
 import { useCurrentUser, venuesQueryOptions } from "@/lib/query"; // Import useCurrentUser
 import { cn, usePersistentState } from "@/lib/utils"; // Added cn
 
-export const Route = createFileRoute("/app/events/timeline")({
+export const Route = createFileRoute("/app/events/")({
 	component: Events,
 });
 
@@ -65,14 +65,13 @@ function Events() {
 	const { data: currentUser } = useCurrentUser();
 	const userRoles = currentUser?.roles || [];
 
-	const isSuperAdmin =
-		userRoles.includes("SUPER_ADMIN") ||
-		userRoles.includes("ASSIGNED_PERSONNEL");
+	const isSuperAdmin = userRoles.includes("SUPER_ADMIN");
 	const isAdmin =
 		userRoles.includes("VP_ADMIN") ||
 		userRoles.includes("ADMIN") ||
 		userRoles.includes("DEPT_HEAD") ||
 		userRoles.includes("VENUE_OWNER") ||
+		userRoles.includes("ASSIGNED_PERSONNEL") ||
 		userRoles.includes("EQUIPMENT_OWNER");
 
 	let defaultActiveTab: "all" | "mine" | "related";

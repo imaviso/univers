@@ -46,7 +46,7 @@ export const allNavigation: NavigationItem[] = [
 	},
 	{
 		name: "Events",
-		href: "/app/events/timeline",
+		href: "/app/events",
 		icon: LayoutGrid,
 		roles: [
 			"SUPER_ADMIN",
@@ -62,14 +62,14 @@ export const allNavigation: NavigationItem[] = [
 		],
 	},
 	{
-		name: "Event Staffing",
-		href: "/app/event-staffing/staff",
+		name: "Event Personnel",
+		href: "/app/event-personnel",
 		icon: UserCogIcon,
 		roles: ["SUPER_ADMIN", "EQUIPMENT_OWNER"],
 	},
 	{
 		name: "Venues",
-		href: "/app/venues/dashboard",
+		href: "/app/venues",
 		icon: Building,
 		roles: [
 			"SUPER_ADMIN",
@@ -85,13 +85,13 @@ export const allNavigation: NavigationItem[] = [
 	},
 	{
 		name: "Event Approval",
-		href: "/app/event-approval/approval",
+		href: "/app/event-approval",
 		icon: BookCheck,
 		roles: ["VENUE_OWNER", "VP_ADMIN", "ADMIN", "DEPT_HEAD"],
 	},
 	{
 		name: "Users",
-		href: "/app/user-management/users",
+		href: "/app/user-management",
 		icon: Users,
 		roles: ["SUPER_ADMIN"],
 	},
@@ -113,13 +113,13 @@ export const allNavigation: NavigationItem[] = [
 	},
 	{
 		name: "Equipment Approval",
-		href: "/app/equipment-approval/approval",
+		href: "/app/equipment-approval",
 		icon: PackageCheck,
 		roles: ["EQUIPMENT_OWNER"],
 	},
 	{
-		name: "Departments",
-		href: "/app/departments/dashboard",
+		name: "Departments/Organization",
+		href: "/app/departments",
 		icon: Building2,
 		roles: ["SUPER_ADMIN"],
 	},

@@ -15,7 +15,7 @@ export const Route = createFileRoute("/app/venues")({
 			) {
 				return true;
 			}
-			if (item.href === "/app/venues/dashboard") {
+			if (item.href === "/app/venues") {
 				const customPathRegex =
 					/^\/app\/venues\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 				return customPathRegex.test(location.pathname);

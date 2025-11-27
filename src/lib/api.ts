@@ -1516,7 +1516,7 @@ export const getTimelineEventsByDateRange = async (
 	if (endDate) params.append("endDate", endDate);
 
 	const response = await fetchWithAuth(
-		`${API_BASE_URL}/events/timeline?${params.toString()}`,
+		`${API_BASE_URL}/events?${params.toString()}`,
 		{
 			method: "GET",
 			headers: { "Content-Type": "application/json" },

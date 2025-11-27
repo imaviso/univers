@@ -27,21 +27,21 @@ import { Route as AppVenuesRouteImport } from './routes/app/venues/route'
 import { Route as AppUserManagementRouteImport } from './routes/app/user-management/route'
 import { Route as AppSettingsRouteImport } from './routes/app/settings/route'
 import { Route as AppEventsRouteImport } from './routes/app/events/route'
-import { Route as AppEventStaffingRouteImport } from './routes/app/event-staffing/route'
+import { Route as AppEventPersonnelRouteImport } from './routes/app/event-personnel/route'
 import { Route as AppEventApprovalRouteImport } from './routes/app/event-approval/route'
 import { Route as AppEquipmentApprovalRouteImport } from './routes/app/equipment-approval/route'
 import { Route as AppDepartmentsRouteImport } from './routes/app/departments/route'
-import { Route as AppVenuesDashboardImport } from './routes/app/venues/dashboard'
+import { Route as AppVenuesIndexImport } from './routes/app/venues/index'
+import { Route as AppUserManagementIndexImport } from './routes/app/user-management/index'
+import { Route as AppEventsIndexImport } from './routes/app/events/index'
+import { Route as AppEventPersonnelIndexImport } from './routes/app/event-personnel/index'
+import { Route as AppEventApprovalIndexImport } from './routes/app/event-approval/index'
+import { Route as AppEquipmentApprovalIndexImport } from './routes/app/equipment-approval/index'
+import { Route as AppDepartmentsIndexImport } from './routes/app/departments/index'
 import { Route as AppVenuesVenueIdImport } from './routes/app/venues/$venueId'
-import { Route as AppUserManagementUsersImport } from './routes/app/user-management/users'
 import { Route as AppSettingsNotificationsImport } from './routes/app/settings/notifications'
 import { Route as AppSettingsAccountImport } from './routes/app/settings/account'
-import { Route as AppEventsTimelineImport } from './routes/app/events/timeline'
 import { Route as AppEventsEventIdImport } from './routes/app/events/$eventId'
-import { Route as AppEventStaffingStaffImport } from './routes/app/event-staffing/staff'
-import { Route as AppEventApprovalApprovalImport } from './routes/app/event-approval/approval'
-import { Route as AppEquipmentApprovalApprovalImport } from './routes/app/equipment-approval/approval'
-import { Route as AppDepartmentsDashboardImport } from './routes/app/departments/dashboard'
 
 // Create/Update Routes
 
@@ -140,9 +140,9 @@ const AppEventsRouteRoute = AppEventsRouteImport.update({
   getParentRoute: () => AppRouteRoute,
 } as any)
 
-const AppEventStaffingRouteRoute = AppEventStaffingRouteImport.update({
-  id: '/event-staffing',
-  path: '/event-staffing',
+const AppEventPersonnelRouteRoute = AppEventPersonnelRouteImport.update({
+  id: '/event-personnel',
+  path: '/event-personnel',
   getParentRoute: () => AppRouteRoute,
 } as any)
 
@@ -164,22 +164,52 @@ const AppDepartmentsRouteRoute = AppDepartmentsRouteImport.update({
   getParentRoute: () => AppRouteRoute,
 } as any)
 
-const AppVenuesDashboardRoute = AppVenuesDashboardImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const AppVenuesIndexRoute = AppVenuesIndexImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => AppVenuesRouteRoute,
+} as any)
+
+const AppUserManagementIndexRoute = AppUserManagementIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppUserManagementRouteRoute,
+} as any)
+
+const AppEventsIndexRoute = AppEventsIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppEventsRouteRoute,
+} as any)
+
+const AppEventPersonnelIndexRoute = AppEventPersonnelIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppEventPersonnelRouteRoute,
+} as any)
+
+const AppEventApprovalIndexRoute = AppEventApprovalIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppEventApprovalRouteRoute,
+} as any)
+
+const AppEquipmentApprovalIndexRoute = AppEquipmentApprovalIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppEquipmentApprovalRouteRoute,
+} as any)
+
+const AppDepartmentsIndexRoute = AppDepartmentsIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppDepartmentsRouteRoute,
 } as any)
 
 const AppVenuesVenueIdRoute = AppVenuesVenueIdImport.update({
   id: '/$venueId',
   path: '/$venueId',
   getParentRoute: () => AppVenuesRouteRoute,
-} as any)
-
-const AppUserManagementUsersRoute = AppUserManagementUsersImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AppUserManagementRouteRoute,
 } as any)
 
 const AppSettingsNotificationsRoute = AppSettingsNotificationsImport.update({
@@ -194,41 +224,10 @@ const AppSettingsAccountRoute = AppSettingsAccountImport.update({
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 
-const AppEventsTimelineRoute = AppEventsTimelineImport.update({
-  id: '/timeline',
-  path: '/timeline',
-  getParentRoute: () => AppEventsRouteRoute,
-} as any)
-
 const AppEventsEventIdRoute = AppEventsEventIdImport.update({
   id: '/$eventId',
   path: '/$eventId',
   getParentRoute: () => AppEventsRouteRoute,
-} as any)
-
-const AppEventStaffingStaffRoute = AppEventStaffingStaffImport.update({
-  id: '/staff',
-  path: '/staff',
-  getParentRoute: () => AppEventStaffingRouteRoute,
-} as any)
-
-const AppEventApprovalApprovalRoute = AppEventApprovalApprovalImport.update({
-  id: '/approval',
-  path: '/approval',
-  getParentRoute: () => AppEventApprovalRouteRoute,
-} as any)
-
-const AppEquipmentApprovalApprovalRoute =
-  AppEquipmentApprovalApprovalImport.update({
-    id: '/approval',
-    path: '/approval',
-    getParentRoute: () => AppEquipmentApprovalRouteRoute,
-  } as any)
-
-const AppDepartmentsDashboardRoute = AppDepartmentsDashboardImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AppDepartmentsRouteRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -277,11 +276,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEventApprovalRouteImport
       parentRoute: typeof AppRouteImport
     }
-    '/app/event-staffing': {
-      id: '/app/event-staffing'
-      path: '/event-staffing'
-      fullPath: '/app/event-staffing'
-      preLoaderRoute: typeof AppEventStaffingRouteImport
+    '/app/event-personnel': {
+      id: '/app/event-personnel'
+      path: '/event-personnel'
+      fullPath: '/app/event-personnel'
+      preLoaderRoute: typeof AppEventPersonnelRouteImport
       parentRoute: typeof AppRouteImport
     }
     '/app/events': {
@@ -375,46 +374,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotificationsImport
       parentRoute: typeof AppRouteImport
     }
-    '/app/departments/dashboard': {
-      id: '/app/departments/dashboard'
-      path: '/dashboard'
-      fullPath: '/app/departments/dashboard'
-      preLoaderRoute: typeof AppDepartmentsDashboardImport
-      parentRoute: typeof AppDepartmentsRouteImport
-    }
-    '/app/equipment-approval/approval': {
-      id: '/app/equipment-approval/approval'
-      path: '/approval'
-      fullPath: '/app/equipment-approval/approval'
-      preLoaderRoute: typeof AppEquipmentApprovalApprovalImport
-      parentRoute: typeof AppEquipmentApprovalRouteImport
-    }
-    '/app/event-approval/approval': {
-      id: '/app/event-approval/approval'
-      path: '/approval'
-      fullPath: '/app/event-approval/approval'
-      preLoaderRoute: typeof AppEventApprovalApprovalImport
-      parentRoute: typeof AppEventApprovalRouteImport
-    }
-    '/app/event-staffing/staff': {
-      id: '/app/event-staffing/staff'
-      path: '/staff'
-      fullPath: '/app/event-staffing/staff'
-      preLoaderRoute: typeof AppEventStaffingStaffImport
-      parentRoute: typeof AppEventStaffingRouteImport
-    }
     '/app/events/$eventId': {
       id: '/app/events/$eventId'
       path: '/$eventId'
       fullPath: '/app/events/$eventId'
       preLoaderRoute: typeof AppEventsEventIdImport
-      parentRoute: typeof AppEventsRouteImport
-    }
-    '/app/events/timeline': {
-      id: '/app/events/timeline'
-      path: '/timeline'
-      fullPath: '/app/events/timeline'
-      preLoaderRoute: typeof AppEventsTimelineImport
       parentRoute: typeof AppEventsRouteImport
     }
     '/app/settings/account': {
@@ -431,13 +395,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsNotificationsImport
       parentRoute: typeof AppSettingsRouteImport
     }
-    '/app/user-management/users': {
-      id: '/app/user-management/users'
-      path: '/users'
-      fullPath: '/app/user-management/users'
-      preLoaderRoute: typeof AppUserManagementUsersImport
-      parentRoute: typeof AppUserManagementRouteImport
-    }
     '/app/venues/$venueId': {
       id: '/app/venues/$venueId'
       path: '/$venueId'
@@ -445,11 +402,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVenuesVenueIdImport
       parentRoute: typeof AppVenuesRouteImport
     }
-    '/app/venues/dashboard': {
-      id: '/app/venues/dashboard'
-      path: '/dashboard'
-      fullPath: '/app/venues/dashboard'
-      preLoaderRoute: typeof AppVenuesDashboardImport
+    '/app/departments/': {
+      id: '/app/departments/'
+      path: '/'
+      fullPath: '/app/departments/'
+      preLoaderRoute: typeof AppDepartmentsIndexImport
+      parentRoute: typeof AppDepartmentsRouteImport
+    }
+    '/app/equipment-approval/': {
+      id: '/app/equipment-approval/'
+      path: '/'
+      fullPath: '/app/equipment-approval/'
+      preLoaderRoute: typeof AppEquipmentApprovalIndexImport
+      parentRoute: typeof AppEquipmentApprovalRouteImport
+    }
+    '/app/event-approval/': {
+      id: '/app/event-approval/'
+      path: '/'
+      fullPath: '/app/event-approval/'
+      preLoaderRoute: typeof AppEventApprovalIndexImport
+      parentRoute: typeof AppEventApprovalRouteImport
+    }
+    '/app/event-personnel/': {
+      id: '/app/event-personnel/'
+      path: '/'
+      fullPath: '/app/event-personnel/'
+      preLoaderRoute: typeof AppEventPersonnelIndexImport
+      parentRoute: typeof AppEventPersonnelRouteImport
+    }
+    '/app/events/': {
+      id: '/app/events/'
+      path: '/'
+      fullPath: '/app/events/'
+      preLoaderRoute: typeof AppEventsIndexImport
+      parentRoute: typeof AppEventsRouteImport
+    }
+    '/app/user-management/': {
+      id: '/app/user-management/'
+      path: '/'
+      fullPath: '/app/user-management/'
+      preLoaderRoute: typeof AppUserManagementIndexImport
+      parentRoute: typeof AppUserManagementRouteImport
+    }
+    '/app/venues/': {
+      id: '/app/venues/'
+      path: '/'
+      fullPath: '/app/venues/'
+      preLoaderRoute: typeof AppVenuesIndexImport
       parentRoute: typeof AppVenuesRouteImport
     }
   }
@@ -478,23 +477,23 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 )
 
 interface AppDepartmentsRouteRouteChildren {
-  AppDepartmentsDashboardRoute: typeof AppDepartmentsDashboardRoute
+  AppDepartmentsIndexRoute: typeof AppDepartmentsIndexRoute
 }
 
 const AppDepartmentsRouteRouteChildren: AppDepartmentsRouteRouteChildren = {
-  AppDepartmentsDashboardRoute: AppDepartmentsDashboardRoute,
+  AppDepartmentsIndexRoute: AppDepartmentsIndexRoute,
 }
 
 const AppDepartmentsRouteRouteWithChildren =
   AppDepartmentsRouteRoute._addFileChildren(AppDepartmentsRouteRouteChildren)
 
 interface AppEquipmentApprovalRouteRouteChildren {
-  AppEquipmentApprovalApprovalRoute: typeof AppEquipmentApprovalApprovalRoute
+  AppEquipmentApprovalIndexRoute: typeof AppEquipmentApprovalIndexRoute
 }
 
 const AppEquipmentApprovalRouteRouteChildren: AppEquipmentApprovalRouteRouteChildren =
   {
-    AppEquipmentApprovalApprovalRoute: AppEquipmentApprovalApprovalRoute,
+    AppEquipmentApprovalIndexRoute: AppEquipmentApprovalIndexRoute,
   }
 
 const AppEquipmentApprovalRouteRouteWithChildren =
@@ -503,11 +502,11 @@ const AppEquipmentApprovalRouteRouteWithChildren =
   )
 
 interface AppEventApprovalRouteRouteChildren {
-  AppEventApprovalApprovalRoute: typeof AppEventApprovalApprovalRoute
+  AppEventApprovalIndexRoute: typeof AppEventApprovalIndexRoute
 }
 
 const AppEventApprovalRouteRouteChildren: AppEventApprovalRouteRouteChildren = {
-  AppEventApprovalApprovalRoute: AppEventApprovalApprovalRoute,
+  AppEventApprovalIndexRoute: AppEventApprovalIndexRoute,
 }
 
 const AppEventApprovalRouteRouteWithChildren =
@@ -515,27 +514,28 @@ const AppEventApprovalRouteRouteWithChildren =
     AppEventApprovalRouteRouteChildren,
   )
 
-interface AppEventStaffingRouteRouteChildren {
-  AppEventStaffingStaffRoute: typeof AppEventStaffingStaffRoute
+interface AppEventPersonnelRouteRouteChildren {
+  AppEventPersonnelIndexRoute: typeof AppEventPersonnelIndexRoute
 }
 
-const AppEventStaffingRouteRouteChildren: AppEventStaffingRouteRouteChildren = {
-  AppEventStaffingStaffRoute: AppEventStaffingStaffRoute,
-}
+const AppEventPersonnelRouteRouteChildren: AppEventPersonnelRouteRouteChildren =
+  {
+    AppEventPersonnelIndexRoute: AppEventPersonnelIndexRoute,
+  }
 
-const AppEventStaffingRouteRouteWithChildren =
-  AppEventStaffingRouteRoute._addFileChildren(
-    AppEventStaffingRouteRouteChildren,
+const AppEventPersonnelRouteRouteWithChildren =
+  AppEventPersonnelRouteRoute._addFileChildren(
+    AppEventPersonnelRouteRouteChildren,
   )
 
 interface AppEventsRouteRouteChildren {
   AppEventsEventIdRoute: typeof AppEventsEventIdRoute
-  AppEventsTimelineRoute: typeof AppEventsTimelineRoute
+  AppEventsIndexRoute: typeof AppEventsIndexRoute
 }
 
 const AppEventsRouteRouteChildren: AppEventsRouteRouteChildren = {
   AppEventsEventIdRoute: AppEventsEventIdRoute,
-  AppEventsTimelineRoute: AppEventsTimelineRoute,
+  AppEventsIndexRoute: AppEventsIndexRoute,
 }
 
 const AppEventsRouteRouteWithChildren = AppEventsRouteRoute._addFileChildren(
@@ -556,12 +556,12 @@ const AppSettingsRouteRouteWithChildren =
   AppSettingsRouteRoute._addFileChildren(AppSettingsRouteRouteChildren)
 
 interface AppUserManagementRouteRouteChildren {
-  AppUserManagementUsersRoute: typeof AppUserManagementUsersRoute
+  AppUserManagementIndexRoute: typeof AppUserManagementIndexRoute
 }
 
 const AppUserManagementRouteRouteChildren: AppUserManagementRouteRouteChildren =
   {
-    AppUserManagementUsersRoute: AppUserManagementUsersRoute,
+    AppUserManagementIndexRoute: AppUserManagementIndexRoute,
   }
 
 const AppUserManagementRouteRouteWithChildren =
@@ -571,12 +571,12 @@ const AppUserManagementRouteRouteWithChildren =
 
 interface AppVenuesRouteRouteChildren {
   AppVenuesVenueIdRoute: typeof AppVenuesVenueIdRoute
-  AppVenuesDashboardRoute: typeof AppVenuesDashboardRoute
+  AppVenuesIndexRoute: typeof AppVenuesIndexRoute
 }
 
 const AppVenuesRouteRouteChildren: AppVenuesRouteRouteChildren = {
   AppVenuesVenueIdRoute: AppVenuesVenueIdRoute,
-  AppVenuesDashboardRoute: AppVenuesDashboardRoute,
+  AppVenuesIndexRoute: AppVenuesIndexRoute,
 }
 
 const AppVenuesRouteRouteWithChildren = AppVenuesRouteRoute._addFileChildren(
@@ -587,7 +587,7 @@ interface AppRouteRouteChildren {
   AppDepartmentsRouteRoute: typeof AppDepartmentsRouteRouteWithChildren
   AppEquipmentApprovalRouteRoute: typeof AppEquipmentApprovalRouteRouteWithChildren
   AppEventApprovalRouteRoute: typeof AppEventApprovalRouteRouteWithChildren
-  AppEventStaffingRouteRoute: typeof AppEventStaffingRouteRouteWithChildren
+  AppEventPersonnelRouteRoute: typeof AppEventPersonnelRouteRouteWithChildren
   AppEventsRouteRoute: typeof AppEventsRouteRouteWithChildren
   AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
   AppUserManagementRouteRoute: typeof AppUserManagementRouteRouteWithChildren
@@ -602,7 +602,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppDepartmentsRouteRoute: AppDepartmentsRouteRouteWithChildren,
   AppEquipmentApprovalRouteRoute: AppEquipmentApprovalRouteRouteWithChildren,
   AppEventApprovalRouteRoute: AppEventApprovalRouteRouteWithChildren,
-  AppEventStaffingRouteRoute: AppEventStaffingRouteRouteWithChildren,
+  AppEventPersonnelRouteRoute: AppEventPersonnelRouteRouteWithChildren,
   AppEventsRouteRoute: AppEventsRouteRouteWithChildren,
   AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
   AppUserManagementRouteRoute: AppUserManagementRouteRouteWithChildren,
@@ -623,7 +623,7 @@ export interface FileRoutesByFullPath {
   '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
   '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
   '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
-  '/app/event-staffing': typeof AppEventStaffingRouteRouteWithChildren
+  '/app/event-personnel': typeof AppEventPersonnelRouteRouteWithChildren
   '/app/events': typeof AppEventsRouteRouteWithChildren
   '/app/settings': typeof AppSettingsRouteRouteWithChildren
   '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
@@ -637,30 +637,23 @@ export interface FileRoutesByFullPath {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/equipments': typeof AppEquipmentsRoute
   '/app/notifications': typeof AppNotificationsRoute
-  '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
-  '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
-  '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
-  '/app/event-staffing/staff': typeof AppEventStaffingStaffRoute
   '/app/events/$eventId': typeof AppEventsEventIdRoute
-  '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/app/user-management/users': typeof AppUserManagementUsersRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
-  '/app/venues/dashboard': typeof AppVenuesDashboardRoute
+  '/app/departments/': typeof AppDepartmentsIndexRoute
+  '/app/equipment-approval/': typeof AppEquipmentApprovalIndexRoute
+  '/app/event-approval/': typeof AppEventApprovalIndexRoute
+  '/app/event-personnel/': typeof AppEventPersonnelIndexRoute
+  '/app/events/': typeof AppEventsIndexRoute
+  '/app/user-management/': typeof AppUserManagementIndexRoute
+  '/app/venues/': typeof AppVenuesIndexRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof authRouteRouteWithChildren
   '/app': typeof AppRouteRouteWithChildren
-  '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
-  '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
-  '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
-  '/app/event-staffing': typeof AppEventStaffingRouteRouteWithChildren
-  '/app/events': typeof AppEventsRouteRouteWithChildren
   '/app/settings': typeof AppSettingsRouteRouteWithChildren
-  '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
-  '/app/venues': typeof AppVenuesRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
   '/register': typeof authRegisterRoute
@@ -670,17 +663,17 @@ export interface FileRoutesByTo {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/equipments': typeof AppEquipmentsRoute
   '/app/notifications': typeof AppNotificationsRoute
-  '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
-  '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
-  '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
-  '/app/event-staffing/staff': typeof AppEventStaffingStaffRoute
   '/app/events/$eventId': typeof AppEventsEventIdRoute
-  '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/app/user-management/users': typeof AppUserManagementUsersRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
-  '/app/venues/dashboard': typeof AppVenuesDashboardRoute
+  '/app/departments': typeof AppDepartmentsIndexRoute
+  '/app/equipment-approval': typeof AppEquipmentApprovalIndexRoute
+  '/app/event-approval': typeof AppEventApprovalIndexRoute
+  '/app/event-personnel': typeof AppEventPersonnelIndexRoute
+  '/app/events': typeof AppEventsIndexRoute
+  '/app/user-management': typeof AppUserManagementIndexRoute
+  '/app/venues': typeof AppVenuesIndexRoute
 }
 
 export interface FileRoutesById {
@@ -691,7 +684,7 @@ export interface FileRoutesById {
   '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
   '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
   '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
-  '/app/event-staffing': typeof AppEventStaffingRouteRouteWithChildren
+  '/app/event-personnel': typeof AppEventPersonnelRouteRouteWithChildren
   '/app/events': typeof AppEventsRouteRouteWithChildren
   '/app/settings': typeof AppSettingsRouteRouteWithChildren
   '/app/user-management': typeof AppUserManagementRouteRouteWithChildren
@@ -705,17 +698,17 @@ export interface FileRoutesById {
   '/app/dashboard': typeof AppDashboardRoute
   '/app/equipments': typeof AppEquipmentsRoute
   '/app/notifications': typeof AppNotificationsRoute
-  '/app/departments/dashboard': typeof AppDepartmentsDashboardRoute
-  '/app/equipment-approval/approval': typeof AppEquipmentApprovalApprovalRoute
-  '/app/event-approval/approval': typeof AppEventApprovalApprovalRoute
-  '/app/event-staffing/staff': typeof AppEventStaffingStaffRoute
   '/app/events/$eventId': typeof AppEventsEventIdRoute
-  '/app/events/timeline': typeof AppEventsTimelineRoute
   '/app/settings/account': typeof AppSettingsAccountRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
-  '/app/user-management/users': typeof AppUserManagementUsersRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
-  '/app/venues/dashboard': typeof AppVenuesDashboardRoute
+  '/app/departments/': typeof AppDepartmentsIndexRoute
+  '/app/equipment-approval/': typeof AppEquipmentApprovalIndexRoute
+  '/app/event-approval/': typeof AppEventApprovalIndexRoute
+  '/app/event-personnel/': typeof AppEventPersonnelIndexRoute
+  '/app/events/': typeof AppEventsIndexRoute
+  '/app/user-management/': typeof AppUserManagementIndexRoute
+  '/app/venues/': typeof AppVenuesIndexRoute
 }
 
 export interface FileRouteTypes {
@@ -726,7 +719,7 @@ export interface FileRouteTypes {
     | '/app/departments'
     | '/app/equipment-approval'
     | '/app/event-approval'
-    | '/app/event-staffing'
+    | '/app/event-personnel'
     | '/app/events'
     | '/app/settings'
     | '/app/user-management'
@@ -740,29 +733,22 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/equipments'
     | '/app/notifications'
-    | '/app/departments/dashboard'
-    | '/app/equipment-approval/approval'
-    | '/app/event-approval/approval'
-    | '/app/event-staffing/staff'
     | '/app/events/$eventId'
-    | '/app/events/timeline'
     | '/app/settings/account'
     | '/app/settings/notifications'
-    | '/app/user-management/users'
     | '/app/venues/$venueId'
-    | '/app/venues/dashboard'
+    | '/app/departments/'
+    | '/app/equipment-approval/'
+    | '/app/event-approval/'
+    | '/app/event-personnel/'
+    | '/app/events/'
+    | '/app/user-management/'
+    | '/app/venues/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/app'
-    | '/app/departments'
-    | '/app/equipment-approval'
-    | '/app/event-approval'
-    | '/app/event-staffing'
-    | '/app/events'
     | '/app/settings'
-    | '/app/user-management'
-    | '/app/venues'
     | '/forgot-password'
     | '/login'
     | '/register'
@@ -772,17 +758,17 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/equipments'
     | '/app/notifications'
-    | '/app/departments/dashboard'
-    | '/app/equipment-approval/approval'
-    | '/app/event-approval/approval'
-    | '/app/event-staffing/staff'
     | '/app/events/$eventId'
-    | '/app/events/timeline'
     | '/app/settings/account'
     | '/app/settings/notifications'
-    | '/app/user-management/users'
     | '/app/venues/$venueId'
-    | '/app/venues/dashboard'
+    | '/app/departments'
+    | '/app/equipment-approval'
+    | '/app/event-approval'
+    | '/app/event-personnel'
+    | '/app/events'
+    | '/app/user-management'
+    | '/app/venues'
   id:
     | '__root__'
     | '/'
@@ -791,7 +777,7 @@ export interface FileRouteTypes {
     | '/app/departments'
     | '/app/equipment-approval'
     | '/app/event-approval'
-    | '/app/event-staffing'
+    | '/app/event-personnel'
     | '/app/events'
     | '/app/settings'
     | '/app/user-management'
@@ -805,17 +791,17 @@ export interface FileRouteTypes {
     | '/app/dashboard'
     | '/app/equipments'
     | '/app/notifications'
-    | '/app/departments/dashboard'
-    | '/app/equipment-approval/approval'
-    | '/app/event-approval/approval'
-    | '/app/event-staffing/staff'
     | '/app/events/$eventId'
-    | '/app/events/timeline'
     | '/app/settings/account'
     | '/app/settings/notifications'
-    | '/app/user-management/users'
     | '/app/venues/$venueId'
-    | '/app/venues/dashboard'
+    | '/app/departments/'
+    | '/app/equipment-approval/'
+    | '/app/event-approval/'
+    | '/app/event-personnel/'
+    | '/app/events/'
+    | '/app/user-management/'
+    | '/app/venues/'
   fileRoutesById: FileRoutesById
 }
 
@@ -865,7 +851,7 @@ export const routeTree = rootRoute
         "/app/departments",
         "/app/equipment-approval",
         "/app/event-approval",
-        "/app/event-staffing",
+        "/app/event-personnel",
         "/app/events",
         "/app/settings",
         "/app/user-management",
@@ -880,28 +866,28 @@ export const routeTree = rootRoute
       "filePath": "app/departments/route.tsx",
       "parent": "/app",
       "children": [
-        "/app/departments/dashboard"
+        "/app/departments/"
       ]
     },
     "/app/equipment-approval": {
       "filePath": "app/equipment-approval/route.tsx",
       "parent": "/app",
       "children": [
-        "/app/equipment-approval/approval"
+        "/app/equipment-approval/"
       ]
     },
     "/app/event-approval": {
       "filePath": "app/event-approval/route.tsx",
       "parent": "/app",
       "children": [
-        "/app/event-approval/approval"
+        "/app/event-approval/"
       ]
     },
-    "/app/event-staffing": {
-      "filePath": "app/event-staffing/route.tsx",
+    "/app/event-personnel": {
+      "filePath": "app/event-personnel/route.tsx",
       "parent": "/app",
       "children": [
-        "/app/event-staffing/staff"
+        "/app/event-personnel/"
       ]
     },
     "/app/events": {
@@ -909,7 +895,7 @@ export const routeTree = rootRoute
       "parent": "/app",
       "children": [
         "/app/events/$eventId",
-        "/app/events/timeline"
+        "/app/events/"
       ]
     },
     "/app/settings": {
@@ -924,7 +910,7 @@ export const routeTree = rootRoute
       "filePath": "app/user-management/route.tsx",
       "parent": "/app",
       "children": [
-        "/app/user-management/users"
+        "/app/user-management/"
       ]
     },
     "/app/venues": {
@@ -932,7 +918,7 @@ export const routeTree = rootRoute
       "parent": "/app",
       "children": [
         "/app/venues/$venueId",
-        "/app/venues/dashboard"
+        "/app/venues/"
       ]
     },
     "/(auth)/forgot-password": {
@@ -971,28 +957,8 @@ export const routeTree = rootRoute
       "filePath": "app/notifications.tsx",
       "parent": "/app"
     },
-    "/app/departments/dashboard": {
-      "filePath": "app/departments/dashboard.tsx",
-      "parent": "/app/departments"
-    },
-    "/app/equipment-approval/approval": {
-      "filePath": "app/equipment-approval/approval.tsx",
-      "parent": "/app/equipment-approval"
-    },
-    "/app/event-approval/approval": {
-      "filePath": "app/event-approval/approval.tsx",
-      "parent": "/app/event-approval"
-    },
-    "/app/event-staffing/staff": {
-      "filePath": "app/event-staffing/staff.tsx",
-      "parent": "/app/event-staffing"
-    },
     "/app/events/$eventId": {
       "filePath": "app/events/$eventId.tsx",
-      "parent": "/app/events"
-    },
-    "/app/events/timeline": {
-      "filePath": "app/events/timeline.tsx",
       "parent": "/app/events"
     },
     "/app/settings/account": {
@@ -1003,16 +969,36 @@ export const routeTree = rootRoute
       "filePath": "app/settings/notifications.tsx",
       "parent": "/app/settings"
     },
-    "/app/user-management/users": {
-      "filePath": "app/user-management/users.tsx",
-      "parent": "/app/user-management"
-    },
     "/app/venues/$venueId": {
       "filePath": "app/venues/$venueId.tsx",
       "parent": "/app/venues"
     },
-    "/app/venues/dashboard": {
-      "filePath": "app/venues/dashboard.tsx",
+    "/app/departments/": {
+      "filePath": "app/departments/index.tsx",
+      "parent": "/app/departments"
+    },
+    "/app/equipment-approval/": {
+      "filePath": "app/equipment-approval/index.tsx",
+      "parent": "/app/equipment-approval"
+    },
+    "/app/event-approval/": {
+      "filePath": "app/event-approval/index.tsx",
+      "parent": "/app/event-approval"
+    },
+    "/app/event-personnel/": {
+      "filePath": "app/event-personnel/index.tsx",
+      "parent": "/app/event-personnel"
+    },
+    "/app/events/": {
+      "filePath": "app/events/index.tsx",
+      "parent": "/app/events"
+    },
+    "/app/user-management/": {
+      "filePath": "app/user-management/index.tsx",
+      "parent": "/app/user-management"
+    },
+    "/app/venues/": {
+      "filePath": "app/venues/index.tsx",
       "parent": "/app/venues"
     }
   }

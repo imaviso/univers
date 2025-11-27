@@ -12,7 +12,7 @@ import type { UserFormInput } from "@/lib/schema";
 import type { UserDTO } from "@/lib/types";
 import { ROLES } from "@/lib/types";
 
-export const Route = createFileRoute("/app/user-management/users")({
+export const Route = createFileRoute("/app/user-management/")({
 	component: UsersComponent,
 });
 

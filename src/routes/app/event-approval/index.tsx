@@ -187,7 +187,7 @@ function usePersistentState<T>(
 	return [state, setState];
 }
 
-export const Route = createFileRoute("/app/event-approval/approval")({
+export const Route = createFileRoute("/app/event-approval/")({
 	component: EventApproval,
 	beforeLoad: async ({ location, context }) => {
 		const navigationItem = allNavigation.find(
@@ -246,7 +246,7 @@ type SingleActionInfo = {
 
 export function EventApproval() {
 	const navigate = useNavigate();
-	const context = useRouteContext({ from: "/app/event-approval/approval" });
+	const context = useRouteContext({ from: "/app/event-approval/" });
 	const currentUserId = context.authState?.publicId;
 	const approvalType = context.approvalType as ApprovalType;
 	const config = approvalConfigs[approvalType];

@@ -4,7 +4,7 @@ import PendingPage from "@/components/PendingPage";
 import { allNavigation } from "@/lib/navigation";
 import type { UserRole } from "@/lib/types";
 
-export const Route = createFileRoute("/app/event-staffing")({
+export const Route = createFileRoute("/app/event-personnel")({
 	beforeLoad: async ({ location, context }) => {
 		const navigationItem = allNavigation.find((item) => {
 			// Allow exact match or any sub-route after the base path.
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/app/event-staffing")({
 			) {
 				return true;
 			}
-			if (item.href === "/app/events/timeline") {
+			if (item.href === "/app/events") {
 				const customPathRegex =
 					/^\/app\/events\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 				return customPathRegex.test(location.pathname);

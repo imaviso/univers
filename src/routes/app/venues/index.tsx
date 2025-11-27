@@ -77,7 +77,7 @@ function usePersistentState<T>(
 	return [state, setState];
 }
 
-export const Route = createFileRoute("/app/venues/dashboard")({
+export const Route = createFileRoute("/app/venues/")({
 	component: VenueManagement,
 	loader: ({ context: { queryClient } }) => {
 		queryClient.ensureQueryData(venuesQueryOptions);

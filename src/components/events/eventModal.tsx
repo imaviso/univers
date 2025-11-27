@@ -241,7 +241,7 @@ function ApprovedLetterUploadField({
 
 export function EventModal({ isOpen, onClose, venues }: EventModalProps) {
 	const { data: currentUser } = useCurrentUser();
-	const context = useRouteContext({ from: "/app/events/timeline" });
+	const context = useRouteContext({ from: "/app/events" });
 	const queryClient = context.queryClient;
 
 	const { data: departments, isLoading: isLoadingDepartments } =
