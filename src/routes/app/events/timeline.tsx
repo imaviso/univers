@@ -65,7 +65,9 @@ function Events() {
 	const { data: currentUser } = useCurrentUser();
 	const userRoles = currentUser?.roles || [];
 
-	const isSuperAdmin = userRoles.includes("SUPER_ADMIN");
+	const isSuperAdmin =
+		userRoles.includes("SUPER_ADMIN") ||
+		userRoles.includes("ASSIGNED_PERSONNEL");
 	const isAdmin =
 		userRoles.includes("VP_ADMIN") ||
 		userRoles.includes("ADMIN") ||

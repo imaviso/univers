@@ -446,3 +446,15 @@ export type EventPersonnelDTO = {
 };
 
 export type Task = "SETUP" | "PULLOUT";
+
+export type EquipmentChecklistDTO = {
+	publicId: string;
+	eventPersonnel: EventPersonnelDTO;
+	task: Task;
+	equipmentIds: string[];
+};
+
+export type EquipmentChecklistRequest = {
+	eventPersonnelId: string;
+	equipmentIds: string[];
+};

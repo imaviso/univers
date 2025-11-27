@@ -168,10 +168,10 @@ export function ManageAssignmentsDialog() {
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<Users className="h-5 w-5" />
-						Manage Event Staff
+						Manage Event Personnel
 					</DialogTitle>
 					<DialogDescription>
-						Manage staff assignments for "{selectedEvent.eventName}"
+						Manage personnel assignments for "{selectedEvent.eventName}"
 					</DialogDescription>
 				</DialogHeader>
 
@@ -182,14 +182,14 @@ export function ManageAssignmentsDialog() {
 							{/* Staff Selection */}
 							<div>
 								<p className="text-xs font-medium text-muted-foreground mb-2">
-									Select Staff Member
+									Select Personnel
 								</p>
 								<Select
 									value={selectedPersonnelId}
 									onValueChange={setSelectedPersonnelId}
 								>
 									<SelectTrigger className="w-full">
-										<SelectValue placeholder="Choose a staff member..." />
+										<SelectValue placeholder="Choose a personnel..." />
 									</SelectTrigger>
 									<SelectContent>
 										{isPersonnelLoading ? (
@@ -221,7 +221,7 @@ export function ManageAssignmentsDialog() {
 										htmlFor={phoneInputId}
 										className="text-xs font-medium text-muted-foreground mb-2 block"
 									>
-										Phone Number
+										Phone Number (Optional)
 									</label>
 									<Input
 										id={phoneInputId}
@@ -231,15 +231,6 @@ export function ManageAssignmentsDialog() {
 										maxLength={11}
 										disabled={!selectedPersonnelId}
 									/>
-									{selectedPersonnelId && !phoneNumber && (
-										<p className="text-xs text-muted-foreground mt-1.5">
-											{
-												personnelList.find(
-													(p) => p.publicId === selectedPersonnelId,
-												)?.phoneNumber
-											}
-										</p>
-									)}
 								</div>
 
 								{/* Task Selection */}
@@ -280,7 +271,7 @@ export function ManageAssignmentsDialog() {
 								) : (
 									<>
 										<Plus className="h-4 w-4 mr-2" />
-										Add Staff to Event
+										Add Personnel Event
 									</>
 								)}
 							</Button>
@@ -293,7 +284,7 @@ export function ManageAssignmentsDialog() {
 					<div>
 						<h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
 							<Users className="h-4 w-4" />
-							Currently Assigned Staff ({currentAssignedPersonnel.length})
+							Currently Assigned Personnel ({currentAssignedPersonnel.length})
 						</h3>
 
 						{currentAssignedPersonnel.length > 0 ? (
@@ -332,7 +323,7 @@ export function ManageAssignmentsDialog() {
 											onClick={() => handleRemovePersonnel(person)}
 											disabled={deletePersonnelMutation.isPending}
 											className="text-destructive hover:text-destructive ml-2 flex-shrink-0"
-											title="Remove staff member"
+											title="Remove personnel"
 										>
 											<Trash2 className="h-4 w-4" />
 										</Button>
@@ -342,9 +333,9 @@ export function ManageAssignmentsDialog() {
 						) : (
 							<div className="text-sm text-muted-foreground text-center py-8 border rounded-lg bg-background-50">
 								<Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-								<p>No staff currently assigned</p>
+								<p>No personnel currently assigned</p>
 								<p className="text-xs mt-1">
-									Add staff members above to get started
+									Add personnel above to get started
 								</p>
 							</div>
 						)}

@@ -622,10 +622,16 @@ export const personnelSchema = v.object({
 export type PersonnelInput = v.InferInput<typeof personnelSchema>;
 
 export const eventPersonnelSchema = v.object({
-	personnelId: v.pipe(v.string(), v.nonEmpty("Staff member is required")),
-	phoneNumber: v.pipe(
-		v.string(),
-		v.regex(/^\d{11}$/, "Phone number must be exactly 11 digits"),
+	personnelId: v.pipe(v.string(), v.nonEmpty("Personnel is required")),
+	phoneNumber: v.optional(
+		v.union([
+			v.literal(""),
+			v.pipe(
+				v.string(),
+				v.length(11, "Phone number must be exactly 11 digits"),
+				v.regex(/^\d+$/, "Phone number must be a number"),
+			),
+		]),
 	),
 	task: v.pipe(
 		v.string(),
@@ -635,3 +641,19 @@ export const eventPersonnelSchema = v.object({
 });
 
 export type EventPersonnelInput = v.InferInput<typeof eventPersonnelSchema>;
+
+export const equipmentChecklistRequestSchema = v.object({
+	eventPersonnelId: v.pipe(
+		v.string("Event Personnel ID is required"),
+		v.nonEmpty("Event Personnel ID is required"),
+		v.uuid("Event Personnel ID must be a valid UUID"),
+	),
+	equipmentIds: v.pipe(
+		v.array(v.pipe(v.string(), v.nonEmpty("Equipment ID cannot be empty"))),
+		v.minLength(1, "At least one equipment ID is required"),
+	),
+});
+
+export type EquipmentChecklistRequestInput = v.InferInput<
+	typeof equipmentChecklistRequestSchema
+>;

@@ -1939,3 +1939,53 @@ export const getAllPersonnel = async (): Promise<UserDTO[]> => {
 				);
 	}
 };
+
+// --- Equipment Checklist API ---
+
+const EQUIPMENT_CHECKLIST_BASE_URL = `${API_BASE_URL}/equipment-checklist`;
+
+export const getAssignedEquipment = async (
+	eventPersonnelId: string,
+): Promise<string[]> => {
+	try {
+		const url = new URL(`${EQUIPMENT_CHECKLIST_BASE_URL}/assigned`);
+		url.searchParams.append("eventPersonnelId", eventPersonnelId);
+
+		const response = await fetchWithAuth(url.toString(), {
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		});
+		const data = await handleApiResponse<string[]>(response, true);
+		return data || [];
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					`An unexpected error occurred while fetching assigned equipment for personnel ${eventPersonnelId}.`,
+				);
+	}
+};
+
+export const submitEquipmentChecklist = async (checklistData: {
+	eventPersonnelId: string;
+	equipmentIds: string[];
+}): Promise<string> => {
+	try {
+		const response = await fetchWithAuth(
+			`${EQUIPMENT_CHECKLIST_BASE_URL}/submit`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(checklistData),
+			},
+		);
+		const responseData = await handleApiResponse<string>(response, false);
+		return responseData || "Checklist submitted successfully";
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					"An unexpected error occurred while submitting equipment checklist.",
+				);
+	}
+};

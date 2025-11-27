@@ -158,7 +158,7 @@ function EventStaff() {
 			<div className="bg-background">
 				<div className="flex flex-col flex-1 overflow-hidden">
 					<header className="flex items-center justify-between border-b px-6 h-[65px]">
-						<h1 className="text-xl font-semibold">Event Staffing</h1>
+						<h1 className="text-xl font-semibold">Event Personnel</h1>
 					</header>
 					<div className="p-6">
 						<div className="text-center">Loading...</div>
@@ -172,7 +172,7 @@ function EventStaff() {
 		<div className="bg-background flex flex-col overflow-hidden h-full">
 			<div className="flex flex-col flex-1 overflow-hidden">
 				<header className="sticky top-0 z-10 flex items-center justify-between border-b px-6 h-[65px] bg-background">
-					<h1 className="text-xl font-semibold">Event Staffing</h1>
+					<h1 className="text-xl font-semibold">Event Personnel</h1>
 					<div className="flex items-center gap-4 h-full">
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
@@ -416,7 +416,8 @@ function EventStaff() {
 									<div className="flex-1 space-y-4">
 										<div className="flex items-center justify-between">
 											<span className="text-sm font-medium">
-												Assigned Staff ({event.assignedPersonnel?.length || 0})
+												Assigned Personnel(
+												{event.assignedPersonnel?.length || 0})
 											</span>
 										</div>
 										{event.assignedPersonnel?.length ? (
@@ -450,7 +451,7 @@ function EventStaff() {
 											</div>
 										) : (
 											<div className="text-sm text-muted-foreground">
-												No staff assigned.
+												No personnel assigned.
 											</div>
 										)}
 									</div>

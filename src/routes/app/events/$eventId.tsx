@@ -250,6 +250,14 @@ export function EventDetailsPage() {
 		// Organizers cannot approve their own events
 		if (isOrganizer) return false;
 
+		// Assigned personnel can approve if they are assigned to this event
+		const isAssignedPersonnel =
+			currentUser.roles?.includes("ASSIGNED_PERSONNEL");
+		const isAssignedToEvent = event.assignedPersonnel?.some(
+			(staff) => staff.personnel.publicId === currentUser.publicId,
+		);
+		if (isAssignedPersonnel && isAssignedToEvent) return true;
+
 		// Check if current user is in the approvals list and hasn't already approved
 		const hasAlreadyApproved = currentUserApprovalRecord?.status === "APPROVED";
 		const isInApprovalsList = currentUserApprovalRecord != null;
@@ -261,6 +269,7 @@ export function EventDetailsPage() {
 		currentUserApprovalRecord,
 		isOrganizer,
 		isSuperAdmin,
+		event.assignedPersonnel,
 	]);
 
 	// User can reject if they are in the approvals list and haven't already rejected
@@ -273,6 +282,14 @@ export function EventDetailsPage() {
 		// Organizers cannot reject their own events
 		if (isOrganizer) return false;
 
+		// Assigned personnel can reject if they are assigned to this event
+		const isAssignedPersonnel =
+			currentUser.roles?.includes("ASSIGNED_PERSONNEL");
+		const isAssignedToEvent = event.assignedPersonnel?.some(
+			(staff) => staff.personnel.publicId === currentUser.publicId,
+		);
+		if (isAssignedPersonnel && isAssignedToEvent) return true;
+
 		// Check if current user is in the approvals list and hasn't already rejected
 		const hasAlreadyRejected = currentUserApprovalRecord?.status === "REJECTED";
 		const isInApprovalsList = currentUserApprovalRecord != null;
@@ -284,6 +301,7 @@ export function EventDetailsPage() {
 		currentUserApprovalRecord,
 		isOrganizer,
 		isSuperAdmin,
+		event.assignedPersonnel,
 	]);
 
 	const canCancelEvent =
@@ -1255,7 +1273,7 @@ export function EventDetailsPage() {
 						{/* Event Staff Section */}
 						<Card>
 							<CardHeader className="flex flex-row items-center justify-between pb-2">
-								<CardTitle>Event Staff</CardTitle>
+								<CardTitle>Event Personnel</CardTitle>
 								{canManageStaff && (
 									<Button
 										size="sm"
@@ -1267,7 +1285,7 @@ export function EventDetailsPage() {
 										}}
 									>
 										<Users className="h-4 w-4" />
-										Manage Staff
+										Manage Personnel
 									</Button>
 								)}
 							</CardHeader>
@@ -1276,7 +1294,7 @@ export function EventDetailsPage() {
 								event.assignedPersonnel.length > 0 ? (
 									<div className="space-y-3">
 										<div className="text-sm text-muted-foreground">
-											{event.assignedPersonnel.length} staff member(s) assigned
+											{event.assignedPersonnel.length} personnel(s) assigned
 										</div>
 										<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 											{event.assignedPersonnel?.map((staff) => (
