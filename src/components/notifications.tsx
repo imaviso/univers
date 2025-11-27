@@ -31,6 +31,26 @@ import {
 	useMarkAllNotificationsReadMutation,
 	useMarkNotificationsReadMutation,
 } from "@/lib/query";
+import { formatDateTime } from "@/lib/utils";
+
+/**
+ * Formats ISO date strings found within notification message text
+ * Replaces patterns like "2025-12-04T11:40:00Z" with formatted dates
+ */
+const formatDatesInMessage = (message: string): string => {
+	// Match ISO 8601 date strings (e.g., 2025-12-04T11:40:00Z or 2025-12-04T11:40:00)
+	const isoDateRegex =
+		/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?/g;
+
+	return message.replace(isoDateRegex, (dateStr) => {
+		try {
+			return formatDateTime(dateStr);
+		} catch {
+			// If formatting fails, return original string
+			return dateStr;
+		}
+	});
+};
 
 // Helper function to generate a title
 const generateNotificationTitle = (notification: NotificationDTO): string => {
@@ -215,14 +235,20 @@ export function NotificationDropdown() {
 
 										{/* Message Text - Apply explicit type check */}
 										<p className="text-sm text-muted-foreground leading-snug line-clamp-2">
-											{typeof notification.message?.message === "string"
-												? notification.message.message
-												: notification.message?.message
-													? JSON.stringify(notification.message.message).slice(
-															0,
-															100,
-														)
-													: "No message content."}
+											{(() => {
+												let messageText: string;
+												if (typeof notification.message?.message === "string") {
+													messageText = notification.message.message;
+												} else if (notification.message?.message) {
+													messageText = JSON.stringify(
+														notification.message.message,
+													).slice(0, 100);
+												} else {
+													messageText = "No message content.";
+												}
+												// Format any ISO dates found in the message
+												return formatDatesInMessage(messageText);
+											})()}
 										</p>
 
 										{/* Additional Fields (condensed for dropdown) */}
@@ -253,10 +279,7 @@ export function NotificationDropdown() {
 
 										{/* Timestamp */}
 										<p className="text-xs text-muted-foreground">
-											{new Date(notification.createdAt).toLocaleString([], {
-												dateStyle: "short",
-												timeStyle: "short",
-											})}
+											{formatDateTime(notification.createdAt)}
 										</p>
 									</div>
 								</DropdownMenuItem>

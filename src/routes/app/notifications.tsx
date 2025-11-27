@@ -44,6 +44,7 @@ import {
 	useMarkAllNotificationsReadMutation,
 	useMarkNotificationsReadMutation,
 } from "@/lib/query";
+import { formatDateTime } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/notifications")({
 	component: NotificationsPage,
@@ -60,6 +61,26 @@ export const Route = createFileRoute("/app/notifications")({
 });
 
 // --- Helper Functions (Consistent with Dropdown) ---
+
+/**
+ * Formats ISO date strings found within notification message text
+ * Replaces patterns like "2025-12-04T11:40:00Z" with formatted dates
+ */
+const formatDatesInMessage = (message: string): string => {
+	// Match ISO 8601 date strings (e.g., 2025-12-04T11:40:00Z or 2025-12-04T11:40:00)
+	const isoDateRegex =
+		/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?/g;
+
+	return message.replace(isoDateRegex, (dateStr) => {
+		try {
+			return formatDateTime(dateStr);
+		} catch {
+			// If formatting fails, return original string
+			return dateStr;
+		}
+	});
+};
+
 const generateNotificationTitle = (notification: NotificationDTO): string => {
 	// Access nested fields
 	if (notification.message?.eventName) {
@@ -440,15 +461,22 @@ function NotificationsPage() {
 										</h3>
 										{/* Main Message */}
 										<p className="text-sm text-muted-foreground leading-snug line-clamp-2">
-											{
-												typeof notification.message === "string"
-													? notification.message // Display if notification.message itself is the string
-													: typeof notification.message?.message === "string" // Check nested if message is object
-														? notification.message.message
-														: notification.message // Check if message object exists
-															? `Details: ${JSON.stringify(notification.message).slice(0, 150)}...` // Stringify the whole message object for context
-															: "No message content." // Fallback
-											}
+											{(() => {
+												let messageText: string;
+												if (typeof notification.message === "string") {
+													messageText = notification.message;
+												} else if (
+													typeof notification.message?.message === "string"
+												) {
+													messageText = notification.message.message;
+												} else if (notification.message) {
+													messageText = `Details: ${JSON.stringify(notification.message).slice(0, 150)}...`;
+												} else {
+													messageText = "No message content.";
+												}
+												// Format any ISO dates found in the message
+												return formatDatesInMessage(messageText);
+											})()}
 										</p>
 										{/* Additional Fields (Consistent with Dropdown) */}
 										{notification.message?.eventName && (
@@ -476,10 +504,7 @@ function NotificationsPage() {
 										)} */}
 										{/* Timestamp (Consistent with Dropdown) */}
 										<p className="text-xs text-muted-foreground pt-1">
-											{new Date(notification.createdAt).toLocaleString([], {
-												dateStyle: "short",
-												timeStyle: "short",
-											})}
+											{formatDateTime(notification.createdAt)}
 										</p>
 									</div>
 									{/* Mark as Read Button (No longer needed if clicking the item marks as read) */}
