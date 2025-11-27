@@ -4,49 +4,31 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
-import {
-	Bar,
-	BarChart,
-	CartesianGrid,
-	ResponsiveContainer,
-	XAxis,
-	YAxis,
-} from "recharts";
+import { Cell, Legend, Pie, PieChart } from "recharts";
 import {
 	type ChartConfig,
-	ChartStyle, // Re-added import
+	ChartContainer,
 	ChartTooltip,
 } from "@/components/ui/chart";
 import { topVenuesQueryOptions } from "@/lib/query";
-import type { TopVenueDTO } from "@/lib/types"; // Import for explicit typing
+import type { TopVenueDTO } from "@/lib/types";
 import { Skeleton } from "../ui/skeleton";
 
 interface EventsPerVenueChartProps {
 	dateRange?: DateRange;
 }
 
-// const BASE_CHART_COLORS_HSL = ...; // No longer needed
-
-// Define statuses (same as in UserActivityChart and TopEquipmentChart)
-const RESERVATION_STATUSES = [
-	{ key: "pendingCount", label: "Pending", color: "var(--chart-1)" },
-	{ key: "approvedCount", label: "Reserved", color: "var(--chart-2)" },
-	{ key: "ongoingCount", label: "Ongoing", color: "var(--chart-3)" },
-	{ key: "completedCount", label: "Completed", color: "var(--chart-4)" },
-	{
-		key: "rejectedCount",
-		label: "Denied Reservation",
-		color: "var(--chart-5)",
-	},
-	{
-		key: "canceledCount",
-		label: "Canceled",
-		color: "var(--chart-6, var(--muted-foreground))",
-	},
-] as const;
+const CHART_COLORS = [
+	"var(--chart-1)",
+	"var(--chart-2)",
+	"var(--chart-3)",
+	"var(--chart-4)",
+	"var(--chart-5)",
+	"var(--chart-6)",
+	"var(--chart-7)",
+];
 
 export function EventsPerVenueChart({ dateRange }: EventsPerVenueChartProps) {
-	const id = "bar-events-per-venue";
 	const startDate = dateRange?.from
 		? format(dateRange.from, "yyyy-MM-dd")
 		: undefined;
@@ -56,7 +38,7 @@ export function EventsPerVenueChart({ dateRange }: EventsPerVenueChartProps) {
 	const limit = 7;
 
 	const {
-		data: rawTopVenuesData, // Rename to avoid conflict
+		data: rawTopVenuesData,
 		isLoading,
 		isError,
 		error,
@@ -64,181 +46,127 @@ export function EventsPerVenueChart({ dateRange }: EventsPerVenueChartProps) {
 
 	const topVenuesData = rawTopVenuesData as TopVenueDTO[] | undefined;
 
-	// const totalEvents = ...; // No longer needed directly here, can be derived in tooltip if necessary
-
 	const chartData = React.useMemo(() => {
 		if (!topVenuesData) return [];
 		return topVenuesData
 			.map((venue) => ({
 				name: venue.venueName,
-				pendingCount: venue.pendingCount || 0,
-				approvedCount: venue.approvedCount || 0,
-				ongoingCount: venue.ongoingCount || 0,
-				completedCount: venue.completedCount || 0,
-				rejectedCount: venue.rejectedCount || 0,
-				canceledCount: venue.canceledCount || 0,
-				totalEventCount: venue.totalEventCount || 0,
+				value: venue.totalEventCount || 0,
 			}))
-			.sort((a, b) => b.totalEventCount - a.totalEventCount);
+			.filter((venue) => venue.value > 0)
+			.sort((a, b) => b.value - a.value);
 	}, [topVenuesData]);
+
+	const totalEvents = React.useMemo(() => {
+		return chartData.reduce((sum, item) => sum + item.value, 0);
+	}, [chartData]);
 
 	const chartConfig = React.useMemo(() => {
 		const config: ChartConfig = {};
-		for (const status of RESERVATION_STATUSES) {
-			config[status.key] = { label: status.label, color: status.color };
-		}
-		config.totalEventCount = { label: "Total Events" };
+		chartData.forEach((item, index) => {
+			const key = item.name.toLowerCase().replace(/\s+/g, "-");
+			config[key] = {
+				label: item.name,
+				color: CHART_COLORS[index % CHART_COLORS.length],
+			};
+		});
 		return config;
-	}, []);
+	}, [chartData]);
 
 	if (isLoading) {
 		return (
-			<div className="flex flex-col h-[300px] p-6">
-				<div className="flex-1 space-y-3">
-					{[...Array(limit)].map((_, i) => (
-						<Skeleton
-							key={`skeleton-item-${
-								// biome-ignore lint/suspicious/noArrayIndexKey: Using index for skeleton is acceptable as the list is static.
-								i
-							}`}
-							className="h-8 w-full rounded"
-						/>
-					))}
-				</div>
+			<div className="h-[300px] w-full flex items-center justify-center">
+				<Skeleton className="h-[200px] w-[200px] rounded-full" />
 			</div>
 		);
 	}
 
 	if (isError) {
 		return (
-			<div className="flex flex-col h-[300px] p-6 items-center justify-center">
-				<div className="grid gap-1 text-center mb-4">
-					<p className="text-sm text-red-500">Error loading data.</p>
-				</div>
-				<p className="text-red-500">
-					{error?.message || "Could not fetch data."}
-				</p>
+			<div className="h-[300px] w-full flex flex-col items-center justify-center text-red-500">
+				<p className="text-sm">Error loading data.</p>
+				<p className="text-sm">{error?.message || "Could not fetch data."}</p>
 			</div>
 		);
 	}
 
 	if (chartData.length === 0) {
 		return (
-			<div className="flex flex-col h-[300px] p-6 items-center justify-center">
-				<div className="grid gap-1 text-center mb-4">
-					<p className="text-sm text-muted-foreground">
-						No data available for the selected period.
-					</p>
-				</div>
-				<p className="text-muted-foreground">
-					No event data for venues to display.
-				</p>
+			<div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+				<p>No event data for venues to display.</p>
 			</div>
 		);
 	}
 
 	return (
-		<div data-chart={id} className="flex flex-col h-[300px] p-6">
-			<ChartStyle id={id} config={chartConfig} />
-			<div className="flex-1">
-				<ResponsiveContainer width="100%" height="100%">
-					<BarChart
-						layout="vertical"
+		<div className="h-[300px] w-full">
+			<ChartContainer config={chartConfig} className="h-full w-full">
+				<PieChart>
+					<Pie
 						data={chartData}
-						margin={{
-							top: 5,
-							right: 30,
-							left: 20,
-							bottom: 5,
+						cx="50%"
+						cy="50%"
+						labelLine={false}
+						label={({ name, percent }) => {
+							const percentage = (percent * 100).toFixed(1);
+							return `${name}: ${percentage}%`;
 						}}
-						barCategoryGap="20%"
+						outerRadius={80}
+						fill="#8884d8"
+						dataKey="value"
 					>
-						<CartesianGrid horizontal={false} strokeDasharray="3 3" />
-						<XAxis
-							type="number"
-							stroke="var(--muted-foreground)"
-							fontSize={12}
-							tickLine={false}
-							axisLine={false}
-						/>
-						<YAxis
-							type="category"
-							dataKey="name"
-							stroke="var(--muted-foreground)"
-							fontSize={12}
-							tickLine={false}
-							axisLine={false}
-							width={120} // Adjust width for names
-							tickFormatter={(value: string) =>
-								value.length > 15 ? `${value.substring(0, 13)}...` : value
-							}
-						/>
-						<ChartTooltip
-							cursor={{ fill: "var(--muted)" }}
-							content={({ active, payload, label }) => {
-								if (active && payload && payload.length) {
-									const data = payload[0].payload as (typeof chartData)[number];
-									return (
-										<div className="min-w-[180px] rounded-lg border bg-background p-2 shadow-sm text-xs">
-											<div className="font-bold mb-1 text-foreground">
-												{label} {/* Venue's name */}
-											</div>
-											<div className="space-y-1">
-												{RESERVATION_STATUSES.map((status) => {
-													const count = data[status.key];
-													if (count > 0) {
-														// Only show statuses with counts
-														return (
-															<div
-																key={status.key}
-																className="flex items-center justify-between"
-															>
-																<div className="flex items-center">
-																	<span
-																		className="w-2.5 h-2.5 rounded-full mr-2"
-																		style={{
-																			backgroundColor: status.color,
-																		}}
-																	/>
-																	<span className="text-muted-foreground">
-																		{status.label}:
-																	</span>
-																</div>
-																<span className="font-semibold text-foreground">
-																	{count.toLocaleString()}
-																</span>
-															</div>
-														);
-													}
-													return null;
-												})}
-												<hr className="my-1" />
-												<div className="flex items-center justify-between font-medium">
-													<span className="text-muted-foreground">Total:</span>
-													<span className="text-foreground">
-														{data.totalEventCount.toLocaleString()}
-													</span>
-												</div>
-											</div>
-										</div>
-									);
-								}
-								return null;
-							}}
-						/>
-						{RESERVATION_STATUSES.map((status) => (
-							<Bar
-								key={status.key}
-								dataKey={status.key}
-								stackId="a" // All bars in the same stack
-								fill={status.color}
-								radius={0} // Stacked bars typically don't have individual radius
-								barSize={30}
+						{chartData.map((entry, index) => (
+							<Cell
+								key={`cell-${entry.name}`}
+								fill={CHART_COLORS[index % CHART_COLORS.length]}
 							/>
 						))}
-					</BarChart>
-				</ResponsiveContainer>
-			</div>
+					</Pie>
+					<ChartTooltip
+						content={({ active, payload }) => {
+							if (active && payload && payload.length) {
+								const data = payload[0].payload;
+								const percentage = ((data.value / totalEvents) * 100).toFixed(
+									1,
+								);
+								return (
+									<div className="min-w-[180px] rounded-lg border bg-background p-2 shadow-sm text-xs">
+										<div className="font-bold mb-1 text-foreground">
+											{data.name}
+										</div>
+										<div className="space-y-1">
+											<div className="flex items-center justify-between">
+												<span className="text-muted-foreground">Events:</span>
+												<span className="font-semibold text-foreground">
+													{data.value.toLocaleString()}
+												</span>
+											</div>
+											<div className="flex items-center justify-between">
+												<span className="text-muted-foreground">
+													Percentage:
+												</span>
+												<span className="font-semibold text-foreground">
+													{percentage}%
+												</span>
+											</div>
+										</div>
+									</div>
+								);
+							}
+							return null;
+						}}
+					/>
+					<Legend
+						verticalAlign="bottom"
+						height={36}
+						formatter={(value, entry) => {
+							const data = entry.payload as { value: number };
+							const percentage = ((data.value / totalEvents) * 100).toFixed(1);
+							return `${value} (${percentage}%)`;
+						}}
+					/>
+				</PieChart>
+			</ChartContainer>
 		</div>
 	);
 }
