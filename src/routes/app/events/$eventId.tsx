@@ -251,12 +251,12 @@ export function EventDetailsPage() {
 		if (isOrganizer) return false;
 
 		// Assigned personnel can approve if they are assigned to this event
-		const isAssignedPersonnel =
-			currentUser.roles?.includes("ASSIGNED_PERSONNEL");
-		const isAssignedToEvent = event.assignedPersonnel?.some(
-			(staff) => staff.personnel.publicId === currentUser.publicId,
-		);
-		if (isAssignedPersonnel && isAssignedToEvent) return true;
+		// const isAssignedPersonnel =
+		// 	currentUser.roles?.includes("ASSIGNED_PERSONNEL");
+		// const isAssignedToEvent = event.assignedPersonnel?.some(
+		// 	(staff) => staff.personnel.publicId === currentUser.publicId,
+		// );
+		// if (isAssignedPersonnel && isAssignedToEvent) return true;
 
 		// Check if current user is in the approvals list and hasn't already approved
 		const hasAlreadyApproved = currentUserApprovalRecord?.status === "APPROVED";
@@ -269,7 +269,7 @@ export function EventDetailsPage() {
 		currentUserApprovalRecord,
 		isOrganizer,
 		isSuperAdmin,
-		event.assignedPersonnel,
+		// event.assignedPersonnel,
 	]);
 
 	// User can reject if they are in the approvals list and haven't already rejected
@@ -283,12 +283,12 @@ export function EventDetailsPage() {
 		if (isOrganizer) return false;
 
 		// Assigned personnel can reject if they are assigned to this event
-		const isAssignedPersonnel =
-			currentUser.roles?.includes("ASSIGNED_PERSONNEL");
-		const isAssignedToEvent = event.assignedPersonnel?.some(
-			(staff) => staff.personnel.publicId === currentUser.publicId,
-		);
-		if (isAssignedPersonnel && isAssignedToEvent) return true;
+		// const isAssignedPersonnel =
+		// 	currentUser.roles?.includes("ASSIGNED_PERSONNEL");
+		// const isAssignedToEvent = event.assignedPersonnel?.some(
+		// 	(staff) => staff.personnel.publicId === currentUser.publicId,
+		// );
+		// if (isAssignedPersonnel && isAssignedToEvent) return true;
 
 		// Check if current user is in the approvals list and hasn't already rejected
 		const hasAlreadyRejected = currentUserApprovalRecord?.status === "REJECTED";
@@ -301,7 +301,7 @@ export function EventDetailsPage() {
 		currentUserApprovalRecord,
 		isOrganizer,
 		isSuperAdmin,
-		event.assignedPersonnel,
+		// event.assignedPersonnel,
 	]);
 
 	const canCancelEvent =
