@@ -136,11 +136,13 @@ export function EditDepartmentFormDialog({
 				);
 			}
 			toast.error(
-				err instanceof Error ? err.message : "Failed to update department",
+				err instanceof Error
+					? err.message
+					: "Failed to update department/organization",
 			);
 		},
 		onSuccess: () => {
-			toast.success("Department updated successfully");
+			toast.success("Department/Organization updated successfully");
 			onClose(); // Call onClose prop
 		},
 		onSettled: () => {
@@ -181,7 +183,8 @@ export function EditDepartmentFormDialog({
 				<DialogHeader>
 					<DialogTitle>Edit Department</DialogTitle>
 					<DialogDescription>
-						Update the details for the "{department.name}" department.
+						Update the details for the "{department.name}"
+						department/organization.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -195,7 +198,7 @@ export function EditDepartmentFormDialog({
 							name="name"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Department Name</FormLabel>
+									<FormLabel>Department/Organization Name</FormLabel>
 									<FormControl>
 										<Input placeholder="e.g., Finance" {...field} />
 									</FormControl>
@@ -212,7 +215,7 @@ export function EditDepartmentFormDialog({
 									<FormLabel>Description (Optional)</FormLabel>
 									<FormControl>
 										<Textarea
-											placeholder="Brief description of the department"
+											placeholder="Brief description of the department/organization"
 											{...field}
 											value={field.value ?? ""}
 										/>

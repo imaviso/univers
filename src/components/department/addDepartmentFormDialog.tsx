@@ -77,11 +77,13 @@ export function AddDepartmentFormDialog() {
 				);
 			}
 			toast.error(
-				err instanceof Error ? err.message : "Failed to add department",
+				err instanceof Error
+					? err.message
+					: "Failed to add department/organization",
 			);
 		},
 		onSuccess: () => {
-			toast.success("Department added successfully");
+			toast.success("Department/Organization added successfully");
 			setIsOpen(false); // Close dialog
 			form.reset(); // Reset form
 		},
@@ -110,9 +112,9 @@ export function AddDepartmentFormDialog() {
 		<Dialog open={isOpen} onOpenChange={handleClose}>
 			<DialogContent className="sm:max-w-[500px]">
 				<DialogHeader>
-					<DialogTitle>Add New Department</DialogTitle>
+					<DialogTitle>Add New Department/Organization</DialogTitle>
 					<DialogDescription>
-						Enter the details for the new department.
+						Enter the details for the new department/organization.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -126,7 +128,7 @@ export function AddDepartmentFormDialog() {
 							name="name"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Department Name</FormLabel>
+									<FormLabel>Department/Organization Name</FormLabel>
 									<FormControl>
 										<Input placeholder="e.g., Finance" {...field} />
 									</FormControl>
@@ -143,7 +145,7 @@ export function AddDepartmentFormDialog() {
 									<FormLabel>Description (Optional)</FormLabel>
 									<FormControl>
 										<Textarea
-											placeholder="Brief description of the department"
+											placeholder="Brief description of the department/organization"
 											{...field}
 											value={field.value ?? ""} // Handle null/undefined for textarea
 										/>
@@ -158,7 +160,7 @@ export function AddDepartmentFormDialog() {
 							name="deptHeadId"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Department Head (Optional)</FormLabel>
+									<FormLabel>Department/Organization Head (Optional)</FormLabel>
 									<Select
 										onValueChange={(value) =>
 											field.onChange(value === "none" ? undefined : value)
@@ -171,7 +173,9 @@ export function AddDepartmentFormDialog() {
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent>
-											<SelectItem value="none">No department head</SelectItem>
+											<SelectItem value="none">
+												No department/organization head
+											</SelectItem>
 											{users?.map((user: UserDTO) => (
 												<SelectItem key={user.publicId} value={user.publicId}>
 													{user.firstName} {user.lastName} ({user.email})
@@ -194,7 +198,9 @@ export function AddDepartmentFormDialog() {
 								Cancel
 							</Button>
 							<Button type="submit" disabled={addMutation.isPending}>
-								{addMutation.isPending ? "Adding..." : "Add Department"}
+								{addMutation.isPending
+									? "Adding..."
+									: "Add Department/Organization"}
 							</Button>
 						</DialogFooter>
 					</form>
