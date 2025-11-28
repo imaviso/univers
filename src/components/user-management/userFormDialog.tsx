@@ -276,14 +276,14 @@ export function UserFormDialog({
 								name="departmentPublicId"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Department</FormLabel>
+										<FormLabel>Department/Organization</FormLabel>
 										<Select
 											onValueChange={field.onChange}
 											defaultValue={field.value}
 										>
 											<FormControl>
 												<SelectTrigger className="w-full">
-													<SelectValue placeholder="Select a department" />
+													<SelectValue placeholder="Select a department/organization" />
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>

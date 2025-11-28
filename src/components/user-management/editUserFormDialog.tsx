@@ -342,7 +342,7 @@ export function EditUserFormDialog({
 							name="departmentPublicId"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>Department</FormLabel>
+									<FormLabel>Department/Organization</FormLabel>
 									<Select
 										onValueChange={field.onChange}
 										value={field.value || ""}
@@ -350,7 +350,7 @@ export function EditUserFormDialog({
 										<FormControl>
 											{/* The trigger sets the perceived width in the form */}
 											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Select a department" />
+												<SelectValue placeholder="Select a department/organization" />
 											</SelectTrigger>
 										</FormControl>
 										{/* Constrain the dropdown panel's width */}

@@ -108,14 +108,14 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
 						name="departmentPublicId"
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel>Department</FormLabel>
+								<FormLabel>Department/Organization</FormLabel>
 								<Select
 									onValueChange={field.onChange}
 									defaultValue={field.value}
 								>
 									<FormControl>
 										<SelectTrigger className="w-full">
-											<SelectValue placeholder="Select your department" />
+											<SelectValue placeholder="Select your department/organization" />
 										</SelectTrigger>
 									</FormControl>
 									<SelectContent>

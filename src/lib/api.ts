@@ -30,6 +30,8 @@ import type {
 	UserDTO,
 	UserReservationActivityDTO,
 	VenueDTO,
+	Task,
+	EquipmentChecklistStatusDTO,
 } from "./types";
 
 // Define a custom error class
@@ -1986,6 +1988,57 @@ export const submitEquipmentChecklist = async (checklistData: {
 			? error
 			: new Error(
 					"An unexpected error occurred while submitting equipment checklist.",
+				);
+	}
+};
+
+export const getEquipmentChecklistStatus = async (
+	eventId: string,
+	task: Task,
+): Promise<string[]> => {
+	try {
+		const url = new URL(`${EQUIPMENT_CHECKLIST_BASE_URL}/status`);
+		url.searchParams.append("eventId", eventId);
+		url.searchParams.append("task", task);
+
+		const response = await fetchWithAuth(url.toString(), {
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		});
+		const data = await handleApiResponse<string[]>(response, true);
+		return data || [];
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					`An unexpected error occurred while fetching equipment checklist status for event ${eventId}.
+`;
+	}
+};
+
+export const getEquipmentChecklistStatusDetail = async (
+	eventId: string,
+	task: Task,
+): Promise<EquipmentChecklistStatusDTO[]> => {
+	try {
+		const url = new URL(`${EQUIPMENT_CHECKLIST_BASE_URL}/status/detail`);
+		url.searchParams.append("eventId", eventId);
+		url.searchParams.append("task", task);
+
+		const response = await fetchWithAuth(url.toString(), {
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		});
+		const data = await handleApiResponse<EquipmentChecklistStatusDTO[]>(
+			response,
+			true,
+		);
+		return data || [];
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					`An unexpected error occurred while fetching detailed equipment checklist status for event ${eventId}.`,
 				);
 	}
 };
