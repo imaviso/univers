@@ -12,6 +12,7 @@ import {
 	Building,
 	CalendarPlus,
 	CheckCircle2,
+	ClipboardCheck,
 	Clock,
 	Edit,
 	MapPin,
@@ -25,6 +26,7 @@ import {
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EquipmentReservationFormDialog } from "@/components/equipment-reservation/equipmentReservationForm";
+import { EquipmentChecklistDialog } from "@/components/event-staffing/equipmentChecklistDialog";
 import { ManageAssignmentsDialog } from "@/components/event-staffing/manageAssignmentsDialog";
 import { CancelConfirmDialog } from "@/components/events/cancelEventDialog";
 import { EditEventModal } from "@/components/events/editEventModal";
@@ -91,6 +93,7 @@ import type {
 	EventApprovalDTO,
 	EventDTO,
 	EventDTOPayload,
+	EventPersonnelDTO,
 	UserRole,
 	VenueDTO,
 } from "@/lib/types";
@@ -170,6 +173,10 @@ export function EventDetailsPage() {
 	] = useState(false);
 	const [equipmentReservationToCancelId, setEquipmentReservationToCancelId] =
 		useState<string | null>(null);
+	const [isEquipmentChecklistDialogOpen, setIsEquipmentChecklistDialogOpen] =
+		useState(false);
+	const [selectedPersonnelForChecklist, setSelectedPersonnelForChecklist] =
+		useState<string | null>(null);
 
 	// Staff management state
 	const [, setManageAssignmentsDialogOpen] = useAtom(
@@ -200,6 +207,9 @@ export function EventDetailsPage() {
 
 	const isOrganizer = currentUser?.publicId === event.organizer.publicId;
 	const isSuperAdmin = currentUser?.roles?.includes("SUPER_ADMIN");
+	const isAssignedPersonnel =
+		currentUser?.roles?.includes("ASSIGNED_PERSONNEL");
+	const canViewEquipmentChecklist = isAssignedPersonnel || isSuperAdmin;
 	const isEventPending = event.status === "PENDING";
 
 	// Role-based label overrides for VPAA + ADMIN
@@ -824,6 +834,30 @@ export function EventDetailsPage() {
 		return Array.from(groups.values());
 	}, [reservedEquipments]);
 
+	// Group personnel by task type
+	const groupedPersonnelByTask = useMemo(() => {
+		const groups = new Map<string, EventPersonnelDTO[]>();
+		for (const staff of event.assignedPersonnel || []) {
+			const task = staff.task;
+			if (!groups.has(task)) {
+				groups.set(task, []);
+			}
+			const group = groups.get(task);
+			if (group) {
+				group.push(staff);
+			}
+		}
+		return Array.from(groups.entries());
+	}, [event.assignedPersonnel]);
+
+	// Check if current user is assigned to this event
+	const isCurrentUserAssigned = useMemo(() => {
+		if (!currentUser?.publicId) return false;
+		return event.assignedPersonnel?.some(
+			(staff) => staff.personnel.publicId === currentUser.publicId,
+		);
+	}, [event.assignedPersonnel, currentUser?.publicId]);
+
 	return (
 		<div className="flex h-screen bg-background">
 			<div className="flex flex-col flex-1">
@@ -1330,6 +1364,82 @@ export function EventDetailsPage() {
 							</CardContent>
 						</Card>
 
+						{/* Equipment Checklist Section */}
+						{canViewEquipmentChecklist && (
+							<Card>
+								<CardHeader className="flex flex-row items-center justify-between pb-2">
+									<CardTitle className="flex items-center gap-2">
+										<ClipboardCheck className="h-5 w-5" />
+										Equipment Checklist
+									</CardTitle>
+								</CardHeader>
+								<CardContent>
+									{event.assignedPersonnel &&
+									event.assignedPersonnel.length > 0 ? (
+										<div className="space-y-4">
+											<p className="text-sm text-muted-foreground">
+												Track equipment for each task during setup and pullout
+												phases.
+											</p>
+											{groupedPersonnelByTask.map(([task, personnelList]) => (
+												<div key={task} className="space-y-2">
+													<h3 className="text-sm font-semibold text-muted-foreground">
+														{task === "SETUP" ? "Setup Phase" : "Pullout Phase"}
+													</h3>
+													<div className="space-y-2">
+														{personnelList.map((staff) => {
+															const canOpenChecklist =
+																isCurrentUserAssigned &&
+																staff.personnel.publicId ===
+																	currentUser?.publicId
+																	? true
+																	: isSuperAdmin;
+															return (
+																<div
+																	key={staff.publicId}
+																	className="flex items-center justify-between p-3 border rounded-lg bg-card"
+																>
+																	<div className="flex-1">
+																		<div className="font-medium text-sm">
+																			{staff.personnel.firstName}{" "}
+																			{staff.personnel.lastName}
+																		</div>
+																		<div className="text-xs text-muted-foreground">
+																			Role: {staff.task}
+																		</div>
+																	</div>
+																	{canOpenChecklist && (
+																		<Button
+																			size="sm"
+																			variant="outline"
+																			className="gap-2"
+																			onClick={() => {
+																				setSelectedPersonnelForChecklist(
+																					staff.publicId,
+																				);
+																				setIsEquipmentChecklistDialogOpen(true);
+																			}}
+																		>
+																			<ClipboardCheck className="h-4 w-4" />
+																			Checklist
+																		</Button>
+																	)}
+																</div>
+															);
+														})}
+													</div>
+												</div>
+											))}
+										</div>
+									) : (
+										<p className="text-sm text-muted-foreground py-4">
+											No personnel assigned to this event yet.
+										</p>
+									)}
+								</CardContent>
+							</Card>
+						)}
+
 						<Card>
 							<CardHeader>
 								<CardTitle>Approval Status</CardTitle>
@@ -1449,6 +1559,38 @@ export function EventDetailsPage() {
 			/>
 			{/* Staff Management Dialogs */}
 			{canManageStaff && <ManageAssignmentsDialog />}
+			{/* Equipment Checklist Dialog */}
+			{selectedPersonnelForChecklist &&
+				event.assignedPersonnel?.find(
+					(p) => p.publicId === selectedPersonnelForChecklist,
+				) && (
+					<EquipmentChecklistDialog
+						isOpen={isEquipmentChecklistDialogOpen}
+						onClose={() => {
+							setIsEquipmentChecklistDialogOpen(false);
+							setSelectedPersonnelForChecklist(null);
+						}}
+						personnel={
+							event.assignedPersonnel.find(
+								(p) => p.publicId === selectedPersonnelForChecklist,
+							)!
+						}
+						eventId={event.publicId}
+						reservedEquipmentIds={
+							reservedEquipments?.map((r) => r.equipment.publicId) ?? []
+						}
+						reservedEquipmentNames={
+							reservedEquipments
+								? Object.fromEntries(
+										reservedEquipments.map((r) => [
+											r.equipment.publicId,
+											r.equipment.name,
+										]),
+									)
+								: {}
+						}
+					/>
+				)}
 		</div>
 	);
 }

@@ -458,3 +458,9 @@ export type EquipmentChecklistRequest = {
 	eventPersonnelId: string;
 	equipmentIds: string[];
 };
+
+export type EquipmentChecklistStatusDTO = {
+	equipmentId: string;
+	checked: boolean;
+	checkedByPersonnelIds: string[];
+};

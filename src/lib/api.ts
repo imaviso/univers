@@ -15,6 +15,7 @@ import type {
 	EquipmentActionInput,
 	EquipmentApprovalDTO,
 	EquipmentCategoryDTO,
+	EquipmentChecklistStatusDTO,
 	EquipmentReservationDTO,
 	Event,
 	EventCountDTO,
@@ -24,14 +25,13 @@ import type {
 	EventTypeStatusDistributionDTO,
 	PeakHourDTO,
 	RecentActivityItemDTO,
+	Task,
 	TopEquipmentDTO,
 	TopVenueDTO,
 	UserActivityDTO,
 	UserDTO,
 	UserReservationActivityDTO,
 	VenueDTO,
-	Task,
-	EquipmentChecklistStatusDTO,
 } from "./types";
 
 // Define a custom error class
@@ -2011,8 +2011,8 @@ export const getEquipmentChecklistStatus = async (
 		throw error instanceof Error
 			? error
 			: new Error(
-					`An unexpected error occurred while fetching equipment checklist status for event ${eventId}.
-`;
+					`An unexpected error occurred while fetching equipment checklist status for event ${eventId}.`,
+				);
 	}
 };
 

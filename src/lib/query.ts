@@ -30,8 +30,12 @@ import {
 	getAllUsers,
 	getAllVenues,
 	getApprovalsForEquipmentReservation,
+	// Equipment Checklist API imports
+	getAssignedEquipment,
 	getCancellationRates,
 	getEquipmentCategoryByPublicId,
+	getEquipmentChecklistStatus,
+	getEquipmentChecklistStatusDetail,
 	getEquipmentReservationById,
 	getEquipmentReservationsByEventId,
 	getEventById,
@@ -55,6 +59,7 @@ import {
 	markNotificationsRead,
 	rejectEquipmentReservation,
 	searchEvents,
+	submitEquipmentChecklist,
 	updateEquipmentCategory,
 } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
@@ -74,6 +79,7 @@ import type {
 	EventTypeStatusDistributionDTO, // For event types chart with status breakdown
 	PeakHourDTO,
 	RecentActivityItemDTO,
+	Task,
 	TopEquipmentDTO,
 	// Dashboard DTO imports
 	TopVenueDTO,
@@ -1481,4 +1487,60 @@ export const allPersonnelQueryOptions = queryOptions<UserDTO[]>({
 
 export const useAllPersonnelQuery = () => {
 	return useQuery(allPersonnelQueryOptions);
+};
+
+// --- Equipment Checklist Query Keys and Options ---
+
+export const equipmentChecklistKeys = {
+	all: ["equipmentChecklist"] as const,
+	assigned: (eventPersonnelId: string) =>
+		[...equipmentChecklistKeys.all, "assigned", eventPersonnelId] as const,
+	status: (eventId: string, task: Task) =>
+		[...equipmentChecklistKeys.all, "status", eventId, task] as const,
+	statusDetail: (eventId: string, task: Task) =>
+		[...equipmentChecklistKeys.all, "statusDetail", eventId, task] as const,
+};
+
+export const assignedEquipmentQueryOptions = (eventPersonnelId: string) =>
+	queryOptions({
+		queryKey: equipmentChecklistKeys.assigned(eventPersonnelId),
+		queryFn: () => getAssignedEquipment(eventPersonnelId),
+		staleTime: 1000 * 60 * 5, // 5 minutes
+	});
+
+export const equipmentChecklistStatusQueryOptions = (
+	eventId: string,
+	task: Task,
+) =>
+	queryOptions({
+		queryKey: equipmentChecklistKeys.status(eventId, task),
+		queryFn: () => getEquipmentChecklistStatus(eventId, task),
+		staleTime: 1000 * 60 * 5, // 5 minutes
+	});
+
+export const equipmentChecklistStatusDetailQueryOptions = (
+	eventId: string,
+	task: Task,
+) =>
+	queryOptions({
+		queryKey: equipmentChecklistKeys.statusDetail(eventId, task),
+		queryFn: () => getEquipmentChecklistStatusDetail(eventId, task),
+		staleTime: 1000 * 60 * 5, // 5 minutes
+	});
+
+// --- Equipment Checklist Mutations ---
+
+export const useSubmitEquipmentChecklistMutation = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: submitEquipmentChecklist,
+		onSuccess: (_message, variables) => {
+			// Invalidate assigned equipment for this personnel
+			queryClient.invalidateQueries({
+				queryKey: equipmentChecklistKeys.assigned(variables.eventPersonnelId),
+			});
+			// Note: We need to know the event ID and task to invalidate status queries
+			// This would be passed in or fetched from the personnel data
+		},
+	});
 };
