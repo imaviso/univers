@@ -7,6 +7,7 @@ import type {
 	VenueInput,
 } from "./schema";
 import type {
+	ActivityLogDTO,
 	ApiResponse,
 	CancellationRateDTO,
 	CreateEquipmentReservationInput,
@@ -2039,6 +2040,226 @@ export const getEquipmentChecklistStatusDetail = async (
 			? error
 			: new Error(
 					`An unexpected error occurred while fetching detailed equipment checklist status for event ${eventId}.`,
+				);
+	}
+};
+
+// --- Activity Log API ---
+
+const ACTIVITY_LOG_BASE_URL = `${API_BASE_URL}/admin/activity-logs`;
+
+export const getAllActivityLogs = async (
+	page = 0,
+	size = 20,
+): Promise<Page<ActivityLogDTO>> => {
+	try {
+		const params = new URLSearchParams({
+			page: page.toString(),
+			size: size.toString(),
+		});
+		const response = await fetchWithAuth(
+			`${ACTIVITY_LOG_BASE_URL}?${params.toString()}`,
+			{
+				method: "GET",
+				headers: { "Content-Type": "application/json" },
+			},
+		);
+		const data = await handleApiResponse<Page<ActivityLogDTO>>(response, true);
+		return (
+			data || {
+				content: [],
+				totalElements: 0,
+				totalPages: 0,
+				size: 0,
+				number: 0,
+			}
+		);
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error("An unexpected error occurred while fetching activity logs.");
+	}
+};
+
+export const getActivityLogsByAction = async (
+	action: string,
+	page = 0,
+	size = 20,
+): Promise<Page<ActivityLogDTO>> => {
+	try {
+		const params = new URLSearchParams({
+			action,
+			page: page.toString(),
+			size: size.toString(),
+		});
+		const response = await fetchWithAuth(
+			`${ACTIVITY_LOG_BASE_URL}/by-action?${params.toString()}`,
+			{
+				method: "GET",
+				headers: { "Content-Type": "application/json" },
+			},
+		);
+		const data = await handleApiResponse<Page<ActivityLogDTO>>(response, true);
+		return (
+			data || {
+				content: [],
+				totalElements: 0,
+				totalPages: 0,
+				size: 0,
+				number: 0,
+			}
+		);
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					`An unexpected error occurred while fetching activity logs for action ${action}.`,
+				);
+	}
+};
+
+export const getActivityLogsByEntityType = async (
+	entityType: string,
+	page = 0,
+	size = 20,
+): Promise<Page<ActivityLogDTO>> => {
+	try {
+		const params = new URLSearchParams({
+			entityType,
+			page: page.toString(),
+			size: size.toString(),
+		});
+		const response = await fetchWithAuth(
+			`${ACTIVITY_LOG_BASE_URL}/by-entity-type?${params.toString()}`,
+			{
+				method: "GET",
+				headers: { "Content-Type": "application/json" },
+			},
+		);
+		const data = await handleApiResponse<Page<ActivityLogDTO>>(response, true);
+		return (
+			data || {
+				content: [],
+				totalElements: 0,
+				totalPages: 0,
+				size: 0,
+				number: 0,
+			}
+		);
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					`An unexpected error occurred while fetching activity logs for entity type ${entityType}.`,
+				);
+	}
+};
+
+export const getActivityLogsByDateRange = async (
+	startDate: string,
+	endDate: string,
+	page = 0,
+	size = 20,
+): Promise<Page<ActivityLogDTO>> => {
+	try {
+		const params = new URLSearchParams({
+			startDate,
+			endDate,
+			page: page.toString(),
+			size: size.toString(),
+		});
+		const response = await fetchWithAuth(
+			`${ACTIVITY_LOG_BASE_URL}/by-date-range?${params.toString()}`,
+			{
+				method: "GET",
+				headers: { "Content-Type": "application/json" },
+			},
+		);
+		const data = await handleApiResponse<Page<ActivityLogDTO>>(response, true);
+		return (
+			data || {
+				content: [],
+				totalElements: 0,
+				totalPages: 0,
+				size: 0,
+				number: 0,
+			}
+		);
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					`An unexpected error occurred while fetching activity logs for date range ${startDate} to ${endDate}.`,
+				);
+	}
+};
+
+export const exportActivityLogsAsCSV = async (
+	startDate?: string,
+	endDate?: string,
+): Promise<Blob> => {
+	try {
+		const url = new URL(`${ACTIVITY_LOG_BASE_URL}/export/csv`);
+		if (startDate) {
+			url.searchParams.append("startDate", startDate);
+		}
+		if (endDate) {
+			url.searchParams.append("endDate", endDate);
+		}
+
+		const response = await fetchWithAuth(url.toString(), {
+			method: "GET",
+		});
+
+		if (!response.ok) {
+			throw new ApiError(
+				`Failed to export CSV: ${response.status}`,
+				response.status,
+			);
+		}
+
+		const blob = await response.blob();
+		return blob;
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					"An unexpected error occurred while exporting activity logs as CSV.",
+				);
+	}
+};
+
+export const exportActivityLogsAsJSON = async (
+	startDate?: string,
+	endDate?: string,
+): Promise<Blob> => {
+	try {
+		const url = new URL(`${ACTIVITY_LOG_BASE_URL}/export/json`);
+		if (startDate) {
+			url.searchParams.append("startDate", startDate);
+		}
+		if (endDate) {
+			url.searchParams.append("endDate", endDate);
+		}
+
+		const response = await fetchWithAuth(url.toString(), {
+			method: "GET",
+		});
+
+		if (!response.ok) {
+			throw new ApiError(
+				`Failed to export JSON: ${response.status}`,
+				response.status,
+			);
+		}
+
+		const blob = await response.blob();
+		return blob;
+	} catch (error) {
+		throw error instanceof Error
+			? error
+			: new Error(
+					"An unexpected error occurred while exporting activity logs as JSON.",
 				);
 	}
 };

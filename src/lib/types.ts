@@ -464,3 +464,58 @@ export type EquipmentChecklistStatusDTO = {
 	checked: boolean;
 	checkedByPersonnelIds: string[];
 };
+
+// Activity Logging Types
+export type ActivityLogDTO = {
+	publicId: string;
+	action: string;
+	entityType: string;
+	entityId: string;
+	user: UserDTO | null;
+	userEmail: string;
+	details: string | null;
+	ipAddress: string | null;
+	createdAt: string;
+};
+
+export type ActivityLogAction =
+	| "USER_REGISTERED"
+	| "USER_CREATED_BY_ADMIN"
+	| "USER_UPDATED_BY_ADMIN"
+	| "USER_ACTIVATED"
+	| "USER_DEACTIVATED"
+	| "EVENT_CREATED"
+	| "EVENT_UPDATED"
+	| "EVENT_DELETED"
+	| "EVENT_CANCELED"
+	| "EVENT_APPROVAL_APPROVED"
+	| "EVENT_APPROVAL_REJECTED"
+	| "VENUE_CREATED"
+	| "VENUE_UPDATED"
+	| "VENUE_DELETED"
+	| "DEPARTMENT_CREATED"
+	| "DEPARTMENT_UPDATED"
+	| "DEPARTMENT_DELETED"
+	| "DEPARTMENT_HEAD_ASSIGNED"
+	| "EQUIPMENT_CREATED"
+	| "EQUIPMENT_UPDATED"
+	| "EQUIPMENT_RESERVATION_APPROVED"
+	| "EQUIPMENT_RESERVATION_REJECTED";
+
+export type ActivityLogEntityType =
+	| "USER"
+	| "EVENT"
+	| "VENUE"
+	| "EQUIPMENT"
+	| "DEPARTMENT"
+	| "EVENT_APPROVAL"
+	| "EQUIPMENT_RESERVATION";
+
+export interface ActivityLogsPageParams {
+	page?: number;
+	size?: number;
+	action?: string;
+	entityType?: string;
+	startDate?: string;
+	endDate?: string;
+}

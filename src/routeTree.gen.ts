@@ -31,6 +31,7 @@ import { Route as AppEventPersonnelRouteImport } from './routes/app/event-person
 import { Route as AppEventApprovalRouteImport } from './routes/app/event-approval/route'
 import { Route as AppEquipmentApprovalRouteImport } from './routes/app/equipment-approval/route'
 import { Route as AppDepartmentsRouteImport } from './routes/app/departments/route'
+import { Route as AppActivityLogsRouteImport } from './routes/app/activity-logs/route'
 import { Route as AppVenuesIndexImport } from './routes/app/venues/index'
 import { Route as AppUserManagementIndexImport } from './routes/app/user-management/index'
 import { Route as AppEventsIndexImport } from './routes/app/events/index'
@@ -38,6 +39,7 @@ import { Route as AppEventPersonnelIndexImport } from './routes/app/event-person
 import { Route as AppEventApprovalIndexImport } from './routes/app/event-approval/index'
 import { Route as AppEquipmentApprovalIndexImport } from './routes/app/equipment-approval/index'
 import { Route as AppDepartmentsIndexImport } from './routes/app/departments/index'
+import { Route as AppActivityLogsIndexImport } from './routes/app/activity-logs/index'
 import { Route as AppVenuesVenueIdImport } from './routes/app/venues/$venueId'
 import { Route as AppSettingsNotificationsImport } from './routes/app/settings/notifications'
 import { Route as AppSettingsAccountImport } from './routes/app/settings/account'
@@ -164,6 +166,12 @@ const AppDepartmentsRouteRoute = AppDepartmentsRouteImport.update({
   getParentRoute: () => AppRouteRoute,
 } as any)
 
+const AppActivityLogsRouteRoute = AppActivityLogsRouteImport.update({
+  id: '/activity-logs',
+  path: '/activity-logs',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+
 const AppVenuesIndexRoute = AppVenuesIndexImport.update({
   id: '/',
   path: '/',
@@ -204,6 +212,12 @@ const AppDepartmentsIndexRoute = AppDepartmentsIndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppDepartmentsRouteRoute,
+} as any)
+
+const AppActivityLogsIndexRoute = AppActivityLogsIndexImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppActivityLogsRouteRoute,
 } as any)
 
 const AppVenuesVenueIdRoute = AppVenuesVenueIdImport.update({
@@ -254,6 +268,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRoute
+    }
+    '/app/activity-logs': {
+      id: '/app/activity-logs'
+      path: '/activity-logs'
+      fullPath: '/app/activity-logs'
+      preLoaderRoute: typeof AppActivityLogsRouteImport
+      parentRoute: typeof AppRouteImport
     }
     '/app/departments': {
       id: '/app/departments'
@@ -402,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVenuesVenueIdImport
       parentRoute: typeof AppVenuesRouteImport
     }
+    '/app/activity-logs/': {
+      id: '/app/activity-logs/'
+      path: '/'
+      fullPath: '/app/activity-logs/'
+      preLoaderRoute: typeof AppActivityLogsIndexImport
+      parentRoute: typeof AppActivityLogsRouteImport
+    }
     '/app/departments/': {
       id: '/app/departments/'
       path: '/'
@@ -475,6 +503,17 @@ const authRouteRouteChildren: authRouteRouteChildren = {
 const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
   authRouteRouteChildren,
 )
+
+interface AppActivityLogsRouteRouteChildren {
+  AppActivityLogsIndexRoute: typeof AppActivityLogsIndexRoute
+}
+
+const AppActivityLogsRouteRouteChildren: AppActivityLogsRouteRouteChildren = {
+  AppActivityLogsIndexRoute: AppActivityLogsIndexRoute,
+}
+
+const AppActivityLogsRouteRouteWithChildren =
+  AppActivityLogsRouteRoute._addFileChildren(AppActivityLogsRouteRouteChildren)
 
 interface AppDepartmentsRouteRouteChildren {
   AppDepartmentsIndexRoute: typeof AppDepartmentsIndexRoute
@@ -584,6 +623,7 @@ const AppVenuesRouteRouteWithChildren = AppVenuesRouteRoute._addFileChildren(
 )
 
 interface AppRouteRouteChildren {
+  AppActivityLogsRouteRoute: typeof AppActivityLogsRouteRouteWithChildren
   AppDepartmentsRouteRoute: typeof AppDepartmentsRouteRouteWithChildren
   AppEquipmentApprovalRouteRoute: typeof AppEquipmentApprovalRouteRouteWithChildren
   AppEventApprovalRouteRoute: typeof AppEventApprovalRouteRouteWithChildren
@@ -599,6 +639,7 @@ interface AppRouteRouteChildren {
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppActivityLogsRouteRoute: AppActivityLogsRouteRouteWithChildren,
   AppDepartmentsRouteRoute: AppDepartmentsRouteRouteWithChildren,
   AppEquipmentApprovalRouteRoute: AppEquipmentApprovalRouteRouteWithChildren,
   AppEventApprovalRouteRoute: AppEventApprovalRouteRouteWithChildren,
@@ -620,6 +661,7 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 export interface FileRoutesByFullPath {
   '/': typeof authRouteRouteWithChildren
   '/app': typeof AppRouteRouteWithChildren
+  '/app/activity-logs': typeof AppActivityLogsRouteRouteWithChildren
   '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
   '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
   '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
@@ -641,6 +683,7 @@ export interface FileRoutesByFullPath {
   '/app/settings/account': typeof AppSettingsAccountRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/app/activity-logs/': typeof AppActivityLogsIndexRoute
   '/app/departments/': typeof AppDepartmentsIndexRoute
   '/app/equipment-approval/': typeof AppEquipmentApprovalIndexRoute
   '/app/event-approval/': typeof AppEventApprovalIndexRoute
@@ -667,6 +710,7 @@ export interface FileRoutesByTo {
   '/app/settings/account': typeof AppSettingsAccountRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/app/activity-logs': typeof AppActivityLogsIndexRoute
   '/app/departments': typeof AppDepartmentsIndexRoute
   '/app/equipment-approval': typeof AppEquipmentApprovalIndexRoute
   '/app/event-approval': typeof AppEventApprovalIndexRoute
@@ -681,6 +725,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(auth)': typeof authRouteRouteWithChildren
   '/app': typeof AppRouteRouteWithChildren
+  '/app/activity-logs': typeof AppActivityLogsRouteRouteWithChildren
   '/app/departments': typeof AppDepartmentsRouteRouteWithChildren
   '/app/equipment-approval': typeof AppEquipmentApprovalRouteRouteWithChildren
   '/app/event-approval': typeof AppEventApprovalRouteRouteWithChildren
@@ -702,6 +747,7 @@ export interface FileRoutesById {
   '/app/settings/account': typeof AppSettingsAccountRoute
   '/app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/app/activity-logs/': typeof AppActivityLogsIndexRoute
   '/app/departments/': typeof AppDepartmentsIndexRoute
   '/app/equipment-approval/': typeof AppEquipmentApprovalIndexRoute
   '/app/event-approval/': typeof AppEventApprovalIndexRoute
@@ -716,6 +762,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/app/activity-logs'
     | '/app/departments'
     | '/app/equipment-approval'
     | '/app/event-approval'
@@ -737,6 +784,7 @@ export interface FileRouteTypes {
     | '/app/settings/account'
     | '/app/settings/notifications'
     | '/app/venues/$venueId'
+    | '/app/activity-logs/'
     | '/app/departments/'
     | '/app/equipment-approval/'
     | '/app/event-approval/'
@@ -762,6 +810,7 @@ export interface FileRouteTypes {
     | '/app/settings/account'
     | '/app/settings/notifications'
     | '/app/venues/$venueId'
+    | '/app/activity-logs'
     | '/app/departments'
     | '/app/equipment-approval'
     | '/app/event-approval'
@@ -774,6 +823,7 @@ export interface FileRouteTypes {
     | '/'
     | '/(auth)'
     | '/app'
+    | '/app/activity-logs'
     | '/app/departments'
     | '/app/equipment-approval'
     | '/app/event-approval'
@@ -795,6 +845,7 @@ export interface FileRouteTypes {
     | '/app/settings/account'
     | '/app/settings/notifications'
     | '/app/venues/$venueId'
+    | '/app/activity-logs/'
     | '/app/departments/'
     | '/app/equipment-approval/'
     | '/app/event-approval/'
@@ -848,6 +899,7 @@ export const routeTree = rootRoute
     "/app": {
       "filePath": "app/route.tsx",
       "children": [
+        "/app/activity-logs",
         "/app/departments",
         "/app/equipment-approval",
         "/app/event-approval",
@@ -860,6 +912,13 @@ export const routeTree = rootRoute
         "/app/dashboard",
         "/app/equipments",
         "/app/notifications"
+      ]
+    },
+    "/app/activity-logs": {
+      "filePath": "app/activity-logs/route.tsx",
+      "parent": "/app",
+      "children": [
+        "/app/activity-logs/"
       ]
     },
     "/app/departments": {
@@ -972,6 +1031,10 @@ export const routeTree = rootRoute
     "/app/venues/$venueId": {
       "filePath": "app/venues/$venueId.tsx",
       "parent": "/app/venues"
+    },
+    "/app/activity-logs/": {
+      "filePath": "app/activity-logs/index.tsx",
+      "parent": "/app/activity-logs"
     },
     "/app/departments/": {
       "filePath": "app/departments/index.tsx",

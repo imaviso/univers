@@ -3,6 +3,7 @@ import {
 	Building,
 	Building2,
 	CalendarDays,
+	FileText,
 	Home,
 	LayoutGrid,
 	Package,
@@ -121,6 +122,12 @@ export const allNavigation: NavigationItem[] = [
 		name: "Departments/Organization",
 		href: "/app/departments",
 		icon: Building2,
+		roles: ["SUPER_ADMIN"],
+	},
+	{
+		name: "Activity Logs",
+		href: "/app/activity-logs",
+		icon: FileText,
 		roles: ["SUPER_ADMIN"],
 	},
 ];
