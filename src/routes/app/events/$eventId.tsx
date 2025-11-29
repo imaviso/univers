@@ -861,7 +861,7 @@ export function EventDetailsPage() {
 	return (
 		<div className="flex h-screen bg-background">
 			<div className="flex flex-col flex-1">
-				<header className="border-b px-4 sm:px-6 py-3 sm:py-3.5 sticky top-0 bg-background z-10">
+				<header className="border-b px-4 sm:px-6 py-3 sm:py-3 sticky top-0 bg-background z-10">
 					<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
 						<div className="flex items-center gap-2 sm:gap-4 min-w-0">
 							<Button

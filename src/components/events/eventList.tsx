@@ -64,10 +64,8 @@ export function EventList({
 				</div>
 			) : (
 				<div>
-					{" "}
-					{/* Container for list or grid */}
 					{displayView === "card" ? (
-						<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 pr-6 py-4">
+						<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 py-4">
 							{events.map((event) => (
 								<EventCard
 									key={`card-${activeTab}-${event.publicId}`}
@@ -78,10 +76,7 @@ export function EventList({
 							))}
 						</div>
 					) : (
-						<div className="flex flex-col gap-0 pr-6">
-							{" "}
-							{/* List view container */}
-							{/* Optional: Add a header row here */}
+						<div className="flex flex-col gap-0">
 							{events.map((event) => (
 								<EventListItem
 									key={`list-${activeTab}-${event.publicId}`}
