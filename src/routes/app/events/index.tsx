@@ -119,198 +119,211 @@ function Events() {
 					}
 					className="flex flex-col flex-1 overflow-hidden"
 				>
-					<header className="flex items-center justify-between border-b px-6 h-[65px]">
-						<div className="flex items-center gap-4">
-							<h1 className="text-xl font-semibold">Events</h1>
-							<div className="flex items-center gap-2"></div>
-						</div>
-						<div className="flex items-center gap-4 h-full">
-							<DropdownMenu>
-								{" "}
-								{/* Only show filter dropdown in list view */}
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" className="ml-auto">
-										<ListFilter className="mr-2 h-4 w-4" />
-										Display
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuRadioGroup
-										value={displayView}
-										onValueChange={(value) =>
-											setDisplayView(value as "list" | "card")
-										}
-									>
+					<header className="border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
+						<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 sm:h-full">
+							<div className="flex items-center gap-4">
+								<h1 className="text-xl font-semibold">Events</h1>
+								<div className="flex items-center gap-2"></div>
+							</div>
+							<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 sm:h-full">
+								<DropdownMenu>
+									{" "}
+									{/* Only show filter dropdown in list view */}
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="outline"
+											className="w-full sm:w-auto sm:ml-auto"
+										>
+											<ListFilter className="mr-2 h-4 w-4" />
+											Display
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end">
+										<DropdownMenuRadioGroup
+											value={displayView}
+											onValueChange={(value) =>
+												setDisplayView(value as "list" | "card")
+											}
+										>
+											<Label className="px-2 py-1.5 text-sm font-semibold">
+												View As
+											</Label>
+											<DropdownMenuRadioItem value="card">
+												Card View
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="list">
+												List View
+											</DropdownMenuRadioItem>
+										</DropdownMenuRadioGroup>
+										<DropdownMenuSeparator />
+										<DropdownMenuRadioGroup
+											value={eventStatusFilter}
+											onValueChange={setEventStatusFilter}
+										>
+											<Label className="px-2 py-1.5 text-sm font-semibold">
+												Status
+											</Label>
+											<DropdownMenuRadioItem value="ALL">
+												All Statuses
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="PENDING">
+												{EventStatus.PENDING}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="APPROVED">
+												{EventStatus.APPROVED}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="ONGOING">
+												{EventStatus.ONGOING}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="COMPLETED">
+												{EventStatus.COMPLETED}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="REJECTED">
+												{EventStatus.REJECTED}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="CANCELED">
+												{EventStatus.CANCELED}
+											</DropdownMenuRadioItem>
+										</DropdownMenuRadioGroup>
+										<DropdownMenuSeparator />
 										<Label className="px-2 py-1.5 text-sm font-semibold">
-											View As
+											Sort
 										</Label>
-										<DropdownMenuRadioItem value="card">
-											Card View
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="list">
-											List View
-										</DropdownMenuRadioItem>
-									</DropdownMenuRadioGroup>
-									<DropdownMenuSeparator />
-									<DropdownMenuRadioGroup
-										value={eventStatusFilter}
-										onValueChange={setEventStatusFilter}
-									>
-										<Label className="px-2 py-1.5 text-sm font-semibold">
-											Status
-										</Label>
-										<DropdownMenuRadioItem value="ALL">
-											All Statuses
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="PENDING">
-											{EventStatus.PENDING}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="APPROVED">
-											{EventStatus.APPROVED}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="ONGOING">
-											{EventStatus.ONGOING}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="COMPLETED">
-											{EventStatus.COMPLETED}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="REJECTED">
-											{EventStatus.REJECTED}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="CANCELED">
-											{EventStatus.CANCELED}
-										</DropdownMenuRadioItem>
-									</DropdownMenuRadioGroup>
-									<DropdownMenuSeparator />
-									<Label className="px-2 py-1.5 text-sm font-semibold">
-										Sort
-									</Label>
-									<DropdownMenuCheckboxItem
-										checked={sortBy === "recency"}
-										onCheckedChange={(checked) => {
-											setSortBy(checked ? "recency" : "default");
-										}}
-									>
-										Most Recent
-									</DropdownMenuCheckboxItem>
-									<DropdownMenuCheckboxItem
-										checked={sortBy === "date"}
-										onCheckedChange={(checked) => {
-											setSortBy(checked ? "date" : "default");
-										}}
-									>
-										Event Date
-									</DropdownMenuCheckboxItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											"w-fit justify-start text-left font-normal",
-											!listSelectedDateRange && "text-muted-foreground",
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{listSelectedDateRange?.from ? (
-											listSelectedDateRange.to ? (
-												<>
-													{format(listSelectedDateRange.from, "LLL dd, y")} -{" "}
-													{format(listSelectedDateRange.to, "LLL dd, y")}
-												</>
+										<DropdownMenuCheckboxItem
+											checked={sortBy === "recency"}
+											onCheckedChange={(checked) => {
+												setSortBy(checked ? "recency" : "default");
+											}}
+										>
+											Most Recent
+										</DropdownMenuCheckboxItem>
+										<DropdownMenuCheckboxItem
+											checked={sortBy === "date"}
+											onCheckedChange={(checked) => {
+												setSortBy(checked ? "date" : "default");
+											}}
+										>
+											Event Date
+										</DropdownMenuCheckboxItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+								<Popover>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											className={cn(
+												"w-full sm:w-auto justify-start text-left font-normal",
+												!listSelectedDateRange && "text-muted-foreground",
+											)}
+										>
+											<CalendarIcon className="mr-2 h-4 w-4" />
+											{listSelectedDateRange?.from ? (
+												listSelectedDateRange.to ? (
+													<>
+														<span className="hidden sm:inline">
+															{format(listSelectedDateRange.from, "LLL dd, y")}{" "}
+															- {format(listSelectedDateRange.to, "LLL dd, y")}
+														</span>
+														<span className="sm:hidden">
+															{format(listSelectedDateRange.from, "MMM dd")} -{" "}
+															{format(listSelectedDateRange.to, "MMM dd")}
+														</span>
+													</>
+												) : (
+													format(listSelectedDateRange.from, "LLL dd, y")
+												)
 											) : (
-												format(listSelectedDateRange.from, "LLL dd, y")
-											)
-										) : (
-											<span>Pick a date range</span>
-										)}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0" align="end">
-									<Select
-										onValueChange={(value) => {
-											const now = new Date();
-											if (value === "custom") {
-												setListSelectedDateRange(
-													(prevRange: DateRange | undefined) => ({
-														from:
-															prevRange?.from ?? startOfDay(addDays(now, -7)),
-														to: prevRange?.to ?? endOfDay(now),
-													}),
-												);
-											} else if (value === "all") {
-												setListSelectedDateRange(undefined);
-											} else if (value === "today") {
-												setListSelectedDateRange({
-													from: startOfDay(now),
-													to: endOfDay(now),
-												});
-											} else if (value === "thisWeek") {
-												setListSelectedDateRange({
-													from: startOfWeek(now, {
-														weekStartsOn: 1,
-													}),
-													to: endOfWeek(now, {
-														weekStartsOn: 1,
-													}),
-												});
-											} else if (value === "thisMonth") {
-												setListSelectedDateRange({
-													from: startOfMonth(now),
-													to: endOfMonth(now),
-												});
-											} else {
-												const numDays = Number.parseInt(value, 10);
-												if (!Number.isNaN(numDays)) {
+												<span>Pick a date range</span>
+											)}
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-auto p-0" align="end">
+										<Select
+											onValueChange={(value) => {
+												const now = new Date();
+												if (value === "custom") {
+													setListSelectedDateRange(
+														(prevRange: DateRange | undefined) => ({
+															from:
+																prevRange?.from ?? startOfDay(addDays(now, -7)),
+															to: prevRange?.to ?? endOfDay(now),
+														}),
+													);
+												} else if (value === "all") {
+													setListSelectedDateRange(undefined);
+												} else if (value === "today") {
 													setListSelectedDateRange({
-														from: startOfDay(addDays(now, -numDays)),
+														from: startOfDay(now),
 														to: endOfDay(now),
 													});
+												} else if (value === "thisWeek") {
+													setListSelectedDateRange({
+														from: startOfWeek(now, {
+															weekStartsOn: 1,
+														}),
+														to: endOfWeek(now, {
+															weekStartsOn: 1,
+														}),
+													});
+												} else if (value === "thisMonth") {
+													setListSelectedDateRange({
+														from: startOfMonth(now),
+														to: endOfMonth(now),
+													});
 												} else {
-													setListSelectedDateRange(undefined);
+													const numDays = Number.parseInt(value, 10);
+													if (!Number.isNaN(numDays)) {
+														setListSelectedDateRange({
+															from: startOfDay(addDays(now, -numDays)),
+															to: endOfDay(now),
+														});
+													} else {
+														setListSelectedDateRange(undefined);
+													}
 												}
-											}
-										}}
-									>
-										<SelectTrigger className="m-2 mb-0 w-[calc(100%-1rem)]">
-											<SelectValue placeholder="Select quick range" />
-										</SelectTrigger>
-										<SelectContent position="popper">
-											<SelectItem value="all">All Time</SelectItem>
-											<SelectItem value="today">Today</SelectItem>
-											<SelectItem value="thisWeek">This Week</SelectItem>
-											<SelectItem value="thisMonth">This Month</SelectItem>
-											<SelectItem value="7">Last 7 days</SelectItem>
-											<SelectItem value="30">Last 30 days</SelectItem>
-										</SelectContent>
-									</Select>
-									<Calendar
-										initialFocus
-										mode="range"
-										defaultMonth={listSelectedDateRange?.from}
-										selected={listSelectedDateRange}
-										onSelect={setListSelectedDateRange}
-										numberOfMonths={1}
-									/>
-								</PopoverContent>
-							</Popover>
+											}}
+										>
+											<SelectTrigger className="m-2 mb-0 w-[calc(100%-1rem)]">
+												<SelectValue placeholder="Select quick range" />
+											</SelectTrigger>
+											<SelectContent position="popper">
+												<SelectItem value="all">All Time</SelectItem>
+												<SelectItem value="today">Today</SelectItem>
+												<SelectItem value="thisWeek">This Week</SelectItem>
+												<SelectItem value="thisMonth">This Month</SelectItem>
+												<SelectItem value="7">Last 7 days</SelectItem>
+												<SelectItem value="30">Last 30 days</SelectItem>
+											</SelectContent>
+										</Select>
+										<Calendar
+											initialFocus
+											mode="range"
+											defaultMonth={listSelectedDateRange?.from}
+											selected={listSelectedDateRange}
+											onSelect={setListSelectedDateRange}
+											numberOfMonths={1}
+										/>
+									</PopoverContent>
+								</Popover>
 
-							{/* TabsList for authorized users */}
-							<TabsList className={cn("h-9 grid grid-cols-2")}>
-								{isSuperAdmin && (
-									<TabsTrigger value="all">All Events</TabsTrigger>
-								)}
-								{!isSuperAdmin && isAdmin && (
-									<TabsTrigger value="related">Related Events</TabsTrigger>
-								)}
-								<TabsTrigger value="mine">My Events</TabsTrigger>
-							</TabsList>
-							<CreateEventButton onClick={() => setIsModalOpen(true)} />
+								{/* TabsList for authorized users */}
+								<TabsList
+									className={cn("h-9 grid grid-cols-2 w-full sm:w-auto")}
+								>
+									{isSuperAdmin && (
+										<TabsTrigger value="all">All Events</TabsTrigger>
+									)}
+									{!isSuperAdmin && isAdmin && (
+										<TabsTrigger value="related">Related Events</TabsTrigger>
+									)}
+									<TabsTrigger value="mine">My Events</TabsTrigger>
+								</TabsList>
+								<CreateEventButton onClick={() => setIsModalOpen(true)} />
+							</div>
 						</div>
 					</header>
 
-					<main className="flex-1 pl-6 pr-6 overflow-hidden">
+					<main className="flex-1 px-4 sm:px-6 overflow-hidden">
 						{isSuperAdmin && (
 							<TabsContent value="all" className="mt-0 h-full">
 								<EventList
@@ -374,185 +387,196 @@ function Events() {
 			) : (
 				// Non-Authorized users (Organizers) or timeline view structure
 				<div className="flex flex-col flex-1 overflow-hidden">
-					<header className="flex items-center justify-between border-b px-6 h-[65px]">
-						<div className="flex items-center gap-4">
-							<h1 className="text-xl font-semibold">Events</h1>
-							{/* View switcher still available */}
-							<div className="flex items-center gap-2"></div>
-						</div>
-						<div className="flex items-center gap-4 h-full">
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className={cn(
-											"w-fit justify-start text-left font-normal",
-											!listSelectedDateRange && "text-muted-foreground",
-										)}
-									>
-										<CalendarIcon className="mr-2 h-4 w-4" />
-										{listSelectedDateRange?.from ? (
-											listSelectedDateRange.to ? (
-												<>
-													{format(listSelectedDateRange.from, "LLL dd, y")} -{" "}
-													{format(listSelectedDateRange.to, "LLL dd, y")}
-												</>
+					<header className="border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
+						<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 sm:h-full">
+							<div className="flex items-center gap-4">
+								<h1 className="text-xl font-semibold">Events</h1>
+								{/* View switcher still available */}
+								<div className="flex items-center gap-2"></div>
+							</div>
+							<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 sm:h-full">
+								<Popover>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											className={cn(
+												"w-full sm:w-fit justify-start text-left font-normal text-xs sm:text-sm",
+												!listSelectedDateRange && "text-muted-foreground",
+											)}
+										>
+											<CalendarIcon className="mr-2 h-4 w-4" />
+											{listSelectedDateRange?.from ? (
+												listSelectedDateRange.to ? (
+													<>
+														<span className="hidden sm:inline">
+															{format(listSelectedDateRange.from, "LLL dd, y")}{" "}
+															- {format(listSelectedDateRange.to, "LLL dd, y")}
+														</span>
+														<span className="sm:hidden">
+															{format(listSelectedDateRange.from, "MMM dd")} -{" "}
+															{format(listSelectedDateRange.to, "MMM dd")}
+														</span>
+													</>
+												) : (
+													format(listSelectedDateRange.from, "LLL dd, y")
+												)
 											) : (
-												format(listSelectedDateRange.from, "LLL dd, y")
-											)
-										) : (
-											<span>Pick a date range</span>
-										)}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-auto p-0" align="end">
-									<Select
-										onValueChange={(value) => {
-											const now = new Date();
-											if (value === "custom") {
-												setListSelectedDateRange(
-													(prevRange: DateRange | undefined) => ({
-														from:
-															prevRange?.from ?? startOfDay(addDays(now, -7)),
-														to: prevRange?.to ?? endOfDay(now),
-													}),
-												);
-											} else if (value === "all") {
-												setListSelectedDateRange(undefined);
-											} else if (value === "today") {
-												setListSelectedDateRange({
-													from: startOfDay(now),
-													to: endOfDay(now),
-												});
-											} else if (value === "thisWeek") {
-												setListSelectedDateRange({
-													from: startOfWeek(now, {
-														weekStartsOn: 1,
-													}),
-													to: endOfWeek(now, {
-														weekStartsOn: 1,
-													}),
-												});
-											} else if (value === "thisMonth") {
-												setListSelectedDateRange({
-													from: startOfMonth(now),
-													to: endOfMonth(now),
-												});
-											} else {
-												const numDays = Number.parseInt(value, 10);
-												if (!Number.isNaN(numDays)) {
+												<span>Pick a date range</span>
+											)}
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-auto p-0" align="end">
+										<Select
+											onValueChange={(value) => {
+												const now = new Date();
+												if (value === "custom") {
+													setListSelectedDateRange(
+														(prevRange: DateRange | undefined) => ({
+															from:
+																prevRange?.from ?? startOfDay(addDays(now, -7)),
+															to: prevRange?.to ?? endOfDay(now),
+														}),
+													);
+												} else if (value === "all") {
+													setListSelectedDateRange(undefined);
+												} else if (value === "today") {
 													setListSelectedDateRange({
-														from: startOfDay(addDays(now, -numDays)),
+														from: startOfDay(now),
 														to: endOfDay(now),
 													});
+												} else if (value === "thisWeek") {
+													setListSelectedDateRange({
+														from: startOfWeek(now, {
+															weekStartsOn: 1,
+														}),
+														to: endOfWeek(now, {
+															weekStartsOn: 1,
+														}),
+													});
+												} else if (value === "thisMonth") {
+													setListSelectedDateRange({
+														from: startOfMonth(now),
+														to: endOfMonth(now),
+													});
 												} else {
-													setListSelectedDateRange(undefined);
+													const numDays = Number.parseInt(value, 10);
+													if (!Number.isNaN(numDays)) {
+														setListSelectedDateRange({
+															from: startOfDay(addDays(now, -numDays)),
+															to: endOfDay(now),
+														});
+													} else {
+														setListSelectedDateRange(undefined);
+													}
 												}
+											}}
+										>
+											<SelectTrigger className="m-2 mb-0 w-[calc(100%-1rem)]">
+												<SelectValue placeholder="Select quick range" />
+											</SelectTrigger>
+											<SelectContent position="popper">
+												<SelectItem value="all">All Time</SelectItem>
+												<SelectItem value="today">Today</SelectItem>
+												<SelectItem value="thisWeek">This Week</SelectItem>
+												<SelectItem value="thisMonth">This Month</SelectItem>
+												<SelectItem value="7">Last 7 days</SelectItem>
+												<SelectItem value="30">Last 30 days</SelectItem>
+											</SelectContent>
+										</Select>
+										<Calendar
+											initialFocus
+											mode="range"
+											defaultMonth={listSelectedDateRange?.from}
+											selected={listSelectedDateRange}
+											onSelect={setListSelectedDateRange}
+											numberOfMonths={1}
+										/>
+									</PopoverContent>
+								</Popover>
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="outline"
+											className="w-full sm:w-auto sm:ml-auto"
+										>
+											<ListFilter className="mr-2 h-4 w-4" />
+											Display
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end">
+										<DropdownMenuRadioGroup
+											value={displayView}
+											onValueChange={(value) =>
+												setDisplayView(value as "list" | "card")
 											}
-										}}
-									>
-										<SelectTrigger className="m-2 mb-0 w-[calc(100%-1rem)]">
-											<SelectValue placeholder="Select quick range" />
-										</SelectTrigger>
-										<SelectContent position="popper">
-											<SelectItem value="all">All Time</SelectItem>
-											<SelectItem value="today">Today</SelectItem>
-											<SelectItem value="thisWeek">This Week</SelectItem>
-											<SelectItem value="thisMonth">This Month</SelectItem>
-											<SelectItem value="7">Last 7 days</SelectItem>
-											<SelectItem value="30">Last 30 days</SelectItem>
-										</SelectContent>
-									</Select>
-									<Calendar
-										initialFocus
-										mode="range"
-										defaultMonth={listSelectedDateRange?.from}
-										selected={listSelectedDateRange}
-										onSelect={setListSelectedDateRange}
-										numberOfMonths={1}
-									/>
-								</PopoverContent>
-							</Popover>
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" className="ml-auto">
-										<ListFilter className="mr-2 h-4 w-4" />
-										Display
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuRadioGroup
-										value={displayView}
-										onValueChange={(value) =>
-											setDisplayView(value as "list" | "card")
-										}
-									>
+										>
+											<Label className="px-2 py-1.5 text-sm font-semibold">
+												View As
+											</Label>
+											<DropdownMenuRadioItem value="card">
+												Card View
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="list">
+												List View
+											</DropdownMenuRadioItem>
+										</DropdownMenuRadioGroup>
+										<DropdownMenuSeparator />
+										<DropdownMenuRadioGroup
+											value={eventStatusFilter}
+											onValueChange={setEventStatusFilter}
+										>
+											<Label className="px-2 py-1.5 text-sm font-semibold">
+												Status
+											</Label>
+											<DropdownMenuRadioItem value="ALL">
+												All Statuses
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="PENDING">
+												{EventStatus.PENDING}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="APPROVED">
+												{EventStatus.APPROVED}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="ONGOING">
+												{EventStatus.ONGOING}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="COMPLETED">
+												{EventStatus.COMPLETED}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="REJECTED">
+												{EventStatus.REJECTED}
+											</DropdownMenuRadioItem>
+											<DropdownMenuRadioItem value="CANCELED">
+												{EventStatus.CANCELED}
+											</DropdownMenuRadioItem>
+										</DropdownMenuRadioGroup>
+										<DropdownMenuSeparator />
 										<Label className="px-2 py-1.5 text-sm font-semibold">
-											View As
+											Sort
 										</Label>
-										<DropdownMenuRadioItem value="card">
-											Card View
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="list">
-											List View
-										</DropdownMenuRadioItem>
-									</DropdownMenuRadioGroup>
-									<DropdownMenuSeparator />
-									<DropdownMenuRadioGroup
-										value={eventStatusFilter}
-										onValueChange={setEventStatusFilter}
-									>
-										<Label className="px-2 py-1.5 text-sm font-semibold">
-											Status
-										</Label>
-										<DropdownMenuRadioItem value="ALL">
-											All Statuses
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="PENDING">
-											{EventStatus.PENDING}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="APPROVED">
-											{EventStatus.APPROVED}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="ONGOING">
-											{EventStatus.ONGOING}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="COMPLETED">
-											{EventStatus.COMPLETED}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="REJECTED">
-											{EventStatus.REJECTED}
-										</DropdownMenuRadioItem>
-										<DropdownMenuRadioItem value="CANCELED">
-											{EventStatus.CANCELED}
-										</DropdownMenuRadioItem>
-									</DropdownMenuRadioGroup>
-									<DropdownMenuSeparator />
-									<Label className="px-2 py-1.5 text-sm font-semibold">
-										Sort
-									</Label>
-									<DropdownMenuCheckboxItem
-										checked={sortBy === "recency"}
-										onCheckedChange={(checked) => {
-											setSortBy(checked ? "recency" : "default");
-										}}
-									>
-										Most Recent
-									</DropdownMenuCheckboxItem>
-									<DropdownMenuCheckboxItem
-										checked={sortBy === "date"}
-										onCheckedChange={(checked) => {
-											setSortBy(checked ? "date" : "default");
-										}}
-									>
-										Event Date
-									</DropdownMenuCheckboxItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-							<CreateEventButton onClick={() => setIsModalOpen(true)} />
+										<DropdownMenuCheckboxItem
+											checked={sortBy === "recency"}
+											onCheckedChange={(checked) => {
+												setSortBy(checked ? "recency" : "default");
+											}}
+										>
+											Most Recent
+										</DropdownMenuCheckboxItem>
+										<DropdownMenuCheckboxItem
+											checked={sortBy === "date"}
+											onCheckedChange={(checked) => {
+												setSortBy(checked ? "date" : "default");
+											}}
+										>
+											Event Date
+										</DropdownMenuCheckboxItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+								<CreateEventButton onClick={() => setIsModalOpen(true)} />
+							</div>
 						</div>
 					</header>
-					<main className="flex-1 p-6 overflow-hidden">
+					<main className="flex-1 p-4 sm:p-6 overflow-hidden">
 						<EventList
 							activeTab="mine" // Default to 'mine' for organizers
 							eventStatusFilter={eventStatusFilter}
@@ -569,7 +593,6 @@ function Events() {
 							}
 							displayView={displayView}
 						/>
-						)
 					</main>
 				</div>
 			)}

@@ -123,9 +123,9 @@ export function DataTable<TData, TValue>({
 	return (
 		<div className="space-y-4">
 			{(searchColumn || showColumnToggle) && (
-				<div className="flex items-center justify-between">
+				<div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
 					{searchColumn && (
-						<div className="flex items-center gap-2">
+						<div className="flex items-center gap-2 flex-1">
 							<Input
 								placeholder={searchPlaceholder}
 								value={
@@ -137,14 +137,14 @@ export function DataTable<TData, TValue>({
 										.getColumn(searchColumn)
 										?.setFilterValue(event.target.value)
 								}
-								className="max-w-sm"
+								className="w-full sm:max-w-sm"
 							/>
 						</div>
 					)}
 					{showColumnToggle && (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="outline" className="ml-auto">
+								<Button variant="outline" className="w-full sm:w-auto sm:ml-auto">
 									Columns <ChevronDown className="ml-2 h-4 w-4" />
 								</Button>
 							</DropdownMenuTrigger>
@@ -171,7 +171,7 @@ export function DataTable<TData, TValue>({
 					)}
 				</div>
 			)}
-			<div className="rounded-md border">
+			<div className="rounded-md border overflow-x-auto">
 				<Table>
 					<TableHeader>
 						{table.getHeaderGroups().map((headerGroup) => (
@@ -222,8 +222,8 @@ export function DataTable<TData, TValue>({
 				</Table>
 			</div>
 			{showPagination && (
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-2">
+				<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+					<div className="flex items-center gap-2 flex-wrap">
 						<p className="text-sm text-muted-foreground">
 							Showing{" "}
 							<strong>

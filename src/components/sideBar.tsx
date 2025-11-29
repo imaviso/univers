@@ -72,16 +72,24 @@ export function Sidebar() {
 
 	return (
 		<TooltipProvider>
+			{/* Mobile backdrop overlay */}
+			{isMobileOpen && (
+				<div
+					className="lg:hidden fixed inset-0 z-40 bg-black/50 transition-opacity"
+					onClick={() => setIsMobileOpen(false)}
+					aria-hidden="true"
+				/>
+			)}
 			<Button
 				className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary rounded-md shadow-md"
 				onClick={() => setIsMobileOpen(!isMobileOpen)}
 				aria-label="Toggle sidebar"
 			>
-				<Menu className="text-foreground h-6 w-6" />
+				<Menu className="text-primary-foreground h-6 w-6" />
 			</Button>
 			<div
 				className={cn(
-					"fixed inset-y-0 z-20 flex flex-col bg-card transition-all duration-300 ease-in-out lg:static",
+					"fixed inset-y-0 z-40 flex flex-col bg-card transition-all duration-300 ease-in-out lg:static lg:z-auto",
 					isCollapsed ? "w-[72px]" : "w-72",
 					isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
 				)}
@@ -112,7 +120,10 @@ export function Sidebar() {
 							<Button
 								variant="ghost"
 								size="sm"
-								className={cn("h-8 w-8", !isCollapsed && "ml-auto")}
+								className={cn(
+									"h-8 w-8 hidden lg:flex",
+									!isCollapsed && "ml-auto",
+								)}
 								onClick={() => setIsCollapsed(!isCollapsed)}
 							>
 								<ChevronLeft
@@ -137,6 +148,7 @@ export function Sidebar() {
 										<TooltipTrigger asChild>
 											<Link
 												to={item.href}
+												onClick={() => setIsMobileOpen(false)}
 												className={cn(
 													"flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
 													pathname === item.href
@@ -154,6 +166,7 @@ export function Sidebar() {
 									<Link
 										key={item.name}
 										to={item.href}
+										onClick={() => setIsMobileOpen(false)}
 										className={cn(
 											"flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
 											pathname === item.href

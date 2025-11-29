@@ -193,11 +193,11 @@ function Dashboard() {
 	return (
 		<div className="bg-background">
 			<div className="flex flex-col flex-1 overflow-hidden">
-				<header className="flex items-center justify-between border-b px-6 h-[65px]">
+				<header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
 					<div className="flex items-center gap-4">
 						<h1 className="text-xl font-semibold">Dashboard</h1>
 					</div>
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-2 w-full sm:w-auto">
 						{/* Date Range Picker */}
 						<Popover>
 							<PopoverTrigger asChild>
@@ -205,7 +205,7 @@ function Dashboard() {
 									id={dateButtonId}
 									variant={"outline"}
 									className={cn(
-										"w-fit justify-start text-left font-normal",
+										"w-full sm:w-fit justify-start text-left font-normal text-xs sm:text-sm",
 										!dateRange && "text-muted-foreground",
 									)}
 								>
@@ -213,8 +213,14 @@ function Dashboard() {
 									{dateRange?.from ? (
 										dateRange.to ? (
 											<>
-												{format(dateRange.from, "LLL dd, y")} -{" "}
-												{format(dateRange.to, "LLL dd, y")}
+												<span className="hidden sm:inline">
+													{format(dateRange.from, "LLL dd, y")} -{" "}
+													{format(dateRange.to, "LLL dd, y")}
+												</span>
+												<span className="sm:hidden">
+													{format(dateRange.from, "MMM dd")} -{" "}
+													{format(dateRange.to, "MMM dd")}
+												</span>
 											</>
 										) : (
 											format(dateRange.from, "LLL dd, y")
@@ -340,9 +346,9 @@ function Dashboard() {
 						</Popover>  */}
 					</div>
 				</header>
-				<main className="flex-1 overflow-auto p-6">
+				<main className="flex-1 overflow-auto p-4 sm:p-6">
 					<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-						<div className="grid gap-6 col-span-2">
+						<div className="grid gap-6 md:col-span-2 lg:col-span-2">
 							<Card>
 								<CardHeader>
 									<CardTitle>Recent Activity</CardTitle>
@@ -362,8 +368,8 @@ function Dashboard() {
 								<UpcomingEvents />
 							</CardContent>
 						</Card>
-						<Card className="col-span-3">
-							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+						<Card className="md:col-span-2 lg:col-span-3">
+							<CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
 								<div>
 									<CardTitle>Events Overview</CardTitle>
 									<CardDescription>
@@ -406,7 +412,7 @@ function Dashboard() {
 								/>
 							</CardContent>
 						</Card>
-						<Card className="col-span-2">
+						<Card className="md:col-span-2">
 							<CardHeader>
 								<CardTitle>Event Types</CardTitle>
 								<CardDescription>Distribution by event type</CardDescription>
@@ -415,7 +421,7 @@ function Dashboard() {
 								<EventTypesChart dateRange={dateRange} />
 							</CardContent>
 						</Card>
-						<Card>
+						<Card className="md:col-span-2 lg:col-span-1">
 							<CardHeader>
 								<CardTitle>Peak Reservation Hours</CardTitle>
 								<CardDescription>
@@ -435,7 +441,7 @@ function Dashboard() {
 							</CardContent>
 						</Card>
 
-						<div className="grid gap-6 col-span-3">
+						<div className="grid gap-6 md:col-span-2 lg:col-span-3">
 							<Card>
 								<CardHeader>
 									<CardTitle>Cancellation Rate</CardTitle>
@@ -458,7 +464,7 @@ function Dashboard() {
 								</CardContent>
 							</Card>
 						</div>
-						<Card>
+						<Card className="md:col-span-2 lg:col-span-1">
 							<CardHeader>
 								<CardTitle>Events per Venue</CardTitle>
 								<CardDescription>Number of events per venue</CardDescription>
@@ -470,7 +476,7 @@ function Dashboard() {
 								/>
 							</CardContent>
 						</Card>
-						<Card>
+						<Card className="md:col-span-2 lg:col-span-1">
 							<CardHeader>
 								<CardTitle>Top Equipment</CardTitle>
 								<CardDescription>Most reserved equipment</CardDescription>
@@ -482,7 +488,7 @@ function Dashboard() {
 								/>
 							</CardContent>
 						</Card>
-						<Card>
+						<Card className="md:col-span-2 lg:col-span-1">
 							<CardHeader>
 								<CardTitle>User Reservation Activity</CardTitle>
 								<CardDescription>Most active organizers</CardDescription>

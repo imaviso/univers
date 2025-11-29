@@ -861,175 +861,195 @@ export function EventDetailsPage() {
 	return (
 		<div className="flex h-screen bg-background">
 			<div className="flex flex-col flex-1">
-				<header className="flex items-center justify-between border-b px-6 py-3.5 sticky top-0 bg-background z-10">
-					{" "}
-					<div className="flex items-center gap-4">
-						<Button variant="ghost" size="icon" onClick={onBack}>
-							<ArrowLeft className="h-4 w-4" />
-						</Button>
-						<h1 className="text-xl font-semibold">{event.eventName}</h1>
-						{getApproverStatusBadge(event.status)}
-					</div>
-					<div className="flex items-center gap-2">
-						{/* Show Approve Button if user can approve */}
-						{canUserApprove && (
-							<Dialog
-								open={isApprovalDialogOpen}
-								onOpenChange={setIsApprovalDialogOpen}
-							>
-								<DialogTrigger asChild>
-									<Button size="sm" className="gap-1">
-										<CheckCircle2 className="h-4 w-4" />
-										{approveActionLabel}
-									</Button>
-								</DialogTrigger>
-								<DialogContent>
-									<DialogHeader>
-										<DialogTitle>{approveDialogTitle}</DialogTitle>
-										<DialogDescription>
-											Add optional remarks for your approval.
-										</DialogDescription>
-									</DialogHeader>
-									<div className="py-4">
-										<Textarea
-											placeholder="Enter remarks (optional)..."
-											value={approvalRemarks}
-											onChange={(e) => setApprovalRemarks(e.target.value)}
-											rows={4}
-										/>
-									</div>
-									<DialogFooter>
-										<Button
-											variant="outline"
-											onClick={() => setIsApprovalDialogOpen(false)}
-										>
-											Cancel
-										</Button>
-										<Button
-											onClick={handleApproveClick}
-											disabled={approveMutation.isPending}
-										>
-											{approveMutation.isPending
-												? approvePendingLabel
-												: approveConfirmLabel}
-										</Button>
-									</DialogFooter>
-								</DialogContent>
-							</Dialog>
-						)}
-						{/* Show Reject Button if user can reject */}
-						{canUserReject && (
-							<Dialog
-								open={isRejectionDialogOpen}
-								onOpenChange={setIsRejectionDialogOpen}
-							>
-								<DialogTrigger asChild>
-									<Button variant="destructive" size="sm" className="gap-1">
-										<XCircle className="h-4 w-4" />
-										{rejectActionLabel}
-									</Button>
-								</DialogTrigger>
-								<DialogContent>
-									<DialogHeader>
-										<DialogTitle>{rejectDialogTitle}</DialogTitle>
-										<DialogDescription>
-											Provide remarks for rejecting this event. Remarks are
-											required for rejection.
-										</DialogDescription>
-									</DialogHeader>
-									<div className="py-4">
-										<Textarea
-											placeholder="Enter rejection remarks (required)..."
-											value={rejectionRemarks}
-											onChange={(e) => setRejectionRemarks(e.target.value)}
-											rows={4}
-										/>
-									</div>
-									<DialogFooter>
-										<Button
-											variant="outline"
-											onClick={() => setIsRejectionDialogOpen(false)}
-										>
-											Cancel
-										</Button>
-										<Button
-											variant="destructive"
-											onClick={handleConfirmReject}
-											disabled={
-												rejectEventMutation.isPending ||
-												!rejectionRemarks.trim()
-											}
-										>
-											{rejectEventMutation.isPending
-												? rejectPendingLabel
-												: rejectConfirmLabel}
-										</Button>
-									</DialogFooter>
-								</DialogContent>
-							</Dialog>
-						)}
-
-						{/* Container for Edit and More Options buttons */}
-						{/* Render Edit button only if canEditEvent is true */}
-						{canEditEvent && (
+				<header className="border-b px-4 sm:px-6 py-3 sm:py-3.5 sticky top-0 bg-background z-10">
+					<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+						<div className="flex items-center gap-2 sm:gap-4 min-w-0">
 							<Button
-								variant="outline"
-								size="sm"
-								className="gap-1"
-								onClick={handleEditClick}
-								disabled={updateEventMutation.isPending} // Only disable if mutation is pending
+								variant="ghost"
+								size="icon"
+								onClick={onBack}
+								className="shrink-0"
 							>
-								<Edit className="h-4 w-4" />
-								Edit
+								<ArrowLeft className="h-4 w-4" />
 							</Button>
-						)}
-
-						{/* Render More Options Dropdown if user is organizer or superAdmin AND there are actions available (cancel or delete) */}
-						{(isOrganizer || isSuperAdmin) &&
-							(canCancelEvent || isSuperAdmin) && (
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button variant="ghost" size="icon" className="h-8 w-8">
-											<MoreHorizontal className="h-4 w-4" />
+							<h1 className="text-lg sm:text-xl font-semibold truncate">
+								{event.eventName}
+							</h1>
+							<div className="shrink-0">
+								{getApproverStatusBadge(event.status)}
+							</div>
+						</div>
+						<div className="flex items-center gap-2 flex-wrap">
+							{/* Show Approve Button if user can approve */}
+							{canUserApprove && (
+								<Dialog
+									open={isApprovalDialogOpen}
+									onOpenChange={setIsApprovalDialogOpen}
+								>
+									<DialogTrigger asChild>
+										<Button size="sm" className="gap-1">
+											<CheckCircle2 className="h-4 w-4" />
+											<span className="hidden sm:inline">
+												{approveActionLabel}
+											</span>
+											<span className="sm:hidden">Approve</span>
 										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="end">
-										{/* Cancel Event Item - Render only if canCancelEvent is true */}
-										{canCancelEvent && (
-											<DropdownMenuItem
-												className="text-orange-600 focus:text-orange-700 focus:bg-orange-100"
-												onClick={handleCancelClick}
-												disabled={cancelEventMutation.isPending}
+									</DialogTrigger>
+									<DialogContent>
+										<DialogHeader>
+											<DialogTitle>{approveDialogTitle}</DialogTitle>
+											<DialogDescription>
+												Add optional remarks for your approval.
+											</DialogDescription>
+										</DialogHeader>
+										<div className="py-4">
+											<Textarea
+												placeholder="Enter remarks (optional)..."
+												value={approvalRemarks}
+												onChange={(e) => setApprovalRemarks(e.target.value)}
+												rows={4}
+											/>
+										</div>
+										<DialogFooter>
+											<Button
+												variant="outline"
+												onClick={() => setIsApprovalDialogOpen(false)}
 											>
-												<XCircle className="mr-2 h-4 w-4" />
-												Cancel Event
-											</DropdownMenuItem>
-										)}
-										{/* Delete Event Item (Only for SUPER_ADMIN) */}
-										{isSuperAdmin && (
-											<DropdownMenuItem
-												className="text-destructive focus:text-destructive focus:bg-destructive/10"
-												onClick={handleDeleteClick} // Use delete handler
-												disabled={deleteEventMutation.isPending} // Disable during delete mutation
+												Cancel
+											</Button>
+											<Button
+												onClick={handleApproveClick}
+												disabled={approveMutation.isPending}
 											>
-												<Trash2 className="mr-2 h-4 w-4" />
-												Delete Event
-											</DropdownMenuItem>
-										)}
-									</DropdownMenuContent>
-								</DropdownMenu>
+												{approveMutation.isPending
+													? approvePendingLabel
+													: approveConfirmLabel}
+											</Button>
+										</DialogFooter>
+									</DialogContent>
+								</Dialog>
 							)}
+							{/* Show Reject Button if user can reject */}
+							{canUserReject && (
+								<Dialog
+									open={isRejectionDialogOpen}
+									onOpenChange={setIsRejectionDialogOpen}
+								>
+									<DialogTrigger asChild>
+										<Button variant="destructive" size="sm" className="gap-1">
+											<XCircle className="h-4 w-4" />
+											<span className="hidden sm:inline">
+												{rejectActionLabel}
+											</span>
+											<span className="sm:hidden">Reject</span>
+										</Button>
+									</DialogTrigger>
+									<DialogContent>
+										<DialogHeader>
+											<DialogTitle>{rejectDialogTitle}</DialogTitle>
+											<DialogDescription>
+												Provide remarks for rejecting this event. Remarks are
+												required for rejection.
+											</DialogDescription>
+										</DialogHeader>
+										<div className="py-4">
+											<Textarea
+												placeholder="Enter rejection remarks (required)..."
+												value={rejectionRemarks}
+												onChange={(e) => setRejectionRemarks(e.target.value)}
+												rows={4}
+											/>
+										</div>
+										<DialogFooter>
+											<Button
+												variant="outline"
+												onClick={() => setIsRejectionDialogOpen(false)}
+											>
+												Cancel
+											</Button>
+											<Button
+												variant="destructive"
+												onClick={handleConfirmReject}
+												disabled={
+													rejectEventMutation.isPending ||
+													!rejectionRemarks.trim()
+												}
+											>
+												{rejectEventMutation.isPending
+													? rejectPendingLabel
+													: rejectConfirmLabel}
+											</Button>
+										</DialogFooter>
+									</DialogContent>
+								</Dialog>
+							)}
+
+							{/* Container for Edit and More Options buttons */}
+							{/* Render Edit button only if canEditEvent is true */}
+							{canEditEvent && (
+								<Button
+									variant="outline"
+									size="sm"
+									className="gap-1"
+									onClick={handleEditClick}
+									disabled={updateEventMutation.isPending} // Only disable if mutation is pending
+								>
+									<Edit className="h-4 w-4" />
+									<span className="hidden sm:inline">Edit</span>
+								</Button>
+							)}
+
+							{/* Render More Options Dropdown if user is organizer or superAdmin AND there are actions available (cancel or delete) */}
+							{(isOrganizer || isSuperAdmin) &&
+								(canCancelEvent || isSuperAdmin) && (
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-9 w-9 sm:h-8 sm:w-8"
+											>
+												<MoreHorizontal className="h-4 w-4" />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											{/* Cancel Event Item - Render only if canCancelEvent is true */}
+											{canCancelEvent && (
+												<DropdownMenuItem
+													className="text-orange-600 focus:text-orange-700 focus:bg-orange-100"
+													onClick={handleCancelClick}
+													disabled={cancelEventMutation.isPending}
+												>
+													<XCircle className="mr-2 h-4 w-4" />
+													Cancel Event
+												</DropdownMenuItem>
+											)}
+											{/* Delete Event Item (Only for SUPER_ADMIN) */}
+											{isSuperAdmin && (
+												<DropdownMenuItem
+													className="text-destructive focus:text-destructive focus:bg-destructive/10"
+													onClick={handleDeleteClick} // Use delete handler
+													disabled={deleteEventMutation.isPending} // Disable during delete mutation
+												>
+													<Trash2 className="mr-2 h-4 w-4" />
+													Delete Event
+												</DropdownMenuItem>
+											)}
+										</DropdownMenuContent>
+									</DropdownMenu>
+								)}
+						</div>
 					</div>
 				</header>
 				<ScrollArea className="flex-1">
-					<div className="p-6 space-y-6">
+					<div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
 						{/* Event Overview Card */}
 						<Card>
 							<CardHeader className="pb-2">
 								<h2 className="text-lg font-medium">Event Overview</h2>
 							</CardHeader>
 							<CardContent>
-								<div className="grid md:grid-cols-2 gap-6">
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
 									{/* Left Column */}
 									<div className="space-y-4">
 										{/* Event Type */}
@@ -1088,7 +1108,7 @@ export function EventDetailsPage() {
 																</span>
 															</div>
 														</DialogTrigger>
-														<DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
+														<DialogContent className="max-w-[95vw] sm:max-w-[600px] md:max-w-[800px] lg:max-w-[1000px]">
 															<DialogHeader>
 																<DialogTitle>Approved Letter</DialogTitle>
 																<DialogDescription>
@@ -1175,7 +1195,7 @@ export function EventDetailsPage() {
 									<div className="space-y-4">
 										{eventVenue && (
 											<div>
-												<div className="rounded-lg overflow-hidden border aspect-[16/10] bg-muted mb-2 max-h-80">
+												<div className="rounded-lg overflow-hidden border aspect-video sm:aspect-[16/10] bg-muted mb-2 max-h-80 w-full">
 													<img
 														src={
 															eventVenue.imagePath ?? DEFAULT_VENUE_IMAGE_URL
@@ -1215,13 +1235,13 @@ export function EventDetailsPage() {
 						</Card>
 
 						<Card>
-							<CardHeader className="flex flex-row items-center justify-between pb-2">
+							<CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 space-y-2 sm:space-y-0">
 								<CardTitle>Reserved Equipment</CardTitle>
 								{canUserModifyEquipmentReservation && (
 									<Button
 										size="sm"
 										variant="outline"
-										className="gap-1"
+										className="gap-1 w-full sm:w-auto"
 										onClick={handleReserveEquipmentClick}
 										disabled={createEquipmentReservationMutation.isPending}
 									>
@@ -1232,70 +1252,74 @@ export function EventDetailsPage() {
 							</CardHeader>
 							<CardContent>
 								{reservedEquipments && reservedEquipments.length > 0 ? (
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Equipment</TableHead>
-												<TableHead>Quantity</TableHead>
-												<TableHead>Status</TableHead>
-												{canUserModifyEquipmentReservation && (
-													<TableHead className="text-right">Actions</TableHead>
-												)}
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{groupedReservedEquipment.map((group) => (
-												<Fragment key={group.categoryName}>
-													<TableRow className="bg-muted/50 hover:bg-muted/50">
-														<TableCell
-															colSpan={
-																canUserModifyEquipmentReservation ? 4 : 3
-															}
-															className="py-2 font-semibold px-3"
-														>
-															{group.categoryName}
-														</TableCell>
-													</TableRow>
-													{group.reservations.map((reservation) => (
-														<TableRow key={reservation.publicId}>
-															<TableCell>
-																{reservation.equipment?.name ?? "N/A"}
+									<div className="overflow-x-auto -mx-4 px-4 sm:-mx-0 sm:px-0">
+										<Table>
+											<TableHeader>
+												<TableRow>
+													<TableHead>Equipment</TableHead>
+													<TableHead>Quantity</TableHead>
+													<TableHead>Status</TableHead>
+													{canUserModifyEquipmentReservation && (
+														<TableHead className="text-right">
+															Actions
+														</TableHead>
+													)}
+												</TableRow>
+											</TableHeader>
+											<TableBody>
+												{groupedReservedEquipment.map((group) => (
+													<Fragment key={group.categoryName}>
+														<TableRow className="bg-muted/50 hover:bg-muted/50">
+															<TableCell
+																colSpan={
+																	canUserModifyEquipmentReservation ? 4 : 3
+																}
+																className="py-2 font-semibold px-3"
+															>
+																{group.categoryName}
 															</TableCell>
-															<TableCell>{reservation.quantity}</TableCell>
-															<TableCell>
-																{getApproverStatusBadge(reservation.status)}
-															</TableCell>
-															{(reservation.status === "PENDING" ||
-																reservation.status === "APPROVED") &&
-																canUserModifyEquipmentReservation && (
-																	<TableCell className="text-right">
-																		<Button
-																			variant="ghost"
-																			size="icon"
-																			onClick={() =>
-																				handleCancelEquipmentReservationClick(
-																					reservation.publicId,
-																				)
-																			}
-																			disabled={
-																				cancelEquipmentReservationMutationHook.isPending &&
-																				equipmentReservationToCancelId ===
-																					reservation.publicId
-																			}
-																		>
-																			<XCircle className="h-4 w-4 text-destructive" />
-																			<span className="sr-only">
-																				Cancel Reservation
-																			</span>
-																		</Button>
-																	</TableCell>
-																)}
 														</TableRow>
-													))}
-												</Fragment>
-											))}
-										</TableBody>
-									</Table>
+														{group.reservations.map((reservation) => (
+															<TableRow key={reservation.publicId}>
+																<TableCell>
+																	{reservation.equipment?.name ?? "N/A"}
+																</TableCell>
+																<TableCell>{reservation.quantity}</TableCell>
+																<TableCell>
+																	{getApproverStatusBadge(reservation.status)}
+																</TableCell>
+																{(reservation.status === "PENDING" ||
+																	reservation.status === "APPROVED") &&
+																	canUserModifyEquipmentReservation && (
+																		<TableCell className="text-right">
+																			<Button
+																				variant="ghost"
+																				size="icon"
+																				onClick={() =>
+																					handleCancelEquipmentReservationClick(
+																						reservation.publicId,
+																					)
+																				}
+																				disabled={
+																					cancelEquipmentReservationMutationHook.isPending &&
+																					equipmentReservationToCancelId ===
+																						reservation.publicId
+																				}
+																			>
+																				<XCircle className="h-4 w-4 text-destructive" />
+																				<span className="sr-only">
+																					Cancel Reservation
+																				</span>
+																			</Button>
+																		</TableCell>
+																	)}
+															</TableRow>
+														))}
+													</Fragment>
+												))}
+											</TableBody>
+										</Table>
+									</div>
 								) : (
 									<p className="text-sm text-muted-foreground py-4">
 										No equipment reserved for this event yet.
@@ -1306,13 +1330,13 @@ export function EventDetailsPage() {
 
 						{/* Event Staff Section */}
 						<Card>
-							<CardHeader className="flex flex-row items-center justify-between pb-2">
+							<CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 space-y-2 sm:space-y-0">
 								<CardTitle>Event Personnel</CardTitle>
 								{canManageStaff && (
 									<Button
 										size="sm"
 										variant="outline"
-										className="gap-1"
+										className="gap-1 w-full sm:w-auto"
 										onClick={() => {
 											setSelectedEventId(event.publicId);
 											setManageAssignmentsDialogOpen(true);
@@ -1367,7 +1391,7 @@ export function EventDetailsPage() {
 						{/* Equipment Checklist Section */}
 						{canViewEquipmentChecklist && (
 							<Card>
-								<CardHeader className="flex flex-row items-center justify-between pb-2">
+								<CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 space-y-2 sm:space-y-0">
 									<CardTitle className="flex items-center gap-2">
 										<ClipboardCheck className="h-5 w-5" />
 										Equipment Checklist
@@ -1397,9 +1421,9 @@ export function EventDetailsPage() {
 															return (
 																<div
 																	key={staff.publicId}
-																	className="flex items-center justify-between p-3 border rounded-lg bg-card"
+																	className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border rounded-lg bg-card"
 																>
-																	<div className="flex-1">
+																	<div className="flex-1 min-w-0">
 																		<div className="font-medium text-sm">
 																			{staff.personnel.firstName}{" "}
 																			{staff.personnel.lastName}
@@ -1412,7 +1436,7 @@ export function EventDetailsPage() {
 																		<Button
 																			size="sm"
 																			variant="outline"
-																			className="gap-2"
+																			className="gap-2 w-full sm:w-auto"
 																			onClick={() => {
 																				setSelectedPersonnelForChecklist(
 																					staff.publicId,
@@ -1446,58 +1470,62 @@ export function EventDetailsPage() {
 							</CardHeader>
 							<CardContent>
 								{approvalTableRows.length > 0 ? (
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Approver</TableHead>
-												<TableHead>Role</TableHead>
-												<TableHead>Department</TableHead>
-												<TableHead>Date Signed</TableHead>
-												<TableHead>Status</TableHead>
-												<TableHead>Remarks</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{approvalTableRows.map((approvalRow) => (
-												<TableRow key={approvalRow.publicId}>
-													<TableCell>
-														{approvalRow.signedByUser.firstName}
-														{approvalRow.signedByUser.lastName
-															? ` ${approvalRow.signedByUser.lastName}`
-															: ""}
-													</TableCell>
-													<TableCell>
-														<div className="flex flex-wrap gap-1">
-															{approvalRow.signedByUser.roles.map((role) => (
-																<Badge
-																	key={role}
-																	className={getBadgeVariant(role as UserRole)}
-																>
-																	{formatRole(role as UserRole)}
-																</Badge>
-															))}
-														</div>
-													</TableCell>
-													<TableCell>
-														{approvalRow.signedByUser.department?.name}
-													</TableCell>
-													<TableCell>
-														{approvalRow.dateSigned
-															? formatDateTime(approvalRow.dateSigned)
-															: "—"}
-													</TableCell>
-													<TableCell>
-														{getApproverStatusBadge(
-															approvalRow.status,
-															approvalRow.signedByUser.roles ||
-																approvalRow.userRole,
-														)}
-													</TableCell>
-													<TableCell>{approvalRow.remarks} </TableCell>
+									<div className="overflow-x-auto -mx-4 px-4 sm:-mx-0 sm:px-0">
+										<Table>
+											<TableHeader>
+												<TableRow>
+													<TableHead>Approver</TableHead>
+													<TableHead>Role</TableHead>
+													<TableHead>Department</TableHead>
+													<TableHead>Date Signed</TableHead>
+													<TableHead>Status</TableHead>
+													<TableHead>Remarks</TableHead>
 												</TableRow>
-											))}
-										</TableBody>
-									</Table>
+											</TableHeader>
+											<TableBody>
+												{approvalTableRows.map((approvalRow) => (
+													<TableRow key={approvalRow.publicId}>
+														<TableCell>
+															{approvalRow.signedByUser.firstName}
+															{approvalRow.signedByUser.lastName
+																? ` ${approvalRow.signedByUser.lastName}`
+																: ""}
+														</TableCell>
+														<TableCell>
+															<div className="flex flex-wrap gap-1">
+																{approvalRow.signedByUser.roles.map((role) => (
+																	<Badge
+																		key={role}
+																		className={getBadgeVariant(
+																			role as UserRole,
+																		)}
+																	>
+																		{formatRole(role as UserRole)}
+																	</Badge>
+																))}
+															</div>
+														</TableCell>
+														<TableCell>
+															{approvalRow.signedByUser.department?.name}
+														</TableCell>
+														<TableCell>
+															{approvalRow.dateSigned
+																? formatDateTime(approvalRow.dateSigned)
+																: "—"}
+														</TableCell>
+														<TableCell>
+															{getApproverStatusBadge(
+																approvalRow.status,
+																approvalRow.signedByUser.roles ||
+																	approvalRow.userRole,
+															)}
+														</TableCell>
+														<TableCell>{approvalRow.remarks} </TableCell>
+													</TableRow>
+												))}
+											</TableBody>
+										</Table>
+									</div>
 								) : (
 									<p className="text-sm text-muted-foreground">
 										No approval records or pending placeholders found.
