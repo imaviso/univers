@@ -1,7 +1,6 @@
 import { ApiError, handleApiResponse } from "@/lib/api";
 import type { UserDTO } from "@/lib/types";
-export const API_BASE_URL =
-	import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 // --- START: Added for Token Refresh ---
 let refreshTokenPromise: Promise<void> | null = null;

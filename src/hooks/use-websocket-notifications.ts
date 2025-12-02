@@ -16,9 +16,27 @@ import {
 } from "@/lib/query";
 
 // Use ws:// or wss:// directly for brokerURL
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL
-	? `${import.meta.env.VITE_API_BASE_URL.replace(/^http/, "ws")}/ws` // Use ws:// or wss://
-	: "ws://localhost:8080/ws"; // Fallback for local dev
+// WebSocket endpoint is at /ws, not /api/ws
+const getSocketUrl = () => {
+	if (import.meta.env.VITE_API_BASE_URL) {
+		const apiUrl = import.meta.env.VITE_API_BASE_URL;
+		// If it's a full URL, replace the protocol and remove /api suffix if present
+		if (apiUrl.startsWith("http")) {
+			return `${apiUrl.replace(/^http/, "ws").replace(/\/api$/, "")}/ws`;
+		}
+		// If it's a path like /api, use relative WebSocket URL
+		return (
+			window.location.protocol.replace("http", "ws") +
+			"//" +
+			window.location.host +
+			"/ws"
+		);
+	}
+	// Fallback for local dev
+	return "ws://localhost:8080/ws";
+};
+
+const SOCKET_URL = getSocketUrl();
 
 const RECONNECT_DELAY = 5000;
 

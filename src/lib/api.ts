@@ -36,6 +36,27 @@ import type {
 	VenueDTO,
 } from "./types";
 
+// Helper function to construct URL properly (works with both absolute and relative base URLs)
+function createUrl(path: string): URL {
+	// If path already starts with API_BASE_URL, don't add it again
+	// This handles cases where path is constructed from BASE_URL constants
+	if (path.startsWith(API_BASE_URL)) {
+		if (API_BASE_URL.startsWith("http")) {
+			// API_BASE_URL is absolute
+			return new URL(path);
+		}
+		// API_BASE_URL is relative, use window.location.origin
+		return new URL(path, window.location.origin);
+	}
+
+	// If API_BASE_URL is absolute (starts with http), use it directly
+	if (API_BASE_URL.startsWith("http")) {
+		return new URL(path, API_BASE_URL);
+	}
+	// If API_BASE_URL is relative (like /api), use window.location.origin as base
+	return new URL(API_BASE_URL + path, window.location.origin);
+}
+
 // Define a custom error class
 export class ApiError extends Error {
 	status: number;
@@ -462,7 +483,7 @@ export const cancelEvent = async (
 	reason?: string,
 ): Promise<string> => {
 	try {
-		const url = new URL(`${API_BASE_URL}/events/${eventId}/cancel`);
+		const url = createUrl(`/events/${eventId}/cancel`);
 		if (reason) {
 			url.searchParams.append("reason", reason);
 		}
@@ -642,7 +663,7 @@ export const bulkDeleteVenues = async (venueIds: string[]): Promise<string> => {
 
 export const getAllEquipmentsAdmin = async (): Promise<Equipment[]> => {
 	try {
-		const url = new URL(`${API_BASE_URL}/equipments/all`);
+		const url = createUrl("/equipments/all");
 		const response = await fetchWithAuth(url.toString(), {
 			method: "GET",
 		});
@@ -684,7 +705,7 @@ export const getAllEquipmentsByOwner = async (
 	ownerUserId: string,
 ): Promise<Equipment[]> => {
 	try {
-		const url = new URL(`${API_BASE_URL}/equipments`);
+		const url = createUrl("/equipments");
 		url.searchParams.append("userId", ownerUserId);
 		const response = await fetchWithAuth(url.toString(), {
 			method: "GET",
@@ -749,7 +770,7 @@ export const addEquipment = async ({
 			formData.append("image", imageFile, imageFile.name);
 		}
 
-		const url = new URL(`${API_BASE_URL}/equipments`);
+		const url = createUrl("/equipments");
 		url.searchParams.append("userId", userId);
 
 		const response = await fetchWithAuth(url.toString(), {
@@ -819,7 +840,7 @@ export const editEquipment = async ({
 			formData.append("image", imageFile, imageFile.name);
 		}
 
-		const url = new URL(`${API_BASE_URL}/equipments/${equipmentId}`);
+		const url = createUrl(`/equipments/${equipmentId}`);
 		url.searchParams.append("userId", userId);
 
 		const response = await fetchWithAuth(url.toString(), {
@@ -1483,7 +1504,7 @@ export const searchEvents = async (
 	endDate?: string,
 ): Promise<EventDTO[]> => {
 	try {
-		const url = new URL(`${API_BASE_URL}/events/search`);
+		const url = createUrl("/events/search");
 		url.searchParams.append("scope", scope);
 		if (status && status.toUpperCase() !== "ALL") {
 			url.searchParams.append("status", status.toUpperCase());
@@ -1972,7 +1993,7 @@ export const getAssignedEquipment = async (
 	eventPersonnelId: string,
 ): Promise<string[]> => {
 	try {
-		const url = new URL(`${EQUIPMENT_CHECKLIST_BASE_URL}/assigned`);
+		const url = createUrl(`${EQUIPMENT_CHECKLIST_BASE_URL}/assigned`);
 		url.searchParams.append("eventPersonnelId", eventPersonnelId);
 
 		const response = await fetchWithAuth(url.toString(), {
@@ -2019,7 +2040,7 @@ export const getEquipmentChecklistStatus = async (
 	task: Task,
 ): Promise<string[]> => {
 	try {
-		const url = new URL(`${EQUIPMENT_CHECKLIST_BASE_URL}/status`);
+		const url = createUrl(`${EQUIPMENT_CHECKLIST_BASE_URL}/status`);
 		url.searchParams.append("eventId", eventId);
 		url.searchParams.append("task", task);
 
@@ -2043,7 +2064,7 @@ export const getEquipmentChecklistStatusDetail = async (
 	task: Task,
 ): Promise<EquipmentChecklistStatusDTO[]> => {
 	try {
-		const url = new URL(`${EQUIPMENT_CHECKLIST_BASE_URL}/status/detail`);
+		const url = createUrl(`${EQUIPMENT_CHECKLIST_BASE_URL}/status/detail`);
 		url.searchParams.append("eventId", eventId);
 		url.searchParams.append("task", task);
 
@@ -2220,7 +2241,7 @@ export const exportActivityLogsAsCSV = async (
 	endDate?: string,
 ): Promise<Blob> => {
 	try {
-		const url = new URL(`${ACTIVITY_LOG_BASE_URL}/export/csv`);
+		const url = createUrl(`${ACTIVITY_LOG_BASE_URL}/export/csv`);
 		if (startDate) {
 			url.searchParams.append("startDate", startDate);
 		}
@@ -2255,7 +2276,7 @@ export const exportActivityLogsAsJSON = async (
 	endDate?: string,
 ): Promise<Blob> => {
 	try {
-		const url = new URL(`${ACTIVITY_LOG_BASE_URL}/export/json`);
+		const url = createUrl(`${ACTIVITY_LOG_BASE_URL}/export/json`);
 		if (startDate) {
 			url.searchParams.append("startDate", startDate);
 		}
