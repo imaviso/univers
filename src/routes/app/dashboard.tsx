@@ -465,50 +465,52 @@ function Dashboard() {
 								</CardContent>
 							</Card>
 						</div>
-						<Card className="md:col-span-2 lg:col-span-1">
-							<CardHeader>
-								<CardTitle>Events per Venue</CardTitle>
-								<CardDescription>Number of events per venue</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<EventsPerVenueChart
-									dateRange={dateRange}
-									// venueFilter={venueFilter === "ALL_VENUES" ? undefined : venueFilter}
-								/>
-							</CardContent>
-						</Card>
-						<Card className="md:col-span-2 lg:col-span-1">
-							<CardHeader>
-								<CardTitle>Top Equipment</CardTitle>
-								<CardDescription>Most reserved equipment</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<TopEquipmentChart
-									dateRange={dateRange}
-									// equipmentTypeFilter={equipmentTypeFilter}
-								/>
-							</CardContent>
-						</Card>
-						<Card className="md:col-span-2 lg:col-span-1">
-							<CardHeader>
-								<CardTitle>Top Departments</CardTitle>
-								<CardDescription>
-									Departments ranked by reservation rate
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<TopDepartmentsChart dateRange={dateRange} />
-							</CardContent>
-						</Card>
-						<Card className="md:col-span-2 lg:col-span-3">
-							<CardHeader>
-								<CardTitle>User Reservation Activity</CardTitle>
-								<CardDescription>Most active organizers</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<UserActivityChart dateRange={dateRange} />
-							</CardContent>
-						</Card>
+						<div className="grid gap-6 md:col-span-2 lg:col-span-3 lg:grid-cols-2">
+							<Card>
+								<CardHeader>
+									<CardTitle>Events per Venue</CardTitle>
+									<CardDescription>Number of events per venue</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<EventsPerVenueChart
+										dateRange={dateRange}
+										// venueFilter={venueFilter === "ALL_VENUES" ? undefined : venueFilter}
+									/>
+								</CardContent>
+							</Card>
+							<Card>
+								<CardHeader>
+									<CardTitle>Top Equipment</CardTitle>
+									<CardDescription>Most reserved equipment</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<TopEquipmentChart
+										dateRange={dateRange}
+										// equipmentTypeFilter={equipmentTypeFilter}
+									/>
+								</CardContent>
+							</Card>
+							<Card>
+								<CardHeader>
+									<CardTitle>Top Departments</CardTitle>
+									<CardDescription>
+										Departments ranked by reservation rate
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<TopDepartmentsChart dateRange={dateRange} />
+								</CardContent>
+							</Card>
+							<Card>
+								<CardHeader>
+									<CardTitle>User Reservation Activity</CardTitle>
+									<CardDescription>Most active organizers</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<UserActivityChart dateRange={dateRange} />
+								</CardContent>
+							</Card>
+						</div>
 					</div>
 				</main>
 			</div>
