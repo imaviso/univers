@@ -365,6 +365,19 @@ export interface TopEquipmentDTO {
 	completedCount: number;
 }
 
+export interface TopDepartmentDTO {
+	departmentPublicId: string;
+	departmentName: string;
+	totalEventCount: number;
+	approvedCount: number;
+	pendingCount: number;
+	canceledCount: number;
+	rejectedCount: number;
+	ongoingCount: number;
+	completedCount: number;
+	reservationRate: number;
+}
+
 export interface EventCountDTO {
 	date: string; // LocalDate is typically string "YYYY-MM-DD"
 	pendingCount?: number;

@@ -47,8 +47,9 @@ import {
 	getPendingEquipmentOwnerReservations,
 	getRecentActivityApi,
 	getTimelineEventsByDateRange,
-	getTopEquipment,
 	// Dashboard API imports
+	getTopDepartments,
+	getTopEquipment,
 	getTopVenues,
 	getUnreadNotificationCount,
 	getUpcomingApprovedEventsApi,
@@ -80,6 +81,7 @@ import type {
 	PeakHourDTO,
 	RecentActivityItemDTO,
 	Task,
+	TopDepartmentDTO,
 	TopEquipmentDTO,
 	// Dashboard DTO imports
 	TopVenueDTO,
@@ -1020,6 +1022,12 @@ export const dashboardQueryKeys = {
 			"topVenues",
 			{ startDate, endDate, limit },
 		] as const,
+	topDepartments: (startDate?: string, endDate?: string, limit?: number) =>
+		[
+			...dashboardQueryKeys.all,
+			"topDepartments",
+			{ startDate, endDate, limit },
+		] as const,
 	topEquipment: (
 		startDate?: string,
 		endDate?: string,
@@ -1120,6 +1128,21 @@ export const topVenuesQueryOptions = (
 		queryFn: () => {
 			if (!startDate || !endDate) return Promise.resolve([]);
 			return getTopVenues(startDate, endDate, limit);
+		},
+		enabled: !!startDate && !!endDate,
+		staleTime: 1000 * 60 * 5, // 5 minutes
+	});
+
+export const topDepartmentsQueryOptions = (
+	startDate?: string,
+	endDate?: string,
+	limit = 5,
+) =>
+	queryOptions<TopDepartmentDTO[]>({
+		queryKey: dashboardQueryKeys.topDepartments(startDate, endDate, limit),
+		queryFn: () => {
+			if (!startDate || !endDate) return Promise.resolve([]);
+			return getTopDepartments(startDate, endDate, limit);
 		},
 		enabled: !!startDate && !!endDate,
 		staleTime: 1000 * 60 * 5, // 5 minutes

@@ -27,6 +27,7 @@ import type {
 	PeakHourDTO,
 	RecentActivityItemDTO,
 	Task,
+	TopDepartmentDTO,
 	TopEquipmentDTO,
 	TopVenueDTO,
 	UserActivityDTO,
@@ -1573,6 +1574,26 @@ export const getTopEquipment = async (
 		},
 	);
 	return handleApiResponse<TopEquipmentDTO[]>(response, true);
+};
+
+export const getTopDepartments = async (
+	startDate: string,
+	endDate: string,
+	limit = 5,
+): Promise<TopDepartmentDTO[]> => {
+	const params = new URLSearchParams({
+		startDate,
+		endDate,
+		limit: limit.toString(),
+	});
+	const response = await fetchWithAuth(
+		`${DASHBOARD_BASE_URL}/top-departments?${params.toString()}`,
+		{
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		},
+	);
+	return handleApiResponse<TopDepartmentDTO[]>(response, true);
 };
 
 export const getEventsOverview = async (

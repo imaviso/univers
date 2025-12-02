@@ -9,6 +9,7 @@ import { EventsPerVenueChart } from "@/components/dashboard/eventsPerVenueChart"
 import { EventTypesChart } from "@/components/dashboard/eventTypesChart";
 import { PeakReservationHoursChart } from "@/components/dashboard/peakReservationHoursChart";
 import { RecentActivity } from "@/components/dashboard/recentActivity";
+import { TopDepartmentsChart } from "@/components/dashboard/topDepartmentsChart";
 import { TopEquipmentChart } from "@/components/dashboard/topEquipmentChart";
 import { UpcomingEvents } from "@/components/dashboard/upcomingEvents";
 import { UserActivityChart } from "@/components/dashboard/userActivityChart";
@@ -489,6 +490,17 @@ function Dashboard() {
 							</CardContent>
 						</Card>
 						<Card className="md:col-span-2 lg:col-span-1">
+							<CardHeader>
+								<CardTitle>Top Departments</CardTitle>
+								<CardDescription>
+									Departments ranked by reservation rate
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<TopDepartmentsChart dateRange={dateRange} />
+							</CardContent>
+						</Card>
+						<Card className="md:col-span-2 lg:col-span-3">
 							<CardHeader>
 								<CardTitle>User Reservation Activity</CardTitle>
 								<CardDescription>Most active organizers</CardDescription>
