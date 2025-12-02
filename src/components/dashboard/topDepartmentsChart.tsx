@@ -55,6 +55,9 @@ export function TopDepartmentsChart({ dateRange }: TopDepartmentsChartProps) {
 				value: dept.reservationRate,
 				totalEventCount: dept.totalEventCount,
 				approvedCount: dept.approvedCount,
+				pendingCount: dept.pendingCount,
+				canceledCount: dept.canceledCount,
+				rejectedCount: dept.rejectedCount,
 				ongoingCount: dept.ongoingCount,
 				completedCount: dept.completedCount,
 			}))
@@ -133,54 +136,94 @@ export function TopDepartmentsChart({ dateRange }: TopDepartmentsChartProps) {
 								const data = payload[0].payload;
 								const percentage = ((data.value / totalRate) * 100).toFixed(1);
 								return (
-									<div className="min-w-[220px] rounded-lg border bg-background p-2 shadow-sm text-xs">
-										<div className="font-bold mb-1 text-foreground">
+									<div className="min-w-[260px] rounded-lg border bg-background p-3 shadow-sm">
+										<div className="font-bold mb-2 text-base text-foreground border-b pb-1">
 											{data.name}
 										</div>
-										<div className="space-y-1">
-											<div className="flex items-center justify-between">
-												<span className="text-muted-foreground">
-													Reservation Rate:
-												</span>
-												<span className="font-semibold text-foreground">
-													{data.value.toFixed(1)}%
-												</span>
+										<div className="space-y-2">
+											<div className="bg-muted/50 p-2 rounded">
+												<div className="flex items-center justify-between mb-1">
+													<span className="text-muted-foreground text-xs font-medium">
+														Reservation Rate:
+													</span>
+													<span className="font-bold text-foreground">
+														{data.value.toFixed(1)}%
+													</span>
+												</div>
+												<div className="flex items-center justify-between">
+													<span className="text-muted-foreground text-xs font-medium">
+														Share of Top {chartData.length}:
+													</span>
+													<span className="font-bold text-foreground">
+														{percentage}%
+													</span>
+												</div>
 											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-muted-foreground">
-													Share of Total:
-												</span>
-												<span className="font-semibold text-foreground">
-													{percentage}%
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-muted-foreground">
-													Total Events:
-												</span>
-												<span className="font-semibold text-foreground">
-													{data.totalEventCount}
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-muted-foreground">Approved:</span>
-												<span className="font-semibold text-foreground">
-													{data.approvedCount}
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-muted-foreground">Ongoing:</span>
-												<span className="font-semibold text-foreground">
-													{data.ongoingCount}
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-muted-foreground">
-													Completed:
-												</span>
-												<span className="font-semibold text-foreground">
-													{data.completedCount}
-												</span>
+
+											<div>
+												<div className="text-xs font-medium text-muted-foreground mb-1.5">
+													Event Breakdown
+												</div>
+												<div className="space-y-1">
+													<div className="flex items-center justify-between">
+														<span className="text-xs text-muted-foreground">
+															Total Events:
+														</span>
+														<span className="font-semibold text-foreground">
+															{data.totalEventCount}
+														</span>
+													</div>
+													<div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+														<div className="flex items-center justify-between">
+															<span className="text-muted-foreground">
+																Approved:
+															</span>
+															<span className="font-medium text-foreground">
+																{data.approvedCount}
+															</span>
+														</div>
+														<div className="flex items-center justify-between">
+															<span className="text-muted-foreground">
+																Pending:
+															</span>
+															<span className="font-medium text-foreground">
+																{data.pendingCount}
+															</span>
+														</div>
+														<div className="flex items-center justify-between">
+															<span className="text-muted-foreground">
+																Ongoing:
+															</span>
+															<span className="font-medium text-foreground">
+																{data.ongoingCount}
+															</span>
+														</div>
+														<div className="flex items-center justify-between">
+															<span className="text-muted-foreground">
+																Completed:
+															</span>
+															<span className="font-medium text-foreground">
+																{data.completedCount}
+															</span>
+														</div>
+														<div className="flex items-center justify-between">
+															<span className="text-muted-foreground">
+																Canceled:
+															</span>
+															<span className="font-medium text-foreground">
+																{data.canceledCount}
+															</span>
+														</div>
+														<div className="flex items-center justify-between">
+															<span className="text-muted-foreground">
+																Rejected:
+															</span>
+															<span className="font-medium text-foreground">
+																{data.rejectedCount}
+															</span>
+														</div>
+													</div>
+												</div>
 											</div>
 										</div>
 									</div>

@@ -349,7 +349,7 @@ function Dashboard() {
 				</header>
 				<main className="flex-1 overflow-auto p-4 sm:p-6">
 					<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-						<div className="grid gap-6 md:col-span-2 lg:col-span-2">
+						<div className="grid gap-6 md:col-span-1 lg:col-span-2">
 							<Card>
 								<CardHeader>
 									<CardTitle>Recent Activity</CardTitle>
