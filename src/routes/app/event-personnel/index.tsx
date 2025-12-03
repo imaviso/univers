@@ -157,10 +157,12 @@ function EventStaff() {
 		return (
 			<div className="bg-background">
 				<div className="flex flex-col flex-1 overflow-hidden">
-					<header className="flex items-center justify-between border-b px-6 h-[65px]">
-						<h1 className="text-xl font-semibold">Event Personnel</h1>
+					<header className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0 sm:justify-between border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
+						<h1 className="text-lg sm:text-xl font-semibold">
+							Event Personnel
+						</h1>
 					</header>
-					<div className="p-6">
+					<div className="p-4 sm:p-6">
 						<div className="text-center">Loading...</div>
 					</div>
 				</div>
@@ -171,12 +173,12 @@ function EventStaff() {
 	return (
 		<div className="bg-background flex flex-col overflow-hidden h-full">
 			<div className="flex flex-col flex-1 overflow-hidden">
-				<header className="sticky top-0 z-10 flex items-center justify-between border-b px-6 h-[65px] bg-background">
-					<h1 className="text-xl font-semibold">Event Personnel</h1>
-					<div className="flex items-center gap-4 h-full">
+				<header className="sticky top-0 z-10 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 sm:justify-between border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px] bg-background">
+					<h1 className="text-lg sm:text-xl font-semibold">Event Personnel</h1>
+					<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 h-full">
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="outline">
+								<Button variant="outline" className="w-full sm:w-auto">
 									<ListFilter className="mr-2 h-4 w-4" />
 									Filter
 								</Button>
@@ -238,23 +240,25 @@ function EventStaff() {
 								<Button
 									variant="outline"
 									className={cn(
-										"w-fit justify-start text-left font-normal",
+										"w-full sm:w-fit justify-start text-left font-normal text-xs sm:text-sm",
 										!selectedDateRange && "text-muted-foreground",
 									)}
 								>
-									<CalendarIcon className="mr-2 h-4 w-4" />
-									{selectedDateRange?.from ? (
-										selectedDateRange.to ? (
-											<>
-												{format(selectedDateRange.from, "LLL dd, y")} -{" "}
-												{format(selectedDateRange.to, "LLL dd, y")}
-											</>
+									<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+									<span className="truncate">
+										{selectedDateRange?.from ? (
+											selectedDateRange.to ? (
+												<>
+													{format(selectedDateRange.from, "MMM dd")} -{" "}
+													{format(selectedDateRange.to, "MMM dd, y")}
+												</>
+											) : (
+												format(selectedDateRange.from, "LLL dd, y")
+											)
 										) : (
-											format(selectedDateRange.from, "LLL dd, y")
-										)
-									) : (
-										<span>Pick a date range</span>
-									)}
+											"Pick date range"
+										)}
+									</span>
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent className="w-auto p-0" align="end">
@@ -327,14 +331,16 @@ function EventStaff() {
 					</div>
 				</header>
 
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6">
+				<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6">
 					<Card>
-						<CardContent className="p-6">
+						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center space-x-2">
-								<Users className="w-5 h-5 text-primary" />
+								<Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
 								<div>
-									<p className="text-2xl font-bold">{uniquePersonnel.length}</p>
-									<p className="text-sm text-muted-foreground">
+									<p className="text-xl sm:text-2xl font-bold">
+										{uniquePersonnel.length}
+									</p>
+									<p className="text-xs sm:text-sm text-muted-foreground">
 										Total Personnel
 									</p>
 								</div>
@@ -342,12 +348,14 @@ function EventStaff() {
 						</CardContent>
 					</Card>
 					<Card>
-						<CardContent className="p-6">
+						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center space-x-2">
-								<CalendarDays className="w-5 h-5 text-accent" />
+								<CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 text-accent flex-shrink-0" />
 								<div>
-									<p className="text-2xl font-bold">{upcomingEvents.length}</p>
-									<p className="text-sm text-muted-foreground">
+									<p className="text-xl sm:text-2xl font-bold">
+										{upcomingEvents.length}
+									</p>
+									<p className="text-xs sm:text-sm text-muted-foreground">
 										Upcoming Events
 									</p>
 								</div>
@@ -355,32 +363,40 @@ function EventStaff() {
 						</CardContent>
 					</Card>
 					<Card>
-						<CardContent className="p-6">
+						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center space-x-2">
-								<MapPin className="w-5 h-5 text-yellow-500" />
+								<MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 flex-shrink-0" />
 								<div>
-									<p className="text-2xl font-bold">{sortedEvents.length}</p>
-									<p className="text-sm text-muted-foreground">Total Events</p>
+									<p className="text-xl sm:text-2xl font-bold">
+										{sortedEvents.length}
+									</p>
+									<p className="text-xs sm:text-sm text-muted-foreground">
+										Total Events
+									</p>
 								</div>
 							</div>
 						</CardContent>
 					</Card>
 					<Card>
-						<CardContent className="p-6">
+						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center space-x-2">
-								<MapPin className="w-5 h-5 text-destructive" />
+								<MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-destructive flex-shrink-0" />
 								<div>
-									<p className="text-2xl font-bold">{allPersonnel.length}</p>
-									<p className="text-sm text-muted-foreground">Assignments</p>
+									<p className="text-xl sm:text-2xl font-bold">
+										{allPersonnel.length}
+									</p>
+									<p className="text-xs sm:text-sm text-muted-foreground">
+										Assignments
+									</p>
 								</div>
 							</div>
 						</CardContent>
 					</Card>
 				</div>
 
-				<Separator className="my-4" />
+				<Separator className="my-2 sm:my-4" />
 
-				<div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<div className="p-4 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
 					{sortedEvents.length > 0 ? (
 						sortedEvents.map((event) => (
 							<Card key={event.publicId}>

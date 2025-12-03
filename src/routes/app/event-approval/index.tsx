@@ -1109,16 +1109,16 @@ export function EventApproval() {
 	return (
 		<div className="bg-background">
 			<div className="flex flex-col flex-1 overflow-hidden">
-				<header className="flex items-center justify-between border-b px-6 h-[65px]">
+				<header className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2 sm:justify-between border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
 					<div>
-						<h1 className="text-xl font-semibold">{config.title}</h1>
-						<p className="text-sm text-muted-foreground">
+						<h1 className="text-lg sm:text-xl font-semibold">{config.title}</h1>
+						<p className="text-xs sm:text-sm text-muted-foreground">
 							{config.description}
 						</p>
 					</div>
 					{numEligibleSelected > 0 && (
-						<div className="flex items-center gap-2">
-							<span className="text-sm text-muted-foreground">
+						<div className="flex items-center gap-2 w-full sm:w-auto">
+							<span className="text-xs sm:text-sm text-muted-foreground">
 								{numEligibleSelected} eligible event(s) selected
 							</span>
 							<Button
@@ -1132,7 +1132,7 @@ export function EventApproval() {
 								}
 							>
 								<CheckCircle2 className="h-4 w-4 text-green-600" />
-								{approveActionLabel}
+								<span className="hidden sm:inline">{approveActionLabel}</span>
 							</Button>
 							<Button
 								variant="destructive"
@@ -1145,67 +1145,73 @@ export function EventApproval() {
 								}
 							>
 								<X className="h-4 w-4" />
-								{rejectActionLabel}
+								<span className="hidden sm:inline">{rejectActionLabel}</span>
 							</Button>
 						</div>
 					)}
 				</header>
 
-				<div className="grid grid-cols-4 gap-4 p-6 pb-4 border-b">
+				<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6 sm:pb-4 border-b">
 					<Card>
 						<CardHeader className="pb-2">
-							<CardTitle className="text-sm font-medium">
+							<CardTitle className="text-xs sm:text-sm font-medium">
 								Total Events for Your Approval
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className="text-2xl font-bold">{statistics.total}</div>
+							<div className="text-xl sm:text-2xl font-bold">
+								{statistics.total}
+							</div>
 						</CardContent>
 					</Card>
 					<Card>
 						<CardHeader className="pb-2">
-							<CardTitle className="text-sm font-medium">
+							<CardTitle className="text-xs sm:text-sm font-medium">
 								Events Pending Your Action
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className="text-2xl font-bold text-yellow-500">
+							<div className="text-xl sm:text-2xl font-bold text-yellow-500">
 								{statistics.pendingAction}
 							</div>
 						</CardContent>
 					</Card>
 					<Card>
 						<CardHeader className="pb-2">
-							<CardTitle className="text-sm font-medium">
+							<CardTitle className="text-xs sm:text-sm font-medium">
 								Events You've Reserved
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className="text-2xl font-bold text-green-500">
+							<div className="text-xl sm:text-2xl font-bold text-green-500">
 								{statistics.userApproved}
 							</div>
 						</CardContent>
 					</Card>
 					<Card>
 						<CardHeader className="pb-2">
-							<CardTitle className="text-sm font-medium">
+							<CardTitle className="text-xs sm:text-sm font-medium">
 								Events You've Denied Reservation
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className="text-2xl font-bold text-red-500">
+							<div className="text-xl sm:text-2xl font-bold text-red-500">
 								{statistics.userRejected}
 							</div>
 						</CardContent>
 					</Card>
 				</div>
 
-				<div className="flex items-center justify-between p-6 pt-4 pb-2">
-					<div className="flex items-center gap-4 flex-1">
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 sm:pt-4 sm:pb-2 gap-3 sm:gap-4">
+					<div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-1">
 						<DataTableFilter table={table} />
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="outline" size="sm">
+								<Button
+									variant="outline"
+									size="sm"
+									className="w-full sm:w-auto"
+								>
 									Columns <ChevronDown className="ml-2 h-4 w-4" />
 								</Button>
 							</DropdownMenuTrigger>
@@ -1237,8 +1243,8 @@ export function EventApproval() {
 					</div>
 				</div>
 
-				<div className="flex-1 overflow-auto p-6 pt-0">
-					<div className="rounded-md border overflow-y-auto max-h-[60vh]">
+				<div className="flex-1 overflow-auto p-4 sm:p-6 sm:pt-0">
+					<div className="rounded-md border overflow-x-auto">
 						<Table>
 							<TableHeader>
 								{table.getHeaderGroups().map((headerGroup) => (

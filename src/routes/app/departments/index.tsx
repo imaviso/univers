@@ -16,24 +16,28 @@ function DepartmentsComponent() {
 	return (
 		<div className="bg-background">
 			<div className="flex flex-col flex-1 overflow-hidden">
-				<header className="flex items-center justify-between border-b px-6 h-[65px]">
-					<h1 className="text-xl font-semibold">
+				<header className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2 sm:justify-between border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
+					<h1 className="text-lg sm:text-xl font-semibold">
 						Department/Organization Management
 					</h1>
 					<div className="flex items-center gap-2">
 						<Button
 							onClick={() => setAddDepartmentOpen(true)}
 							size="sm"
-							className="gap-1"
+							className="gap-1 w-full sm:w-auto"
 						>
-							<Building className="h-4 w-4" /> Add Department/Organization
+							<Building className="h-4 w-4" />{" "}
+							<span className="hidden sm:inline">
+								Add Department/Organization
+							</span>
+							<span className="sm:hidden">Add Dept/Org</span>
 						</Button>
 					</div>
 				</header>
 
 				<AddDepartmentFormDialog />
 
-				<div className="flex-1 overflow-auto p-6">
+				<div className="flex-1 overflow-auto p-4 sm:p-6">
 					<DepartmentDataTable />
 				</div>
 			</div>

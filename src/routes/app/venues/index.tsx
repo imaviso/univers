@@ -294,15 +294,15 @@ export function VenueManagement() {
 		<div className="bg-background">
 			<div className="flex flex-col flex-1 overflow-hidden">
 				{/* Header */}
-				<header className="flex items-center justify-between border-b px-6 h-[65px]">
-					<h1 className="text-xl font-semibold">Venues</h1>
-					<div className="flex items-center gap-2">
-						<div className="relative">
+				<header className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2 sm:justify-between border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
+					<h1 className="text-lg sm:text-xl font-semibold">Venues</h1>
+					<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+						<div className="relative w-full sm:w-64">
 							<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
 								type="search"
 								placeholder="Search venues..."
-								className="w-64 pl-8"
+								className="w-full pl-8"
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
 							/>
@@ -314,7 +314,7 @@ export function VenueManagement() {
 									setIsAddVenueOpen(true);
 								}}
 								size="sm"
-								className="gap-1"
+								className="gap-1 w-full sm:w-auto"
 								disabled={isMutating}
 							>
 								<Plus className="h-4 w-4" />
@@ -325,39 +325,43 @@ export function VenueManagement() {
 				</header>
 
 				{/* Stats Cards */}
-				<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4 p-6 pb-0">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 p-4 sm:p-6 sm:pb-0">
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">
+							<CardTitle className="text-xs sm:text-sm font-medium">
 								Total Venues
 							</CardTitle>
 							<Building className="h-4 w-4 text-muted-foreground" />
 						</CardHeader>
 						<CardContent>
-							<div className="text-2xl font-bold">{stats.total}</div>
+							<div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
 						</CardContent>
 					</Card>
 					{role.includes("VENUE_OWNER") && (
 						<Card>
 							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-								<CardTitle className="text-sm font-medium">My Venues</CardTitle>
+								<CardTitle className="text-xs sm:text-sm font-medium">
+									My Venues
+								</CardTitle>
 								<UserCheck className="h-4 w-4 text-muted-foreground" />
 							</CardHeader>
 							<CardContent>
-								<div className="text-2xl font-bold">{stats.myVenues}</div>
+								<div className="text-xl sm:text-2xl font-bold">
+									{stats.myVenues}
+								</div>
 							</CardContent>
 						</Card>
 					)}
 					{role.includes("SUPER_ADMIN") && (
 						<Card>
 							<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-								<CardTitle className="text-sm font-medium">
+								<CardTitle className="text-xs sm:text-sm font-medium">
 									Unassigned Venues
 								</CardTitle>
 								<HelpCircle className="h-4 w-4 text-muted-foreground" />
 							</CardHeader>
 							<CardContent>
-								<div className="text-2xl font-bold">
+								<div className="text-xl sm:text-2xl font-bold">
 									{stats.unassignedVenues}
 								</div>
 							</CardContent>
@@ -366,24 +370,25 @@ export function VenueManagement() {
 				</div>
 
 				{/* Filters and Actions Bar */}
-				<div className="flex items-center justify-between border-b px-6 py-2">
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b px-4 sm:px-6 py-3 sm:py-2 gap-3 sm:gap-2">
 					<div className="flex items-center gap-2">
 						{/* Bulk Actions Removed */}
-						<span className="text-sm text-muted-foreground">
+						<span className="text-xs sm:text-sm text-muted-foreground">
 							{filteredVenues.length} venue
 							{filteredVenues.length !== 1 ? "s" : ""} found
 						</span>
 					</div>
 
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-2 w-full sm:w-auto">
 						{/* View Mode Toggle */}
 						<Tabs
 							value={viewMode}
 							onValueChange={(value) =>
 								setViewMode(value as "table" | "grid" | "events")
 							}
+							className="w-full sm:w-auto"
 						>
-							<TabsList>
+							<TabsList className="w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
 								{(role.includes("SUPER_ADMIN") ||
 									role.includes("VENUE_OWNER")) && (
 									<TabsTrigger value="table">Table</TabsTrigger>
