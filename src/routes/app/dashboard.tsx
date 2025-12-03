@@ -206,29 +206,31 @@ function Dashboard() {
 									id={dateButtonId}
 									variant={"outline"}
 									className={cn(
-										"w-full sm:w-fit justify-start text-left font-normal text-xs sm:text-sm",
+										"flex-1 sm:flex-initial sm:w-auto justify-start text-left font-normal",
 										!dateRange && "text-muted-foreground",
 									)}
 								>
-									<CalendarIcon className="mr-2 h-4 w-4" />
-									{dateRange?.from ? (
-										dateRange.to ? (
-											<>
-												<span className="hidden sm:inline">
-													{format(dateRange.from, "LLL dd, y")} -{" "}
-													{format(dateRange.to, "LLL dd, y")}
-												</span>
-												<span className="sm:hidden">
-													{format(dateRange.from, "MMM dd")} -{" "}
-													{format(dateRange.to, "MMM dd")}
-												</span>
-											</>
+									<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+									<span className="truncate text-xs sm:text-sm">
+										{dateRange?.from ? (
+											dateRange.to ? (
+												<>
+													<span className="hidden sm:inline">
+														{format(dateRange.from, "LLL dd, y")} -{" "}
+														{format(dateRange.to, "LLL dd, y")}
+													</span>
+													<span className="sm:hidden">
+														{format(dateRange.from, "MM/dd")} -{" "}
+														{format(dateRange.to, "MM/dd")}
+													</span>
+												</>
+											) : (
+												format(dateRange.from, "LLL dd, y")
+											)
 										) : (
-											format(dateRange.from, "LLL dd, y")
-										)
-									) : (
-										<span>Pick a date range</span>
-									)}
+											"Pick a date range"
+										)}
+									</span>
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent className="w-auto p-0" align="end">

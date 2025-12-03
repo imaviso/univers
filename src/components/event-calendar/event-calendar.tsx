@@ -1,6 +1,5 @@
 "use client";
 
-import { RiCalendarCheckLine } from "@remixicon/react";
 import {
 	addDays,
 	addMonths,
@@ -159,32 +158,61 @@ export function EventCalendar({
 				} as React.CSSProperties
 			}
 		>
-			<header
-				className={cn(
-					"flex items-center border-b justify-between p-2 sm:p-4 h-[65px]",
-					className,
-				)}
-			>
-				<div className="flex items-center gap-1 sm:gap-4">
-					<h1 className="text-xl font-semibold">Calendar</h1>
+		<header
+			className={cn(
+				"flex flex-col border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px] sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0",
+				className,
+			)}
+		>
+			{/* Top row on mobile: Title and View selector */}
+			<div className="flex items-center justify-between gap-4">
+				<h1 className="text-xl font-semibold">Calendar</h1>
+				
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button variant="outline" size="sm" className="gap-1.5">
+							<span className="text-xs sm:text-sm">
+								{view.charAt(0).toUpperCase() + view.slice(1)}
+							</span>
+							<ChevronDownIcon
+								className="-me-1 opacity-60"
+								size={16}
+								aria-hidden="true"
+							/>
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" className="min-w-32">
+						<DropdownMenuItem onClick={() => setView("month")}>
+							Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => setView("week")}>
+							Week <DropdownMenuShortcut>W</DropdownMenuShortcut>
+						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => setView("day")}>
+							Day <DropdownMenuShortcut>D</DropdownMenuShortcut>
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
+
+			{/* Bottom row on mobile: Navigation controls and date */}
+			<div className="flex items-center justify-between gap-3 sm:gap-4">
+				<div className="flex items-center gap-2">
 					<Button
 						variant="outline"
-						className="max-[479px]:aspect-square max-[479px]:p-0!"
+						size="sm"
 						onClick={handleToday}
+						className="text-xs sm:text-sm"
 					>
-						<RiCalendarCheckLine
-							className="min-[480px]:hidden"
-							size={16}
-							aria-hidden="true"
-						/>
-						<span className="max-[479px]:sr-only">Today</span>
+						Today
 					</Button>
-					<div className="flex items-center sm:gap-2">
+					<div className="flex items-center">
 						<Button
 							variant="ghost"
 							size="icon"
 							onClick={handlePrevious}
 							aria-label="Previous"
+							className="h-8 w-8 sm:h-9 sm:w-9"
 						>
 							<ChevronLeftIcon size={16} aria-hidden="true" />
 						</Button>
@@ -193,18 +221,21 @@ export function EventCalendar({
 							size="icon"
 							onClick={handleNext}
 							aria-label="Next"
+							className="h-8 w-8 sm:h-9 sm:w-9"
 						>
 							<ChevronRightIcon size={16} aria-hidden="true" />
 						</Button>
 					</div>
-					<h2 className="text-sm font-semibold sm:text-lg md:text-xl">
+				</div>
+
+				<div className="flex items-center gap-2">
+					<h2 className="text-sm font-semibold sm:text-base md:text-lg">
 						{viewTitle}
 					</h2>
-				</div>
-				<div className="flex items-center gap-2">
+
 					{/* Legend (hidden on small screens) */}
 					{legendItems.length > 0 && (
-						<div className="hidden md:flex items-center gap-3 me-1 flex-wrap">
+						<div className="hidden lg:flex items-center gap-3 ms-4 flex-wrap">
 							{legendItems.map((item) => (
 								<div
 									key={item.key}
@@ -223,39 +254,9 @@ export function EventCalendar({
 							))}
 						</div>
 					)}
-
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="outline" className="gap-1.5 max-[479px]:h-8">
-								<span>
-									<span className="min-[480px]:hidden" aria-hidden="true">
-										{view.charAt(0).toUpperCase()}
-									</span>
-									<span className="max-[479px]:sr-only">
-										{view.charAt(0).toUpperCase() + view.slice(1)}
-									</span>
-								</span>
-								<ChevronDownIcon
-									className="-me-1 opacity-60"
-									size={16}
-									aria-hidden="true"
-								/>
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="min-w-32">
-							<DropdownMenuItem onClick={() => setView("month")}>
-								Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
-							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => setView("week")}>
-								Week <DropdownMenuShortcut>W</DropdownMenuShortcut>
-							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => setView("day")}>
-								Day <DropdownMenuShortcut>D</DropdownMenuShortcut>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
 				</div>
-			</header>
+			</div>
+		</header>
 
 			<div className="flex flex-1 flex-col p-6">
 				{view === "month" && (

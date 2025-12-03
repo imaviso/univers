@@ -311,9 +311,9 @@ function EquipmentInventory() {
 	return (
 		<div className="bg-background">
 			<div className="flex flex-col flex-1 overflow-hidden">
-				<header className="flex items-center justify-between border-b px-6 h-[65px]">
-					<h1 className="text-xl font-semibold">Equipments</h1>
-					<div className="flex items-center gap-2">
+				<header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
+					<h1 className="text-xl font-semibold">Equipment</h1>
+					<div className="flex items-center gap-2 w-full sm:w-auto">
 						{isPrivilegedUser && (
 							<Button
 								onClick={() => {
@@ -322,7 +322,7 @@ function EquipmentInventory() {
 									setAddDialogKey((prevKey) => prevKey + 1);
 								}}
 								size="sm"
-								className="gap-1"
+								className="gap-1 w-full sm:w-auto"
 								disabled={isMutating}
 							>
 								<Plus className="h-4 w-4" />
