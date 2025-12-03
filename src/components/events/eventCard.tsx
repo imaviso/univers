@@ -88,90 +88,105 @@ export function EventCard({
 			className="overflow-hidden transition-all hover:shadow-md flex flex-col"
 		>
 			<CardHeader>
-				<div className="flex items-start justify-between">
-					{currentUserApproval ? (
-						<TooltipProvider>
-							<Tooltip delayDuration={500}>
-								<TooltipTrigger asChild>
-									<h3
-										className={`font-medium ${
-											currentUserApproval.status === "APPROVED"
-												? "text-maroon"
-												: currentUserApproval.status === "REJECTED"
-													? "text-red-600"
-													: "text-yellow-600"
-										}`}
-									>
-										{event.eventName}
-									</h3>
-								</TooltipTrigger>
-								<TooltipContent>
-									<div className="flex flex-col gap-1">
-										<span className="font-medium">
-											{currentUserApproval.status === "PENDING"
-												? "Your approval is pending"
-												: `You ${currentUserApproval.status.toLowerCase()} this event`}
-										</span>
-										{currentUserApproval.dateSigned && (
-											<span className="text-xs text-primary-foreground">
-												on{" "}
-												{format(
-													new Date(currentUserApproval.dateSigned),
-													"MMM d, yyyy 'at' h:mm a",
-												)}
+				<div className="flex items-start justify-between gap-2">
+					<div className="flex-1 min-w-0">
+						{currentUserApproval ? (
+							<TooltipProvider>
+								<Tooltip delayDuration={500}>
+									<TooltipTrigger asChild>
+										<h3
+											className={`text-sm sm:text-base font-medium truncate ${
+												currentUserApproval.status === "APPROVED"
+													? "text-maroon"
+													: currentUserApproval.status === "REJECTED"
+														? "text-red-600"
+														: "text-yellow-600"
+											}`}
+											title={event.eventName}
+										>
+											{event.eventName}
+										</h3>
+									</TooltipTrigger>
+									<TooltipContent>
+										<div className="flex flex-col gap-1">
+											<span className="font-medium">
+												{currentUserApproval.status === "PENDING"
+													? "Your approval is pending"
+													: `You ${currentUserApproval.status.toLowerCase()} this event`}
 											</span>
-										)}
-										{currentUserApproval.remarks && (
-											<span className="text-xs text-primary-foreground italic">
-												"{currentUserApproval.remarks}"
-											</span>
-										)}
-									</div>
-								</TooltipContent>
-							</Tooltip>
-						</TooltipProvider>
-					) : (
-						<h3 className="font-medium">{event.eventName}</h3>
-					)}
-					<div className="flex flex-col items-end gap-1">
+											{currentUserApproval.dateSigned && (
+												<span className="text-xs text-primary-foreground">
+													on{" "}
+													{format(
+														new Date(currentUserApproval.dateSigned),
+														"MMM d, yyyy 'at' h:mm a",
+													)}
+												</span>
+											)}
+											{currentUserApproval.remarks && (
+												<span className="text-xs text-primary-foreground italic">
+													"{currentUserApproval.remarks}"
+												</span>
+											)}
+										</div>
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
+						) : (
+							<h3
+								className="text-sm sm:text-base font-medium truncate"
+								title={event.eventName}
+							>
+								{event.eventName}
+							</h3>
+						)}
+					</div>
+					<div className="flex flex-col items-end gap-1 flex-shrink-0">
 						{getApproverStatusBadge(event.status)}
 					</div>
 				</div>
 			</CardHeader>
 			<CardContent className="flex-grow">
-				<div className="space-y-3">
-					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<Tag className="h-4 w-4" />
-						<span>{event.eventType ?? "N/A"}</span>
+				<div className="space-y-2 sm:space-y-3">
+					<div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+						<Tag className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+						<span className="truncate" title={event.eventType ?? "N/A"}>
+							{event.eventType ?? "N/A"}
+						</span>
 					</div>
-					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<Clock className="h-4 w-4" />
-						<span>{dateDisplayString}</span>
+					<div className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground">
+						<Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
+						<span className="break-words">{dateDisplayString}</span>
 					</div>
-					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<MapPin className="h-4 w-4" />
-						<span>
+					<div className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground">
+						<MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
+						<span className="break-words">
 							{venueMap.get(event.eventVenue?.publicId) ?? "Unknown Venue"}
 						</span>
 					</div>
 				</div>
 			</CardContent>
 			<Separator />
-			<CardFooter className="flex items-center justify-between">
-				<div className="flex items-center gap-2">
-					<Avatar className="h-8 w-8">
+			<CardFooter className="flex items-center justify-between gap-2">
+				<div className="flex items-center gap-2 min-w-0 flex-1">
+					<Avatar className="h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0">
 						<AvatarImage
 							src={event.organizer?.profileImagePath ?? ""}
 							alt={organizerName}
 						/>
 						<AvatarFallback>{getInitials(organizerName)}</AvatarFallback>
 					</Avatar>
-					<span className="text-xs text-muted-foreground">{organizerName}</span>
+					<span
+						className="text-xs text-muted-foreground truncate"
+						title={organizerName}
+					>
+						{organizerName}
+					</span>
 				</div>
 				<Button
 					variant="ghost"
 					size="icon"
-					className="flex items-center gap-2 text-sm font-normal"
+					className="flex items-center gap-2 text-sm font-normal flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
 					onClick={() => onNavigate(event.publicId)}
 					disabled={typeof event.publicId !== "string"}
 				>

@@ -68,8 +68,8 @@ export function EventListItem({
 	}
 
 	return (
-		<div className="flex items-center justify-between p-4 border-b hover:bg-muted/50 transition-colors">
-			<div className="flex items-center gap-4 flex-1 min-w-0">
+		<div className="flex items-center justify-between p-3 sm:p-4 border-b hover:bg-muted/50 transition-colors gap-2">
+			<div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
 				<Avatar className="h-10 w-10 hidden sm:flex">
 					<AvatarImage
 						src={event.imageUrl || event.organizer?.profileImagePath || ""}
@@ -83,7 +83,7 @@ export function EventListItem({
 							<Tooltip delayDuration={500}>
 								<TooltipTrigger asChild>
 									<p
-										className={`font-medium truncate ${
+										className={`text-sm sm:text-base font-medium truncate ${
 											currentUserApproval.status === "APPROVED"
 												? "text-maroon"
 												: currentUserApproval.status === "REJECTED"
@@ -121,12 +121,15 @@ export function EventListItem({
 							</Tooltip>
 						</TooltipProvider>
 					) : (
-						<p className="font-medium truncate" title={event.eventName}>
+						<p
+							className="text-sm sm:text-base font-medium truncate"
+							title={event.eventName}
+						>
 							{event.eventName}
 						</p>
 					)}
-					<div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-						<Tag className="h-4 w-4 flex-shrink-0" />
+					<div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 mt-1">
+						<Tag className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
 						<span className="truncate" title={event.eventType ?? "N/A"}>
 							{event.eventType ?? "N/A"}
 						</span>
@@ -134,7 +137,7 @@ export function EventListItem({
 				</div>
 			</div>
 
-			<div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground mx-4 flex-shrink-0">
+			<div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground mx-2 lg:mx-4 flex-shrink-0">
 				<Clock className="h-4 w-4" />
 				<span>{dateDisplayString}</span>
 			</div>
@@ -149,7 +152,7 @@ export function EventListItem({
 				</span>
 			</div>
 
-			<div className="flex items-center gap-2 text-sm text-muted-foreground mx-4 flex-shrink-0">
+			<div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground mx-2 lg:mx-4 flex-shrink-0">
 				<Avatar className="h-8 w-8">
 					<AvatarImage
 						src={event.organizer?.profileImagePath ?? ""}
@@ -162,16 +165,18 @@ export function EventListItem({
 				</span>
 			</div>
 
-			{getApproverStatusBadge(event.status)}
+			<div className="flex-shrink-0">
+				{getApproverStatusBadge(event.status)}
+			</div>
 
 			<Button
 				variant="ghost"
 				size="icon"
 				onClick={() => onNavigate(event.publicId)}
 				disabled={typeof event.publicId !== "string"}
-				className="flex-shrink-0"
+				className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
 			>
-				<ChevronRight className="h-5 w-5 text-muted-foreground" />
+				<ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
 			</Button>
 		</div>
 	);
