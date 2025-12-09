@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UserFormDialog } from "@/components/user-management/userFormDialog";
 import { UserDataTable } from "@/components/user-management/userManagementTable";
-import { createUser } from "@/lib/api";
+import { type CreateUserInputFEWithDepartment, createUser } from "@/lib/api";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import type { UserFormInput } from "@/lib/schema";
 import type { UserDTO } from "@/lib/types";
@@ -15,15 +15,6 @@ import { ROLES } from "@/lib/types";
 export const Route = createFileRoute("/app/user-management/")({
 	component: UsersComponent,
 });
-
-type CreateUserInputFE = Omit<
-	UserDTO,
-	"id" | "publicId" | "emailVerified" | "createdAt" | "updatedAt" | "department"
->;
-
-type CreateUserInputFEWithDepartment = CreateUserInputFE & {
-	departmentPublicId: string;
-};
 
 function UsersComponent() {
 	const context = useRouteContext({ from: "/app/user-management" });

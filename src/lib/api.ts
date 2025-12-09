@@ -228,12 +228,12 @@ export const updateProfile = async ({
 	}
 };
 
-type CreateUserInputFE = Omit<
+export type CreateUserInputFE = Omit<
 	UserDTO,
-	"id" | "emailVerified" | "createdAt" | "updatedAt" | "department"
+	"id" | "publicId" | "emailVerified" | "createdAt" | "updatedAt" | "department"
 >;
 
-type CreateUserInputFEWithDepartment = CreateUserInputFE & {
+export type CreateUserInputFEWithDepartment = CreateUserInputFE & {
 	departmentPublicId: string;
 };
 

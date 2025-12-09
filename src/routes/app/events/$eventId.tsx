@@ -415,7 +415,7 @@ export function EventDetailsPage() {
 	});
 
 	const cancelEventMutation = useMutation({
-		mutationFn: cancelEvent,
+		mutationFn: (eventId: string) => cancelEvent(eventId),
 		onSuccess: () => {
 			toast.success("Event canceled successfully.");
 			queryClient.invalidateQueries({
