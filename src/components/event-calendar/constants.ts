@@ -17,9 +17,9 @@ export const EndHour = 24;
 export const DefaultStartHour = 9; // 9 AM
 export const DefaultEndHour = 10; // 10 AM
 
+import { EVENT_STATUSES } from "@/lib/constants";
 // ---------- Status → Color mapping (centralized) ----------
 import type { EventColor } from "./types";
-import { EVENT_STATUSES } from "@/lib/constants";
 
 // Uppercase status to calendar EventColor used across views
 export const STATUS_TO_EVENT_COLOR: Record<string, EventColor> = {

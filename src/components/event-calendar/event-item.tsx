@@ -3,15 +3,14 @@
 import { differenceInMinutes, format, getMinutes, isPast } from "date-fns";
 import { Users } from "lucide-react";
 import { useMemo } from "react";
-
-import type { CalendarEvent } from "./types";
-import { getBorderRadiusClasses, getEventColorClasses } from "./utils";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import type { CalendarEvent } from "./types";
+import { getBorderRadiusClasses, getEventColorClasses } from "./utils";
 
 // Using date-fns format with custom formatting:
 // 'h' - hours (1-12)
@@ -93,6 +92,7 @@ function EventWrapper({
 
 	return (
 		<button
+			type="button"
 			className={cn(
 				"focus-visible:border-ring focus-visible:ring-ring/50 flex size-full overflow-hidden px-1 text-left font-medium backdrop-blur-md transition outline-none select-none focus-visible:ring-[3px] data-dragging:cursor-grabbing data-dragging:shadow-lg data-past-event:line-through sm:px-2",
 				getEventColorClasses(event.color),
@@ -263,6 +263,7 @@ export function EventItem({
 	// Agenda view - kept separate since it's significantly different
 	return (
 		<button
+			type="button"
 			className={cn(
 				"focus-visible:border-ring focus-visible:ring-ring/50 flex w-full flex-col gap-1 rounded p-2 text-left transition outline-none focus-visible:ring-[3px] data-past-event:line-through data-past-event:opacity-90",
 				getEventColorClasses(eventColor),

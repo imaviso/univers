@@ -1,9 +1,8 @@
 import { format, isSameDay } from "date-fns";
 import { XIcon } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
-
-import type { CalendarEvent } from "./types";
 import { EventItem } from "./event-item";
+import type { CalendarEvent } from "./types";
 
 interface EventsPopupProps {
 	date: Date;
@@ -94,6 +93,7 @@ export function EventsPopup({
 			<div className="bg-background sticky top-0 flex items-center justify-between border-b p-3">
 				<h3 className="font-medium">{format(date, "d MMMM yyyy")}</h3>
 				<button
+					type="button"
 					onClick={onClose}
 					className="hover:bg-muted rounded-full p-1"
 					aria-label="Close"
@@ -113,9 +113,10 @@ export function EventsPopup({
 						const isLastDay = isSameDay(date, eventEnd);
 
 						return (
-							<div
+							<button
+								type="button"
 								key={event.id}
-								className="cursor-pointer"
+								className="cursor-pointer w-full text-left"
 								onClick={() => handleEventClick(event)}
 							>
 								<EventItem
@@ -124,7 +125,7 @@ export function EventsPopup({
 									isFirstDay={isFirstDay}
 									isLastDay={isLastDay}
 								/>
-							</div>
+							</button>
 						);
 					})
 				)}

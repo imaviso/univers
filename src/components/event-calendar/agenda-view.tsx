@@ -5,8 +5,8 @@ import { addDays, format, isToday } from "date-fns";
 import { useMemo } from "react";
 
 import { AgendaDaysToShow } from "./constants";
-import type { CalendarEvent } from "./types";
 import { EventItem } from "./event-item";
+import type { CalendarEvent } from "./types";
 import { getAgendaEventsForDay } from "./utils";
 
 interface AgendaViewProps {
