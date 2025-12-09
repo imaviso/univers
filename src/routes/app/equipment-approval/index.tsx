@@ -720,24 +720,27 @@ export function EquipmentReservationApproval() {
 	return (
 		<div className="bg-background">
 			<div className="flex flex-col flex-1 overflow-hidden">
-				<header className="flex items-center justify-between border-b px-6 h-[65px]">
-					<h1 className="text-xl font-semibold">
+				<header className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2 sm:justify-between border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
+					<h1 className="text-lg sm:text-xl font-semibold">
 						Equipment Reservation Approval
 					</h1>
-					<div className="flex items-center gap-2">
-						<div className="relative">
+					<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+						<div className="relative w-full sm:w-64">
 							<Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 							<Input
 								type="search"
 								placeholder="Search reservations..."
-								className="w-64 pl-8"
+								className="w-full pl-8"
 								value={globalFilter}
 								onChange={(e) => setGlobalFilter(e.target.value)}
 							/>
 						</div>
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="outline" className="ml-auto">
+								<Button
+									variant="outline"
+									className="w-full sm:w-auto sm:ml-auto"
+								>
 									Columns <ChevronDown className="ml-2 h-4 w-4" />
 								</Button>
 							</DropdownMenuTrigger>
@@ -766,18 +769,20 @@ export function EquipmentReservationApproval() {
 
 				{(currentUserRole.includes("EQUIPMENT_OWNER") ||
 					currentUserRole.includes("SUPER_ADMIN")) && (
-					<div className="grid grid-cols-4 gap-4 p-6 pb-6">
+					<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6 sm:pb-6">
 						<Card
 							className={`hover:shadow-md transition-shadow cursor-pointer ${viewMode === "all" ? "ring-2 ring-primary" : ""}`}
 							onClick={() => setViewMode("all")}
 						>
 							<CardHeader className="pb-2">
-								<CardTitle className="text-sm font-medium">
+								<CardTitle className="text-xs sm:text-sm font-medium">
 									Total Reservations
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<div className="text-2xl font-bold">{stats.total}</div>
+								<div className="text-xl sm:text-2xl font-bold">
+									{stats.total}
+								</div>
 							</CardContent>
 						</Card>
 						<Card
@@ -785,12 +790,12 @@ export function EquipmentReservationApproval() {
 							onClick={() => setViewMode("pending")}
 						>
 							<CardHeader className="pb-2">
-								<CardTitle className="text-sm font-medium">
+								<CardTitle className="text-xs sm:text-sm font-medium">
 									Pending Approval
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<div className="text-2xl font-bold text-yellow-500">
+								<div className="text-xl sm:text-2xl font-bold text-yellow-500">
 									{stats.pending}
 								</div>
 							</CardContent>
@@ -800,10 +805,12 @@ export function EquipmentReservationApproval() {
 							onClick={() => setViewMode("approved")}
 						>
 							<CardHeader className="pb-2">
-								<CardTitle className="text-sm font-medium">Reserved</CardTitle>
+								<CardTitle className="text-xs sm:text-sm font-medium">
+									Reserved
+								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<div className="text-2xl font-bold text-green-500">
+								<div className="text-xl sm:text-2xl font-bold text-green-500">
 									{stats.approved}
 								</div>
 							</CardContent>
@@ -813,12 +820,12 @@ export function EquipmentReservationApproval() {
 							onClick={() => setViewMode("rejected")}
 						>
 							<CardHeader className="pb-2">
-								<CardTitle className="text-sm font-medium">
+								<CardTitle className="text-xs sm:text-sm font-medium">
 									Denied Reservation/Cancelled
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<div className="text-2xl font-bold text-red-500">
+								<div className="text-xl sm:text-2xl font-bold text-red-500">
 									{stats.rejected}
 								</div>
 							</CardContent>
@@ -826,15 +833,20 @@ export function EquipmentReservationApproval() {
 					</div>
 				)}
 
-				<div className="flex items-center justify-between border-b px-6 py-2">
-					<div className="flex items-center gap-2 flex-wrap">
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b px-4 sm:px-6 py-3 sm:py-2 gap-3 sm:gap-2">
+					<div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2 flex-wrap">
 						<Tabs
 							value={viewMode}
 							onValueChange={(value) => setViewMode(value as ViewMode)}
+							className="w-full sm:w-auto"
 						>
-							<TabsList>
+							<TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
 								{availableTabs.map((tab) => (
-									<TabsTrigger key={tab} value={tab} className="capitalize">
+									<TabsTrigger
+										key={tab}
+										value={tab}
+										className="capitalize text-xs sm:text-sm"
+									>
 										{tab}
 									</TabsTrigger>
 								))}
@@ -842,8 +854,8 @@ export function EquipmentReservationApproval() {
 						</Tabs>
 						{/* Bulk Actions */}
 						{numEligibleSelected > 0 && (
-							<div className="flex items-center gap-2 border-l pl-2 ml-2">
-								<span className="text-sm text-muted-foreground">
+							<div className="flex items-center gap-2 sm:border-l sm:pl-2 sm:ml-2">
+								<span className="text-xs sm:text-sm text-muted-foreground">
 									{numEligibleSelected} eligible selected
 								</span>
 								<Button
@@ -867,8 +879,8 @@ export function EquipmentReservationApproval() {
 							</div>
 						)}
 						{numSelected > 0 && numSelected !== numEligibleSelected && (
-							<div className="flex items-center gap-2 border-l pl-2 ml-2">
-								<span className="text-sm text-muted-foreground">
+							<div className="flex items-center gap-2 sm:border-l sm:pl-2 sm:ml-2">
+								<span className="text-xs sm:text-sm text-muted-foreground">
 									{numSelected - numEligibleSelected} selected item(s) not
 									eligible for action.
 								</span>
@@ -879,12 +891,15 @@ export function EquipmentReservationApproval() {
 				</div>
 
 				{/* Table */}
-				<div className="flex-1 overflow-auto p-6">
-					<div className="flex items-center justify-between gap-2">
+				<div className="flex-1 overflow-auto p-4 sm:p-6">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2">
 						<DataTableFilter table={table} />
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="outline" className="ml-auto">
+								<Button
+									variant="outline"
+									className="w-full sm:w-auto sm:ml-auto"
+								>
 									Columns <ChevronDown className="ml-2 h-4 w-4" />
 								</Button>
 							</DropdownMenuTrigger>
@@ -918,7 +933,7 @@ export function EquipmentReservationApproval() {
 							Loading reservations...
 						</p>
 					) : (
-						<div className="rounded-md border mt-4 overflow-y-auto max-h-[58vh]">
+						<div className="rounded-md border mt-4 overflow-x-auto">
 							<Table>
 								<TableHeader>
 									{table.getHeaderGroups().map((headerGroup) => (

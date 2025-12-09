@@ -101,6 +101,10 @@ function EventStaff() {
 	const [selectedDateRange, setSelectedDateRange] = usePersistentState<
 		DateRange | undefined
 	>("staffEventDateRange_v1", undefined);
+	const [displayView, setDisplayView] = usePersistentState<"list" | "card">(
+		"staffEventDisplayView",
+		"card",
+	);
 
 	const { data: eventsData = [], isLoading: eventsLoading } = useQuery(
 		searchEventsQueryOptions("ALL", "ALL", "startTime", undefined, undefined),
@@ -157,10 +161,10 @@ function EventStaff() {
 		return (
 			<div className="bg-background">
 				<div className="flex flex-col flex-1 overflow-hidden">
-					<header className="flex items-center justify-between border-b px-6 h-[65px]">
+					<header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
 						<h1 className="text-xl font-semibold">Event Personnel</h1>
 					</header>
-					<div className="p-6">
+					<div className="p-4 sm:p-6">
 						<div className="text-center">Loading...</div>
 					</div>
 				</div>
@@ -171,17 +175,37 @@ function EventStaff() {
 	return (
 		<div className="bg-background flex flex-col overflow-hidden h-full">
 			<div className="flex flex-col flex-1 overflow-hidden">
-				<header className="sticky top-0 z-10 flex items-center justify-between border-b px-6 h-[65px] bg-background">
+				<header className="sticky top-0 z-10 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-0 justify-between border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px] bg-background">
 					<h1 className="text-xl font-semibold">Event Personnel</h1>
-					<div className="flex items-center gap-4 h-full">
+					<div className="flex flex-row items-center gap-2 w-full sm:w-auto">
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="outline">
+								<Button
+									variant="outline"
+									className="flex-1 sm:flex-initial sm:w-auto"
+								>
 									<ListFilter className="mr-2 h-4 w-4" />
-									Filter
+									Display
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
+								<DropdownMenuRadioGroup
+									value={displayView}
+									onValueChange={(value) =>
+										setDisplayView(value as "list" | "card")
+									}
+								>
+									<Label className="px-2 py-1.5 text-sm font-semibold">
+										View As
+									</Label>
+									<DropdownMenuRadioItem value="card">
+										Card View
+									</DropdownMenuRadioItem>
+									<DropdownMenuRadioItem value="list">
+										List View
+									</DropdownMenuRadioItem>
+								</DropdownMenuRadioGroup>
+								<DropdownMenuSeparator />
 								<DropdownMenuRadioGroup
 									value={eventStatusFilter}
 									onValueChange={setEventStatusFilter}
@@ -238,23 +262,31 @@ function EventStaff() {
 								<Button
 									variant="outline"
 									className={cn(
-										"w-fit justify-start text-left font-normal",
+										"flex-1 sm:flex-initial sm:w-auto justify-start text-left font-normal",
 										!selectedDateRange && "text-muted-foreground",
 									)}
 								>
-									<CalendarIcon className="mr-2 h-4 w-4" />
-									{selectedDateRange?.from ? (
-										selectedDateRange.to ? (
-											<>
-												{format(selectedDateRange.from, "LLL dd, y")} -{" "}
-												{format(selectedDateRange.to, "LLL dd, y")}
-											</>
+									<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+									<span className="truncate text-xs sm:text-sm">
+										{selectedDateRange?.from ? (
+											selectedDateRange.to ? (
+												<>
+													<span className="hidden sm:inline">
+														{format(selectedDateRange.from, "MMM dd")} -{" "}
+														{format(selectedDateRange.to, "MMM dd, y")}
+													</span>
+													<span className="sm:hidden">
+														{format(selectedDateRange.from, "MM/dd")} -{" "}
+														{format(selectedDateRange.to, "MM/dd")}
+													</span>
+												</>
+											) : (
+												format(selectedDateRange.from, "LLL dd, y")
+											)
 										) : (
-											format(selectedDateRange.from, "LLL dd, y")
-										)
-									) : (
-										<span>Pick a date range</span>
-									)}
+											"Pick a date range"
+										)}
+									</span>
 								</Button>
 							</PopoverTrigger>
 							<PopoverContent className="w-auto p-0" align="end">
@@ -327,14 +359,16 @@ function EventStaff() {
 					</div>
 				</header>
 
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6">
+				<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6">
 					<Card>
-						<CardContent className="p-6">
+						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center space-x-2">
-								<Users className="w-5 h-5 text-primary" />
+								<Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
 								<div>
-									<p className="text-2xl font-bold">{uniquePersonnel.length}</p>
-									<p className="text-sm text-muted-foreground">
+									<p className="text-xl sm:text-2xl font-bold">
+										{uniquePersonnel.length}
+									</p>
+									<p className="text-xs sm:text-sm text-muted-foreground">
 										Total Personnel
 									</p>
 								</div>
@@ -342,12 +376,14 @@ function EventStaff() {
 						</CardContent>
 					</Card>
 					<Card>
-						<CardContent className="p-6">
+						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center space-x-2">
-								<CalendarDays className="w-5 h-5 text-accent" />
+								<CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 text-accent flex-shrink-0" />
 								<div>
-									<p className="text-2xl font-bold">{upcomingEvents.length}</p>
-									<p className="text-sm text-muted-foreground">
+									<p className="text-xl sm:text-2xl font-bold">
+										{upcomingEvents.length}
+									</p>
+									<p className="text-xs sm:text-sm text-muted-foreground">
 										Upcoming Events
 									</p>
 								</div>
@@ -355,121 +391,194 @@ function EventStaff() {
 						</CardContent>
 					</Card>
 					<Card>
-						<CardContent className="p-6">
+						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center space-x-2">
-								<MapPin className="w-5 h-5 text-yellow-500" />
+								<MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 flex-shrink-0" />
 								<div>
-									<p className="text-2xl font-bold">{sortedEvents.length}</p>
-									<p className="text-sm text-muted-foreground">Total Events</p>
+									<p className="text-xl sm:text-2xl font-bold">
+										{sortedEvents.length}
+									</p>
+									<p className="text-xs sm:text-sm text-muted-foreground">
+										Total Events
+									</p>
 								</div>
 							</div>
 						</CardContent>
 					</Card>
 					<Card>
-						<CardContent className="p-6">
+						<CardContent className="p-4 sm:p-6">
 							<div className="flex items-center space-x-2">
-								<MapPin className="w-5 h-5 text-destructive" />
+								<MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-destructive flex-shrink-0" />
 								<div>
-									<p className="text-2xl font-bold">{allPersonnel.length}</p>
-									<p className="text-sm text-muted-foreground">Assignments</p>
+									<p className="text-xl sm:text-2xl font-bold">
+										{allPersonnel.length}
+									</p>
+									<p className="text-xs sm:text-sm text-muted-foreground">
+										Assignments
+									</p>
 								</div>
 							</div>
 						</CardContent>
 					</Card>
 				</div>
 
-				<Separator className="my-4" />
+				<Separator className="my-2 sm:my-4" />
 
-				<div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<div className="p-4 sm:p-6 overflow-y-auto flex-1">
 					{sortedEvents.length > 0 ? (
-						sortedEvents.map((event) => (
-							<Card key={event.publicId}>
-								<CardHeader>
-									<div className="flex items-center justify-between">
-										<div>
-											<CardTitle className="text-xl">
-												{event.eventName}
-											</CardTitle>
-											<CardDescription className="flex items-center space-x-4 mt-2">
-												<span className="flex items-center space-x-1">
-													<CalendarDays className="w-4 h-4" />
-													<span>
-														{formatDateTime(event.startTime)} -{" "}
-														{formatDateTime(event.endTime)}
+						displayView === "card" ? (
+							<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+								{sortedEvents.map((event) => (
+									<Card key={event.publicId}>
+										<CardHeader>
+											<div className="flex items-center justify-between">
+												<div>
+													<CardTitle className="text-xl">
+														{event.eventName}
+													</CardTitle>
+													<CardDescription className="flex items-center space-x-4 mt-2">
+														<span className="flex items-center space-x-1">
+															<CalendarDays className="w-4 h-4" />
+															<span>
+																{formatDateTime(event.startTime)} -{" "}
+																{formatDateTime(event.endTime)}
+															</span>
+														</span>
+														<span className="flex items-center space-x-1">
+															<MapPin className="w-4 h-4" />
+															<span>
+																{event.eventVenue.name}
+																{event.eventVenue.location
+																	? ` • ${event.eventVenue.location}`
+																	: ""}
+															</span>
+														</span>
+													</CardDescription>
+												</div>
+												{getApproverStatusBadge(event.status)}
+											</div>
+										</CardHeader>
+										<CardContent className="flex flex-col h-full">
+											<div className="flex-1 space-y-4">
+												<div className="flex items-center justify-between">
+													<span className="text-sm font-medium">
+														Assigned Personnel(
+														{event.assignedPersonnel?.length || 0})
 													</span>
-												</span>
-												<span className="flex items-center space-x-1">
-													<MapPin className="w-4 h-4" />
-													<span>
-														{event.eventVenue.name}
-														{event.eventVenue.location
-															? ` • ${event.eventVenue.location}`
-															: ""}
-													</span>
-												</span>
-											</CardDescription>
-										</div>
-										{getApproverStatusBadge(event.status)}
-									</div>
-								</CardHeader>
-								<CardContent className="flex flex-col h-full">
-									<div className="flex-1 space-y-4">
-										<div className="flex items-center justify-between">
-											<span className="text-sm font-medium">
-												Assigned Personnel(
-												{event.assignedPersonnel?.length || 0})
-											</span>
-										</div>
-										{event.assignedPersonnel?.length ? (
-											<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-												{event.assignedPersonnel.map((staff) => (
-													<div
-														key={staff.publicId}
-														className="flex items-center space-x-2 p-2 rounded-lg bg-muted/30"
-													>
-														<Avatar className="h-8 w-8">
-															<AvatarFallback className="text-xs">
-																{getInitials(
-																	`${staff.personnel.firstName} ${staff.personnel.lastName}`,
-																)}
-															</AvatarFallback>
-														</Avatar>
-														<div className="flex-1 min-w-0">
-															<div className="font-medium text-sm truncate">
-																{staff.personnel.firstName}{" "}
-																{staff.personnel.lastName}
+												</div>
+												{event.assignedPersonnel?.length ? (
+													<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+														{event.assignedPersonnel.map((staff) => (
+															<div
+																key={staff.publicId}
+																className="flex items-center space-x-2 p-2 rounded-lg bg-muted/30"
+															>
+																<Avatar className="h-8 w-8">
+																	<AvatarFallback className="text-xs">
+																		{getInitials(
+																			`${staff.personnel.firstName} ${staff.personnel.lastName}`,
+																		)}
+																	</AvatarFallback>
+																</Avatar>
+																<div className="flex-1 min-w-0">
+																	<div className="font-medium text-sm truncate">
+																		{staff.personnel.firstName}{" "}
+																		{staff.personnel.lastName}
+																	</div>
+																	<div className="text-xs text-muted-foreground flex items-center gap-1">
+																		<Phone className="w-3 h-3" />
+																		<span className="truncate">
+																			{staff.phoneNumber}
+																		</span>
+																	</div>
+																</div>
 															</div>
-															<div className="text-xs text-muted-foreground flex items-center gap-1">
-																<Phone className="w-3 h-3" />
-																<span className="truncate">
-																	{staff.phoneNumber}
-																</span>
-															</div>
-														</div>
+														))}
 													</div>
-												))}
+												) : (
+													<div className="text-sm text-muted-foreground">
+														No personnel assigned.
+													</div>
+												)}
 											</div>
-										) : (
-											<div className="text-sm text-muted-foreground">
-												No personnel assigned.
+											<Button
+												className="w-full bg-transparent mt-4"
+												variant="outline"
+												onClick={() => {
+													setSelectedEventId(event.publicId);
+													setManageAssignmentsDialogOpen(true);
+												}}
+											>
+												Manage Assignments
+											</Button>
+										</CardContent>
+									</Card>
+								))}
+							</div>
+						) : (
+							<div className="border rounded-lg overflow-hidden">
+								<div className="flex flex-col">
+									{sortedEvents.map((event) => (
+										<div
+											key={event.publicId}
+											className="flex items-center justify-between p-3 sm:p-4 border-b last:border-b-0 hover:bg-muted/50 transition-colors gap-2"
+										>
+											<div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+												<div className="flex-1 min-w-0">
+													<p
+														className="text-sm sm:text-base font-medium truncate"
+														title={event.eventName}
+													>
+														{event.eventName}
+													</p>
+													<div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 mt-1">
+														<CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+														<span className="truncate">
+															{formatDateTime(event.startTime)}
+														</span>
+													</div>
+												</div>
 											</div>
-										)}
-									</div>
-									<Button
-										className="w-full bg-transparent mt-4"
-										variant="outline"
-										onClick={() => {
-											setSelectedEventId(event.publicId);
-											setManageAssignmentsDialogOpen(true);
-										}}
-									>
-										Manage Assignments
-									</Button>
-								</CardContent>
-							</Card>
-						))
+
+											<div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground mx-2 lg:mx-4 flex-shrink-0">
+												<MapPin className="h-4 w-4" />
+												<span
+													className="truncate"
+													title={event.eventVenue.name}
+												>
+													{event.eventVenue.name}
+												</span>
+											</div>
+
+											<div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground mx-4 flex-shrink-0">
+												<Users className="h-4 w-4" />
+												<span>
+													{event.assignedPersonnel?.length || 0} Personnel
+												</span>
+											</div>
+
+											<div className="flex-shrink-0">
+												{getApproverStatusBadge(event.status)}
+											</div>
+
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => {
+													setSelectedEventId(event.publicId);
+													setManageAssignmentsDialogOpen(true);
+												}}
+												className="flex-shrink-0"
+											>
+												Manage
+											</Button>
+										</div>
+									))}
+								</div>
+							</div>
+						)
 					) : (
-						<div className="text-center text-muted-foreground py-8 col-span-full">
+						<div className="text-center text-muted-foreground py-8">
 							No events found.
 						</div>
 					)}

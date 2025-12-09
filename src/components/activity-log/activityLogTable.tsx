@@ -394,36 +394,39 @@ export function ActivityLogTable() {
 	return (
 		<div className="space-y-4">
 			{/* Filters and Actions */}
-			<div className="flex flex-wrap items-center gap-4">
-				{/* Action Filter */}
-				<Select value={actionFilter} onValueChange={setActionFilter}>
-					<SelectTrigger className="w-[250px]">
-						<SelectValue placeholder="Filter by action" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All Actions</SelectItem>
-						{ACTION_TYPES.map((action) => (
-							<SelectItem key={action} value={action}>
-								{formatActionLabel(action)}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+			<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+				{/* Action Filter and Entity Type Filter - same row on mobile */}
+				<div className="flex flex-row gap-2 sm:contents">
+					{/* Action Filter */}
+					<Select value={actionFilter} onValueChange={setActionFilter}>
+						<SelectTrigger className="flex-1 sm:w-[200px] md:w-[240px]">
+							<SelectValue placeholder="Filter by action" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All Actions</SelectItem>
+							{ACTION_TYPES.map((action) => (
+								<SelectItem key={action} value={action}>
+									{formatActionLabel(action)}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 
-				{/* Entity Type Filter */}
-				<Select value={entityTypeFilter} onValueChange={setEntityTypeFilter}>
-					<SelectTrigger className="w-[250px]">
-						<SelectValue placeholder="Filter by entity" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="all">All Entities</SelectItem>
-						{ENTITY_TYPES.map((type) => (
-							<SelectItem key={type} value={type}>
-								{formatActionLabel(type)}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+					{/* Entity Type Filter */}
+					<Select value={entityTypeFilter} onValueChange={setEntityTypeFilter}>
+						<SelectTrigger className="flex-1 sm:w-[200px] md:w-[240px]">
+							<SelectValue placeholder="Filter by entity" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All Entities</SelectItem>
+							{ENTITY_TYPES.map((type) => (
+								<SelectItem key={type} value={type}>
+									{formatActionLabel(type)}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 
 				{/* Date Range Filter */}
 				<Popover>
@@ -431,23 +434,31 @@ export function ActivityLogTable() {
 						<Button
 							variant="outline"
 							className={cn(
-								"w-[280px] justify-start text-left font-normal",
+								"w-full sm:w-[240px] justify-start text-left font-normal",
 								!dateRange && "text-muted-foreground",
 							)}
 						>
-							<CalendarIcon className="mr-2 h-4 w-4" />
-							{dateRange?.from ? (
-								dateRange.to ? (
-									<>
-										{format(dateRange.from, "LLL dd, y")} -{" "}
-										{format(dateRange.to, "LLL dd, y")}
-									</>
+							<CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+							<span className="truncate text-xs sm:text-sm">
+								{dateRange?.from ? (
+									dateRange.to ? (
+										<>
+											<span className="hidden md:inline">
+												{format(dateRange.from, "LLL dd, y")} -{" "}
+												{format(dateRange.to, "LLL dd, y")}
+											</span>
+											<span className="md:hidden">
+												{format(dateRange.from, "MM/dd")} -{" "}
+												{format(dateRange.to, "MM/dd")}
+											</span>
+										</>
+									) : (
+										format(dateRange.from, "LLL dd, y")
+									)
 								) : (
-									format(dateRange.from, "LLL dd, y")
-								)
-							) : (
-								<span>Pick a date range</span>
-							)}
+									"Pick a date range"
+								)}
+							</span>
 						</Button>
 					</PopoverTrigger>
 					<PopoverContent className="w-auto p-0" align="start">
@@ -468,6 +479,8 @@ export function ActivityLogTable() {
 					dateRange) && (
 					<Button
 						variant="ghost"
+						size="sm"
+						className="w-full sm:w-auto"
 						onClick={() => {
 							setActionFilter("all");
 							setEntityTypeFilter("all");
@@ -478,14 +491,22 @@ export function ActivityLogTable() {
 					</Button>
 				)}
 
-				<div className="ml-auto flex items-center gap-2">
+				{/* Spacer to push Export/Columns to the right on desktop */}
+				<div className="hidden sm:block sm:flex-1" />
+
+				{/* Export and Columns - same row on mobile */}
+				<div className="flex flex-row gap-2 sm:contents">
 					{/* Export Dropdown */}
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button variant="outline">
+							<Button
+								variant="outline"
+								size="sm"
+								className="flex-1 sm:flex-none sm:w-[130px]"
+							>
 								<Download className="mr-2 h-4 w-4" />
-								Export
-								<ChevronDown className="ml-2 h-4 w-4" />
+								<span className="truncate">Export</span>
+								<ChevronDown className="ml-2 h-4 w-4 flex-shrink-0" />
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
@@ -503,8 +524,13 @@ export function ActivityLogTable() {
 					{/* Column Visibility */}
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button variant="outline">
-								Columns <ChevronDown className="ml-2 h-4 w-4" />
+							<Button
+								variant="outline"
+								size="sm"
+								className="flex-1 sm:flex-none sm:w-[120px]"
+							>
+								<span className="truncate">Columns</span>
+								<ChevronDown className="ml-2 h-4 w-4 flex-shrink-0" />
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
@@ -592,8 +618,8 @@ export function ActivityLogTable() {
 			</div>
 
 			{/* Pagination */}
-			<div className="flex items-center justify-between px-2">
-				<div className="text-sm text-muted-foreground">
+			<div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2">
+				<div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
 					Showing {currentPage * pageSize + 1} to{" "}
 					{Math.min((currentPage + 1) * pageSize, totalElements)} of{" "}
 					{totalElements} entries
@@ -604,10 +630,11 @@ export function ActivityLogTable() {
 						size="sm"
 						onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
 						disabled={currentPage === 0}
+						className="text-xs sm:text-sm"
 					>
 						Previous
 					</Button>
-					<span className="text-sm">
+					<span className="text-xs sm:text-sm whitespace-nowrap">
 						Page {currentPage + 1} of {totalPages || 1}
 					</span>
 					<Button
@@ -615,6 +642,7 @@ export function ActivityLogTable() {
 						size="sm"
 						onClick={() => setCurrentPage((prev) => prev + 1)}
 						disabled={currentPage >= totalPages - 1}
+						className="text-xs sm:text-sm"
 					>
 						Next
 					</Button>

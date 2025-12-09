@@ -17,12 +17,12 @@ import {
 import type React from "react";
 import { useMemo } from "react";
 import { EndHour, StartHour } from "@/components/event-calendar/constants";
-import type { CalendarEvent } from "./types";
-import { EventItem } from "./event-item";
-import { isMultiDayEvent } from "./utils";
-import { useCurrentTimeIndicator } from "./hooks/use-current-time-indicator";
-import { WeekCellsHeight } from "./constants";
 import { cn } from "@/lib/utils";
+import { WeekCellsHeight } from "./constants";
+import { EventItem } from "./event-item";
+import { useCurrentTimeIndicator } from "./hooks/use-current-time-indicator";
+import type { CalendarEvent } from "./types";
+import { isMultiDayEvent } from "./utils";
 
 interface WeekViewProps {
 	currentDate: Date;
@@ -318,9 +318,10 @@ export function WeekView({
 					>
 						{/* Positioned events */}
 						{(processedDayEvents[dayIndex] ?? []).map((positionedEvent) => (
-							<div
+							<button
+								type="button"
 								key={positionedEvent.event.id}
-								className="absolute z-10 px-0.5"
+								className="absolute z-10 px-0.5 border-0 bg-transparent p-0 cursor-pointer"
 								style={{
 									top: `${positionedEvent.top}px`,
 									height: `${positionedEvent.height}px`,
@@ -338,7 +339,7 @@ export function WeekView({
 										showTime
 									/>
 								</div>
-							</div>
+							</button>
 						))}
 
 						{/* Current time indicator - only show for today's column */}

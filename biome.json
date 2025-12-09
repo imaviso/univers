@@ -11,7 +11,7 @@
 			"**",
 			"!**/src/routeTree.gen.ts",
 			"!**/src/components/ui",
-			"!**/src/components/event-calendar"
+                        "!**/src/index.css"
 		]
 	},
 	"formatter": {

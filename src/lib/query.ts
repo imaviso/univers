@@ -253,13 +253,13 @@ export const useBulkDeactivateUsersAsAdminMutation = (
 	const queryClient = useQueryClient();
 	return useMutation<string[], Error, string[], { previousUsers?: UserDTO[] }>({
 		mutationFn: bulkDeactivateUsersAsAdmin,
-		onSettled: (data, error, variables, context) => {
+		onSettled: (data, error, variables, context, mutationFnContext) => {
 			// Always invalidate users query on settlement
 			queryClient.invalidateQueries({
 				queryKey: usersQueryOptions.queryKey,
 			});
 			// Call component's onSettled if provided
-			options?.onSettled?.(data, error, variables, context);
+			options?.onSettled?.(data, error, variables, context, mutationFnContext);
 		},
 		// Spread all other options from the component, including onSuccess, onError, onMutate
 		...options,

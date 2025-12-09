@@ -97,7 +97,7 @@ export const allNavigation: NavigationItem[] = [
 		roles: ["SUPER_ADMIN"],
 	},
 	{
-		name: "Equipments",
+		name: "Equipment",
 		href: "/app/equipments",
 		icon: Package,
 		roles: [

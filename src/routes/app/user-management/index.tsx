@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UserFormDialog } from "@/components/user-management/userFormDialog";
 import { UserDataTable } from "@/components/user-management/userManagementTable";
-import { createUser } from "@/lib/api";
+import { type CreateUserInputFEWithDepartment, createUser } from "@/lib/api";
 import { departmentsQueryOptions, usersQueryOptions } from "@/lib/query";
 import type { UserFormInput } from "@/lib/schema";
 import type { UserDTO } from "@/lib/types";
@@ -15,15 +15,6 @@ import { ROLES } from "@/lib/types";
 export const Route = createFileRoute("/app/user-management/")({
 	component: UsersComponent,
 });
-
-type CreateUserInputFE = Omit<
-	UserDTO,
-	"id" | "publicId" | "emailVerified" | "createdAt" | "updatedAt" | "department"
->;
-
-type CreateUserInputFEWithDepartment = CreateUserInputFE & {
-	departmentPublicId: string;
-};
 
 function UsersComponent() {
 	const context = useRouteContext({ from: "/app/user-management" });
@@ -109,13 +100,13 @@ function UsersComponent() {
 	return (
 		<div className="bg-background">
 			<div className="flex flex-col flex-1 overflow-hidden">
-				<header className="flex items-center justify-between border-b px-6 h-[65px]">
-					<h1 className="text-xl font-semibold">User Management</h1>
+				<header className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-2 sm:justify-between border-b px-4 sm:px-6 py-3 sm:py-0 sm:h-[65px]">
+					<h1 className="text-lg sm:text-xl font-semibold">User Management</h1>
 					<div className="flex items-center gap-2">
 						<Button
 							onClick={() => setIsAddUserOpen(true)}
 							size="sm"
-							className="gap-1"
+							className="gap-1 w-full sm:w-auto"
 							disabled={createUserMutation.isPending}
 						>
 							<UserPlus className="h-4 w-4" />
@@ -136,7 +127,7 @@ function UsersComponent() {
 					roles={ROLES}
 					departments={departments}
 				/>
-				<div className="flex-1 overflow-auto p-6">
+				<div className="flex-1 overflow-auto p-4 sm:p-6">
 					<UserDataTable />
 				</div>
 			</div>
