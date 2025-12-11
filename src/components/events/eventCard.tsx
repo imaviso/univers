@@ -88,8 +88,8 @@ export function EventCard({
 			className="overflow-hidden transition-all hover:shadow-md flex flex-col"
 		>
 			<CardHeader>
-				<div className="flex items-start justify-between gap-2">
-					<div className="flex-1 min-w-0">
+				<div className="flex items-start justify-between gap-2 min-w-0">
+					<div className="flex-1 min-w-0 overflow-hidden">
 						{currentUserApproval ? (
 							<TooltipProvider>
 								<Tooltip delayDuration={500}>
@@ -141,9 +141,7 @@ export function EventCard({
 							</h3>
 						)}
 					</div>
-					<div className="flex flex-col items-end gap-1 flex-shrink-0">
-						{getApproverStatusBadge(event.status)}
-					</div>
+					<div className="shrink-0">{getApproverStatusBadge(event.status)}</div>
 				</div>
 			</CardHeader>
 			<CardContent className="flex-grow">
