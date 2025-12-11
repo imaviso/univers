@@ -357,18 +357,6 @@ export function ActivityLogTable() {
 				);
 			},
 		},
-		{
-			accessorKey: "ipAddress",
-			header: "IP Address",
-			cell: ({ row }) => {
-				const ip = row.getValue("ipAddress") as string | null;
-				return ip ? (
-					<span className="font-mono text-xs">{ip}</span>
-				) : (
-					<span className="text-muted-foreground">-</span>
-				);
-			},
-		},
 	];
 
 	const table = useReactTable({
