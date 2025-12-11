@@ -96,10 +96,9 @@ export function DepartmentDataTable() {
 			[],
 		);
 	const [columnVisibility, setColumnVisibility] =
-		usePersistentState<VisibilityState>(
-			"departmentTableColumnVisibility_v1",
-			{},
-		);
+		usePersistentState<VisibilityState>("departmentTableColumnVisibility_v1", {
+			id: false,
+		});
 	const [rowSelection, setRowSelection] = React.useState({});
 
 	const [editDialogOpen, setEditDialogOpen] = useAtom(editDepartmentDialogAtom);

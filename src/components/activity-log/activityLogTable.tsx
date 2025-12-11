@@ -153,7 +153,9 @@ export function ActivityLogTable() {
 	const [columnFilters, setColumnFilters] =
 		usePersistentState<ColumnFiltersState>("activity-log-table-filters", []);
 	const [columnVisibility, setColumnVisibility] =
-		usePersistentState<VisibilityState>("activity-log-table-visibility", {});
+		usePersistentState<VisibilityState>("activity-log-table-visibility", {
+			entityId: false,
+		});
 
 	// Fetch data
 	const fetchLogs = useCallback(async () => {
