@@ -107,142 +107,151 @@ export function TopDepartmentsChart({ dateRange }: TopDepartmentsChartProps) {
 	}
 
 	return (
-		<div className="h-[300px] w-full">
-			<ChartContainer config={chartConfig} className="h-full w-full">
-				<PieChart>
-					<Pie
-						data={chartData}
-						cx="50%"
-						cy="50%"
-						labelLine={false}
-						label={({ name, percent }) => {
-							const percentage = (percent * 100).toFixed(1);
-							return `${name}: ${percentage}%`;
-						}}
-						outerRadius={80}
-						fill="#8884d8"
-						dataKey="value"
-					>
-						{chartData.map((entry, index) => (
-							<Cell
-								key={`cell-${entry.name}`}
-								fill={CHART_COLORS[index % CHART_COLORS.length]}
-							/>
-						))}
-					</Pie>
-					<ChartTooltip
-						content={({ active, payload }) => {
-							if (active && payload && payload.length) {
-								const data = payload[0].payload;
-								const percentage = ((data.value / totalRate) * 100).toFixed(1);
-								return (
-									<div className="min-w-[260px] rounded-lg border bg-background p-3 shadow-sm">
-										<div className="font-bold mb-2 text-base text-foreground border-b pb-1">
-											{data.name}
-										</div>
-										<div className="space-y-2">
-											<div className="bg-muted/50 p-2 rounded">
-												<div className="flex items-center justify-between mb-1">
-													<span className="text-muted-foreground text-xs font-medium">
-														Reservation Rate:
-													</span>
-													<span className="font-bold text-foreground">
-														{data.value.toFixed(1)}%
-													</span>
-												</div>
-												<div className="flex items-center justify-between">
-													<span className="text-muted-foreground text-xs font-medium">
-														Share of Top {chartData.length}:
-													</span>
-													<span className="font-bold text-foreground">
-														{percentage}%
-													</span>
-												</div>
+		<ChartContainer
+			config={chartConfig}
+			className="h-[350px] sm:h-[400px] w-full aspect-auto"
+		>
+			<PieChart>
+				<Pie
+					data={chartData}
+					cx="50%"
+					cy="45%"
+					labelLine={false}
+					label={false}
+					outerRadius="60%"
+					fill="#8884d8"
+					dataKey="value"
+				>
+					{chartData.map((entry, index) => (
+						<Cell
+							key={`cell-${entry.name}`}
+							fill={CHART_COLORS[index % CHART_COLORS.length]}
+						/>
+					))}
+				</Pie>
+				<ChartTooltip
+					content={({ active, payload }) => {
+						if (active && payload && payload.length) {
+							const data = payload[0].payload;
+							const percentage = ((data.value / totalRate) * 100).toFixed(1);
+							return (
+								<div className="min-w-[220px] max-w-[280px] rounded-lg border bg-background p-2 shadow-sm">
+									<div className="font-bold mb-2 text-sm text-foreground border-b pb-1 truncate">
+										{data.name}
+									</div>
+									<div className="space-y-2">
+										<div className="bg-muted/50 p-1.5 rounded">
+											<div className="flex items-center justify-between mb-1">
+												<span className="text-muted-foreground text-xs">
+													Rate:
+												</span>
+												<span className="font-bold text-foreground text-xs">
+													{data.value.toFixed(1)}%
+												</span>
 											</div>
+											<div className="flex items-center justify-between">
+												<span className="text-muted-foreground text-xs">
+													Share:
+												</span>
+												<span className="font-bold text-foreground text-xs">
+													{percentage}%
+												</span>
+											</div>
+										</div>
 
-											<div>
-												<div className="text-xs font-medium text-muted-foreground mb-1.5">
-													Event Breakdown
+										<div>
+											<div className="text-xs font-medium text-muted-foreground mb-1">
+												Events
+											</div>
+											<div className="space-y-0.5">
+												<div className="flex items-center justify-between">
+													<span className="text-xs text-muted-foreground">
+														Total:
+													</span>
+													<span className="font-semibold text-foreground text-xs">
+														{data.totalEventCount}
+													</span>
 												</div>
-												<div className="space-y-1">
+												<div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-xs">
 													<div className="flex items-center justify-between">
-														<span className="text-xs text-muted-foreground">
-															Total Events:
+														<span className="text-muted-foreground">
+															Approved:
 														</span>
-														<span className="font-semibold text-foreground">
-															{data.totalEventCount}
+														<span className="font-medium text-foreground">
+															{data.approvedCount}
 														</span>
 													</div>
-													<div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-														<div className="flex items-center justify-between">
-															<span className="text-muted-foreground">
-																Approved:
-															</span>
-															<span className="font-medium text-foreground">
-																{data.approvedCount}
-															</span>
-														</div>
-														<div className="flex items-center justify-between">
-															<span className="text-muted-foreground">
-																Pending:
-															</span>
-															<span className="font-medium text-foreground">
-																{data.pendingCount}
-															</span>
-														</div>
-														<div className="flex items-center justify-between">
-															<span className="text-muted-foreground">
-																Ongoing:
-															</span>
-															<span className="font-medium text-foreground">
-																{data.ongoingCount}
-															</span>
-														</div>
-														<div className="flex items-center justify-between">
-															<span className="text-muted-foreground">
-																Completed:
-															</span>
-															<span className="font-medium text-foreground">
-																{data.completedCount}
-															</span>
-														</div>
-														<div className="flex items-center justify-between">
-															<span className="text-muted-foreground">
-																Canceled:
-															</span>
-															<span className="font-medium text-foreground">
-																{data.canceledCount}
-															</span>
-														</div>
-														<div className="flex items-center justify-between">
-															<span className="text-muted-foreground">
-																Rejected:
-															</span>
-															<span className="font-medium text-foreground">
-																{data.rejectedCount}
-															</span>
-														</div>
+													<div className="flex items-center justify-between">
+														<span className="text-muted-foreground">
+															Pending:
+														</span>
+														<span className="font-medium text-foreground">
+															{data.pendingCount}
+														</span>
+													</div>
+													<div className="flex items-center justify-between">
+														<span className="text-muted-foreground">
+															Ongoing:
+														</span>
+														<span className="font-medium text-foreground">
+															{data.ongoingCount}
+														</span>
+													</div>
+													<div className="flex items-center justify-between">
+														<span className="text-muted-foreground">Done:</span>
+														<span className="font-medium text-foreground">
+															{data.completedCount}
+														</span>
+													</div>
+													<div className="flex items-center justify-between">
+														<span className="text-muted-foreground">
+															Canceled:
+														</span>
+														<span className="font-medium text-foreground">
+															{data.canceledCount}
+														</span>
+													</div>
+													<div className="flex items-center justify-between">
+														<span className="text-muted-foreground">
+															Rejected:
+														</span>
+														<span className="font-medium text-foreground">
+															{data.rejectedCount}
+														</span>
 													</div>
 												</div>
 											</div>
 										</div>
 									</div>
-								);
-							}
-							return null;
-						}}
-					/>
-					<Legend
-						verticalAlign="bottom"
-						height={36}
-						formatter={(value, entry) => {
-							const data = entry.payload as { value: number };
-							const percentage = ((data.value / totalRate) * 100).toFixed(1);
-							return `${value} (${percentage}%)`;
-						}}
-					/>
-				</PieChart>
-			</ChartContainer>
-		</div>
+								</div>
+							);
+						}
+						return null;
+					}}
+				/>
+				<Legend
+					verticalAlign="bottom"
+					height={80}
+					wrapperStyle={{
+						fontSize: "10px",
+						paddingTop: "10px",
+						display: "flex",
+						flexWrap: "wrap",
+						justifyContent: "center",
+						gap: "4px",
+						maxWidth: "100%",
+						overflowX: "auto",
+						overflowY: "hidden",
+					}}
+					formatter={(value, entry) => {
+						const data = entry.payload as { value: number };
+						const percentage = ((data.value / totalRate) * 100).toFixed(1);
+						const truncatedValue =
+							value.length > 15 ? `${value.slice(0, 15)}...` : value;
+						return `${truncatedValue} (${percentage}%)`;
+					}}
+				/>
+			</PieChart>
+		</ChartContainer>
 	);
 }

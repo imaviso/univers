@@ -99,74 +99,82 @@ export function EventsPerVenueChart({ dateRange }: EventsPerVenueChartProps) {
 	}
 
 	return (
-		<div className="h-[300px] w-full">
-			<ChartContainer config={chartConfig} className="h-full w-full">
-				<PieChart>
-					<Pie
-						data={chartData}
-						cx="50%"
-						cy="50%"
-						labelLine={false}
-						label={({ name, percent }) => {
-							const percentage = (percent * 100).toFixed(1);
-							return `${name}: ${percentage}%`;
-						}}
-						outerRadius={80}
-						fill="#8884d8"
-						dataKey="value"
-					>
-						{chartData.map((entry, index) => (
-							<Cell
-								key={`cell-${entry.name}`}
-								fill={CHART_COLORS[index % CHART_COLORS.length]}
-							/>
-						))}
-					</Pie>
-					<ChartTooltip
-						content={({ active, payload }) => {
-							if (active && payload && payload.length) {
-								const data = payload[0].payload;
-								const percentage = ((data.value / totalEvents) * 100).toFixed(
-									1,
-								);
-								return (
-									<div className="min-w-[180px] rounded-lg border bg-background p-2 shadow-sm text-xs">
-										<div className="font-bold mb-1 text-foreground">
-											{data.name}
+		<ChartContainer
+			config={chartConfig}
+			className="h-[400px] sm:h-[450px] w-full aspect-auto"
+		>
+			<PieChart>
+				<Pie
+					data={chartData}
+					cx="50%"
+					cy="40%"
+					labelLine={false}
+					label={false}
+					outerRadius="55%"
+					fill="#8884d8"
+					dataKey="value"
+				>
+					{chartData.map((entry, index) => (
+						<Cell
+							key={`cell-${entry.name}`}
+							fill={CHART_COLORS[index % CHART_COLORS.length]}
+						/>
+					))}
+				</Pie>
+				<ChartTooltip
+					content={({ active, payload }) => {
+						if (active && payload && payload.length) {
+							const data = payload[0].payload;
+							const percentage = ((data.value / totalEvents) * 100).toFixed(1);
+							return (
+								<div className="min-w-[140px] rounded-lg border bg-background p-2 shadow-sm text-xs">
+									<div className="font-bold mb-1 text-foreground truncate">
+										{data.name}
+									</div>
+									<div className="space-y-1">
+										<div className="flex items-center justify-between gap-2">
+											<span className="text-muted-foreground">Events:</span>
+											<span className="font-semibold text-foreground">
+												{data.value.toLocaleString()}
+											</span>
 										</div>
-										<div className="space-y-1">
-											<div className="flex items-center justify-between">
-												<span className="text-muted-foreground">Events:</span>
-												<span className="font-semibold text-foreground">
-													{data.value.toLocaleString()}
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span className="text-muted-foreground">
-													Percentage:
-												</span>
-												<span className="font-semibold text-foreground">
-													{percentage}%
-												</span>
-											</div>
+										<div className="flex items-center justify-between gap-2">
+											<span className="text-muted-foreground">Percentage:</span>
+											<span className="font-semibold text-foreground">
+												{percentage}%
+											</span>
 										</div>
 									</div>
-								);
-							}
-							return null;
-						}}
-					/>
-					<Legend
-						verticalAlign="bottom"
-						height={36}
-						formatter={(value, entry) => {
-							const data = entry.payload as { value: number };
-							const percentage = ((data.value / totalEvents) * 100).toFixed(1);
-							return `${value} (${percentage}%)`;
-						}}
-					/>
-				</PieChart>
-			</ChartContainer>
-		</div>
+								</div>
+							);
+						}
+						return null;
+					}}
+				/>
+				<Legend
+					verticalAlign="bottom"
+					height={100}
+					wrapperStyle={{
+						fontSize: "9px",
+						paddingTop: "10px",
+						lineHeight: "1.4",
+						maxWidth: "100%",
+						overflowX: "auto",
+						overflowY: "hidden",
+						display: "flex",
+						flexWrap: "wrap",
+						justifyContent: "center",
+						gap: "4px",
+					}}
+					formatter={(value, entry) => {
+						const data = entry.payload as { value: number };
+						const percentage = ((data.value / totalEvents) * 100).toFixed(1);
+						const truncatedValue =
+							value.length > 12 ? `${value.slice(0, 12)}...` : value;
+						return `${truncatedValue} (${percentage}%)`;
+					}}
+				/>
+			</PieChart>
+		</ChartContainer>
 	);
 }

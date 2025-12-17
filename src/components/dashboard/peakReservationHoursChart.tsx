@@ -111,41 +111,44 @@ export function PeakReservationHoursChart({
 		}))
 		.sort((a, b) => a.hourValue - b.hourValue);
 
-	// Removed Card, CardHeader, CardContent, CardFooter wrappers
-	// The title and description can be handled by the parent component if needed
 	return (
-		<div className="h-[300px] w-full p-4">
-			<ChartContainer config={chartConfig} className="h-[300px] w-full">
-				<LineChart
-					accessibilityLayer
-					data={chartData}
-					margin={{
-						top: 20,
-						left: 20,
-						bottom: 20,
-						right: 20,
-					}}
-				>
-					<CartesianGrid vertical={false} />
-					<XAxis
-						dataKey="time"
-						tickLine={false}
-						tickMargin={10}
-						axisLine={false}
-					/>
-					<ChartTooltip
-						cursor={false}
-						content={<ChartTooltipContent hideLabel />}
-					/>
-					<Line
-						dataKey="reservations"
-						type="natural"
-						stroke="var(--chart-4)"
-						strokeWidth={2}
-						dot={true}
-					/>
-				</LineChart>
-			</ChartContainer>
-		</div>
+		<ChartContainer
+			config={chartConfig}
+			className="h-[300px] sm:h-[350px] w-full aspect-auto"
+		>
+			<LineChart
+				accessibilityLayer
+				data={chartData}
+				margin={{
+					top: 10,
+					left: 0,
+					bottom: 10,
+					right: 0,
+				}}
+			>
+				<CartesianGrid vertical={false} />
+				<XAxis
+					dataKey="time"
+					tickLine={false}
+					tickMargin={8}
+					axisLine={false}
+					fontSize={10}
+					angle={-45}
+					textAnchor="end"
+					height={60}
+				/>
+				<ChartTooltip
+					cursor={false}
+					content={<ChartTooltipContent hideLabel />}
+				/>
+				<Line
+					dataKey="reservations"
+					type="natural"
+					stroke="var(--chart-4)"
+					strokeWidth={2}
+					dot={true}
+				/>
+			</LineChart>
+		</ChartContainer>
 	);
 }

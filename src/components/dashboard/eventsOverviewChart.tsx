@@ -130,7 +130,15 @@ export function EventsOverviewChart({
 								dot={false}
 							/>
 						))}
-					<ChartLegend verticalAlign="top" content={<ChartLegendContent />} />
+					<ChartLegend
+						verticalAlign="top"
+						content={<ChartLegendContent />}
+						wrapperStyle={{
+							paddingBottom: "10px",
+							maxWidth: "100%",
+							overflow: "hidden",
+						}}
+					/>
 				</LineChart>
 			</ChartContainer>
 		</div>
