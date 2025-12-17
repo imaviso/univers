@@ -340,10 +340,15 @@ export function PropertyFilterList<TData>({ table }: { table: Table<TData> }) {
 				// Skip if no filter value
 				if (!filter.value) return null;
 
+				// Create a unique key based on filter content
+				const filterValue = filter.value as FilterValue<ColumnDataType, TData>;
+				const filterKey = `filter-${id}-${filterValue.operator}-${JSON.stringify(filterValue.values)}`;
+
 				// Narrow the type based on meta.type and cast filter accordingly
 				switch (meta.type) {
 					case "text":
 						return renderFilter<TData, "text">(
+							filterKey,
 							filter as {
 								id: string;
 								value: FilterValue<"text", TData>;
@@ -356,6 +361,7 @@ export function PropertyFilterList<TData>({ table }: { table: Table<TData> }) {
 						);
 					case "number":
 						return renderFilter<TData, "number">(
+							filterKey,
 							filter as {
 								id: string;
 								value: FilterValue<"number", TData>;
@@ -368,6 +374,7 @@ export function PropertyFilterList<TData>({ table }: { table: Table<TData> }) {
 						);
 					case "date":
 						return renderFilter<TData, "date">(
+							filterKey,
 							filter as {
 								id: string;
 								value: FilterValue<"date", TData>;
@@ -380,6 +387,7 @@ export function PropertyFilterList<TData>({ table }: { table: Table<TData> }) {
 						);
 					case "option":
 						return renderFilter<TData, "option">(
+							filterKey,
 							filter as {
 								id: string;
 								value: FilterValue<"option", TData>;
@@ -392,6 +400,7 @@ export function PropertyFilterList<TData>({ table }: { table: Table<TData> }) {
 						);
 					case "multiOption":
 						return renderFilter<TData, "multiOption">(
+							filterKey,
 							filter as {
 								id: string;
 								value: FilterValue<"multiOption", TData>;
@@ -412,6 +421,7 @@ export function PropertyFilterList<TData>({ table }: { table: Table<TData> }) {
 
 // Generic render function for a filter with type-safe value
 function renderFilter<TData, T extends ColumnDataType>(
+	key: string,
 	filter: { id: string; value: FilterValue<T, TData> },
 	column: Column<TData, unknown>,
 	meta: ColumnMeta<TData, unknown> & { type: T },
@@ -421,7 +431,7 @@ function renderFilter<TData, T extends ColumnDataType>(
 
 	return (
 		<div
-			key={`filter-${filter.id}`}
+			key={key}
 			className="flex h-7 items-center rounded-2xl border border-border bg-background shadow-xs text-xs"
 		>
 			<PropertyFilterSubject meta={meta} />

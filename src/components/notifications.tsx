@@ -199,7 +199,7 @@ export function NotificationDropdown() {
 								} else if (entityType === "EQUIPMENT_RESERVATION") {
 									canNavigate = true;
 									// Ensure this path matches your route definition
-									targetPath = "/app/equipment-approval/approval";
+									targetPath = "/app/equipment-approval";
 								}
 								// Add more 'else if' for other types if needed
 							}
