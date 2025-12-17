@@ -23,7 +23,7 @@ import {
 	Users,
 	XCircle,
 } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EquipmentReservationFormDialog } from "@/components/equipment-reservation/equipmentReservationForm";
 import { EquipmentChecklistDialog } from "@/components/event-staffing/equipmentChecklistDialog";
@@ -54,14 +54,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { DeleteConfirmDialog } from "@/components/user-management/deleteConfirmDialog";
 import {
@@ -1252,76 +1244,62 @@ export function EventDetailsPage() {
 							</CardHeader>
 							<CardContent>
 								{reservedEquipments && reservedEquipments.length > 0 ? (
-									<div className="overflow-x-auto -mx-4 px-4 sm:-mx-0 sm:px-0">
-										<Table>
-											<TableHeader>
-												<TableRow>
-													<TableHead>Equipment</TableHead>
-													<TableHead>Quantity</TableHead>
-													<TableHead>Status</TableHead>
-													{canUserModifyEquipmentReservation && (
-														<TableHead className="text-right">
-															Actions
-														</TableHead>
-													)}
-												</TableRow>
-											</TableHeader>
-											<TableBody>
-												{groupedReservedEquipment.map((group) => (
-													<Fragment key={group.categoryName}>
-														<TableRow className="bg-muted/50 hover:bg-muted/50">
-															<TableCell
-																colSpan={
-																	canUserModifyEquipmentReservation ? 4 : 3
-																}
-																className="py-2 font-semibold px-3"
-															>
-																{group.categoryName}
-															</TableCell>
-														</TableRow>
-														{group.reservations.map((reservation) => (
-															<TableRow key={reservation.publicId}>
-																<TableCell>
+									<div className="space-y-4">
+										{groupedReservedEquipment.map((group) => (
+											<div key={group.categoryName} className="space-y-2">
+												<h3 className="text-xs font-semibold text-muted-foreground px-1 uppercase">
+													{group.categoryName}
+												</h3>
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+													{group.reservations.map((reservation) => (
+														<div
+															key={reservation.publicId}
+															className="flex items-center justify-between p-2.5 border rounded-lg bg-card"
+														>
+															<div className="flex-1 min-w-0 space-y-1">
+																<div className="text-sm font-medium truncate">
 																	{reservation.equipment?.name ?? "N/A"}
-																</TableCell>
-																<TableCell>{reservation.quantity}</TableCell>
-																<TableCell>
+																</div>
+																<div className="flex items-center gap-2 flex-wrap">
+																	<span className="text-xs text-muted-foreground">
+																		Qty: {reservation.quantity}
+																	</span>
+																	<span className="text-xs">•</span>
 																	{getApproverStatusBadge(reservation.status)}
-																</TableCell>
-																{(reservation.status === "PENDING" ||
-																	reservation.status === "APPROVED") &&
-																	canUserModifyEquipmentReservation && (
-																		<TableCell className="text-right">
-																			<Button
-																				variant="ghost"
-																				size="icon"
-																				onClick={() =>
-																					handleCancelEquipmentReservationClick(
-																						reservation.publicId,
-																					)
-																				}
-																				disabled={
-																					cancelEquipmentReservationMutationHook.isPending &&
-																					equipmentReservationToCancelId ===
-																						reservation.publicId
-																				}
-																			>
-																				<XCircle className="h-4 w-4 text-destructive" />
-																				<span className="sr-only">
-																					Cancel Reservation
-																				</span>
-																			</Button>
-																		</TableCell>
-																	)}
-															</TableRow>
-														))}
-													</Fragment>
-												))}
-											</TableBody>
-										</Table>
+																</div>
+															</div>
+															{(reservation.status === "PENDING" ||
+																reservation.status === "APPROVED") &&
+																canUserModifyEquipmentReservation && (
+																	<Button
+																		variant="ghost"
+																		size="icon"
+																		className="shrink-0 ml-2 h-8 w-8"
+																		onClick={() =>
+																			handleCancelEquipmentReservationClick(
+																				reservation.publicId,
+																			)
+																		}
+																		disabled={
+																			cancelEquipmentReservationMutationHook.isPending &&
+																			equipmentReservationToCancelId ===
+																				reservation.publicId
+																		}
+																	>
+																		<XCircle className="h-4 w-4 text-destructive" />
+																		<span className="sr-only">
+																			Cancel Reservation
+																		</span>
+																	</Button>
+																)}
+														</div>
+													))}
+												</div>
+											</div>
+										))}
 									</div>
 								) : (
-									<p className="text-sm text-muted-foreground py-4">
+									<p className="text-sm text-muted-foreground py-4 text-center">
 										No equipment reserved for this event yet.
 									</p>
 								)}
@@ -1351,23 +1329,23 @@ export function EventDetailsPage() {
 								{event.assignedPersonnel &&
 								event.assignedPersonnel.length > 0 ? (
 									<div className="space-y-3">
-										<div className="text-sm text-muted-foreground">
+										<div className="text-xs text-muted-foreground uppercase font-medium">
 											{event.assignedPersonnel.length} personnel(s) assigned
 										</div>
-										<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
 											{event.assignedPersonnel?.map((staff) => (
 												<div
 													key={staff.publicId}
-													className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+													className="flex items-center gap-3 p-2.5 rounded-lg border bg-card"
 												>
-													<Avatar className="h-10 w-10">
+													<Avatar className="h-9 w-9 shrink-0">
 														<AvatarFallback>
 															{getInitials(
 																`${staff.personnel.firstName} ${staff.personnel.lastName}`,
 															)}
 														</AvatarFallback>
 													</Avatar>
-													<div className="flex-1 min-w-0">
+													<div className="flex-1 min-w-0 space-y-0.5">
 														<div className="font-medium text-sm truncate">
 															{staff.personnel.firstName}{" "}
 															{staff.personnel.lastName}
@@ -1381,7 +1359,7 @@ export function EventDetailsPage() {
 										</div>
 									</div>
 								) : (
-									<p className="text-sm text-muted-foreground py-4">
+									<p className="text-sm text-muted-foreground py-4 text-center">
 										No staff assigned to this event yet.
 									</p>
 								)}
@@ -1470,64 +1448,70 @@ export function EventDetailsPage() {
 							</CardHeader>
 							<CardContent>
 								{approvalTableRows.length > 0 ? (
-									<div className="overflow-x-auto -mx-4 px-4 sm:-mx-0 sm:px-0">
-										<Table>
-											<TableHeader>
-												<TableRow>
-													<TableHead>Approver</TableHead>
-													<TableHead>Role</TableHead>
-													<TableHead>Department</TableHead>
-													<TableHead>Date Signed</TableHead>
-													<TableHead>Status</TableHead>
-													<TableHead>Remarks</TableHead>
-												</TableRow>
-											</TableHeader>
-											<TableBody>
-												{approvalTableRows.map((approvalRow) => (
-													<TableRow key={approvalRow.publicId}>
-														<TableCell>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+										{approvalTableRows.map((approvalRow) => (
+											<div
+												key={approvalRow.publicId}
+												className="p-3 border rounded-lg bg-card space-y-2"
+											>
+												<div className="flex items-start justify-between gap-2">
+													<div className="flex-1 min-w-0 space-y-1">
+														<div className="font-medium text-sm">
 															{approvalRow.signedByUser.firstName}
 															{approvalRow.signedByUser.lastName
 																? ` ${approvalRow.signedByUser.lastName}`
 																: ""}
-														</TableCell>
-														<TableCell>
-															<div className="flex flex-wrap gap-1">
-																{approvalRow.signedByUser.roles.map((role) => (
-																	<Badge
-																		key={role}
-																		className={getBadgeVariant(
-																			role as UserRole,
-																		)}
-																	>
-																		{formatRole(role as UserRole)}
-																	</Badge>
-																))}
-															</div>
-														</TableCell>
-														<TableCell>
-															{approvalRow.signedByUser.department?.name}
-														</TableCell>
-														<TableCell>
+														</div>
+														<div className="flex flex-wrap gap-1">
+															{approvalRow.signedByUser.roles.map((role) => (
+																<Badge
+																	key={role}
+																	className={getBadgeVariant(role as UserRole)}
+																>
+																	{formatRole(role as UserRole)}
+																</Badge>
+															))}
+														</div>
+													</div>
+													{getApproverStatusBadge(
+														approvalRow.status,
+														approvalRow.signedByUser.roles ||
+															approvalRow.userRole,
+													)}
+												</div>
+												<div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t">
+													<div>
+														<span className="text-muted-foreground block mb-1">
+															Department
+														</span>
+														<div className="font-medium">
+															{approvalRow.signedByUser.department?.name || "—"}
+														</div>
+													</div>
+													<div>
+														<span className="text-muted-foreground block mb-1">
+															Date Signed
+														</span>
+														<div className="font-medium">
 															{approvalRow.dateSigned
 																? formatDateTime(approvalRow.dateSigned)
 																: "—"}
-														</TableCell>
-														<TableCell>
-															{getApproverStatusBadge(
-																approvalRow.status,
-																approvalRow.signedByUser.roles ||
-																	approvalRow.userRole,
-															)}
-														</TableCell>
-														<TableCell>{approvalRow.remarks} </TableCell>
-													</TableRow>
-												))}
-											</TableBody>
-										</Table>
+														</div>
+													</div>
+												</div>
+												{approvalRow.remarks?.trim() && (
+													<div className="pt-2 border-t">
+														<span className="text-xs text-muted-foreground block mb-1">
+															Remarks
+														</span>
+														<p className="text-sm">{approvalRow.remarks}</p>
+													</div>
+												)}
+											</div>
+										))}
 									</div>
 								) : (
-									<p className="text-sm text-muted-foreground">
+									<p className="text-sm text-muted-foreground text-center py-4">
 										No approval records or pending placeholders found.
 									</p>
 								)}
