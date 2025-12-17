@@ -402,7 +402,7 @@ function NotificationsPage() {
 								} else if (entityType === "EQUIPMENT_RESERVATION") {
 									// Navigate to equipment approval page using equipment reservation ID
 									canNavigate = true;
-									targetPath = "/app/equipment-approval/approval"; // Or use primaryEntityId if needed: `/app/equipment-approval/${primaryEntityId}`
+									targetPath = "/app/equipment-approval"; // Or use primaryEntityId if needed: `/app/equipment-approval/${primaryEntityId}`
 								}
 								// Add more specific fallbacks if needed
 							}
