@@ -44,6 +44,7 @@ export interface EventCalendarProps {
 	className?: string;
 	initialView?: CalendarView;
 	legendItems?: StatusLegendItem[];
+	additionalFilters?: React.ReactNode;
 }
 
 export function EventCalendar({
@@ -52,6 +53,7 @@ export function EventCalendar({
 	className,
 	initialView = "month",
 	legendItems = [],
+	additionalFilters,
 }: EventCalendarProps) {
 	const [currentDate, setCurrentDate] = useState(new Date());
 	const [view, setView] = useState<CalendarView>(initialView);
@@ -167,31 +169,34 @@ export function EventCalendar({
 				<div className="flex items-center justify-between gap-4">
 					<h1 className="text-xl font-semibold">Calendar</h1>
 
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="outline" size="sm" className="gap-1.5">
-								<span className="text-xs sm:text-sm">
-									{view.charAt(0).toUpperCase() + view.slice(1)}
-								</span>
-								<ChevronDownIcon
-									className="-me-1 opacity-60"
-									size={16}
-									aria-hidden="true"
-								/>
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="min-w-32">
-							<DropdownMenuItem onClick={() => setView("month")}>
-								Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
-							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => setView("week")}>
-								Week <DropdownMenuShortcut>W</DropdownMenuShortcut>
-							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => setView("day")}>
-								Day <DropdownMenuShortcut>D</DropdownMenuShortcut>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+					<div className="flex items-center gap-3">
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="outline" size="sm" className="gap-1.5">
+									<span className="text-xs sm:text-sm">
+										{view.charAt(0).toUpperCase() + view.slice(1)}
+									</span>
+									<ChevronDownIcon
+										className="-me-1 opacity-60"
+										size={16}
+										aria-hidden="true"
+									/>
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end" className="min-w-32">
+								<DropdownMenuItem onClick={() => setView("month")}>
+									Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setView("week")}>
+									Week <DropdownMenuShortcut>W</DropdownMenuShortcut>
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => setView("day")}>
+									Day <DropdownMenuShortcut>D</DropdownMenuShortcut>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+						{additionalFilters}
+					</div>
 				</div>
 
 				{/* Bottom row on mobile: Navigation controls and date */}

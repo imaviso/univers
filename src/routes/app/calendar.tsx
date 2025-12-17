@@ -12,9 +12,12 @@ import {
 } from "@/components/event-calendar/constants";
 import { EventDetailsModal } from "@/components/events/eventDetailsModal";
 import PendingPage from "@/components/PendingPage";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { allNavigation } from "@/lib/navigation";
 import { searchEventsQueryOptions } from "@/lib/query";
 import type { EventDTO, Event as EventType, UserRole } from "@/lib/types";
+import { usePersistentState } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/calendar")({
 	component: Calendar,
@@ -57,8 +60,14 @@ export const Route = createFileRoute("/app/calendar")({
 });
 
 function Calendar() {
+	const [showRelatedOnly, setShowRelatedOnly] = usePersistentState(
+		"calendar-filter-related",
+		false,
+	);
+	const scope = showRelatedOnly ? "related" : "ALL";
+
 	const { data: eventsData = [], isLoading } = useQuery(
-		searchEventsQueryOptions("ALL"),
+		searchEventsQueryOptions(scope),
 	);
 
 	const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -115,6 +124,23 @@ function Calendar() {
 				events={events}
 				legendItems={legendItems}
 				onEventClick={(event) => setSelectedId(event.id)}
+				additionalFilters={
+					<div className="flex items-center gap-2 border-l pl-3">
+						<Checkbox
+							id="related-filter"
+							checked={showRelatedOnly}
+							onCheckedChange={(checked) =>
+								setShowRelatedOnly(checked === true)
+							}
+						/>
+						<Label
+							htmlFor="related-filter"
+							className="text-xs sm:text-sm font-normal cursor-pointer whitespace-nowrap"
+						>
+							Related Events
+						</Label>
+					</div>
+				}
 			/>
 			{selectedEvent && (
 				<EventDetailsModal
